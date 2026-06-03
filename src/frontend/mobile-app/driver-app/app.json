@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Driver App",
+    "slug": "driver-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1f36"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.doantotnghiep.driverapp",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Microphone access is required for voice sessions with the AI assistant.",
+        "NSCameraUsageDescription": "Camera access may be required by WebRTC."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1f36"
+      },
+      "package": "com.doantotnghiep.driverapp",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
+    },
+    "platforms": ["ios", "android"],
+    "scheme": "driver-app",
+    "plugins": [
+      "expo-secure-store",
+      "expo-av"
+    ]
+  }
+}

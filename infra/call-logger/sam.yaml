@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Driver Assistant - call-logger service (Lambda + API Gateway + DynamoDB)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+
+  AppName:
+    Type: String
+    Default: driver-assistant
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-call-records"
+
+Resources:
+
+  # ── API Gateway ──────────────────────────────────────────────────
+  CallLoggerApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-call-logger-api"
+      StageName: !Ref Environment
+
+  # ── Lambda ───────────────────────────────────────────────────────
+  CallLoggerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-call-logger"
+      CodeUri: ../../src/call-logger/
+      Handler: app.main.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CallRecordsTable
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallLoggerApi
+            Path: /health
+            Method: GET
+        SaveRecord:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallLoggerApi
+            Path: /api/v1/records
+            Method: POST
+        ListRecords:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallLoggerApi
+            Path: /api/v1/records
+            Method: GET
+        GetRecord:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallLoggerApi
+            Path: /api/v1/records/{call_id}
+            Method: GET
+
+  CallLoggerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-logger"
+      RetentionInDays: 30
+
+  # ── DynamoDB ─────────────────────────────────────────────────────
+  CallRecordsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain        # keep data when stack is deleted
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-call-records"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: call_id
+          AttributeType: S
+        - AttributeName: caller
+          AttributeType: S
+        - AttributeName: started_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: call_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: caller-started_at-index
+          KeySchema:
+            - AttributeName: caller
+              KeyType: HASH
+            - AttributeName: started_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true             # optional: set ttl field to auto-expire old records
+
+Outputs:
+  ApiUrl:
+    Description: Call Logger API base URL — set this as CALL_LOGGER_URL in voice-agent
+    Value: !Sub "https://${CallLoggerApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  CallLoggerFunctionArn:
+    Value: !GetAtt CallLoggerFunction.Arn
+
+  CallRecordsTableName:
+    Value: !Ref CallRecordsTable

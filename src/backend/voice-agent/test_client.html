@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Voice Agent Tester</title>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 24px; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
+    .card { background: #1e293b; border-radius: 12px; padding: 24px; width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+    .status { font-size: 0.875rem; padding: 10px 14px; border-radius: 8px; background: #0f172a; }
+    .status.connected { background: #052e16; color: #4ade80; }
+    .status.error { background: #450a0a; color: #f87171; }
+    button { padding: 12px 20px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btnConnect { background: #0ea5e9; color: #fff; }
+    #btnDisconnect { background: #ef4444; color: #fff; display: none; }
+    #btnMic { background: #334155; color: #e2e8f0; }
+    #btnMic.muted { background: #7c3aed; }
+    .row { display: flex; gap: 10px; }
+    .log { background: #0f172a; border-radius: 8px; padding: 12px; font-size: 0.8rem; font-family: monospace; max-height: 220px; overflow-y: auto; white-space: pre-wrap; color: #94a3b8; }
+    .agent-speaking { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    audio { width: 100%; border-radius: 8px; background: #0f172a; }
+  </style>
+</head>
+<body>
+  <h1>🎙 Voice Agent Tester</h1>
+
+  <div class="card">
+    <div class="label">Connection</div>
+    <div id="statusText" class="status">Disconnected</div>
+    <div class="row">
+      <button id="btnConnect" onclick="connect()">Connect &amp; Join Room</button>
+      <button id="btnDisconnect" onclick="disconnect()">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Microphone</div>
+    <button id="btnMic" onclick="toggleMic()" disabled>Mic: ON</button>
+  </div>
+
+  <div class="card">
+    <div class="label">Agent Audio</div>
+    <div id="agentStatus" style="font-size:0.85rem;color:#64748b">Waiting for agent…</div>
+    <audio id="agentAudio" controls autoplay></audio>
+  </div>
+
+  <div class="card">
+    <div class="label">Log</div>
+    <div id="log" class="log">Ready.\n</div>
+  </div>
+
+  <script>
+    const { Room, RoomEvent, Track, TrackSource, createLocalAudioTrack } = LivekitClient;
+
+    let room = null;
+    let micTrack = null;
+    let micEnabled = true;
+
+    function log(msg) {
+      const el = document.getElementById("log");
+      el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(text, cls = "") {
+      const el = document.getElementById("statusText");
+      el.textContent = text;
+      el.className = "status " + cls;
+    }
+
+    async function connect() {
+      document.getElementById("btnConnect").disabled = true;
+      setStatus("Fetching token…");
+      log("Fetching token from /token …");
+
+      let data;
+      try {
+        const res = await fetch("/token");
+        data = await res.json();
+      } catch (e) {
+        setStatus("Token fetch failed: " + e.message, "error");
+        log("ERROR: " + e.message);
+        document.getElementById("btnConnect").disabled = false;
+        return;
+      }
+
+      log(`Room: ${data.room}  Identity: ${data.identity}`);
+      log(`LiveKit URL: ${data.url}`);
+      log("Connecting…");
+
+      room = new Room({ adaptiveStream: true, dynacast: true });
+
+      room.on(RoomEvent.Connected, () => {
+        setStatus(`Connected — room: ${data.room}`, "connected");
+        log("Connected to room.");
+        document.getElementById("btnConnect").style.display = "none";
+        document.getElementById("btnDisconnect").style.display = "";
+        document.getElementById("btnMic").disabled = false;
+        publishMic();
+      });
+
+      room.on(RoomEvent.Disconnected, () => {
+        setStatus("Disconnected");
+        log("Disconnected.");
+        document.getElementById("btnConnect").style.display = "";
+        document.getElementById("btnConnect").disabled = false;
+        document.getElementById("btnDisconnect").style.display = "none";
+        document.getElementById("btnMic").disabled = true;
+        document.getElementById("agentStatus").textContent = "Waiting for agent…";
+      });
+
+      room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+        log(`Track subscribed from ${participant.identity}: kind=${track.kind}`);
+        if (track.kind === "audio") {
+          const audio = document.getElementById("agentAudio");
+          track.attach(audio);
+          document.getElementById("agentStatus").textContent = `Agent connected: ${participant.identity}`;
+          log("Agent audio attached — you should hear the agent.");
+        }
+      });
+
+      room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+        track.detach();
+        log(`Track unsubscribed from ${participant.identity}`);
+      });
+
+      room.on(RoomEvent.ParticipantConnected, (p) => {
+        log(`Participant joined: ${p.identity}`);
+        document.getElementById("agentStatus").textContent = `Agent joined: ${p.identity}`;
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+        log(`Participant left: ${p.identity}`);
+      });
+
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        const names = speakers.map(s => s.identity).join(", ");
+        if (names) log(`Speaking: ${names}`);
+      });
+
+      try {
+        await room.connect(data.url, data.token);
+      } catch (e) {
+        setStatus("Connect failed: " + e.message, "error");
+        log("ERROR connecting: " + e.message);
+        document.getElementById("btnConnect").disabled = false;
+      }
+    }
+
+    async function publishMic() {
+      try {
+        micTrack = await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: true });
+        await room.localParticipant.publishTrack(micTrack);
+        log("Microphone published.");
+      } catch (e) {
+        log("Mic error: " + e.message);
+      }
+    }
+
+    async function toggleMic() {
+      if (!micTrack) return;
+      micEnabled = !micEnabled;
+      await micTrack.mute(!micEnabled ? true : false);
+      const btn = document.getElementById("btnMic");
+      btn.textContent = micEnabled ? "Mic: ON" : "Mic: MUTED";
+      btn.className = micEnabled ? "" : "muted";
+      log(micEnabled ? "Mic unmuted." : "Mic muted.");
+    }
+
+    async function disconnect() {
+      if (room) {
+        await room.disconnect();
+        room = null;
+        micTrack = null;
+      }
+    }
+  </script>
+</body>
+</html>

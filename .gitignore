@@ -1,0 +1,86 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+build/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+livekit_venv/
+
+# ── Environment / secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+credentials.json
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── AWS SAM ───────────────────────────────────────────────────────────────────
+.aws-sam/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ── IDE / editors ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Node / JavaScript ─────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+
+# ── Expo / React Native ───────────────────────────────────────────────────────
+.expo/
+dist/
+*.hbc
+*.jsbundle
+.metro-health-check*
+
+# ── Frontend build output ─────────────────────────────────────────────────────
+src/frontend/*/dist/
+src/frontend/*/build/
+src/frontend/mobile-app/*/dist/
+src/frontend/mobile-app/*/build/
+
+# ── LaTeX build artifacts ─────────────────────────────────────────────────────
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+tectonic.tar.gz
+template-report/ieee_voicebot_report/tectonic
+
+# ── Template report generated images ─────────────────────────────────────────
+template-report/ieee_voicebot_report/*.jpg
+
+# ── External repos / large subprojects ───────────────────────────────────────
+genai-core-livekit-voice-platform/
+agents-playground/

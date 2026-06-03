@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Driver Assistant - voice-agent service (ECS Fargate)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+
+  AppName:
+    Type: String
+    Default: driver-assistant
+
+  ImageUri:
+    Type: String
+    Description: ECR image URI (e.g. 123456789.dkr.ecr.ap-southeast-1.amazonaws.com/dev-driver-assistant-voice-agent:latest)
+
+  LivekitUrl:
+    Type: String
+
+  LivekitApiKey:
+    Type: String
+    NoEcho: true
+
+  LivekitApiSecret:
+    Type: String
+    NoEcho: true
+
+  OpenaiApiKey:
+    Type: String
+    NoEcho: true
+
+  ElevenLabsApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+  ElevenLabsVoiceId:
+    Type: String
+    Default: ""
+
+  ElevenLabsModel:
+    Type: String
+    Default: eleven_flash_v2_5
+
+  DeepgramApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+  GoogleCredentialsJson:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+  SttProvider:
+    Type: String
+    Default: openai
+
+  LlmProvider:
+    Type: String
+    Default: openai
+
+  TtsProvider:
+    Type: String
+    Default: elevenlabs
+
+  OpenaiModel:
+    Type: String
+    Default: gpt-4o-mini
+
+  TwilioPhoneNumber:
+    Type: String
+    Default: ""
+
+  CallLoggerUrl:
+    Type: String
+    Default: ""
+    Description: Call-logger API Gateway URL for saving call records
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to deploy ECS service into
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Public subnets for ECS tasks
+
+  DesiredCount:
+    Type: Number
+    Default: 1
+
+Resources:
+
+  # ── ECR Repository ──────────────────────────────────────────
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RepositoryName: !Sub "${Environment}-${AppName}-voice-agent"
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules":[{"rulePriority":1,"description":"Keep last 5 images",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},
+          "action":{"type":"expire"}}]}
+
+  # ── IAM Roles ────────────────────────────────────────────────
+  ECSExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Environment}-${AppName}-voice-agent-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Environment}-${AppName}-voice-agent-task-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt LogGroup.Arn
+
+  # ── CloudWatch Log Group ─────────────────────────────────────
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/ecs/${Environment}-${AppName}-voice-agent"
+      RetentionInDays: 14
+
+  # ── Security Group ───────────────────────────────────────────
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "${Environment}-${AppName}-voice-agent"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  # ── ECS Cluster ──────────────────────────────────────────────
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${Environment}-${AppName}-voice-agent"
+
+  # ── Task Definition ──────────────────────────────────────────
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${Environment}-${AppName}-voice-agent"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: "1024"
+      Memory: "2048"
+      ExecutionRoleArn: !GetAtt ECSExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: voice-agent
+          Image: !Ref ImageUri
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: ENV
+              Value: !Ref Environment
+            - Name: LIVEKIT_URL
+              Value: !Ref LivekitUrl
+            - Name: LIVEKIT_API_KEY
+              Value: !Ref LivekitApiKey
+            - Name: LIVEKIT_API_SECRET
+              Value: !Ref LivekitApiSecret
+            - Name: OPENAI_API_KEY
+              Value: !Ref OpenaiApiKey
+            - Name: OPENAI_MODEL
+              Value: !Ref OpenaiModel
+            - Name: ELEVENLABS_API_KEY
+              Value: !Ref ElevenLabsApiKey
+            - Name: ELEVENLABS_VOICE_ID
+              Value: !Ref ElevenLabsVoiceId
+            - Name: ELEVENLABS_MODEL
+              Value: !Ref ElevenLabsModel
+            - Name: DEEPGRAM_API_KEY
+              Value: !Ref DeepgramApiKey
+            - Name: GOOGLE_CREDENTIALS_JSON
+              Value: !Ref GoogleCredentialsJson
+            - Name: STT_PROVIDER
+              Value: !Ref SttProvider
+            - Name: LLM_PROVIDER
+              Value: !Ref LlmProvider
+            - Name: TTS_PROVIDER
+              Value: !Ref TtsProvider
+            - Name: TWILIO_PHONE_NUMBER
+              Value: !Ref TwilioPhoneNumber
+            - Name: CALL_LOGGER_URL
+              Value: !Ref CallLoggerUrl
+
+  # ── ECS Service ──────────────────────────────────────────────
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub "${Environment}-${AppName}-voice-agent"
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref SecurityGroup
+
+Outputs:
+  ECRRepositoryUri:
+    Description: ECR repository URI
+    Value: !GetAtt ECRRepository.RepositoryUri
+
+  ECSClusterName:
+    Value: !Ref ECSCluster
+
+  ECSServiceName:
+    Value: !GetAtt ECSService.Name

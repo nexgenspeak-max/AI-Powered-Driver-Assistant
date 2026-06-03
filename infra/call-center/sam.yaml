@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Driver Assistant - call-center service (Lambda + API Gateway)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+
+  AppName:
+    Type: String
+    Default: driver-assistant
+
+  TwilioAccountSid:
+    Type: String
+    NoEcho: true
+
+  TwilioAuthToken:
+    Type: String
+    NoEcho: true
+
+  TwilioPhoneNumber:
+    Type: String
+
+  CallCenterBaseUrl:
+    Type: String
+    Default: ""
+    Description: API Gateway base URL — set after first deploy
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        TWILIO_ACCOUNT_SID: !Ref TwilioAccountSid
+        TWILIO_AUTH_TOKEN: !Ref TwilioAuthToken
+        TWILIO_PHONE_NUMBER: !Ref TwilioPhoneNumber
+        BASE_URL: !Ref CallCenterBaseUrl
+
+Resources:
+
+  # Explicit API resource — avoids circular dependency with ServerlessRestApi
+  CallCenterApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-call-center-api"
+      StageName: !Ref Environment
+
+  CallsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-call-center"
+      CodeUri: ../../src/call-center/
+      Handler: app.main.handler
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /health
+            Method: GET
+        InboundWebhook:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/inbound/webhook
+            Method: POST
+        InboundRecorded:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/inbound/recorded
+            Method: POST
+        InboundRecordingStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/inbound/recording-status
+            Method: POST
+        InboundTranscription:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/inbound/transcription
+            Method: POST
+        InboundStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/inbound/status
+            Method: POST
+        OutboundTwiml:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/outbound/twiml
+            Method: POST
+        OutboundGather:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/outbound/gather
+            Method: POST
+        OutboundStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/outbound/status
+            Method: POST
+        OutboundDial:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/outbound/dial
+            Method: POST
+        GetCallStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/status/{call_sid}
+            Method: GET
+        ListRecentCalls:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/recent
+            Method: GET
+
+  CallsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-center"
+      RetentionInDays: 14
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway base URL
+    Value: !Sub "https://${CallCenterApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  InboundWebhookUrl:
+    Description: Paste this into Twilio Console Voice webhook
+    Value: !Sub "https://${CallCenterApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/api/v1/calls/inbound/webhook"
+
+  CallsFunctionArn:
+    Value: !GetAtt CallsFunction.Arn

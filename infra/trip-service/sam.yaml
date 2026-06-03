@@ -1,0 +1,231 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Driver Assistant - trip-service (Lambda + API Gateway + DynamoDB)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+
+  AppName:
+    Type: String
+    Default: driver-assistant
+
+  LivekitUrl:
+    Type: String
+    Default: ""
+
+  LivekitApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+  LivekitApiSecret:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+  SipTrunkId:
+    Type: String
+    Default: ""
+
+  GoogleMapsApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-trips"
+        LIVEKIT_URL: !Ref LivekitUrl
+        LIVEKIT_API_KEY: !Ref LivekitApiKey
+        LIVEKIT_API_SECRET: !Ref LivekitApiSecret
+        SIP_TRUNK_ID: !Ref SipTrunkId
+        GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
+
+Resources:
+
+  # ── API Gateway ──────────────────────────────────────────────────
+  TripServiceApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-trip-service-api"
+      StageName: !Ref Environment
+
+  # ── Lambda ───────────────────────────────────────────────────────
+  TripServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-trip-service"
+      CodeUri: ../../src/trip-service/
+      Handler: app.main.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DriversTable
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /health
+            Method: GET
+        CreateTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips
+            Method: POST
+        ListTrips:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips
+            Method: GET
+        GetTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}
+            Method: GET
+        UpdateTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}
+            Method: PATCH
+        DispatchTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}/dispatch
+            Method: POST
+        NotifyDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}/notify
+            Method: POST
+        RegisterDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers
+            Method: POST
+        ListDrivers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers
+            Method: GET
+        ListOnlineDrivers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/online
+            Method: GET
+        GetDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/{phone}
+            Method: GET
+        UpdateDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/{phone}
+            Method: PATCH
+
+  TripServiceFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-trip-service"
+      RetentionInDays: 30
+
+  # ── DynamoDB ─────────────────────────────────────────────────────
+  TripsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-trips"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: trip_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: driver_phone
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: trip_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: driver_phone-created_at-index
+          KeySchema:
+            - AttributeName: driver_phone
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # ── Drivers DynamoDB ─────────────────────────────────────────────
+  DriversTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-drivers"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: phone
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: registered_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: phone
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-registered_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: registered_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+Outputs:
+  ApiUrl:
+    Description: Trip Service API base URL — set as TRIP_SERVICE_URL in voice-agent
+    Value: !Sub "https://${TripServiceApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  TripServiceFunctionArn:
+    Value: !GetAtt TripServiceFunction.Arn
+
+  TripsTableName:
+    Value: !Ref TripsTable
