@@ -21,8 +21,8 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from app.config.settings import get_settings
 from app.providers import get_stt, get_llm, get_tts
-from app.agent.voice_agent import DriverAgent
-from app.agent.customer_agent import CustomerAgent
+from app.voicebot import get_voicebot
+from app.voicebot.processors import prefetch as prefetch_processor
 from app.services.conversation_service import ConversationService
 from app.services.silence_tracker import SilenceTracker
 
@@ -92,6 +92,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # ── Resolve trip metadata (outbound SIP rooms carry it in room.metadata) ──
     trip: dict | None = None
+    lang = "vn"  # default language
     if mode in ("driver", "outbound"):
         try:
             meta = json.loads(ctx.room.metadata or "{}")
@@ -103,6 +104,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     phone = raw.replace("+", "")
                     mode = "driver"  # treat as driver outbound
                 logger.info("trip found | trip_id=%s driver=%s", trip["trip_id"], phone)
+            lang = meta.get("lang", "vn")
         except Exception:
             pass
 
@@ -111,20 +113,32 @@ async def entrypoint(ctx: JobContext) -> None:
     settings = get_settings()
 
     try:
+        # Per-session state exposed to tools via context.userdata
+        session_userdata = {
+            "driver_phone":           phone if mode != "customer" else "",
+            "customer_phone":         phone if mode == "customer" else "",
+            "trip":                   trip,
+            "pending_cancel_trip_id": None,
+        }
+
         session = AgentSession(
             stt=get_stt(),
             llm=get_llm(),
             tts=get_tts(),
             vad=ctx.proc.userdata["vad"],
             turn_detection=MultilingualModel(),
+            userdata=session_userdata,
         )
 
         # ── Build the right agent for this room ───────────────────────────────
+        voicebot = get_voicebot(lang)
+        logger.info("voicebot lang=%s module=%s", lang, voicebot.__name__)
+
         if mode == "customer":
-            agent = CustomerAgent(customer_phone=phone)
+            agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 20.0   # customers may pause longer
         else:
-            agent = DriverAgent(trip=trip, driver_phone=phone)
+            agent = voicebot.DriverAgent(trip=trip, driver_phone=phone)
             silence_seconds = 15.0   # drivers on the road, faster cut-off
 
         # BVCTelephony is for SIP/phone audio — it can strip speech from mobile WebRTC mics.
@@ -142,6 +156,11 @@ async def entrypoint(ctx: JobContext) -> None:
             ),
         )
         conv_service.attach(session)
+
+        # Prefetch driver context data in background so tools respond instantly
+        if mode != "customer" and phone:
+            asyncio.create_task(prefetch_processor.run(session, phone))
+
 
         # ── Silence tracker ───────────────────────────────────────────────────
         threshold = (

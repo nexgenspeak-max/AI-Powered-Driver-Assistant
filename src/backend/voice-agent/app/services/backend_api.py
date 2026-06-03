@@ -134,3 +134,98 @@ async def create_reminder(
         )
         r.raise_for_status()
         return r.json()
+
+
+# ── Driver profile & stats ────────────────────────────────────────────────────
+
+async def get_driver_profile(driver_phone: str) -> dict:
+    """Return driver rating, acceptance rate, completion rate, total trips."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/drivers/me/profile",
+            headers={"X-Driver-Phone": driver_phone},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def get_today_earnings(driver_phone: str) -> dict:
+    """Return today's earnings: total, trip count, bonuses, hours online."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/drivers/me/earnings/today",
+            headers={"X-Driver-Phone": driver_phone},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def get_earnings_summary(driver_phone: str, period: str = "week") -> dict:
+    """Return earnings summary for the given period ('week' | 'month')."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/drivers/me/earnings/summary",
+            headers={"X-Driver-Phone": driver_phone},
+            params={"period": period},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def get_active_bonuses(driver_phone: str) -> list[dict]:
+    """Return active bonuses or surge-zone info for the driver."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/drivers/me/bonuses",
+            headers={"X-Driver-Phone": driver_phone},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def set_driver_online_status(driver_phone: str, online: bool) -> None:
+    """Set driver availability: online=True to accept trips, False to go offline."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.patch(
+            f"{_trip_base()}/api/v1/drivers/me/status",
+            headers={"X-Driver-Phone": driver_phone},
+            json={"online": online},
+        )
+        r.raise_for_status()
+
+
+# ── Trip issue reporting ──────────────────────────────────────────────────────
+
+async def report_no_show(trip_id: str, driver_phone: str) -> None:
+    """Report that the customer did not show up for the pickup."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/trips/{trip_id}/no-show",
+            headers={"X-Driver-Phone": driver_phone},
+        )
+        r.raise_for_status()
+
+
+async def report_trip_issue(
+    trip_id: str, driver_phone: str, issue_type: str, description: str = ""
+) -> None:
+    """Report an issue with a trip (safety, damage, behavior, etc.)."""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/trips/{trip_id}/issues",
+            headers={"X-Driver-Phone": driver_phone},
+            json={"issueType": issue_type, "description": description},
+        )
+        r.raise_for_status()
+
+
+async def extend_wait_time(trip_id: str, driver_phone: str, extra_minutes: int) -> dict:
+    """Request additional wait time at the pickup point."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/trips/{trip_id}/extend-wait",
+            headers={"X-Driver-Phone": driver_phone},
+            json={"extraMinutes": extra_minutes},
+        )
+        r.raise_for_status()
+        return r.json()
