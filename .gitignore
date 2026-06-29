@@ -83,4 +83,3 @@ template-report/ieee_voicebot_report/*.jpg
 
 # ── External repos / large subprojects ───────────────────────────────────────
 genai-core-livekit-voice-platform/
-agents-playground/
