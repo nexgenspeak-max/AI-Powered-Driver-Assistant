@@ -30,7 +30,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: python3.13
+    Runtime: nodejs20.x
     Timeout: 30
     MemorySize: 256
     Environment:
@@ -43,7 +43,6 @@ Globals:
 
 Resources:
 
-  # Explicit API resource — avoids circular dependency with ServerlessRestApi
   CallCenterApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -54,8 +53,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${Environment}-${AppName}-call-center"
-      CodeUri: ../../src/call-center/
-      Handler: app.main.handler
+      CodeUri: ../../src/backend/call-center/
+      Handler: src/index.handler
       Events:
         Health:
           Type: Api
@@ -129,6 +128,33 @@ Resources:
             RestApiId: !Ref CallCenterApi
             Path: /api/v1/calls/recent
             Method: GET
+        ListTwilioCalls:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/twilio
+            Method: GET
+        ListEvents:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/events
+            Method: GET
+        MonitorCall:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CallCenterApi
+            Path: /api/v1/calls/monitor/{call_sid}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints:
+          - src/index.ts
+        External:
+          - "@aws-sdk/*"
 
   CallsFunctionLogGroup:
     Type: AWS::Logs::LogGroup

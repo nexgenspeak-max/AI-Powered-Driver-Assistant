@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002',
+  baseURL: import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 

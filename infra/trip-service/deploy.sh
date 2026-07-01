@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ENV="${1:-dev}"
-ENV_FILE="$SCRIPT_DIR/../../src/trip-service/envs/.env.$TARGET_ENV"
+ENV_FILE="$SCRIPT_DIR/../../src/backend/trip-service/envs/.env.$TARGET_ENV"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "❌ Env file not found: $ENV_FILE"
