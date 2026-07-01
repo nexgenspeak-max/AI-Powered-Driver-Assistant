@@ -4,15 +4,24 @@ Provider factory — swap STT / LLM / TTS by changing env vars only:
   STT_PROVIDER = openai | deepgram
   LLM_PROVIDER = openai | gemini
   TTS_PROVIDER = openai | elevenlabs | google
+
+All provider modules are imported at the top level so that LiveKit plugins
+(which call Plugin.register_plugin() on import) are registered on the main
+thread — not inside entrypoint() which runs on a worker thread.
 """
 from app.config.settings import get_settings
+
+from app.providers.stt.openai import OpenAISTT
+from app.providers.stt.deepgram import DeepgramSTT
+from app.providers.llm.openai import OpenAILLM
+from app.providers.llm.gemini import GeminiLLM
+from app.providers.tts.openai import OpenAITTS
+from app.providers.tts.elevenlabs import ElevenLabsTTS
+from app.providers.tts.google import GoogleTTS
 
 
 def get_stt():
     s = get_settings()
-    from app.providers.stt.openai import OpenAISTT
-    from app.providers.stt.deepgram import DeepgramSTT
-
     _map = {
         "openai":   OpenAISTT,
         "deepgram": DeepgramSTT,
@@ -27,13 +36,10 @@ def get_stt():
 
 def get_llm():
     s = get_settings()
-    from app.providers.llm.openai import OpenAILLM
-    from app.providers.llm.gemini import GeminiLLM
-
     _map = {
         "openai":  OpenAILLM,
         "gemini":  GeminiLLM,
-        "google":  GeminiLLM,   # alias
+        "google":  GeminiLLM,
     }
     cls = _map.get(s.llm_provider)
     if cls is None:
@@ -45,10 +51,6 @@ def get_llm():
 
 def get_tts():
     s = get_settings()
-    from app.providers.tts.openai import OpenAITTS
-    from app.providers.tts.elevenlabs import ElevenLabsTTS
-    from app.providers.tts.google import GoogleTTS
-
     _map = {
         "openai":     OpenAITTS,
         "elevenlabs": ElevenLabsTTS,
