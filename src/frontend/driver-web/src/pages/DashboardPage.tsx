@@ -29,18 +29,18 @@ export default function DashboardPage() {
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ bgcolor: '#1a1f36', px: 3, pt: 6, pb: 3 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center" gap={1.5}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ width: 40, height: 40, bgcolor: '#6c8aff', borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Typography fontWeight={700} color="white">{driver.name.charAt(0).toUpperCase()}</Typography>
+              <Typography sx={{ fontWeight: 700, color: 'white' }}>{driver.name.charAt(0).toUpperCase()}</Typography>
             </Box>
             <Box>
-              <Typography fontWeight={700} color="white">{driver.name}</Typography>
-              <Typography variant="caption" color="grey.400">{driver.phone}</Typography>
+              <Typography sx={{ fontWeight: 700, color: 'white' }}>{driver.name}</Typography>
+              <Typography variant="caption" sx={{ color: 'grey.400' }}>{driver.phone}</Typography>
             </Box>
           </Stack>
-          <Stack direction="row" alignItems="center" gap={1}>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" sx={{ color: isOnline ? '#4ade80' : 'grey.500', fontWeight: 600 }}>
               {isOnline ? 'Online' : 'Offline'}
             </Typography>
@@ -55,11 +55,11 @@ export default function DashboardPage() {
         <Stack spacing={2}>
           {pending.length > 0 && (
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}
-                sx={{ textTransform: 'uppercase', letterSpacing: 1, px: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: 1, px: 0.5 }}>
                 Trip Requests ({pending.length})
               </Typography>
-              <Stack spacing={1.5} mt={1}>
+              <Stack spacing={1.5} sx={{ mt: 1 }}>
                 {pending.map(t => <TripCard key={t.trip_id} trip={t} qc={qc} />)}
               </Stack>
             </Box>
@@ -67,11 +67,11 @@ export default function DashboardPage() {
 
           {active.length > 0 && (
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}
-                sx={{ textTransform: 'uppercase', letterSpacing: 1, px: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: 1, px: 0.5 }}>
                 Active Trip
               </Typography>
-              <Stack spacing={1.5} mt={1}>
+              <Stack spacing={1.5} sx={{ mt: 1 }}>
                 {active.map(t => <TripCard key={t.trip_id} trip={t} qc={qc} />)}
               </Stack>
             </Box>
@@ -79,11 +79,11 @@ export default function DashboardPage() {
 
           {pending.length === 0 && active.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 10 }}>
-              <Typography fontSize={48} mb={1}>✅</Typography>
-              <Typography fontWeight={600} color="text.secondary">
+              <Typography sx={{ fontSize: 48, mb: 1 }}>✅</Typography>
+              <Typography sx={{ fontWeight: 600, color: 'text.secondary' }}>
                 {isOnline ? 'No trips right now' : 'You are offline'}
               </Typography>
-              <Typography variant="body2" color="text.disabled" mt={0.5}>
+              <Typography variant="body2" sx={{ color: 'text.disabled', mt: 0.5 }}>
                 {isOnline ? 'Auto-refreshing every 4s…' : 'Toggle online to receive trips'}
               </Typography>
             </Box>
@@ -118,8 +118,8 @@ function TripCard({ trip, qc }: { trip: Trip; qc: ReturnType<typeof useQueryClie
     <Card sx={{ borderRadius: 3, border: '1px solid #e8eaf0' }}>
       <CardContent>
         <Stack spacing={1}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="subtitle2" fontWeight={700}>{trip.customer_name}</Typography>
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{trip.customer_name}</Typography>
             <Chip label={trip.status} size="small" color={isConfirmed ? 'success' : 'warning'} />
           </Stack>
 
@@ -130,7 +130,7 @@ function TripCard({ trip, qc }: { trip: Trip; qc: ReturnType<typeof useQueryClie
             {trip.distance_km > 0 && <InfoRow label="Dist" value={`${trip.distance_km} km`} />}
           </Stack>
 
-          <Stack direction="row" spacing={1} mt={0.5}>
+          <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
             {!isConfirmed ? (
               <>
                 <Button fullWidth variant="contained" color="success" onClick={() => accept()}
@@ -157,9 +157,9 @@ function TripCard({ trip, qc }: { trip: Trip; qc: ReturnType<typeof useQueryClie
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <Stack direction="row" justifyContent="space-between" gap={1} py={0.5}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="caption" fontWeight={500} textAlign="right">{value}</Typography>
+    <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 1, py: 0.5 }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 500, textAlign: 'right' }}>{value}</Typography>
     </Stack>
   )
 }

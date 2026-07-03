@@ -33,9 +33,9 @@ export default function BookingPage() {
     <Box sx={{ minHeight: '100dvh', bgcolor: '#1a1f36', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ px: 3, pt: 6, pb: 3 }}>
-        <Stack direction="row" alignItems="center" gap={1.5} mb={0.5}>
+        <Stack sx={{direction:"row" ,alignItems:"center", gap:1.5 ,mb:0.5}}>
           <DirectionsCarIcon sx={{ color: '#6c8aff', fontSize: 28 }} />
-          <Typography variant="h5" fontWeight={700} color="white">Book a Ride</Typography>
+          <Typography variant="h5" sx ={{fontWeight: 700, color: 'white'}}>Book a Ride</Typography>
         </Stack>
         <Typography variant="body2" color="grey.400">Enter your trip details below</Typography>
       </Box>

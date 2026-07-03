@@ -37,7 +37,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: python3.13
+    Runtime: nodejs20.x
     Timeout: 30
     MemorySize: 256
     Environment:
@@ -52,20 +52,18 @@ Globals:
 
 Resources:
 
-  # ── API Gateway ──────────────────────────────────────────────────
   TripServiceApi:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub "${Environment}-${AppName}-trip-service-api"
       StageName: !Ref Environment
 
-  # ── Lambda ───────────────────────────────────────────────────────
   TripServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${Environment}-${AppName}-trip-service"
-      CodeUri: ../../src/trip-service/
-      Handler: app.main.handler
+      CodeUri: ../../src/backend/trip-service/
+      Handler: src/index.handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TripsTable
@@ -78,6 +76,7 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /health
             Method: GET
+        # ── Trips ────────────────────────────────────────────────────
         CreateTrip:
           Type: Api
           Properties:
@@ -114,6 +113,7 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/trips/{trip_id}/notify
             Method: POST
+        # ── Drivers ──────────────────────────────────────────────────
         RegisterDriver:
           Type: Api
           Properties:
@@ -132,6 +132,18 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/drivers/online
             Method: GET
+        DriverUpcomingTrips:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/trips/upcoming
+            Method: GET
+        DriverCurrentTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/trips/current
+            Method: GET
         GetDriver:
           Type: Api
           Properties:
@@ -144,6 +156,41 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/drivers/{phone}
             Method: PATCH
+        # ── Calls ────────────────────────────────────────────────────
+        StartCall:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/calls/start
+            Method: POST
+        LatestCall:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/calls/latest
+            Method: GET
+        # ── Voice ────────────────────────────────────────────────────
+        CreateVoiceToken:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/voice/token
+            Method: POST
+        CreateCustomerToken:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/voice/customer-token
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints:
+          - src/index.ts
+        External:
+          - "@aws-sdk/*"
 
   TripServiceFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -153,7 +200,6 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-trip-service"
       RetentionInDays: 30
 
-  # ── DynamoDB ─────────────────────────────────────────────────────
   TripsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
@@ -191,7 +237,6 @@ Resources:
           Projection:
             ProjectionType: ALL
 
-  # ── Drivers DynamoDB ─────────────────────────────────────────────
   DriversTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain

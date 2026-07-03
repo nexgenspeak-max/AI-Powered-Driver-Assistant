@@ -61,7 +61,7 @@ export default function TripStatusPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} sx={{ color: 'grey.400', mb: 1, pl: 0 }}>
           Back
         </Button>
-        <Typography variant="h5" fontWeight={700} color="white">Trip Status</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>Trip Status</Typography>
         <Typography variant="body2" color="grey.400">#{trip.trip_id.slice(0, 8)}</Typography>
       </Box>
 
@@ -70,7 +70,7 @@ export default function TripStatusPage() {
         <Card sx={{ borderRadius: 3, mb: 2, border: '1px solid #e8eaf0', textAlign: 'center', py: 1 }}>
           <CardContent>
             <Chip label={trip.status.toUpperCase()} color={STATUS_COLOR[trip.status]} sx={{ mb: 1.5, fontWeight: 700 }} />
-            <Typography variant="h6" fontWeight={600}>{STATUS_LABEL[trip.status]}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>{STATUS_LABEL[trip.status]}</Typography>
             {!isDone && <CircularProgress size={18} sx={{ mt: 1.5, color: '#6c8aff' }} />}
           </CardContent>
         </Card>
@@ -103,9 +103,9 @@ export default function TripStatusPage() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+    <Stack sx={{direction:"row"  ,justifyContent:"space-between" , alignItems:"flex-start", gap:1}}>
       <Typography variant="body2" color="text.secondary" sx={{ minWidth: 70 }}>{label}</Typography>
-      <Typography variant="body2" fontWeight={500} textAlign="right">{value}</Typography>
+      <Typography variant="body2" sx={{ fontWeight: 500, textAlign: 'right' }}>{value}</Typography>
     </Stack>
   )
 }

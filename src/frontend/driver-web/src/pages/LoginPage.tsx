@@ -28,8 +28,8 @@ export default function LoginPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
           <DirectionsCarIcon sx={{ color: 'white', fontSize: 36 }} />
         </Box>
-        <Typography variant="h5" fontWeight={700} color="white">Driver Login</Typography>
-        <Typography variant="body2" color="grey.400" mt={0.5}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>Driver Login</Typography>
+        <Typography variant="body2" sx={{ color: 'grey.400', mt: 0.5 }}>
           Enter your details to start receiving trips
         </Typography>
       </Box>

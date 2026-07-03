@@ -14,8 +14,9 @@ class Settings(BaseSettings):
     agent_name: str = "driver-assistant"
 
     # ── Provider selection ────────────────────────────────────────────────────
-    stt_provider: str = "openai"        # openai | deepgram
+    stt_provider: str = "openai"        # openai | deepgram | google
     stt_model: str = "whisper-1"
+    stt_language: str = "vi-VN"         # BCP-47, e.g. vi-VN | en-US (comma-separated for Google)
 
     llm_provider: str = "openai"        # openai | gemini
     llm_model: str = "gpt-4o-mini"
@@ -35,6 +36,7 @@ class Settings(BaseSettings):
     google_credentials_file: str = ""
     google_credentials_json: str = ""   # full JSON string for containerised envs
     google_stt_model: str = "telephony"
+    google_stt_location: str = ""     # auto: asia-southeast1 for chirp_3, global for latest_long
     google_tts_voice: str = "vi-VN-Neural2-A"
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────

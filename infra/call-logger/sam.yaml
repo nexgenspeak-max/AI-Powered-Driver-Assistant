@@ -14,7 +14,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: python3.13
+    Runtime: nodejs20.x
     Timeout: 30
     MemorySize: 256
     Environment:
@@ -24,20 +24,18 @@ Globals:
 
 Resources:
 
-  # ── API Gateway ──────────────────────────────────────────────────
   CallLoggerApi:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub "${Environment}-${AppName}-call-logger-api"
       StageName: !Ref Environment
 
-  # ── Lambda ───────────────────────────────────────────────────────
   CallLoggerFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${Environment}-${AppName}-call-logger"
-      CodeUri: ../../src/call-logger/
-      Handler: app.main.handler
+      CodeUri: ../../src/backend/call-logger/
+      Handler: src/index.handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CallRecordsTable
@@ -66,6 +64,15 @@ Resources:
             RestApiId: !Ref CallLoggerApi
             Path: /api/v1/records/{call_id}
             Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints:
+          - src/index.ts
+        External:
+          - "@aws-sdk/*"
 
   CallLoggerFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -75,10 +82,9 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-logger"
       RetentionInDays: 30
 
-  # ── DynamoDB ─────────────────────────────────────────────────────
   CallRecordsTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain        # keep data when stack is deleted
+    DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub "${Environment}-${AppName}-call-records"
@@ -104,7 +110,7 @@ Resources:
             ProjectionType: ALL
       TimeToLiveSpecification:
         AttributeName: ttl
-        Enabled: true             # optional: set ttl field to auto-expire old records
+        Enabled: true
 
 Outputs:
   ApiUrl:

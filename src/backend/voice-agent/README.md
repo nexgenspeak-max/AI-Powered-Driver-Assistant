@@ -17,7 +17,7 @@ Python worker that runs a Vietnamese AI voice assistant. When a driver calls `+1
 ### 1. Install dependencies
 
 ```bash
-cd src/voice-agent
+cd src/backend/voice-agent
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
