@@ -147,6 +147,21 @@ bash infra/voice-agent/teardown.sh dev
 
 ---
 
+## Driver support requirements
+
+FAQ catalog, conversation flows, and tool/backend coverage — see `requirements/README.md`.
+
+**RAG playbook:** edit `requirements/knowledge/vi/` or `en/`, then:
+
+```bash
+ENV=local python scripts/build_faq_index.py        # both languages
+ENV=local python scripts/build_faq_index.py --lang vi
+```
+
+Tool: `answer_app_faq` — handles *"ứng dụng hỗ trợ những gì?"*, how-to, user guide questions.
+
+---
+
 ## Project structure
 
 ```

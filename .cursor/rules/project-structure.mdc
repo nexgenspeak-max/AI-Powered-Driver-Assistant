@@ -1,0 +1,29 @@
+---
+description: Monorepo layout — service boundaries and where code belongs
+alwaysApply: true
+---
+
+# Project structure
+
+```
+src/backend/{voice-agent,trip-service,call-center,call-logger}  — one service per folder
+src/frontend/{admin-panel,driver-web,agents-playground,...}     — one app per folder
+src/e2e/                                                         — cross-service scripts only
+```
+
+## Rules
+
+- **One concern per file** — tools, routes, services, prompts in separate modules
+- **No duplicate logic** — shared code lives once (e.g. `voicebot/prompts/`, `processors/trip_format.py`)
+- **Service boundaries** — voice-agent calls trip-service via HTTP; no direct DB access from Python
+- **Lang split** — `voicebot/vn/` and `voicebot/en/` mirror each other; shared logic in `processors/`, `prompts/`, `services/`
+- **Requirements/docs** — product specs in `voice-agent/requirements/`, not mixed into code
+
+## File naming
+
+| Layer | Python | TypeScript |
+|-------|--------|------------|
+| HTTP routes | — | `routes/*.ts` |
+| Business logic | `services/`, `processors/` | `services/*.ts` |
+| Agent tools | `voicebot/{lang}/tools/*.py` | — |
+| Prompts | `voicebot/prompts/`, `system_instructions.py` | — |

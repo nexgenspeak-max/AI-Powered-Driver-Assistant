@@ -6,7 +6,17 @@ Included in system instructions to help the LLM choose the right tool.
 TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: check_upcoming_trips
-- Use when: driver asks about schedule, "what's my next trip", "do I have any trips", "show my trips"
+- Use when: schedule, "next trip", "how many trips", "where are my other trips", fare/price questions
+- Default (no trip_index): list ALL trips with estimated fare
+- trip_index=1,2,3…: one trip detail — use for "yes", "trip 2", "how much is that trip"
+
+## Tool: get_current_trip_info
+- Use when: "current trip", "active trip", "how much is this ride", fare/ETA for trip in progress
+
+## Tool: get_trip_traffic
+- Use when: "any traffic", "jammed", "how's traffic", "how long to get there", "congestion"
+- trip_index: specific trip (1, 2, 3…); omit for current/nearest trip
+- Do NOT tell driver to open Maps if traffic_note exists — only suggest Maps when tool returns no data
 
 ---
 
@@ -99,6 +109,15 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - Use when:
   - online=True: "go online", "I'm ready", "start accepting trips", "back online"
   - online=False: "go offline", "take a break", "end my shift", "I'm done"
+
+---
+
+## Tool: answer_app_faq (playbook RAG)
+- Use for **app guide / how-to / general FAQ** — not live trip data
+  - "what does the app support", "how do I book a ride", "how to use voice assistant"
+  - "what features are available", "user guide", "playbook"
+- Pass `question` = user's original question
+- Do NOT use for specific trip status → use trip tools instead
 
 ---
 

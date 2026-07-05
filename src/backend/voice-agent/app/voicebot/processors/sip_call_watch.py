@@ -1,0 +1,110 @@
+"""Auto handback when the SIP customer participant leaves the LiveKit room."""
+from __future__ import annotations
+
+import asyncio
+import logging
+from typing import TYPE_CHECKING
+
+from livekit import api, rtc
+from livekit.agents import AgentSession
+from livekit.agents.job import get_job_context
+
+from app.services import backend_api
+from app.voicebot.processors.handback import handback_to_driver
+
+if TYPE_CHECKING:
+    from app.services.silence_tracker import SilenceTracker
+
+logger = logging.getLogger("voice-agent.processors.sip_call_watch")
+
+
+def _is_customer_sip_participant(participant: rtc.RemoteParticipant, userdata: dict) -> bool:
+    pid = participant.identity
+    sip_id = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    if sip_id and pid == sip_id:
+        return True
+    return pid.startswith("customer-")
+
+
+def _disconnect_summary(lang: str, mode: str) -> str:
+    if mode == "bridge":
+        return (
+            "Customer hung up. Bridge call ended."
+            if lang == "en"
+            else "Khách đã cúp máy. Cuộc gọi kết nối trực tiếp đã kết thúc."
+        )
+    if mode == "background":
+        return (
+            "Customer hung up during background call."
+            if lang == "en"
+            else "Khách cúp máy trong cuộc gọi nền."
+        )
+    return (
+        "Customer hung up before the conversation finished."
+        if lang == "en"
+        else "Khách đã cúp máy trước khi cuộc trò chuyện kết thúc."
+    )
+
+
+async def _auto_complete_isolated(session: AgentSession, userdata: dict, summary: str) -> None:
+    if userdata.get("_handback_in_progress"):
+        return
+    userdata["_handback_in_progress"] = True
+    try:
+        driver_phone = userdata.get("driver_phone", "")
+        call_id = (userdata.get("customer_call") or {}).get("call_id", "")
+        await backend_api.complete_background_call(driver_phone, call_id, summary)
+        try:
+            job_ctx = get_job_context()
+            await job_ctx.api.room.delete_room(
+                api.DeleteRoomRequest(room=job_ctx.room.name)
+            )
+        except Exception:
+            logger.warning("failed to delete isolated room after SIP disconnect", exc_info=True)
+        logger.info("isolated call auto-completed on SIP disconnect")
+    finally:
+        userdata["_handback_in_progress"] = False
+
+
+def register_sip_call_watchers(
+    room: rtc.Room,
+    session: AgentSession,
+    *,
+    silence_tracker: SilenceTracker | None = None,
+) -> None:
+    """Watch for customer SIP disconnect and auto-return to DriverAgent."""
+
+    @room.on("participant_disconnected")
+    def _on_participant_left(participant: rtc.RemoteParticipant) -> None:
+        userdata = session.userdata
+        if userdata.get("isolated_call"):
+            if not _is_customer_sip_participant(participant, userdata):
+                return
+            lang = userdata.get("lang", "vn")
+            summary = _disconnect_summary(lang, "background")
+            asyncio.create_task(_auto_complete_isolated(session, userdata, summary))
+            return
+
+        if not userdata.get("customer_call_active") and not userdata.get("bridge_call_active"):
+            return
+        if not _is_customer_sip_participant(participant, userdata):
+            return
+
+        lang = userdata.get("lang", "vn")
+        mode = (userdata.get("customer_call") or {}).get("mode", "agent")
+        summary = _disconnect_summary(lang, mode)
+        logger.info(
+            "customer SIP disconnected | identity=%s mode=%s",
+            participant.identity,
+            mode,
+        )
+
+        asyncio.create_task(
+            handback_to_driver(
+                session,
+                userdata,
+                summary,
+                mode=mode,
+                silence_tracker=silence_tracker,
+            )
+        )

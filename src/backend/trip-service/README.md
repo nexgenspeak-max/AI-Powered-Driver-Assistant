@@ -32,15 +32,18 @@ GOOGLE_MAPS_API_KEY=   # get from console.cloud.google.com → Directions API
 
 LiveKit keys are pre-filled. AWS profile is david.
 
-For **driver → customer calls** (voice-agent `call_customer` tool):
+For **driver → customer calls** (`call_customer` agent + bridge modes use **LiveKit SIP in-room**):
 
 ```env
-CALL_CENTER_URL=http://localhost:8000
-TWILIO_VERIFIED_TO=+84867347452
-CALL_FORCE_VERIFIED_TO=true   # Twilio trial: always dial verified number locally
+SIP_TRUNK_ID=ST_...              # same outbound trunk as trip dispatch
+LIVEKIT_URL=wss://...
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
+TWILIO_VERIFIED_TO=+84867347452  # Twilio trial: dial verified number locally
+CALL_FORCE_VERIFIED_TO=true
 ```
 
-Start **call-center** on port 8000 (see `src/backend/call-center/README.md`) with Twilio credentials + `BASE_URL` (ngrok when local).
+`CALL_CENTER_URL` is **not** required for in-room agent/bridge calls (legacy Twilio-only path removed).
 
 ### 3. Start the service
 

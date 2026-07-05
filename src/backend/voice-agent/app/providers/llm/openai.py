@@ -8,4 +8,4 @@ class OpenAILLM(BaseLLM):
 
     @classmethod
     def create(cls, settings: Settings):
-        return openai_plugin.LLM(model=settings.llm_model or "gpt-4o-mini")
+        return openai_plugin.LLM(model=settings.llm_model or "gpt-4o-mini", api_key=settings.openai_api_key or None)

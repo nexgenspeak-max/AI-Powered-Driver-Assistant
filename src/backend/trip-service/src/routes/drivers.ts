@@ -1,11 +1,13 @@
 import { Router, Request, Response } from 'express';
 import * as driverService from '../services/driverService';
 import * as tripService from '../services/tripService';
+import * as earningsService from '../services/earningsService';
+import * as driverContextService from '../services/driverContextService';
 
 const router = Router();
 
 const UPCOMING_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed']);
-const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling']);
+const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'ARRIVED_PICKUP', 'PICKED_UP']);
 
 function phoneVariants(phone: string): string[] {
   const p = phone.trim();
@@ -75,10 +77,80 @@ router.get('/me/trips/current', async (req: Request, res: Response) => {
   try {
     const driverPhone = req.headers['x-driver-phone'] as string;
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
-    const trips = await tripsForDriver(driverPhone);
-    const active = trips.find(t => ACTIVE_STATUSES.has(t.status));
+    const ctx = await driverContextService.getDriverContext(driverPhone);
+    const active = ctx.current_trip as tripService.Trip | null;
     if (!active) return res.status(404).json({ detail: 'No active trip' });
     return res.json(active);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/me/context', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const fresh = req.query.fresh === 'true';
+    return res.json(await driverContextService.getDriverContext(driverPhone, fresh));
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/me/profile', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const ctx = await driverContextService.getDriverContext(driverPhone);
+    return res.json(ctx.driver_profile);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/me/earnings/today', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const ctx = await driverContextService.getDriverContext(driverPhone);
+    return res.json(ctx.today_earnings);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/me/earnings/summary', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const period = (req.query.period as 'week' | 'month') || 'week';
+    return res.json(await earningsService.summaryForDriver(driverPhone, period));
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get('/me/bonuses', async (_req: Request, res: Response) => {
+  try {
+    return res.json(earningsService.activeBonuses());
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.patch('/me/status', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const online = req.body.online ?? req.body.status === 'online';
+    const status = online ? 'online' : 'offline';
+    let driver = await driverService.get(driverPhone);
+    if (!driver) {
+      driver = await driverService.register(driverPhone, driverPhone);
+    }
+    const updated = await driverService.update(driverPhone, { status });
+    await driverContextService.invalidateDriverContext(driverPhone);
+    return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }
@@ -107,7 +179,9 @@ router.patch('/:phone', async (req: Request, res: Response) => {
     if (fields.status && !['online', 'offline'].includes(fields.status as string)) {
       return res.status(400).json({ detail: 'status must be online or offline' });
     }
-    return res.json(await driverService.update(req.params.phone, fields));
+    const updated = await driverService.update(req.params.phone, fields);
+    await driverContextService.invalidateDriverContext(req.params.phone);
+    return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

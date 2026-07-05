@@ -11,10 +11,53 @@ raw_schema = {
         "type": "function",
         "name": "check_upcoming_trips",
         "description": (
-            "Check the driver's upcoming trip schedule. "
-            "Use when the driver asks about their schedule, next trip, or trip list."
+            "View full upcoming schedule — lists ALL trips with pickup, dropoff, estimated fare. "
+            "Use for schedule questions, 'where are my other trips', fare questions, "
+            "'trip 2', or follow-ups after listing."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Trip number (1 = nearest). Use for 'how much is that trip', "
+                        "'trip 2 details', or when driver says yes to see more."
+                    ),
+                }
+            },
+            "required": [],
+        },
+    },
+
+    "get_current_trip_info": {
+        "type": "function",
+        "name": "get_current_trip_info",
+        "description": (
+            "Active/current trip details: customer, addresses, fare, ETA, status. "
+            "Use for 'current trip', 'this trip', 'how much is this ride'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_trip_traffic": {
+        "type": "function",
+        "name": "get_trip_traffic",
+        "description": (
+            "Traffic conditions for a trip: congestion, ETA, route summary. "
+            "Use for 'any traffic', 'jammed', 'how long to get there'. "
+            "Data from Google Maps at trip creation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": "Trip number (1 = nearest). Omit for current/nearest trip.",
+                }
+            },
+            "required": [],
+        },
     },
 
     "update_trip_status": {
@@ -43,8 +86,9 @@ raw_schema = {
         "description": (
             "Call the customer for the active trip. "
             "IMPORTANT: Before calling, ask the driver to choose a mode:\n"
-            "  • mode='agent'  — AI calls and talks to the customer, then summarizes for the driver.\n"
-            "  • mode='bridge' — Connect the driver directly to the customer.\n"
+            "  • mode='background' — AI calls customer in a separate room; driver keeps using assistant (RECOMMENDED when busy).\n"
+            "  • mode='agent'  — AI dials customer into the same room; driver listens live.\n"
+            "  • mode='bridge' — Driver speaks directly to customer in the same room.\n"
             "Only call this tool after the driver has chosen a mode."
         ),
         "parameters": {
@@ -52,8 +96,8 @@ raw_schema = {
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["agent", "bridge"],
-                    "description": "'agent' for AI to call and summarize, 'bridge' for direct connection.",
+                    "enum": ["background", "agent", "bridge"],
+                    "description": "'background' = AI calls in background, 'agent' = driver listens, 'bridge' = driver talks directly.",
                 }
             },
             "required": ["mode"],
@@ -84,8 +128,19 @@ raw_schema = {
         "type": "function",
         "name": "summarize_last_call",
         "description": (
-            "Retrieve and read the summary of the last call between the driver and customer. "
-            "Use when the driver asks 'what did they say', 'summarize the call', 'what did the customer want'."
+            "Retrieve and read the summary of the last customer call. "
+            "If a background call is still in progress, tell the driver to wait. "
+            "Use when the driver asks 'what did they say', 'summarize the call', 'is the call done'."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "check_customer_call_status": {
+        "type": "function",
+        "name": "check_customer_call_status",
+        "description": (
+            "Check whether a background customer call is still in progress. "
+            "Use when the driver asks 'is the call done', 'still calling the customer'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -292,5 +347,29 @@ raw_schema = {
             "Use when the customer asks 'how long', 'is the driver close', 'when will they arrive'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    # ── App playbook / FAQ (RAG) ──────────────────────────────────────────────
+
+    "answer_app_faq": {
+        "type": "function",
+        "name": "answer_app_faq",
+        "description": (
+            "Search the app user playbook (RAG) for how-to and FAQ answers about app features, "
+            "workflows, and general help — NOT live trip data. "
+            "Use when the user asks: 'what does the app support', 'how do I book a ride', "
+            "'how to use the voice assistant', 'what features are available', "
+            "or any general app guide / FAQ question."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": "The user's original question about the app or how to use it.",
+                }
+            },
+            "required": ["question"],
+        },
     },
 }

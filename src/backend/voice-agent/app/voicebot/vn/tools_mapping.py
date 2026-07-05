@@ -6,7 +6,17 @@ Included in the system instructions to help the LLM choose the right tool.
 TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: check_upcoming_trips
-- Khi dùng: tài xế hỏi về lịch chuyến, "chuyến tiếp theo", "tôi có chuyến nào không", "xem danh sách chuyến"
+- Khi dùng: lịch chuyến, "chuyến tiếp theo", "còn mấy chuyến", "các chuyến còn lại đi đâu", "bao nhiêu tiền", "giá cước"
+- Mặc định (không trip_index): liệt kê TẤT CẢ chuyến kèm giá ước tính
+- trip_index=1,2,3…: chi tiết một chuyến — dùng khi tài xế nói "có", "chuyến thứ 2", "chuyến đó bao tiền"
+
+## Tool: get_current_trip_info
+- Khi dùng: "chuyến hiện tại", "chuyến đang chạy", "chuyến này bao nhiêu", giá/ETA chuyến active
+
+## Tool: get_trip_traffic
+- Khi dùng: "có tắc đường không", "kẹt xe không", "giao thông thế nào", "mất bao lâu", "đường có đông không"
+- trip_index: chọn chuyến cụ thể (1, 2, 3…); bỏ trống = chuyến đang chạy / gần nhất
+- KHÔNG bảo mở Maps nếu đã có traffic_note — chỉ gợi ý Maps khi tool trả về không có dữ liệu
 
 ---
 
@@ -99,6 +109,16 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - Khi dùng:
   - online=True: "bật nhận chuyến", "tôi sẵn sàng", "bật lại đi"
   - online=False: "tôi muốn nghỉ", "tắt nhận chuyến", "đi offline", "hết ca"
+
+---
+
+## Tool: answer_app_faq (playbook RAG)
+- Khi dùng: câu hỏi về **ứng dụng / hướng dẫn / FAQ chung**, không cần dữ liệu chuyến realtime
+  - "ứng dụng hỗ trợ những gì", "app có chức năng gì"
+  - "cách đặt xe", "làm sao dùng trợ lý AI", "hướng dẫn sử dụng"
+  - "cách thực hiện chức năng X", "FAQ", "playbook"
+- Truyền `question` = câu hỏi gốc của người dùng
+- KHÔNG dùng cho: trạng thái chuyến cụ thể → dùng trip tools
 
 ---
 

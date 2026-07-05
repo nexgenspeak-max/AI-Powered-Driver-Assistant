@@ -1,0 +1,187 @@
+"""Format trip data for voice responses — short addresses, fare, list/detail."""
+from __future__ import annotations
+
+BASE_FARE = 15_000
+FARE_PER_KM = 12_000
+MAX_LIST = 5
+
+
+def estimated_fare(trip: dict) -> int:
+    if trip.get("estimated_fare") is not None:
+        return int(trip["estimated_fare"])
+    km = float(trip.get("distance_km") or 0)
+    return round(BASE_FARE + km * FARE_PER_KM)
+
+
+def fmt_money(amount: int, lang: str) -> str:
+    if lang == "en":
+        return f"{amount:,} VND"
+    if amount >= 1_000_000:
+        return f"{amount / 1_000_000:.1f} triệu đ"
+    if amount >= 1_000:
+        return f"{amount // 1_000} nghìn đ"
+    return f"{amount:,}đ"
+
+
+def short_address(address: str, max_len: int = 48) -> str:
+    if not address:
+        return ""
+    text = address.strip()
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 3].rstrip() + "..."
+
+
+def build_outbound_nav_info(trip: dict, lang: str) -> str:
+    """Navigation/fare lines for outbound trip notification prompts."""
+    lines: list[str] = []
+    fare_label = "Estimated fare" if lang == "en" else "Giá ước tính"
+    lines.append(f"- {fare_label}: {fmt_money(estimated_fare(trip), lang)}")
+
+    eta = trip.get("eta_minutes")
+    distance = trip.get("distance_km")
+    if eta:
+        if lang == "en":
+            lines.append(f"- Distance: {distance} km, estimated {eta} minutes")
+        else:
+            lines.append(f"- Quãng đường: {distance} km, dự kiến {eta} phút")
+
+    traffic = trip.get("traffic_note")
+    if traffic:
+        label = "Traffic" if lang == "en" else "Giao thông"
+        lines.append(f"- {label}: {traffic}")
+
+    route = trip.get("route_summary")
+    if route:
+        label = "Route" if lang == "en" else "Tuyến đường"
+        lines.append(f"- {label}: {route}")
+
+    return "\n".join(lines)
+
+
+def format_traffic_info(trip: dict, lang: str = "vi") -> str:
+    """Traffic / route summary for voice — reads prefetched Google Maps data."""
+    traffic = (trip.get("traffic_note") or "").strip()
+    route = (trip.get("route_summary") or "").strip()
+    eta = trip.get("eta_minutes")
+    km = trip.get("distance_km")
+    pickup = short_address(trip.get("pickup_address", ""), 40)
+    dropoff = short_address(trip.get("dropoff_address", ""), 40)
+
+    if not traffic and not route and not eta:
+        if lang == "en":
+            return (
+                "No live traffic data for this trip yet. "
+                "Use Google Maps or Waze for turn-by-turn navigation."
+            )
+        return (
+            "Chưa có dữ liệu giao thông cho chuyến này. "
+            "Anh/chị dùng Google Maps hoặc Waze để xem đường chi tiết."
+        )
+
+    if lang == "en":
+        msg = f"Route {pickup} to {dropoff}."
+        if traffic:
+            msg += f" Traffic: {traffic}."
+        elif eta:
+            msg += " Traffic looks normal."
+        if route:
+            msg += f" Via {route}."
+        if eta:
+            msg += f" Estimated {eta} minutes"
+            if km:
+                msg += f", {km} km"
+            msg += "."
+        return msg
+
+    msg = f"Tuyến {pickup} đến {dropoff}."
+    if traffic:
+        msg += f" {traffic}."
+    elif eta:
+        msg += " Giao thông bình thường."
+    if route:
+        msg += f" Đi qua {route}."
+    if eta:
+        msg += f" Dự kiến {eta} phút"
+        if km:
+            msg += f", {km} km"
+        msg += "."
+    return msg
+
+
+def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
+    pickup = short_address(trip.get("pickup_address", ""))
+    dropoff = short_address(trip.get("dropoff_address", ""))
+    money = fmt_money(estimated_fare(trip), lang)
+    eta = trip.get("eta_minutes")
+    km = trip.get("distance_km")
+    time = trip.get("pickup_time", "")
+    customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
+    status = trip.get("status", "")
+
+    if lang == "en":
+        msg = (
+            f"Trip {index}: pick up {customer} at {pickup}, drop off at {dropoff}. "
+            f"Estimated fare: {money}."
+        )
+        if time:
+            msg += f" Pickup time: {time}."
+        if km:
+            msg += f" Distance: {km} km."
+        if eta:
+            msg += f" ETA: {eta} min."
+        if status:
+            msg += f" Status: {status}."
+        traffic = trip.get("traffic_note")
+        if traffic:
+            msg += f" Traffic: {traffic}."
+        return msg
+
+    msg = (
+        f"Chuyến {index}: đón {customer} tại {pickup}, đến {dropoff}. "
+        f"Giá ước tính: {money}."
+    )
+    if time:
+        msg += f" Giờ đón: {time}."
+    if km:
+        msg += f" Quãng đường: {km} km."
+    if eta:
+        msg += f" Dự kiến {eta} phút."
+    if status:
+        msg += f" Trạng thái: {status}."
+    traffic = trip.get("traffic_note")
+    if traffic:
+        msg += f" {traffic}."
+    return msg
+
+
+def format_trip_brief(trip: dict, index: int, lang: str = "vi") -> str:
+    pickup = short_address(trip.get("pickup_address", ""), 36)
+    dropoff = short_address(trip.get("dropoff_address", ""), 36)
+    fare = fmt_money(estimated_fare(trip), lang)
+    time = trip.get("pickup_time", "")
+    time_prefix = f"{time} — " if time else ""
+    return f"{index}. {time_prefix}{pickup} → {dropoff} ({fare})"
+
+
+def format_trip_list(trips: list[dict], lang: str = "vi") -> str:
+    shown = trips[:MAX_LIST]
+    if not shown:
+        return ""
+
+    if len(shown) == 1:
+        return format_trip_detail(shown[0], 1, lang)
+
+    if lang == "en":
+        header = f"You have {len(trips)} upcoming trip(s)"
+        if len(trips) > MAX_LIST:
+            header += f" (showing first {MAX_LIST})"
+        suffix = " Say the trip number for more details."
+    else:
+        header = f"Anh/chị có {len(trips)} chuyến sắp tới"
+        if len(trips) > MAX_LIST:
+            header += f" (hiển thị {MAX_LIST} chuyến gần nhất)"
+        suffix = " Anh/chị muốn biết chi tiết chuyến nào thì nói số thứ tự."
+
+    lines = [format_trip_brief(t, i, lang) for i, t in enumerate(shown, 1)]
+    return header + ": " + "; ".join(lines) + "." + suffix

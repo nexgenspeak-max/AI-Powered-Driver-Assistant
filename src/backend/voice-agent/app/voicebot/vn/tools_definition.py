@@ -11,10 +11,54 @@ raw_schema = {
         "type": "function",
         "name": "check_upcoming_trips",
         "description": (
-            "Kiểm tra danh sách chuyến đi sắp tới của tài xế. "
-            "Gọi khi tài xế hỏi về lịch chuyến, chuyến tiếp theo, hoặc muốn xem danh sách chuyến."
+            "Xem lịch chuyến sắp tới — liệt kê TẤT CẢ chuyến (điểm đón, điểm đến, giá ước tính). "
+            "Gọi khi hỏi lịch, chuyến tiếp theo, 'các chuyến còn lại đi đâu', 'bao nhiêu tiền', "
+            "'chuyến thứ 2', hoặc follow-up sau khi liệt kê."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Số thứ tự chuyến (1 = gần nhất). "
+                        "Dùng khi tài xế hỏi chi tiết/giá một chuyến cụ thể: "
+                        "'chuyến đó bao tiền', 'chuyến thứ 2', 'có' (muốn xem thêm)."
+                    ),
+                }
+            },
+            "required": [],
+        },
+    },
+
+    "get_current_trip_info": {
+        "type": "function",
+        "name": "get_current_trip_info",
+        "description": (
+            "Thông tin chuyến đang chạy / active: khách, điểm đón-trả, giá, ETA, trạng thái. "
+            "Gọi khi hỏi 'chuyến hiện tại', 'chuyến đang chạy', 'chuyến này bao tiền'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_trip_traffic": {
+        "type": "function",
+        "name": "get_trip_traffic",
+        "description": (
+            "Tình trạng giao thông / tắc đường trên chuyến: kẹt xe, ETA, tuyến đường. "
+            "Gọi khi hỏi 'có tắc đường không', 'kẹt xe không', 'giao thông thế nào', "
+            "'mất bao lâu đến'. Dữ liệu từ Google Maps lúc tạo chuyến."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": "Số thứ tự chuyến (1 = gần nhất). Bỏ trống = chuyến đang chạy hoặc chuyến gần nhất.",
+                }
+            },
+            "required": [],
+        },
     },
 
     "update_trip_status": {
@@ -43,8 +87,9 @@ raw_schema = {
         "description": (
             "Gọi điện cho khách hàng của chuyến đang hoạt động. "
             "QUAN TRỌNG: Trước khi gọi, hỏi tài xế chọn chế độ:\n"
-            "  • mode='agent'  — AI tự gọi và nói chuyện với khách, sau đó tóm tắt lại cho tài xế.\n"
-            "  • mode='bridge' — Kết nối để tài xế trực tiếp nói chuyện với khách.\n"
+            "  • mode='background' — AI tự gọi khách ở phòng riêng; tài xế vẫn hỏi trợ lý việc khác; tóm tắt sau (KHUYÊN DÙNG khi tài xế bận).\n"
+            "  • mode='agent'  — AI gọi khách vào cùng phòng; tài xế nghe trực tiếp.\n"
+            "  • mode='bridge' — Tài xế nói trực tiếp với khách trong cùng phòng.\n"
             "Sau khi tài xế chọn xong, mới gọi tool này với đúng mode."
         ),
         "parameters": {
@@ -52,8 +97,8 @@ raw_schema = {
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["agent", "bridge"],
-                    "description": "'agent' để AI nói chuyện và tóm tắt, 'bridge' để kết nối trực tiếp.",
+                    "enum": ["background", "agent", "bridge"],
+                    "description": "'background' = AI gọi nền, 'agent' = AI gọi tài xế nghe, 'bridge' = tài xế nói trực tiếp.",
                 }
             },
             "required": ["mode"],
@@ -84,8 +129,19 @@ raw_schema = {
         "type": "function",
         "name": "summarize_last_call",
         "description": (
-            "Lấy và đọc tóm tắt cuộc gọi vừa rồi giữa tài xế và khách hàng. "
-            "Gọi khi tài xế hỏi 'cuộc gọi vừa rồi nói gì', 'tóm tắt cuộc gọi', 'khách vừa nói gì'."
+            "Lấy và đọc tóm tắt cuộc gọi với khách. "
+            "Nếu cuộc gọi nền (background) vẫn đang diễn ra, báo tài xế chờ thêm. "
+            "Gọi khi tài xế hỏi 'cuộc gọi vừa rồi nói gì', 'tóm tắt cuộc gọi', 'gọi xong chưa'."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "check_customer_call_status": {
+        "type": "function",
+        "name": "check_customer_call_status",
+        "description": (
+            "Kiểm tra cuộc gọi khách nền (background) còn đang diễn ra không. "
+            "Gọi khi tài xế hỏi 'gọi xong chưa', 'AI còn gọi khách không'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -292,5 +348,29 @@ raw_schema = {
             "Gọi khi khách hỏi 'còn bao lâu', 'xe đến chưa', 'tài xế gần chưa'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    # ── App playbook / FAQ (RAG) ──────────────────────────────────────────────
+
+    "answer_app_faq": {
+        "type": "function",
+        "name": "answer_app_faq",
+        "description": (
+            "Tra cứu sổ tay hướng dẫn ứng dụng (playbook) để trả lời câu hỏi về "
+            "tính năng app, cách sử dụng, quy trình, FAQ chung — KHÔNG cần dữ liệu chuyến realtime. "
+            "Gọi khi người dùng hỏi: 'ứng dụng hỗ trợ những gì', 'cách đặt xe', "
+            "'làm sao dùng trợ lý AI', 'app có những chức năng gì', 'hướng dẫn sử dụng', "
+            "'cách thực hiện chức năng X', câu hỏi how-to / FAQ không liên quan chuyến cụ thể."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": "Câu hỏi gốc của người dùng về app / cách dùng / FAQ.",
+                }
+            },
+            "required": ["question"],
+        },
     },
 }

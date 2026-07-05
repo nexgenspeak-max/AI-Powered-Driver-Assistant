@@ -6,6 +6,7 @@ Room name conventions (set by trip-service):
   driver-{phone}-{unix_ts}    → DriverAgent  (inbound: driver opens app)
   customer-{phone}-{unix_ts}  → CustomerAgent (customer support)
   trip-{trip_id_prefix}       → DriverAgent  (outbound SIP: system calls driver)
+  custcall-{trip_prefix}-{ts} → CustomerCallAgent (background AI→customer call)
 """
 import asyncio
 import json
@@ -15,14 +16,17 @@ import traceback
 from typing import Literal
 
 from livekit.agents import AgentSession, JobContext, JobProcess, RoomInputOptions, RoomOutputOptions
-from livekit.agents.llm import ChatMessage
 from livekit.plugins import silero
+from livekit.agents.llm import ChatMessage
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from app.config.settings import get_settings
 from app.providers import get_stt, get_llm, get_tts
 from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
+from app.voicebot.processors import context_store
+from app.voicebot.processors.sip_call_watch import register_sip_call_watchers
+from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.services.conversation_service import ConversationService
 from app.services.silence_tracker import SilenceTracker
 
@@ -32,8 +36,9 @@ logger = logging.getLogger("voice-agent.session")
 _DRIVER_RE   = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
 _CUSTOMER_RE = re.compile(r"^customer-(\d+)-\d+$")  # customer-84901234567-1748700000
 _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbound)
+_CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
 
-RoomMode = Literal["driver", "customer", "outbound"]
+RoomMode = Literal["driver", "customer", "outbound", "custcall"]
 
 
 def _parse_room(room_name: str) -> tuple[RoomMode, str]:
@@ -55,6 +60,9 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
 
     if _TRIP_RE.match(room_name):
         return "outbound", ""
+
+    if _CUSTCALL_RE.match(room_name):
+        return "custcall", ""
 
     # Fallback: try splitting on "-" for ad-hoc room names
     parts = room_name.split("-")
@@ -90,10 +98,24 @@ async def entrypoint(ctx: JobContext) -> None:
     mode, phone = _parse_room(room_name)
     logger.info("room_mode=%s phone=%r", mode, phone)
 
-    # ── Resolve trip metadata (outbound SIP rooms carry it in room.metadata) ──
+    # ── Resolve trip metadata ───────────────────────────────────────────────
     trip: dict | None = None
-    lang = "vn"  # default language
-    if mode in ("driver", "outbound"):
+    lang = "vn"
+    if mode == "custcall":
+        try:
+            meta = json.loads(ctx.room.metadata or "{}")
+            lang = meta.get("lang", "vn")
+            trip = {
+                "trip_id":         meta.get("trip_id", ""),
+                "customer_name":   meta.get("customer_name", ""),
+                "pickup_address":  meta.get("pickup_address", ""),
+                "customer_phone":  meta.get("customer_phone", ""),
+            }
+            phone = meta.get("driver_phone", "").replace("+", "").replace(" ", "")
+            logger.info("custcall room | trip_id=%s driver=%s", trip.get("trip_id"), phone)
+        except Exception:
+            phone = ""
+    elif mode in ("driver", "outbound"):
         try:
             meta = json.loads(ctx.room.metadata or "{}")
             if meta.get("trip_id"):
@@ -115,11 +137,29 @@ async def entrypoint(ctx: JobContext) -> None:
     try:
         # Per-session state exposed to tools via context.userdata
         session_userdata = {
-            "driver_phone":           phone if mode != "customer" else "",
+            "driver_phone":           phone if mode not in ("customer",) else "",
             "customer_phone":         phone if mode == "customer" else "",
             "trip":                   trip,
             "pending_cancel_trip_id": None,
+            "room_name":              room_name,
+            "lang":                   lang,
+            "customer_call_active":   False,
+            "bridge_call_active":     False,
+            "background_call_active": False,
+            "isolated_call":          mode == "custcall",
+            "_silence_tracker":       None,
         }
+
+        if mode == "custcall" and trip:
+            meta = json.loads(ctx.room.metadata or "{}")
+            session_userdata["customer_call"] = {
+                "call_id":        meta.get("call_id", ""),
+                "trip_id":        trip.get("trip_id", ""),
+                "customer_phone": trip.get("customer_phone", ""),
+                "sip_identity":   meta.get("sip_identity", ""),
+                "room_name":      room_name,
+                "mode":           "background",
+            }
 
         session = AgentSession(
             stt=get_stt(),
@@ -130,15 +170,34 @@ async def entrypoint(ctx: JobContext) -> None:
             userdata=session_userdata,
         )
 
+        # Prefetch BEFORE session.start so tools + greeting have warm context
+        if mode == "customer" and phone:
+            await prefetch_processor.run_customer(session, phone)
+        elif phone:
+            await prefetch_processor.run_driver(session, phone)
+
         # ── Build the right agent for this room ───────────────────────────────
         voicebot = get_voicebot(lang)
         logger.info("voicebot lang=%s module=%s", lang, voicebot.__name__)
 
-        if mode == "customer":
+        if mode == "custcall":
+            agent = CustomerCallAgent(
+                lang=lang,
+                trip=trip or {},
+                customer_name=(trip or {}).get("customer_name", "khách"),
+                isolated=True,
+            )
+            silence_seconds = 20.0
+        elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 20.0   # customers may pause longer
         else:
-            agent = voicebot.DriverAgent(trip=trip, driver_phone=phone)
+            context_hint = context_store.build_context_hint(
+                session_userdata, lang="en" if lang == "en" else "vi"
+            )
+            agent = voicebot.DriverAgent(
+                trip=trip, driver_phone=phone, context_hint=context_hint
+            )
             silence_seconds = 15.0   # drivers on the road, faster cut-off
 
         # BVCTelephony is for SIP/phone audio — it can strip speech from mobile WebRTC mics.
@@ -156,11 +215,6 @@ async def entrypoint(ctx: JobContext) -> None:
             ),
         )
         conv_service.attach(session)
-
-        # Prefetch driver context data in background so tools respond instantly
-        if mode != "customer" and phone:
-            asyncio.create_task(prefetch_processor.run(session, phone))
-
 
         # ── Silence tracker ───────────────────────────────────────────────────
         threshold = (
@@ -200,9 +254,20 @@ async def entrypoint(ctx: JobContext) -> None:
                 if ev.new_state in ("speaking", "thinking"):
                     silence_tracker.pause()
                 elif ev.new_state in ("listening", "idle"):
-                    silence_tracker.resume()
+                    ud = session.userdata
+                    if not ud.get("customer_call_active") and not ud.get("bridge_call_active"):
+                        silence_tracker.resume()
 
             await silence_tracker.start()
+
+        session_userdata["_silence_tracker"] = silence_tracker
+
+        if mode in ("driver", "custcall"):
+            register_sip_call_watchers(
+                ctx.room,
+                session,
+                silence_tracker=silence_tracker,
+            )
 
         logger.info(
             "session started | mode=%s phone=%s trip=%s",

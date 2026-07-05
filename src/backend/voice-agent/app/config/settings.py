@@ -1,6 +1,6 @@
 import os
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV = os.getenv("ENV", "local")
 _ENV_FILE = f"envs/.env.{_ENV}"
@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
 
+    # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
+    faq_rag_enabled: bool = True
+    faq_knowledge_dir: str = "requirements/knowledge"
+    faq_index_dir: str = "data/faq_index"
+    faq_embed_model: str = "text-embedding-3-small"
+    faq_top_k: int = 4
+
     # ── Silence tracker ───────────────────────────────────────────────────────
     silence_tracker_enabled: bool = True
     silence_threshold_seconds: float = 0.0   # 0 = use per-mode default in session.py
@@ -55,9 +62,16 @@ class Settings(BaseSettings):
     # When false, silence prompts still fire but the room is not torn down (simulator dev).
     silence_end_session: bool = True
 
+    # ── In-room bridge call ───────────────────────────────────────────────────
+    # Max seconds before auto handback if customer never hangs up (0 = disabled).
+    bridge_call_max_seconds: int = 600
+
     env: str = "local"
 
-    model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE if os.path.exists(_ENV_FILE) else None,
+        extra="ignore",
+    )
 
 
 @lru_cache

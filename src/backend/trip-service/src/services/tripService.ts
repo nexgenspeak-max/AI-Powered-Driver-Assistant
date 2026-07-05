@@ -33,6 +33,9 @@ export interface Trip {
   route_summary: string;
   room_name: string;
   driver_phone?: string;
+  wait_extra_minutes?: number;
+  last_issue?: Record<string, unknown>;
+  no_show_reported_at?: string;
   created_at: string;
   updated_at: string;
 }

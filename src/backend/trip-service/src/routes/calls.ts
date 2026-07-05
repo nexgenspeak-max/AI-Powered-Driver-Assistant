@@ -1,11 +1,20 @@
 import { Router, Request, Response } from 'express';
 import * as callService from '../services/callService';
+import { cacheGet, driverLastCallKey } from '../cache/redis';
+import { config } from '../config';
 
 const router = Router();
 
 router.post('/start', async (req: Request, res: Response) => {
   try {
-    const { driverId, customerId = '', tripId = '', phoneNumber, mode = 'bridge' } = req.body;
+    const {
+      driverId,
+      customerId = '',
+      tripId = '',
+      phoneNumber,
+      mode = 'bridge',
+      roomName = '',
+    } = req.body;
     let phone = (phoneNumber as string)?.trim() ?? '';
 
     if (tripId) {
@@ -16,12 +25,17 @@ router.post('/start', async (req: Request, res: Response) => {
 
     if (!phone) return res.status(400).json({ detail: 'phoneNumber is required' });
 
-    return res.json(await callService.startCustomerCall({
+    const result = await callService.startCustomerCall({
       driverPhone: driverId as string,
       customerPhone: phone,
       tripId: tripId as string,
       mode: mode as string,
-    }));
+      roomName: roomName as string,
+      lang: (req.body.lang as string) || 'vn',
+      customerName: (req.body.customerName as string) || '',
+      pickupAddress: (req.body.pickupAddress as string) || '',
+    });
+    return res.json(result);
   } catch (err) {
     const msg = String(err);
     if (msg.includes('customer phone')) return res.status(400).json({ detail: msg });
@@ -29,14 +43,65 @@ router.post('/start', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/latest', (req: Request, res: Response) => {
-  const driverPhone = req.headers['x-driver-phone'];
-  if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
-  return res.status(404).json({ detail: 'No recent call found' });
+router.post('/complete', async (req: Request, res: Response) => {
+  try {
+    const { driverPhone, callId, summary = '' } = req.body;
+    if (!driverPhone || !callId) {
+      return res.status(400).json({ detail: 'driverPhone and callId are required' });
+    }
+    await callService.completeCustomerCall(driverPhone as string, callId as string, summary as string);
+    return res.json({ status: 'completed', call_id: callId, summary });
+  } catch (err) {
+    return res.status(500).json({ detail: String(err) });
+  }
 });
 
-router.post('/:callId/summary', (_req: Request, res: Response) => {
-  return res.status(404).json({ detail: 'Call summary not available' });
+router.get('/latest', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+
+    const cached = await cacheGet<{
+      call_id: string;
+      summary?: string;
+      status?: string;
+      mode?: string;
+    }>(driverLastCallKey(driverPhone));
+    if (cached?.call_id) return res.json(cached);
+
+    if (!config.callLoggerUrl) {
+      return res.status(404).json({ detail: 'No recent call found' });
+    }
+
+    const resp = await fetch(
+      `${config.callLoggerUrl.replace(/\/$/, '')}/api/v1/records?caller=${encodeURIComponent(driverPhone)}&limit=1`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!resp.ok) return res.status(404).json({ detail: 'No recent call found' });
+    const records = (await resp.json()) as Array<{ call_id: string; summary?: string }>;
+    if (!records.length) return res.status(404).json({ detail: 'No recent call found' });
+    return res.json({ call_id: records[0].call_id, summary: records[0].summary || '' });
+  } catch (err) {
+    return res.status(404).json({ detail: 'No recent call found' });
+  }
+});
+
+router.post('/:callId/summary', async (req: Request, res: Response) => {
+  try {
+    const callId = req.params.callId;
+    if (!config.callLoggerUrl) {
+      return res.status(404).json({ detail: 'Call summary not available' });
+    }
+    const resp = await fetch(
+      `${config.callLoggerUrl.replace(/\/$/, '')}/api/v1/records/${encodeURIComponent(callId)}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!resp.ok) return res.status(404).json({ detail: 'Call summary not available' });
+    const record = (await resp.json()) as { summary?: string };
+    return res.json({ summary: record.summary || '' });
+  } catch (err) {
+    return res.status(404).json({ detail: 'Call summary not available' });
+  }
 });
 
 export default router;

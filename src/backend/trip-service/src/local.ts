@@ -4,11 +4,13 @@ import tripsRouter from './routes/trips';
 import driversRouter from './routes/drivers';
 import callsRouter from './routes/calls';
 import voiceRouter from './routes/voice';
+import remindersRouter from './routes/reminders';
+import customersRouter from './routes/customers';
 
 const corsOptions = {
   origin: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Driver-Phone'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Driver-Phone', 'X-Customer-Phone'],
   credentials: false,
 };
 
@@ -22,6 +24,8 @@ app.use('/api/v1/trips', tripsRouter);
 app.use('/api/v1/drivers', driversRouter);
 app.use('/api/v1/calls', callsRouter);
 app.use('/api/v1/voice', voiceRouter);
+app.use('/api/v1/reminders', remindersRouter);
+app.use('/api/v1/customers', customersRouter);
 
 const PORT = process.env.PORT || 8002;
 app.listen(PORT, () => console.log(`trip-service running on :${PORT}`));

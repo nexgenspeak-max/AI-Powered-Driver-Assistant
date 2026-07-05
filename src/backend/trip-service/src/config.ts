@@ -1,8 +1,10 @@
 import dotenv from 'dotenv';
+import { existsSync } from 'fs';
 
 const env = process.env.ENV || 'local';
-if (env === 'local') {
-  dotenv.config({ path: `envs/.env.${env}` });
+const envPath = `envs/.env.${env}`;
+if (existsSync(envPath)) {
+  dotenv.config({ path: envPath });
 }
 
 export const config = {
@@ -19,6 +21,10 @@ export const config = {
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
 
   callCenterUrl: process.env.CALL_CENTER_URL || 'http://localhost:8000',
+  callLoggerUrl: process.env.CALL_LOGGER_URL || 'http://localhost:8001',
   twilioVerifiedTo: process.env.TWILIO_VERIFIED_TO || '',
   callForceVerifiedTo: process.env.CALL_FORCE_VERIFIED_TO !== 'false',
+
+  redisUrl: process.env.REDIS_URL || '',
+  cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 120),
 };

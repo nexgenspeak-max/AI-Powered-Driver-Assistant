@@ -15,6 +15,17 @@ def _trip_base() -> str:
 
 # ── Trips ─────────────────────────────────────────────────────────────────────
 
+async def get_customer_context(customer_phone: str) -> dict:
+    """Single prefetch endpoint — trips and active trip."""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/customers/me/context",
+            headers={"X-Customer-Phone": customer_phone},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
 async def get_customer_trips(customer_phone: str) -> list[dict]:
     """Return all trips for a customer (by phone), most recent first."""
     async with httpx.AsyncClient(timeout=8) as c:
@@ -36,6 +47,17 @@ async def get_upcoming_trips(driver_phone: str) -> list[dict]:
         return r.json()
 
 
+async def get_driver_context(driver_phone: str) -> dict:
+    """Single prefetch endpoint — profile, earnings, bonuses, trips."""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(
+            f"{_trip_base()}/api/v1/drivers/me/context",
+            headers={"X-Driver-Phone": driver_phone},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
 async def get_current_trip(driver_phone: str) -> dict | None:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
@@ -48,7 +70,7 @@ async def get_current_trip(driver_phone: str) -> dict | None:
         return r.json()
 
 
-async def update_trip_status(trip_id: str, status: str) -> None:
+async def update_trip_status(trip_id: str, status: str) -> dict:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.patch(
             f"{_trip_base()}/api/v1/trips/{trip_id}",
@@ -56,6 +78,7 @@ async def update_trip_status(trip_id: str, status: str) -> None:
         )
         r.raise_for_status()
         logger.info("trip %s → %s", trip_id, status)
+        return r.json()
 
 
 async def get_trip_location(trip_id: str) -> dict:
@@ -84,37 +107,73 @@ async def start_call(
     customer_id: str,
     trip_id: str,
     phone_number: str,
-    mode: str = "bridge",   # "agent" = AI-to-customer | "bridge" = driver talks directly
+    mode: str = "bridge",
+    room_name: str = "",
+    *,
+    lang: str = "vn",
+    customer_name: str = "",
+    pickup_address: str = "",
 ) -> dict:
-    async with httpx.AsyncClient(timeout=8) as c:
+    async with httpx.AsyncClient(timeout=25) as c:
         r = await c.post(
             f"{_trip_base()}/api/v1/calls/start",
             json={
-                "driverId":    driver_id,
-                "customerId":  customer_id,
-                "tripId":      trip_id,
-                "phoneNumber": phone_number,
-                "mode":        mode,
+                "driverId":       driver_id,
+                "customerId":     customer_id,
+                "tripId":         trip_id,
+                "phoneNumber":    phone_number,
+                "mode":           mode,
+                "roomName":       room_name,
+                "lang":           lang,
+                "customerName":   customer_name,
+                "pickupAddress":  pickup_address,
             },
         )
         r.raise_for_status()
         return r.json()
 
 
-async def get_latest_call_summary(driver_phone: str) -> str:
+async def get_latest_call_record(driver_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/calls/latest",
             headers={"X-Driver-Phone": driver_phone},
         )
         r.raise_for_status()
-        call = r.json()
-        call_id = call.get("call_id") or call.get("id")
-        if not call_id:
+        return r.json()
+
+
+async def complete_background_call(
+    driver_phone: str, call_id: str, summary: str
+) -> None:
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/calls/complete",
+            json={
+                "driverPhone": driver_phone,
+                "callId":      call_id,
+                "summary":     summary,
+            },
+        )
+        r.raise_for_status()
+
+
+async def get_latest_call_summary(driver_phone: str) -> str:
+    try:
+        call = await get_latest_call_record(driver_phone)
+    except Exception:
+        return ""
+    if call.get("summary"):
+        return call["summary"]
+    call_id = call.get("call_id") or call.get("id")
+    if not call_id:
+        return ""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(f"{_trip_base()}/api/v1/calls/{call_id}/summary")
+        if r.status_code == 404:
             return ""
-        r2 = await c.post(f"{_trip_base()}/api/v1/calls/{call_id}/summary")
-        r2.raise_for_status()
-        return r2.json().get("summary", "")
+        r.raise_for_status()
+        return r.json().get("summary", "")
 
 
 # ── Reminders ─────────────────────────────────────────────────────────────────

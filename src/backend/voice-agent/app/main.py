@@ -2,10 +2,13 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 _env = os.getenv("ENV", "local")
-load_dotenv(f"envs/.env.{_env}")
+_env_file = Path(f"envs/.env.{_env}")
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 from app.config.logging import setup_logging
 setup_logging()
@@ -24,5 +27,6 @@ if __name__ == "__main__":
             api_key=s.livekit_api_key,
             api_secret=s.livekit_api_secret,
             agent_name=s.agent_name,
+            initialize_process_timeout=60.0,
         )
     )

@@ -1,0 +1,52 @@
+---
+description: TypeScript backend (trip-service, call-center) standards
+globs: src/backend/**/*.ts
+alwaysApply: false
+---
+
+# TypeScript backend standards
+
+## Imports & structure
+
+```typescript
+// ✅ GOOD — imports at top; route → service → cache/db
+import { Router, Request, Response } from 'express';
+import * as tripService from '../services/tripService';
+import * as driverContextService from '../services/driverContextService';
+
+// ❌ BAD — dynamic import inside handler unless breaking circular dep
+router.get('/x', async (req, res) => {
+  const { get } = await import('../services/tripService');
+});
+```
+
+## Control flow — always use blocks
+
+```typescript
+// ✅ GOOD
+if (!trip) {
+  return res.status(404).json({ detail: 'Trip not found' });
+}
+
+// ❌ BAD — single-line if without braces (easy to break on edit)
+if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+```
+
+Use **early return** in routes. Keep handlers thin — delegate to `services/`.
+
+## Service layer
+
+| Service | Responsibility |
+|---------|----------------|
+| `tripService.ts` | DynamoDB CRUD |
+| `driverContextService.ts` | Build/cache driver context |
+| `earningsService.ts` | Fare + earnings calculations |
+| `routes/*.ts` | HTTP only — validate, call service, map response |
+
+- Export pure functions: `tripFare()`, `enrichTrip()`, `buildDriverContext()`
+- Invalidate cache in routes after writes: `invalidateTripParties()`
+
+## Types
+
+- Extend `Trip` interface for new fields — avoid `(trip as Record<string, unknown>)`
+- Shared constants at module top: `UPCOMING`, `ACTIVE` status sets

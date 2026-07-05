@@ -1,0 +1,91 @@
+"""Shared driver handback after in-room customer calls (agent or bridge mode)."""
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+from livekit.agents import AgentSession
+
+from app.voicebot import get_voicebot
+from app.voicebot.processors import context_store
+
+if TYPE_CHECKING:
+    from app.services.silence_tracker import SilenceTracker
+
+logger = logging.getLogger("voice-agent.processors.handback")
+
+
+def restore_session_audio(session: AgentSession) -> None:
+    session.input.set_audio_enabled(True)
+    session.output.set_audio_enabled(True)
+
+
+def enter_bridge_listen_mode(session: AgentSession) -> None:
+    """
+    Bridge mode — driver and customer talk via room audio.
+    Keep STT on so the driver can say a wake phrase; mute TTS so the agent never talks over them.
+    """
+    session.input.set_audio_enabled(True)
+    session.output.set_audio_enabled(False)
+
+
+def cancel_bridge_timeout(userdata: dict) -> None:
+    task = userdata.pop("_bridge_timeout_task", None)
+    if task and not task.done():
+        task.cancel()
+
+
+def build_driver_agent(userdata: dict, summary: str = ""):
+    lang = userdata.get("lang", "vn")
+    hint = context_store.build_context_hint(
+        userdata,
+        lang="en" if lang == "en" else "vi",
+    )
+    voicebot = get_voicebot(lang)
+    return voicebot.DriverAgent(
+        driver_phone=userdata.get("driver_phone", ""),
+        context_hint=hint,
+        resume_summary=summary,
+    )
+
+
+def store_call_summary(userdata: dict, summary: str, mode: str) -> None:
+    call_meta = userdata.get("customer_call") or {}
+    call_id = call_meta.get("call_id", "")
+    if call_id:
+        context_store.set_last_call(
+            userdata,
+            str(call_id),
+            trip_id=call_meta.get("trip_id", ""),
+            mode=mode,
+            summary=summary,
+        )
+
+
+async def handback_to_driver(
+    session: AgentSession,
+    userdata: dict,
+    summary: str,
+    *,
+    mode: str,
+    silence_tracker: SilenceTracker | None = None,
+) -> None:
+    if userdata.get("_handback_in_progress"):
+        return
+    userdata["_handback_in_progress"] = True
+    try:
+        cancel_bridge_timeout(userdata)
+        store_call_summary(userdata, summary, mode)
+        userdata["customer_call_active"] = False
+        userdata["bridge_call_active"] = False
+        restore_session_audio(session)
+
+        driver = build_driver_agent(userdata, summary=summary)
+        session.update_agent(driver)
+
+        if silence_tracker:
+            silence_tracker.resume()
+
+        logger.info("handback to DriverAgent | mode=%s summary=%s", mode, summary[:80])
+    finally:
+        userdata["_handback_in_progress"] = False
