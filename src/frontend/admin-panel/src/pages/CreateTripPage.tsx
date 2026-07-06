@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useCreateTrip } from '../features/trips/hooks/useCreateTrip'
 import { useDrivers } from '../features/drivers/hooks/useDrivers'
 import { ROUTES } from '../constants'
+import { PALETTE } from '../styles/palette'
 
 export default function CreateTripPage() {
   const navigate = useNavigate()
@@ -41,7 +42,7 @@ export default function CreateTripPage() {
 
   return (
     <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-      <Card elevation={0} sx={{ border: '1px solid #e8eaf0', borderRadius: 3 }}>
+      <Card elevation={0} sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 4 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>New Trip</Typography>
 
@@ -73,7 +74,11 @@ export default function CreateTripPage() {
                 </Button>
                 <Button type="submit" variant="contained" disabled={isPending}
                   endIcon={isPending ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
-                  fullWidth sx={{ borderRadius: 2, bgcolor: '#6c8aff', '&:hover': { bgcolor: '#5a76f0' } }}
+                  fullWidth sx={{
+                    borderRadius: 2,
+                    background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
+                    '&:hover': { background: `linear-gradient(135deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 100%)` },
+                  }}
                 >
                   {isPending ? 'Creating...' : 'Create & Notify Driver'}
                 </Button>

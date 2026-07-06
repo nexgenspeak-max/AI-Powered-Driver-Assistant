@@ -32,19 +32,6 @@ async function tripsForDriver(phone: string) {
   return trips.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { phone, name, fcm_token = '' } = req.body;
-    const existing = await driverService.get(phone);
-    if (existing) {
-      return res.status(201).json(await driverService.update(phone, { name, fcm_token }));
-    }
-    return res.status(201).json(await driverService.register(phone, name, fcm_token));
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
-});
-
 router.get('/', async (_req: Request, res: Response) => {
   try {
     return res.json(await driverService.listAll());
@@ -144,11 +131,8 @@ router.patch('/me/status', async (req: Request, res: Response) => {
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
     const online = req.body.online ?? req.body.status === 'online';
     const status = online ? 'online' : 'offline';
-    let driver = await driverService.get(driverPhone);
-    if (!driver) {
-      driver = await driverService.register(driverPhone, driverPhone);
-    }
     const updated = await driverService.update(driverPhone, { status });
+    if (!updated) return res.status(404).json({ detail: 'Driver not found' });
     await driverContextService.invalidateDriverContext(driverPhone);
     return res.json(updated);
   } catch (err) {

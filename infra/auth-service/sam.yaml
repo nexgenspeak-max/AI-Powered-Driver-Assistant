@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Driver Assistant - auth-service (Lambda + API Gateway + DynamoDB)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+
+  AppName:
+    Type: String
+    Default: driver-assistant
+
+  JwtSecret:
+    Type: String
+    NoEcho: true
+
+  JwtAccessExpiresIn:
+    Type: String
+    Default: "15m"
+
+  JwtRefreshExpiresIn:
+    Type: String
+    Default: "30d"
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-accounts"
+        JWT_SECRET: !Ref JwtSecret
+        JWT_ACCESS_EXPIRES_IN: !Ref JwtAccessExpiresIn
+        JWT_REFRESH_EXPIRES_IN: !Ref JwtRefreshExpiresIn
+
+Resources:
+
+  AuthServiceApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-auth-service-api"
+      StageName: !Ref Environment
+
+  AuthServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-auth-service"
+      CodeUri: ../../src/backend/auth-service/
+      Handler: src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AccountsTable
+      Events:
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /health
+            Method: GET
+        Register:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/auth/register
+            Method: POST
+        Login:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/auth/login
+            Method: POST
+        Refresh:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/auth/refresh
+            Method: POST
+        Me:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/auth/me
+            Method: GET
+        ListAccounts:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/accounts
+            Method: GET
+        GetAccountByPhone:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/accounts/phone/{phone}
+            Method: GET
+        UpdateAccount:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/accounts/{id}
+            Method: PATCH
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints:
+          - src/index.ts
+        External:
+          - "@aws-sdk/*"
+
+  AuthServiceFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-auth-service"
+      RetentionInDays: 30
+
+  AccountsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-accounts"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: phone
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: role
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: phone-index
+          KeySchema:
+            - AttributeName: phone
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: role-index
+          KeySchema:
+            - AttributeName: role
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+Outputs:
+  ApiUrl:
+    Description: Auth Service API base URL — set as AUTH_SERVICE_URL in other services
+    Value: !Sub "https://${AuthServiceApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  AuthServiceFunctionArn:
+    Value: !GetAtt AuthServiceFunction.Arn
+
+  AccountsTableName:
+    Value: !Ref AccountsTable

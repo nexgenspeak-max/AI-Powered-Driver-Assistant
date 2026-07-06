@@ -27,3 +27,13 @@ export interface CreateTripPayload {
   dropoff_address: string
   pickup_time?: string
 }
+
+
+export interface Customer {
+  id: string
+  name: string
+  phone: string
+  status: 'online' | 'offline'
+  created_at: string
+  updated_at: string
+}

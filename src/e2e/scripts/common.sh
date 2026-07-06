@@ -38,10 +38,10 @@ RED='\033[31m'
 YELLOW='\033[33m'
 RESET='\033[0m'
 
-pass() { echo -e "  ${GREEN}✓${RESET}  $*"; }
+pass() { echo -e "  ${GREEN}✓${RESET}  $*" >&2; }
 fail() { echo -e "  ${RED}✗${RESET}  $*" >&2; exit 1; }
-warn() { echo -e "  ${YELLOW}⚠${RESET}  $*"; }
-info() { echo -e "  →  $*"; }
+warn() { echo -e "  ${YELLOW}⚠${RESET}  $*" >&2; }
+info() { echo -e "  →  $*" >&2; }
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "Missing command: $1"

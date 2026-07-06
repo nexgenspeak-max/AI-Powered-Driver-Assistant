@@ -16,7 +16,7 @@ export default function TripBoardPage() {
   return (
     <Box>
       <TripStatCards trips={trips} drivers={drivers} />
-      <Card elevation={0} sx={{ border: '1px solid #e8eaf0', borderRadius: 3 }}>
+      <Card elevation={0} sx={{ borderRadius: 3 }}>
         <TripTable
           trips={trips}
           drivers={drivers}

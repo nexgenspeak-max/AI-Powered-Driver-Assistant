@@ -7,6 +7,7 @@ import callsRouter from './routes/calls';
 import voiceRouter from './routes/voice';
 import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
+import { authenticate } from './middleware/authenticate';
 
 const corsOptions = {
   origin: true,
@@ -21,6 +22,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/v1', authenticate);
 app.use('/api/v1/trips', tripsRouter);
 app.use('/api/v1/drivers', driversRouter);
 app.use('/api/v1/calls', callsRouter);

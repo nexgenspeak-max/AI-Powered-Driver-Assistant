@@ -33,6 +33,7 @@ export interface Trip {
   route_summary: string;
   room_name: string;
   driver_phone?: string;
+  id_account?: string;
   wait_extra_minutes?: number;
   last_issue?: Record<string, unknown>;
   no_show_reported_at?: string;
@@ -59,6 +60,7 @@ export async function create(data: Record<string, unknown>): Promise<Trip> {
     updated_at: now(),
   };
   if (data.driver_phone) trip.driver_phone = data.driver_phone as string;
+  if (data.id_account) trip.id_account = data.id_account as string;
 
   await docClient.send(new PutCommand({ TableName: config.dynamodbTable, Item: trip }));
   return trip;

@@ -8,8 +8,8 @@ require_cmd python3
 
 STATUS="${1:-confirmed}"   # pending | confirmed | notified — use confirmed for active-trip tools
 
-echo ""
-echo "── Seed trip (driver=$DRIVER_HEADER status=$STATUS) ──"
+echo "" >&2
+echo "── Seed trip (driver=$DRIVER_HEADER status=$STATUS) ──" >&2
 
 BODY=$(python3 - <<PY
 import json

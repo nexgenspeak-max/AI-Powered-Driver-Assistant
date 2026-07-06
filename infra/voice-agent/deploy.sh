@@ -59,6 +59,8 @@ aws cloudformation deploy \
     TtsProvider="${TTS_PROVIDER:-elevenlabs}" \
     TwilioPhoneNumber="${TWILIO_PHONE_NUMBER:-}" \
     CallLoggerUrl="${CALL_LOGGER_URL:-}" \
+    TripServiceUrl="${TRIP_SERVICE_URL:-}" \
+    JwtSecret="$JWT_SECRET" \
     VpcId="$VPC_ID" \
     SubnetIds="$SUBNET_IDS" \
     DesiredCount="${DESIRED_COUNT:-1}"

@@ -9,6 +9,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // avatar-3d model/textures are ~35MB — fetch on demand, don't precache on install
+        globIgnores: ['**/assets/avatar-3d/**'],
+      },
       manifest: {
         name: 'Driver Dashboard',
         short_name: 'Driver',

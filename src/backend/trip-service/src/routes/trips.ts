@@ -20,6 +20,8 @@ router.post('/', async (req: Request, res: Response) => {
     const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address, config.googleMapsApiKey);
     const trip = await tripService.create({
       ...body,
+      // Link the trip back to whichever authenticated account created it.
+      ...(req.user ? { id_account: req.user.sub } : {}),
       distance_km: route.distance_km ?? 0,
       eta_minutes: route.eta_minutes ?? 0,
       traffic_note: route.traffic_note ?? '',
@@ -163,8 +165,12 @@ router.post('/:tripId/dispatch', async (req: Request, res: Response) => {
     if (!['pending', 'notified', 'rejected', 'no_answer'].includes(trip.status)) {
       return res.status(409).json({ detail: `Cannot dispatch trip with status=${trip.status}` });
     }
-    const roomName = await dispatchService.dispatchCall(trip as TripData);
-    const updated = await tripService.updateStatus(req.params.tripId, 'calling', { room_name: roomName });
+    const driverPhone = trip.driver_phone || req.body.driver_phone;
+    if (!driverPhone) {
+      return res.status(400).json({ detail: 'driver_phone is required to dispatch' });
+    }
+    const roomName = await dispatchService.dispatchCall({ ...trip, driver_phone: driverPhone } as TripData);
+    const updated = await tripService.updateStatus(req.params.tripId, 'calling', { driver_phone: driverPhone, room_name: roomName });
     await driverContextService.invalidateTripParties(updated);
     return res.json(updated);
   } catch (err) {

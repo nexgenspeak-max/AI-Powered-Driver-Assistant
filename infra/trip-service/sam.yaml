@@ -35,6 +35,15 @@ Parameters:
     NoEcho: true
     Default: ""
 
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Must match the JwtSecret used by auth-service — tokens are verified with this value.
+
+  AuthServiceUrl:
+    Type: String
+    Description: Base URL of auth-service — driver profile/status now lives in its accounts table.
+
 Globals:
   Function:
     Runtime: nodejs20.x
@@ -49,6 +58,8 @@ Globals:
         LIVEKIT_API_SECRET: !Ref LivekitApiSecret
         SIP_TRUNK_ID: !Ref SipTrunkId
         GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
+        JWT_SECRET: !Ref JwtSecret
+        AUTH_SERVICE_URL: !Ref AuthServiceUrl
 
 Resources:
 
@@ -67,8 +78,6 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TripsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref DriversTable
       Events:
         Health:
           Type: Api
@@ -114,12 +123,6 @@ Resources:
             Path: /api/v1/trips/{trip_id}/notify
             Method: POST
         # ── Drivers ──────────────────────────────────────────────────
-        RegisterDriver:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers
-            Method: POST
         ListDrivers:
           Type: Api
           Properties:
@@ -144,6 +147,42 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/drivers/me/trips/current
             Method: GET
+        DriverMeContext:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/context
+            Method: GET
+        DriverMeProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/profile
+            Method: GET
+        DriverMeEarningsToday:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/earnings/today
+            Method: GET
+        DriverMeEarningsSummary:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/earnings/summary
+            Method: GET
+        DriverMeBonuses:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/bonuses
+            Method: GET
+        DriverMeStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/status
+            Method: PATCH
         GetDriver:
           Type: Api
           Properties:
@@ -233,33 +272,6 @@ Resources:
             - AttributeName: driver_phone
               KeyType: HASH
             - AttributeName: created_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-
-  DriversTable:
-    Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      TableName: !Sub "${Environment}-${AppName}-drivers"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: phone
-          AttributeType: S
-        - AttributeName: status
-          AttributeType: S
-        - AttributeName: registered_at
-          AttributeType: S
-      KeySchema:
-        - AttributeName: phone
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: status-registered_at-index
-          KeySchema:
-            - AttributeName: status
-              KeyType: HASH
-            - AttributeName: registered_at
               KeyType: RANGE
           Projection:
             ProjectionType: ALL

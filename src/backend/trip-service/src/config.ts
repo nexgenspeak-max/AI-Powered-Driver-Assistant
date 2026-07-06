@@ -12,6 +12,9 @@ export const config = {
   dynamodbTable: process.env.DYNAMODB_TABLE || 'local-driver-assistant-trips',
   awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
 
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me',
+  authServiceUrl: process.env.AUTH_SERVICE_URL || 'http://localhost:8003',
+
   livekitUrl: process.env.LIVEKIT_URL || '',
   livekitApiKey: process.env.LIVEKIT_API_KEY || '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET || '',

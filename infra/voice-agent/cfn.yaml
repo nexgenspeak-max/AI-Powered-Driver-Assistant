@@ -78,6 +78,16 @@ Parameters:
     Default: ""
     Description: Call-logger API Gateway URL for saving call records
 
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Must match the JwtSecret used by auth-service/trip-service — voice-agent signs its own service token with this to call trip-service.
+
+  TripServiceUrl:
+    Type: String
+    Default: ""
+    Description: trip-service API Gateway URL
+
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC to deploy ECS service into
@@ -221,6 +231,10 @@ Resources:
               Value: !Ref TwilioPhoneNumber
             - Name: CALL_LOGGER_URL
               Value: !Ref CallLoggerUrl
+            - Name: TRIP_SERVICE_URL
+              Value: !Ref TripServiceUrl
+            - Name: JWT_SECRET
+              Value: !Ref JwtSecret
 
   # ── ECS Service ──────────────────────────────────────────────
   ECSService:

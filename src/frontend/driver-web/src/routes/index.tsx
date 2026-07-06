@@ -2,10 +2,11 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { CircularProgress, Box } from '@mui/material'
 import { useAuthStore } from '../stores/authStore'
+import RegisterPage from '../pages/RegisterPage'
 
 const LoginPage     = lazy(() => import('../pages/LoginPage'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage'))
-
+const HomePage      = lazy(() => import('../pages/HomePage'))
 const Loader = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100dvh', bgcolor: '#1a1f36' }}>
     <CircularProgress sx={{ color: '#6c8aff' }} />
@@ -27,7 +28,9 @@ export function AppRoutes() {
     <Suspense fallback={<Loader />}>
       <Routes>
         <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-        <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+         <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

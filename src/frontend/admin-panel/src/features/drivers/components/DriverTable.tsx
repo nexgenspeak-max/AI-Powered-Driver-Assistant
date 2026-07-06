@@ -3,6 +3,7 @@ import {
   TableContainer, TableHead, TableRow, Typography,
 } from '@mui/material'
 import type { Driver } from '../../../types'
+import { PALETTE } from '../../../styles/palette'
 
 type Props = { drivers: Driver[]; loading: boolean }
 
@@ -11,7 +12,7 @@ export function DriverTable({ drivers, loading }: Props) {
     <TableContainer>
       <Table size="small">
         <TableHead>
-          <TableRow sx={{ bgcolor: '#f8f9fc' }}>
+          <TableRow sx={{ bgcolor: PALETTE.surface }}>
             {['Name', 'Phone', 'Status', 'Registered'].map((h, i) => (
               <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280' }}>{h}</TableCell>
             ))}
