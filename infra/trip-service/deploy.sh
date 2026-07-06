@@ -13,6 +13,15 @@ fi
 
 export $(grep -v '^#' "$ENV_FILE" | grep -v '^$' | xargs)
 
+if [[ -z "$JWT_SECRET" ]]; then
+  echo "❌ JWT_SECRET is empty in $ENV_FILE — must match auth-service's JWT_SECRET exactly."
+  exit 1
+fi
+if [[ -z "$AUTH_SERVICE_URL" ]]; then
+  echo "❌ AUTH_SERVICE_URL is empty in $ENV_FILE — deploy auth-service first and copy its ApiUrl here."
+  exit 1
+fi
+
 ENVIRONMENT="${ENV:-dev}"
 APP_NAME="driver-assistant"
 STACK_NAME="${ENVIRONMENT}-${APP_NAME}-trip-service"
@@ -38,6 +47,15 @@ sam build \
   --region "$REGION"
 
 echo "→ Deploying to AWS..."
+# SAM CLI's shorthand --parameter-overrides rejects "Key=" with an empty value,
+# so optional params are only included when set (falls back to the template's own Default).
+PARAM_OVERRIDES=(Environment="$ENVIRONMENT" AppName="$APP_NAME" JwtSecret="$JWT_SECRET" AuthServiceUrl="$AUTH_SERVICE_URL")
+[[ -n "$LIVEKIT_URL" ]] && PARAM_OVERRIDES+=(LivekitUrl="$LIVEKIT_URL")
+[[ -n "$LIVEKIT_API_KEY" ]] && PARAM_OVERRIDES+=(LivekitApiKey="$LIVEKIT_API_KEY")
+[[ -n "$LIVEKIT_API_SECRET" ]] && PARAM_OVERRIDES+=(LivekitApiSecret="$LIVEKIT_API_SECRET")
+[[ -n "$SIP_TRUNK_ID" ]] && PARAM_OVERRIDES+=(SipTrunkId="$SIP_TRUNK_ID")
+[[ -n "$GOOGLE_MAPS_API_KEY" ]] && PARAM_OVERRIDES+=(GoogleMapsApiKey="$GOOGLE_MAPS_API_KEY")
+
 sam deploy \
   --template-file "$SCRIPT_DIR/.aws-sam/build/template.yaml" \
   --stack-name "$STACK_NAME" \
@@ -46,14 +64,7 @@ sam deploy \
   --capabilities CAPABILITY_IAM \
   --no-fail-on-empty-changeset \
   $PROFILE \
-  --parameter-overrides \
-    Environment="$ENVIRONMENT" \
-    AppName="$APP_NAME" \
-    LivekitUrl="${LIVEKIT_URL:-}" \
-    LivekitApiKey="${LIVEKIT_API_KEY:-}" \
-    LivekitApiSecret="${LIVEKIT_API_SECRET:-}" \
-    SipTrunkId="${SIP_TRUNK_ID:-}" \
-    GoogleMapsApiKey="${GOOGLE_MAPS_API_KEY:-}"
+  --parameter-overrides "${PARAM_OVERRIDES[@]}"
 
 API_URL=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" \

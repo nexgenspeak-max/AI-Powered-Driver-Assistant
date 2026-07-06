@@ -7,6 +7,7 @@ import {
 import type { Driver, Trip, TripStatus } from '../../../types'
 import { DISPATCHABLE_STATUSES, TRIP_STATUSES } from '../../../constants/status'
 import { TripStatusChip } from './TripStatusChip'
+import { PALETTE } from '../../../styles/palette'
 
 type Props = {
   trips: Trip[]
@@ -24,7 +25,7 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
   return (
     <Box>
       {/* Status filter bar */}
-      <Box sx={{ p: 2, borderBottom: '1px solid #e8eaf0', display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <Box sx={{ p: 2, borderBottom: `1px solid ${PALETTE.border}`, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip
           label="All"
           size="small"
@@ -47,7 +48,7 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
       <TableContainer>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f8f9fc' }}>
+            <TableRow sx={{ bgcolor: PALETTE.surface }}>
               {['Trip ID', 'Customer', 'Pickup', 'Dropoff', 'Status', 'Assign Driver', 'Booked via', ''].map((h, i) => (
                 <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280' }}>{h}</TableCell>
               ))}

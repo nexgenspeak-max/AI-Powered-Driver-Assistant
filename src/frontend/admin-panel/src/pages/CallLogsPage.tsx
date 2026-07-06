@@ -10,6 +10,7 @@ import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk'
 import { useCallLogs, useCallLog } from '../features/call-logs/hooks/useCallLogs'
 import { formatDateTime } from '../utils/format'
 import type { CallLog } from '../types'
+import { PALETTE } from '../styles/palette'
 
 function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -32,7 +33,7 @@ function TranscriptDialog({ callId, open, onClose }: TranscriptDialogProps) {
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <PhoneInTalkIcon sx={{ color: '#6c8aff', fontSize: 20 }} />
+          <PhoneInTalkIcon sx={{ color: PALETTE.base, fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Call Transcript</Typography>
         </Stack>
         <IconButton size="small" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
@@ -44,7 +45,7 @@ function TranscriptDialog({ callId, open, onClose }: TranscriptDialogProps) {
         {isLoading && <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress size={24} /></Box>}
         {data && (
           <Stack spacing={2}>
-            <Box sx={{ p: 2, bgcolor: '#f8f9fc', borderRadius: 2 }}>
+            <Box sx={{ p: 2, bgcolor: PALETTE.surface, borderRadius: 2 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Summary</Typography>
               <Typography variant="body2">{data.summary || 'No summary available'}</Typography>
             </Box>
@@ -54,7 +55,7 @@ function TranscriptDialog({ callId, open, onClose }: TranscriptDialogProps) {
                 <Box key={i} sx={{ display: 'flex', justifyContent: turn.role === 'assistant' ? 'flex-start' : 'flex-end' }}>
                   <Box sx={{
                     maxWidth: '80%', px: 1.5, py: 1, borderRadius: 2,
-                    bgcolor: turn.role === 'assistant' ? '#f0f2ff' : '#6c8aff',
+                    bgcolor: turn.role === 'assistant' ? PALETTE.chipBg : PALETTE.base,
                     color: turn.role === 'assistant' ? 'text.primary' : '#fff',
                   }}>
                     <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mb: 0.25 }}>
@@ -107,17 +108,17 @@ export default function CallLogsPage() {
         </Typography>
       </Stack>
 
-      <Card elevation={0} sx={{ border: '1px solid #e8eaf0', borderRadius: 3 }}>
-        <Box sx={{ px: 3, py: 2, borderBottom: '1px solid #f0f2f8' }}>
+      <Card elevation={0} sx={{ borderRadius: 3 }}>
+        <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${PALETTE.border}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Call Logs</Typography>
         </Box>
 
         <TableContainer component={Paper} elevation={0}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f8f9fc' }}>
+              <TableRow sx={{ bgcolor: PALETTE.surface }}>
                 {['Caller', 'Started', 'Duration', 'Summary', ''].map((h, i) => (
-                  <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280', borderBottom: '1px solid #e8eaf0' }}>
+                  <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280', borderBottom: `1px solid ${PALETTE.border}` }}>
                     {h}
                   </TableCell>
                 ))}
@@ -140,7 +141,7 @@ export default function CallLogsPage() {
                 >
                   <TableCell>
                     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                      <Avatar sx={{ width: 28, height: 28, bgcolor: '#e8eaf0', color: '#6c8aff' }}>
+                      <Avatar sx={{ width: 28, height: 28, bgcolor: PALETTE.chipBg, color: PALETTE.base }}>
                         <PhoneInTalkIcon sx={{ fontSize: 14 }} />
                       </Avatar>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{log.caller}</Typography>
@@ -150,7 +151,7 @@ export default function CallLogsPage() {
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>{formatDateTime(log.started_at)}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip label={formatDuration(log.duration_seconds)} size="small" sx={{ fontSize: 11, bgcolor: '#f0f2ff', color: '#6c8aff' }} />
+                    <Chip label={formatDuration(log.duration_seconds)} size="small" sx={{ fontSize: 11, bgcolor: PALETTE.chipBg, color: PALETTE.base }} />
                   </TableCell>
                   <TableCell sx={{ maxWidth: 280 }}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -158,7 +159,7 @@ export default function CallLogsPage() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" sx={{ color: '#6c8aff' }}>View →</Typography>
+                    <Typography variant="caption" sx={{ color: PALETTE.base }}>View →</Typography>
                   </TableCell>
                 </TableRow>
               ))}
@@ -166,7 +167,7 @@ export default function CallLogsPage() {
           </Table>
         </TableContainer>
 
-        <Box sx={{ px: 3, py: 1.5, borderTop: '1px solid #f0f2f8' }}>
+        <Box sx={{ px: 3, py: 1.5, borderTop: `1px solid ${PALETTE.border}` }}>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>Auto-refreshes every 10s · Click a row to view transcript</Typography>
         </Box>
       </Card>

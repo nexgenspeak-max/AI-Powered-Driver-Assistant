@@ -5,6 +5,7 @@ All methods raise httpx.HTTPStatusError on non-2xx — callers handle it.
 import logging
 import httpx
 from app.config.settings import get_settings
+from app.services.service_token import auth_headers
 
 logger = logging.getLogger("voice-agent.backend-api")
 
@@ -20,7 +21,7 @@ async def get_customer_context(customer_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/customers/me/context",
-            headers={"X-Customer-Phone": customer_phone},
+            headers=auth_headers({"X-Customer-Phone": customer_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -32,6 +33,7 @@ async def get_customer_trips(customer_phone: str) -> list[dict]:
         r = await c.get(
             f"{_trip_base()}/api/v1/trips",
             params={"customer_phone": customer_phone},
+            headers=auth_headers(),
         )
         r.raise_for_status()
         return r.json()
@@ -41,7 +43,7 @@ async def get_upcoming_trips(driver_phone: str) -> list[dict]:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/trips/upcoming",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -52,7 +54,7 @@ async def get_driver_context(driver_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/context",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -62,7 +64,7 @@ async def get_current_trip(driver_phone: str) -> dict | None:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/trips/current",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         if r.status_code == 404:
             return None
@@ -75,6 +77,7 @@ async def update_trip_status(trip_id: str, status: str) -> dict:
         r = await c.patch(
             f"{_trip_base()}/api/v1/trips/{trip_id}",
             json={"status": status},
+            headers=auth_headers(),
         )
         r.raise_for_status()
         logger.info("trip %s → %s", trip_id, status)
@@ -83,7 +86,7 @@ async def update_trip_status(trip_id: str, status: str) -> dict:
 
 async def get_trip_location(trip_id: str) -> dict:
     async with httpx.AsyncClient(timeout=8) as c:
-        r = await c.get(f"{_trip_base()}/api/v1/trips/{trip_id}/location")
+        r = await c.get(f"{_trip_base()}/api/v1/trips/{trip_id}/location", headers=auth_headers())
         r.raise_for_status()
         return r.json()
 
@@ -96,6 +99,7 @@ async def confirm_trip_with_customer(trip_id: str) -> None:
                 "method": "sms",
                 "message": "Tài xế đã xác nhận chuyến đi và sẽ đến đón đúng giờ.",
             },
+            headers=auth_headers(),
         )
         r.raise_for_status()
 
@@ -128,6 +132,7 @@ async def start_call(
                 "customerName":   customer_name,
                 "pickupAddress":  pickup_address,
             },
+            headers=auth_headers(),
         )
         r.raise_for_status()
         return r.json()
@@ -137,7 +142,7 @@ async def get_latest_call_record(driver_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/calls/latest",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -154,6 +159,7 @@ async def complete_background_call(
                 "callId":      call_id,
                 "summary":     summary,
             },
+            headers=auth_headers(),
         )
         r.raise_for_status()
 
@@ -169,7 +175,7 @@ async def get_latest_call_summary(driver_phone: str) -> str:
     if not call_id:
         return ""
     async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.post(f"{_trip_base()}/api/v1/calls/{call_id}/summary")
+        r = await c.post(f"{_trip_base()}/api/v1/calls/{call_id}/summary", headers=auth_headers())
         if r.status_code == 404:
             return ""
         r.raise_for_status()
@@ -190,6 +196,7 @@ async def create_reminder(
                 "remindBeforeMinutes":  remind_before_minutes,
                 "type":                 "PICKUP_REMINDER",
             },
+            headers=auth_headers(),
         )
         r.raise_for_status()
         return r.json()
@@ -202,7 +209,7 @@ async def get_driver_profile(driver_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/profile",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -213,7 +220,7 @@ async def get_today_earnings(driver_phone: str) -> dict:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/earnings/today",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -224,7 +231,7 @@ async def get_earnings_summary(driver_phone: str, period: str = "week") -> dict:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/earnings/summary",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
             params={"period": period},
         )
         r.raise_for_status()
@@ -236,7 +243,7 @@ async def get_active_bonuses(driver_phone: str) -> list[dict]:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.get(
             f"{_trip_base()}/api/v1/drivers/me/bonuses",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
         return r.json()
@@ -247,7 +254,7 @@ async def set_driver_online_status(driver_phone: str, online: bool) -> None:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.patch(
             f"{_trip_base()}/api/v1/drivers/me/status",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
             json={"online": online},
         )
         r.raise_for_status()
@@ -260,7 +267,7 @@ async def report_no_show(trip_id: str, driver_phone: str) -> None:
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.post(
             f"{_trip_base()}/api/v1/trips/{trip_id}/no-show",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
         )
         r.raise_for_status()
 
@@ -272,7 +279,7 @@ async def report_trip_issue(
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.post(
             f"{_trip_base()}/api/v1/trips/{trip_id}/issues",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
             json={"issueType": issue_type, "description": description},
         )
         r.raise_for_status()
@@ -283,7 +290,7 @@ async def extend_wait_time(trip_id: str, driver_phone: str, extra_minutes: int) 
     async with httpx.AsyncClient(timeout=8) as c:
         r = await c.post(
             f"{_trip_base()}/api/v1/trips/{trip_id}/extend-wait",
-            headers={"X-Driver-Phone": driver_phone},
+            headers=auth_headers({"X-Driver-Phone": driver_phone}),
             json={"extraMinutes": extra_minutes},
         )
         r.raise_for_status()

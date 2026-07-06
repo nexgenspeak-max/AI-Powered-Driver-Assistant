@@ -10,6 +10,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk'
 import { ROUTES, PAGE_TITLES } from '../constants'
+import { PALETTE } from '../styles/palette'
 
 const DRAWER_WIDTH = 240
 
@@ -28,20 +29,28 @@ function Sidebar() {
       sx={{
         width: DRAWER_WIDTH,
         flexShrink: 0,
-        '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', bgcolor: '#1a1f36', color: '#fff', borderRight: 'none' },
+        '& .MuiDrawer-paper': {
+          width: DRAWER_WIDTH, boxSizing: 'border-box', color: '#fff', borderRight: 'none',
+          background: `linear-gradient(180deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 100%)`,
+        },
       }}
     >
       <Box sx={{ px: 3, py: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <DirectionsCarIcon sx={{ color: '#6c8aff', fontSize: 28 }} />
+        <Box sx={{
+          width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: `linear-gradient(135deg, ${PALETTE.light} 0%, ${PALETTE.mid} 100%)`,
+        }}>
+          <DirectionsCarIcon sx={{ color: '#fff', fontSize: 20 }} />
+        </Box>
         <Box>
           <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>Driver Assistant</Typography>
-          <Typography variant="caption" sx={{ color: '#8b9abf' }}>Admin Panel</Typography>
+          <Typography variant="caption" sx={{ color: PALETTE.light }}>Admin Panel</Typography>
         </Box>
       </Box>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 2 }} />
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
 
-      <Typography variant="caption" sx={{ color: '#8b9abf', px: 3, pt: 2.5, pb: 0.5, letterSpacing: 1, textTransform: 'uppercase', display: 'block' }}>
+      <Typography variant="caption" sx={{ color: PALETTE.light, px: 3, pt: 2.5, pb: 0.5, letterSpacing: 1, textTransform: 'uppercase', display: 'block' }}>
         Main
       </Typography>
 
@@ -55,23 +64,23 @@ function Sidebar() {
               to={to}
               sx={{
                 borderRadius: 2, mb: 0.5,
-                bgcolor: active ? 'rgba(108,138,255,0.15)' : 'transparent',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' },
+                bgcolor: active ? 'rgba(255,255,255,0.14)' : 'transparent',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 36, color: active ? '#6c8aff' : '#8b9abf' }}>{icon}</ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 36, color: active ? '#fff' : PALETTE.light }}>{icon}</ListItemIcon>
               <ListItemText
                 primary={label}
-                slotProps={{ primary: { style: { fontSize: 14, fontWeight: active ? 600 : 400, color: active ? '#fff' : '#c0cae0' } } }}
+                slotProps={{ primary: { style: { fontSize: 14, fontWeight: active ? 600 : 400, color: active ? '#fff' : '#d9cdec' } } }}
               />
-              {active && <Box sx={{ width: 3, height: 20, bgcolor: '#6c8aff', borderRadius: 2 }} />}
+              {active && <Box sx={{ width: 3, height: 20, bgcolor: PALETTE.light, borderRadius: 2 }} />}
             </ListItemButton>
           )
         })}
       </List>
 
-      <Box sx={{ mt: 'auto', px: 3, py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Typography variant="caption" sx={{ color: '#8b9abf' }}>v1.0.0 · Local dev</Typography>
+      <Box sx={{ mt: 'auto', px: 3, py: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <Typography variant="caption" sx={{ color: PALETTE.light }}>v1.0.0 · Local dev</Typography>
       </Box>
     </Drawer>
   )
@@ -85,14 +94,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar />
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <AppBar position="static" elevation={0} sx={{ bgcolor: '#fff', borderBottom: '1px solid #e8eaf0', color: 'inherit' }}>
-          <Toolbar sx={{ minHeight: '56px !important', px: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>{title}</Typography>
-            <IconButton size="small" sx={{ mr: 1, color: 'text.secondary' }}>
+        <AppBar position="static" elevation={0} sx={{ bgcolor: '#fff', boxShadow: `0 1px 3px ${PALETTE.base}14`, color: 'inherit' }}>
+          <Toolbar sx={{ minHeight: '60px !important', px: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, flex: 1 }}>{title}</Typography>
+            <IconButton size="small" sx={{ mr: 1, color: 'text.secondary', '&:hover': { bgcolor: PALETTE.chipBg } }}>
               <NotificationsNoneIcon />
             </IconButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: 0.75, borderRadius: 2, '&:hover': { bgcolor: '#f5f6fa' } }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#6c8aff', fontSize: 14, fontWeight: 700 }}>A</Avatar>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: 0.75, borderRadius: 2, '&:hover': { bgcolor: PALETTE.pale } }}>
+              <Avatar sx={{
+                width: 32, height: 32, fontSize: 14, fontWeight: 700,
+                background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
+              }}>A</Avatar>
               <Box>
                 <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Admin</Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>Dispatcher</Typography>

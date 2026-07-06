@@ -1,74 +1,36 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  GetCommand,
-  ScanCommand,
-  UpdateCommand,
-} from '@aws-sdk/lib-dynamodb';
-import { config } from '../config';
-
-const driversTable = config.dynamodbTable.replace('-trips', '-drivers');
-const docClient = DynamoDBDocumentClient.from(
-  new DynamoDBClient({ region: config.awsRegion })
-);
-
-function now(): string {
-  return new Date().toISOString();
-}
+import { authServiceClient } from './authServiceClient';
 
 export interface Driver {
+  id: string;
   phone: string;
   name: string;
-  fcm_token: string;
   status: string;
-  registered_at: string;
+  fcm_token?: string;
+  vehicle_type?: string;
+  vehicle_plate?: string;
+  vehicle_name?: string;
+  created_at: string;
   updated_at: string;
 }
 
-export async function register(phone: string, name: string, fcmToken = ''): Promise<Driver> {
-  const driver: Driver = {
-    phone, name, fcm_token: fcmToken,
-    status: 'offline',
-    registered_at: now(),
-    updated_at: now(),
-  };
-  await docClient.send(new PutCommand({ TableName: driversTable, Item: driver }));
-  return driver;
-}
+// Driver accounts are created exclusively through auth-service's /auth/register —
+// trip-service only reads/updates the operational fields on an existing account.
 
 export async function get(phone: string): Promise<Driver | null> {
-  const result = await docClient.send(new GetCommand({
-    TableName: driversTable,
-    Key: { phone },
-  }));
-  return (result.Item as Driver) ?? null;
+  const { data } = await authServiceClient.getByPhone<Driver & { role: string }>(phone);
+  return data && data.role === 'driver' ? data : null;
 }
 
 export async function update(phone: string, fields: Record<string, unknown>): Promise<Driver | null> {
-  const data: Record<string, unknown> = { ...fields, updated_at: now() };
-  const names: Record<string, string> = {};
-  const values: Record<string, unknown> = {};
-  for (const k of Object.keys(data)) {
-    names[`#${k}`] = k;
-    values[`:${k}`] = data[k];
-  }
-  const setExpr = 'SET ' + Object.keys(data).map(k => `#${k} = :${k}`).join(', ');
-
-  const result = await docClient.send(new UpdateCommand({
-    TableName: driversTable,
-    Key: { phone },
-    UpdateExpression: setExpr,
-    ExpressionAttributeNames: names,
-    ExpressionAttributeValues: values,
-    ReturnValues: 'ALL_NEW',
-  }));
-  return (result.Attributes as Driver) ?? null;
+  const existing = await get(phone);
+  if (!existing) return null;
+  const { data } = await authServiceClient.update<Driver>(existing.id, fields);
+  return data;
 }
 
 export async function listAll(): Promise<Driver[]> {
-  const result = await docClient.send(new ScanCommand({ TableName: driversTable }));
-  const items = (result.Items as Driver[]) ?? [];
+  const { data } = await authServiceClient.listByRole<Driver[]>('driver');
+  const items = data ?? [];
   return items.sort((a, b) => a.name.localeCompare(b.name));
 }
 

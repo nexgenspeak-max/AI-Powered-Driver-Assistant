@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # ── Downstream services ───────────────────────────────────────────────────
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
+    jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True
