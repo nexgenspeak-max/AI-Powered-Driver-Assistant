@@ -156,6 +156,14 @@ def get_active_customer_trip(userdata: dict) -> dict | None:
     return get(userdata, "active_trip")
 
 
+def add_customer_trip(userdata: dict, trip: dict) -> None:
+    """Register a newly booked trip so later tool calls in the same session see it immediately."""
+    ctx = userdata.setdefault("context", {})
+    ctx["active_trip"] = trip
+    trips = ctx.setdefault("trips", [])
+    trips.insert(0, trip)
+
+
 def resolve_driver_trip(userdata: dict) -> dict | None:
     """Current trip, else first upcoming, else outbound room trip metadata."""
     current = get_current_trip(userdata)

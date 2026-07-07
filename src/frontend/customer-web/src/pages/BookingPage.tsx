@@ -6,7 +6,7 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import { useBookTrip } from '../features/trips/hooks/useBookTrip'
 import { useBookingStore } from '../stores/bookingStore'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../stores/authStore'
+import { useLogout } from '../features/auth/hooks/useLogout'
 
 const schema = z.object({
   customer_name:   z.string().min(2, 'Name required'),
@@ -19,7 +19,7 @@ type FormValues = z.infer<typeof schema>
 export default function BookingPage() {
   const navigate = useNavigate()
   const activeTripId = useBookingStore(s => s.activeTripId)
-  const logout = useAuthStore(s => s.logout)
+  const logout = useLogout()
   const { mutate: book, isPending, isError, error } = useBookTrip()
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({

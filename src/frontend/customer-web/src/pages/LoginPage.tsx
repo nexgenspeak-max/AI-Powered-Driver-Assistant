@@ -47,10 +47,11 @@ export default function LoginPage() {
         id: user.id,
         name: user.name,
         phone: user.phone ?? '',
-        status: user.status === 'locked' ? 'offline' : user.status,
+        status: 'online',
         created_at: user.created_at,
         updated_at: user.updated_at,
       })
+      authService.setStatus(user.id, 'online').catch(() => {})
       navigate('/')
     },
   })

@@ -11,6 +11,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import TranslateIcon from '@mui/icons-material/Translate'
 import CheckIcon from '@mui/icons-material/Check'
 import { useAuthStore } from '../../../stores/authStore'
+import { useLogout } from '../../auth/hooks/useLogout'
 import { PALETTE } from '../../../styles/palette'
 
 const LANGUAGES = [
@@ -25,7 +26,7 @@ type HeaderComponentProps = {
 export default function HeaderComponent({ onSearchAddress }: HeaderComponentProps) {
   const navigate = useNavigate()
   const customer = useAuthStore(s => s.customer)
-  const logout = useAuthStore(s => s.logout)
+  const logout = useLogout()
 
   const [address, setAddress] = useState('')
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null)

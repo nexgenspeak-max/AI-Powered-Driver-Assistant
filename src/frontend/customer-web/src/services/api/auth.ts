@@ -30,4 +30,7 @@ export const authService = {
 
   refresh: (refresh_token: string) =>
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
+
+  setStatus: (id: string, status: 'online' | 'offline') =>
+    authClient.patch(`/accounts/${id}`, { status }).then(r => r.data),
 }

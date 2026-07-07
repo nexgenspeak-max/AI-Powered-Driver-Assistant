@@ -202,3 +202,30 @@ export async function startCustomerCall(opts: {
     sip_identity: lk.sipIdentity,
   };
 }
+
+/** Customer-initiated call: dial the driver's phone into the customer's LiveKit room. */
+export async function startDriverCall(opts: {
+  driverPhone: string;
+  customerPhone: string;
+  tripId: string;
+  roomName: string;
+}) {
+  if (!opts.roomName?.trim()) {
+    throw new Error('roomName is required to call the driver');
+  }
+  const [dialTo, overrideNote] = resolveDialTo(opts.driverPhone);
+  const lk = await dialCustomerViaLiveKit(opts.roomName.trim(), dialTo);
+
+  return {
+    call_id: lk.callId,
+    status: 'initiated',
+    mode: 'bridge',
+    dialed_number: dialTo,
+    driver_phone: normalizePhone(opts.driverPhone),
+    override_note: overrideNote,
+    trip_id: opts.tripId,
+    customer_phone: normalizePhone(opts.customerPhone),
+    livekit_room: opts.roomName.trim(),
+    sip_identity: lk.sipIdentity,
+  };
+}

@@ -77,14 +77,19 @@ export async function getByPhone(phone: string, role?: Role): Promise<User | nul
   return items[0] ?? null;
 }
 
-export async function getByEmail(email: string): Promise<User | null> {
+// Same-email-different-role is possible too (e.g. a driver and an admin account
+// sharing an email) — the email-index has no sort key, so all matches come back
+// and must be narrowed down by role in-app, same as getByPhone.
+export async function getByEmail(email: string, role?: Role): Promise<User | null> {
   const result = await docClient.send(new QueryCommand({
     TableName: config.dynamodbTable,
     IndexName: 'email-index',
     KeyConditionExpression: 'email = :email',
     ExpressionAttributeValues: { ':email': email },
   }));
-  return (result.Items?.[0] as User) ?? null;
+  const items = (result.Items as User[]) ?? [];
+  if (role) return items.find(u => u.role === role) ?? null;
+  return items[0] ?? null;
 }
 
 export async function listByRole(role: Role): Promise<User[]> {

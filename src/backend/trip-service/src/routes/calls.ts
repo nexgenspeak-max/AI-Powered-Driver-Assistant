@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as callService from '../services/callService';
+import * as tripService from '../services/tripService';
 import { cacheGet, driverLastCallKey } from '../cache/redis';
 import { config } from '../config';
 
@@ -40,6 +41,31 @@ router.post('/start', async (req: Request, res: Response) => {
     const msg = String(err);
     if (msg.includes('customer phone')) return res.status(400).json({ detail: msg });
     return res.status(503).json({ detail: msg });
+  }
+});
+
+router.post('/call-driver', async (req: Request, res: Response) => {
+  try {
+    const { tripId, roomName, customerPhone = '' } = req.body;
+    if (!tripId) return res.status(400).json({ detail: 'tripId is required' });
+    if (!roomName) return res.status(400).json({ detail: 'roomName is required' });
+
+    const trip = await tripService.get(tripId as string);
+    if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (!trip.driver_phone) return res.status(409).json({ detail: 'No driver assigned to this trip yet' });
+    if (trip.status !== 'confirmed') {
+      return res.status(409).json({ detail: `Driver has not confirmed this trip yet (status=${trip.status})` });
+    }
+
+    const result = await callService.startDriverCall({
+      driverPhone: trip.driver_phone,
+      customerPhone: (customerPhone as string) || trip.customer_phone,
+      tripId: tripId as string,
+      roomName: roomName as string,
+    });
+    return res.json(result);
+  } catch (err) {
+    return res.status(503).json({ detail: String(err) });
   }
 });
 

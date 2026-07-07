@@ -14,12 +14,22 @@ const ALLOWED_STATUSES = new Set([
   'ARRIVED_PICKUP', 'PICKED_UP', 'COMPLETED',
 ]);
 
+// Once a trip lands in one of these, it's done — no more status changes.
+// The customer/driver must book a new trip instead.
+const CANCELLED_STATUSES = new Set(['rejected', 'cancelled', 'CANCELLED_BY_DRIVER']);
+
+// TODO(temporary): there's no real driver-matching/dispatch logic yet, so every
+// booking with no explicit driver_phone is auto-assigned to this hardcoded number.
+// Replace with real nearest-available-driver selection once that's built.
+
+
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
     const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address, config.googleMapsApiKey);
     const trip = await tripService.create({
       ...body,
+      driver_phone: body.driver_phone || config.phoneDriver,
       // Link the trip back to whichever authenticated account created it.
       ...(req.user ? { id_account: req.user.sub } : {}),
       distance_km: route.distance_km ?? 0,
@@ -27,8 +37,10 @@ router.post('/', async (req: Request, res: Response) => {
       traffic_note: route.traffic_note ?? '',
       route_summary: route.summary ?? '',
     });
-    await driverContextService.invalidateTripParties(trip);
-    return res.status(201).json(trip);
+    // Mark it 'notified' right away so it shows up on the assigned driver's dashboard.
+    const notified = await tripService.updateStatus(trip.trip_id, 'notified');
+    await driverContextService.invalidateTripParties(notified ?? trip);
+    return res.status(201).json(notified ?? trip);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }
@@ -69,6 +81,11 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     }
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (CANCELLED_STATUSES.has(trip.status)) {
+      return res.status(409).json({
+        detail: `Trip already ${trip.status} — cannot change status anymore. Book a new trip instead.`,
+      });
+    }
     const updated = await tripService.updateStatus(req.params.tripId, status);
     await driverContextService.invalidateTripParties(updated);
     return res.json(updated);

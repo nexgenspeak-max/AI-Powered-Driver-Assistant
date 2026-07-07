@@ -30,4 +30,5 @@ export const config = {
 
   redisUrl: process.env.REDIS_URL || '',
   cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 120),
+  phoneDriver: process.env.DEFAULT_DRIVER_PHONE,
 };

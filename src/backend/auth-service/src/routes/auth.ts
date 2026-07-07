@@ -54,7 +54,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     if (role === 'admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required for admin' });
-      if (await userService.getByEmail(email)) return res.status(409).json({ detail: 'Email already registered' });
+      if (await userService.getByEmail(email, 'admin')) return res.status(409).json({ detail: 'Email already registered' });
       const password_hash = await bcrypt.hash(password, 10);
       const user = await userService.create({
         role, name, email, password_hash, permissions: DEFAULT_PERMISSIONS.admin,
@@ -101,7 +101,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     if (role === 'admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required' });
-      const user = await userService.getByEmail(email);
+      const user = await userService.getByEmail(email, 'admin');
       if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).json({ detail: 'Invalid credentials' });
       }

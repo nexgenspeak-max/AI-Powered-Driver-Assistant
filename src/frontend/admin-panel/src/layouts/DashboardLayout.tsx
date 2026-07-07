@@ -1,23 +1,29 @@
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import {
   Box, Drawer, AppBar, Toolbar, Typography, List, ListItemButton,
-  ListItemIcon, ListItemText, Avatar, IconButton, Divider,
+  ListItemIcon, ListItemText, Avatar, IconButton, Divider, Tooltip,
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import AddIcon from '@mui/icons-material/Add'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
+import LocalTaxiIcon from '@mui/icons-material/LocalTaxi';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { ROUTES, PAGE_TITLES } from '../constants'
 import { PALETTE } from '../styles/palette'
+import { useAuthStore } from '../stores/authStore'
+
 
 const DRAWER_WIDTH = 240
 
 const NAV_ITEMS = [
   { to: ROUTES.TRIP_BOARD,  icon: <DashboardIcon fontSize="small" />,   label: 'Trip Board' },
   { to: ROUTES.CREATE_TRIP, icon: <AddIcon fontSize="small" />,          label: 'New Trip'   },
-  { to: ROUTES.DRIVERS,     icon: <PeopleAltIcon fontSize="small" />,    label: 'Drivers'    },
+  { to: ROUTES.DRIVERS,     icon: <LocalTaxiIcon fontSize="small" />,    label: 'Drivers'    },
+  { to: ROUTES.CUSTOMERS,     icon: <PeopleAltIcon fontSize="small" />,    label: 'Customer'    },
+
   { to: ROUTES.CALL_LOGS,   icon: <PhoneInTalkIcon fontSize="small" />,  label: 'Call Logs'  },
 ]
 
@@ -88,7 +94,17 @@ function Sidebar() {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const title = PAGE_TITLES[pathname] ?? 'Admin'
+  const admin = useAuthStore(s => s.admin)
+  const logout = useAuthStore(s => s.logout)
+
+  const handleLogout = () => {
+    logout()
+    navigate(ROUTES.LOGIN)
+  }
+
+  const initial = admin?.name ? admin.name.trim().charAt(0).toUpperCase() : 'A'
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -100,16 +116,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <IconButton size="small" sx={{ mr: 1, color: 'text.secondary', '&:hover': { bgcolor: PALETTE.chipBg } }}>
               <NotificationsNoneIcon />
             </IconButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', px: 1.5, py: 0.75, borderRadius: 2, '&:hover': { bgcolor: PALETTE.pale } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, borderRadius: 2 }}>
               <Avatar sx={{
                 width: 32, height: 32, fontSize: 14, fontWeight: 700,
                 background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
-              }}>A</Avatar>
+              }}>{initial}</Avatar>
               <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Admin</Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Dispatcher</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{admin?.name ?? 'Admin'}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>{admin?.email ?? 'Dispatcher'}</Typography>
               </Box>
             </Box>
+            <Tooltip title="Đăng xuất">
+              <IconButton size="small" onClick={handleLogout} sx={{ ml: 0.5, color: 'text.secondary', '&:hover': { bgcolor: PALETTE.chipBg } }}>
+                <LogoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Toolbar>
         </AppBar>
         <Box component="main" sx={{ flex: 1, p: 3, overflow: 'auto' }}>{children}</Box>

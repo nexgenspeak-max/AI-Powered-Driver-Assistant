@@ -16,6 +16,36 @@ def _trip_base() -> str:
 
 # ── Trips ─────────────────────────────────────────────────────────────────────
 
+async def create_trip(
+    customer_name: str,
+    customer_phone: str,
+    pickup_address: str,
+    dropoff_address: str,
+    pickup_time: str = "",
+) -> dict:
+    """Book a new trip on behalf of a customer talking to the voice agent.
+
+    pickup_time is ISO 8601 (Vietnam time) when the customer scheduled the
+    trip ahead of time; empty means the trip is booked for right now.
+    """
+    async with httpx.AsyncClient(timeout=15) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/trips",
+            json={
+                "customer_name":   customer_name,
+                "customer_phone":  customer_phone,
+                "pickup_address":  pickup_address,
+                "dropoff_address": dropoff_address,
+                "pickup_time":     pickup_time,
+                "booked_via":      "voice",
+            },
+            headers=auth_headers(),
+        )
+        r.raise_for_status()
+        logger.info("trip booked via voice-agent | customer=%s", customer_phone)
+        return r.json()
+
+
 async def get_customer_context(customer_phone: str) -> dict:
     """Single prefetch endpoint — trips and active trip."""
     async with httpx.AsyncClient(timeout=10) as c:
@@ -131,6 +161,22 @@ async def start_call(
                 "lang":           lang,
                 "customerName":   customer_name,
                 "pickupAddress":  pickup_address,
+            },
+            headers=auth_headers(),
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def call_driver(customer_phone: str, trip_id: str, room_name: str) -> dict:
+    """Customer-initiated call: dial the trip's driver into the customer's room."""
+    async with httpx.AsyncClient(timeout=25) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/calls/call-driver",
+            json={
+                "customerPhone": customer_phone,
+                "tripId":        trip_id,
+                "roomName":      room_name,
             },
             headers=auth_headers(),
         )
