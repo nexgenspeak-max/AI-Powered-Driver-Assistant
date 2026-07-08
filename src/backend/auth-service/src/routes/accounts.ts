@@ -25,7 +25,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 
 router.get('/phone/:phone', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await userService.getByPhone(req.params.phone);
+    const role = req.query.role as userService.Role | undefined;
+    const user = await userService.getByPhone(req.params.phone, role);
     if (!user) return res.status(404).json({ detail: 'Account not found' });
     return res.json(sanitize(user));
   } catch (err) {

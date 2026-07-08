@@ -1,12 +1,12 @@
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typography } from '@mui/material'
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
+import { Box, Button, Card, CardContent, CircularProgress, Container, Stack, TextField, Typography } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
 import { useBookTrip } from '../features/trips/hooks/useBookTrip'
 import { useBookingStore } from '../stores/bookingStore'
-import { useNavigate } from 'react-router-dom'
-import { useLogout } from '../features/auth/hooks/useLogout'
+import HeaderComponent from '../features/home/components/HeaderComponent'
+import { PALETTE } from '../styles/palette'
 
 const schema = z.object({
   customer_name:   z.string().min(2, 'Name required'),
@@ -19,7 +19,6 @@ type FormValues = z.infer<typeof schema>
 export default function BookingPage() {
   const navigate = useNavigate()
   const activeTripId = useBookingStore(s => s.activeTripId)
-  const logout = useLogout()
   const { mutate: book, isPending, isError, error } = useBookTrip()
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({
@@ -32,18 +31,17 @@ export default function BookingPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100dvh', bgcolor: '#1a1f36', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{ px: 3, pt: 6, pb: 3 }}>
-        <Stack sx={{direction:"row" ,alignItems:"center", gap:1.5 ,mb:0.5}}>
-          <DirectionsCarIcon sx={{ color: '#6c8aff', fontSize: 28 }} />
-          <Typography variant="h5" sx ={{fontWeight: 700, color: 'white'}}>Book a Ride</Typography>
-        </Stack>
-        <Typography variant="body2" color="grey.400">Enter your trip details below</Typography>
-      </Box>
+    <Box sx={{ minHeight: '100dvh', bgcolor: PALETTE.pale, display: 'flex', flexDirection: 'column' }}>
+      <HeaderComponent />
 
-      {/* Form */}
-      <Box sx={{ flex: 1, bgcolor: '#f0f2f8', borderRadius: '24px 24px 0 0', p: 3 }}>
+      <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 6 } }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: PALETTE.ink, mb: 0.5 }}>
+          Book a Ride
+        </Typography>
+        <Typography variant="body2" sx={{ color: PALETTE.gray, mb: 3 }}>
+          Enter your trip details below
+        </Typography>
+
         {activeTripId && (
           <Card sx={{ mb: 2, bgcolor: '#e8f5e9', border: '1px solid #4ade80' }}>
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -91,9 +89,7 @@ export default function BookingPage() {
             </Stack>
           </CardContent>
         </Card>
-      </Box>
-      <Button onClick={() => logout()}>Go to Login</Button>
+      </Container>
     </Box>
-    
   )
 }

@@ -7,7 +7,7 @@ import * as driverContextService from '../services/driverContextService';
 const router = Router();
 
 const UPCOMING_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed']);
-const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'ARRIVED_PICKUP', 'PICKED_UP']);
+const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
 
 function phoneVariants(phone: string): string[] {
   const p = phone.trim();

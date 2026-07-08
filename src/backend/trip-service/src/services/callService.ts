@@ -32,6 +32,7 @@ function resolveDialTo(customerPhone: string): [string, string | null] {
 async function dialCustomerViaLiveKit(
   roomName: string,
   dialTo: string,
+  identityPrefix: 'customer' | 'driver' = 'customer',
 ): Promise<{ callId: string; sipIdentity: string }> {
   if (!config.livekitApiKey || !config.livekitApiSecret) {
     throw new Error('LIVEKIT_API_KEY and LIVEKIT_API_SECRET required for in-room customer call');
@@ -40,7 +41,7 @@ async function dialCustomerViaLiveKit(
     throw new Error('SIP_TRUNK_ID required for in-room customer call');
   }
 
-  const sipIdentity = `customer-${dialTo.replace(/\D/g, '')}`;
+  const sipIdentity = `${identityPrefix}-${dialTo.replace(/\D/g, '')}`;
   const sipClient = new SipClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
   await sipClient.createSipParticipant(config.sipTrunkId, dialTo, roomName, {
     participantIdentity: sipIdentity,
@@ -214,7 +215,7 @@ export async function startDriverCall(opts: {
     throw new Error('roomName is required to call the driver');
   }
   const [dialTo, overrideNote] = resolveDialTo(opts.driverPhone);
-  const lk = await dialCustomerViaLiveKit(opts.roomName.trim(), dialTo);
+  const lk = await dialCustomerViaLiveKit(opts.roomName.trim(), dialTo, 'driver');
 
   return {
     call_id: lk.callId,

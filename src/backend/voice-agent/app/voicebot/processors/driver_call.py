@@ -44,6 +44,14 @@ async def start_bridge_call_to_driver(
         logger.error("call_driver failed", exc_info=True)
         return _dial_failed(lang)
 
+    call_id = str(result.get("call_id") or "")
+    context.userdata["customer_call"] = {
+        "call_id": call_id,
+        "trip_id": trip.get("trip_id", ""),
+        "sip_identity": result.get("sip_identity", ""),
+        "room_name": room_name,
+        "mode": "bridge",
+    }
     context.userdata["bridge_call_active"] = True
     context.userdata["driver_call_active"] = True
 

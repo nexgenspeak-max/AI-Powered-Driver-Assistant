@@ -1,9 +1,16 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Anchored to this file's location (not the process's CWD) so the right .env
+# still loads no matter which directory the agent (or a spawned job process)
+# was launched from — a CWD-relative path here previously caused job
+# processes to silently miss envs/.env.local and fall back to the hardcoded
+# defaults below (e.g. a different ElevenLabs voice_id than configured).
+_BASE_DIR = Path(__file__).resolve().parents[2]
 _ENV = os.getenv("ENV", "local")
-_ENV_FILE = f"envs/.env.{_ENV}"
+_ENV_FILE = _BASE_DIR / "envs" / f".env.{_ENV}"
 
 
 class Settings(BaseSettings):

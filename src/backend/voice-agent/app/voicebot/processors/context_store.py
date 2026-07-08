@@ -52,7 +52,7 @@ def load_customer_trips(userdata: dict, trips: list[dict]) -> None:
 def _customer_payload_from_trips(trips: list[dict]) -> dict:
     active = [
         t for t in trips
-        if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "CANCELLED_BY_DRIVER")
+        if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "cancelled_by_driver")
     ]
     return {
         "trips": trips,

@@ -66,7 +66,7 @@ class CustomerSupportToolsMixin:
 
         active = [
             t for t in trips
-            if t.get("status") not in ("completed", "rejected", "no_answer")
+            if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "cancelled_by_driver")
         ]
         if not active:
             return "Bạn hiện không có chuyến đi nào đang hoạt động."
@@ -114,7 +114,7 @@ class CustomerSupportToolsMixin:
 
         trip = active[0]
         try:
-            await backend_api.update_trip_status(trip["trip_id"], "rejected")
+            await backend_api.update_trip_status(trip["trip_id"], "cancelled")
         except Exception:
             logger.error("cancel_my_trip — update failed", exc_info=True)
             return "Không thể hủy chuyến lúc này. Vui lòng thử lại."

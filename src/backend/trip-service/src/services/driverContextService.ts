@@ -4,7 +4,7 @@ import * as earningsService from './earningsService';
 import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey } from '../cache/redis';
 
 const UPCOMING = new Set(['pending', 'notified', 'calling', 'confirmed']);
-const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'ARRIVED_PICKUP', 'PICKED_UP']);
+const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
 
 function phoneVariants(phone: string): string[] {
   const p = phone.trim();
@@ -73,7 +73,7 @@ export async function invalidateDriverContext(driverPhone: string) {
 export async function buildCustomerContext(customerPhone: string) {
   const trips = await tripService.listByCustomer(customerPhone, 20);
   const active = trips.filter(
-    t => !['completed', 'rejected', 'no_answer', 'cancelled', 'CANCELLED_BY_DRIVER'].includes(t.status),
+    t => !['completed', 'rejected', 'no_answer', 'cancelled', 'cancelled_by_driver'].includes(t.status),
   );
   return {
     customer_phone: customerPhone,

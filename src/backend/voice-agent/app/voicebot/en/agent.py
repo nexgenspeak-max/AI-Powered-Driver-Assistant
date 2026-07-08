@@ -126,12 +126,19 @@ class DriverAgent(Agent):
 class CustomerAgent(Agent):
     """Handles inbound voice sessions from English-speaking customers."""
 
-    def __init__(self, customer_phone: str = "") -> None:
+    def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone
+        self._resume_summary = resume_summary
         super().__init__(
             instructions=CUSTOMER_SUPPORT_PROMPT + "\n" + TOOLS_MAPPING_PROMPT,
             tools=_CUSTOMER_TOOLS,
         )
 
     async def on_enter(self) -> None:
+        if self._resume_summary:
+            await self.session.say(
+                f"The call with the driver has ended. {self._resume_summary}",
+                allow_interruptions=False,
+            )
+            return
         await self.session.say(GREETING_CUSTOMER, allow_interruptions=False)

@@ -155,7 +155,7 @@ class TripToolsMixin:
         if not trip_id:
             return "Không có yêu cầu hủy chuyến đang chờ xác nhận."
         try:
-            await backend_api.update_trip_status(trip_id, "CANCELLED_BY_DRIVER")
+            await backend_api.update_trip_status(trip_id, "cancelled_by_driver")
             self._pending_cancel_trip_id = None
         except Exception:
             logger.error("confirm_cancel_trip failed", exc_info=True)

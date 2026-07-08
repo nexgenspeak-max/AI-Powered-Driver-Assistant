@@ -49,6 +49,15 @@ def build_driver_agent(userdata: dict, summary: str = ""):
     )
 
 
+def build_customer_agent(userdata: dict, summary: str = ""):
+    lang = userdata.get("lang", "vn")
+    voicebot = get_voicebot(lang)
+    return voicebot.CustomerAgent(
+        customer_phone=userdata.get("customer_phone", ""),
+        resume_summary=summary,
+    )
+
+
 def store_call_summary(userdata: dict, summary: str, mode: str) -> None:
     call_meta = userdata.get("customer_call") or {}
     call_id = call_meta.get("call_id", "")
@@ -87,5 +96,39 @@ async def handback_to_driver(
             silence_tracker.resume()
 
         logger.info("handback to DriverAgent | mode=%s summary=%s", mode, summary[:80])
+    except Exception:
+        logger.error("handback_to_driver failed | mode=%s", mode, exc_info=True)
+    finally:
+        userdata["_handback_in_progress"] = False
+
+
+async def handback_to_customer(
+    session: AgentSession,
+    userdata: dict,
+    summary: str,
+    *,
+    silence_tracker: SilenceTracker | None = None,
+) -> None:
+    if userdata.get("_handback_in_progress"):
+        return
+    userdata["_handback_in_progress"] = True
+    try:
+        from app.voicebot.processors.customer_bridge_timeout import cancel_customer_bridge_timeout
+
+        cancel_customer_bridge_timeout(userdata)
+        store_call_summary(userdata, summary, mode="bridge")
+        userdata["bridge_call_active"] = False
+        userdata["driver_call_active"] = False
+        restore_session_audio(session)
+
+        customer = build_customer_agent(userdata, summary=summary)
+        session.update_agent(customer)
+
+        if silence_tracker:
+            silence_tracker.resume()
+
+        logger.info("handback to CustomerAgent | summary=%s", summary[:80])
+    except Exception:
+        logger.error("handback_to_customer failed", exc_info=True)
     finally:
         userdata["_handback_in_progress"] = False

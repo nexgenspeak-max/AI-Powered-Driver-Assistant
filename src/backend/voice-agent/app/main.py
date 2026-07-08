@@ -5,8 +5,11 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Anchored to this file's location, not the process's CWD — see settings.py
+# for why a CWD-relative path here is unreliable across launch contexts.
+_base_dir = Path(__file__).resolve().parents[1]
 _env = os.getenv("ENV", "local")
-_env_file = Path(f"envs/.env.{_env}")
+_env_file = _base_dir / "envs" / f".env.{_env}"
 if _env_file.exists():
     load_dotenv(_env_file)
 

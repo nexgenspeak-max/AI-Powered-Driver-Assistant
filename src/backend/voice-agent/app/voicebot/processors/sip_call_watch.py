@@ -10,12 +10,26 @@ from livekit.agents import AgentSession
 from livekit.agents.job import get_job_context
 
 from app.services import backend_api
-from app.voicebot.processors.handback import handback_to_driver
+from app.voicebot.processors.handback import handback_to_customer, handback_to_driver
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
 
 logger = logging.getLogger("voice-agent.processors.sip_call_watch")
+
+
+def _run_logged(coro, *, name: str) -> None:
+    """asyncio.create_task, but a raised exception is logged instead of silently dropped."""
+    task = asyncio.create_task(coro, name=name)
+
+    def _done(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc:
+            logger.error("%s crashed", name, exc_info=exc)
+
+    task.add_done_callback(_done)
 
 
 def _is_customer_sip_participant(participant: rtc.RemoteParticipant, userdata: dict) -> bool:
@@ -24,6 +38,14 @@ def _is_customer_sip_participant(participant: rtc.RemoteParticipant, userdata: d
     if sip_id and pid == sip_id:
         return True
     return pid.startswith("customer-")
+
+
+def _is_driver_sip_participant(participant: rtc.RemoteParticipant, userdata: dict) -> bool:
+    pid = participant.identity
+    sip_id = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    if sip_id and pid == sip_id:
+        return True
+    return pid.startswith("driver-")
 
 
 def _disconnect_summary(lang: str, mode: str) -> str:
@@ -82,7 +104,10 @@ def register_sip_call_watchers(
                 return
             lang = userdata.get("lang", "vn")
             summary = _disconnect_summary(lang, "background")
-            asyncio.create_task(_auto_complete_isolated(session, userdata, summary))
+            _run_logged(
+                _auto_complete_isolated(session, userdata, summary),
+                name="auto_complete_isolated",
+            )
             return
 
         if not userdata.get("customer_call_active") and not userdata.get("bridge_call_active"):
@@ -99,12 +124,49 @@ def register_sip_call_watchers(
             mode,
         )
 
-        asyncio.create_task(
+        _run_logged(
             handback_to_driver(
                 session,
                 userdata,
                 summary,
                 mode=mode,
                 silence_tracker=silence_tracker,
-            )
+            ),
+            name="handback_to_driver",
+        )
+
+
+def register_customer_room_sip_watchers(
+    room: rtc.Room,
+    session: AgentSession,
+    *,
+    silence_tracker: SilenceTracker | None = None,
+) -> None:
+    """Watch for the driver's SIP participant leaving a customer-room bridge call
+    and auto-return to CustomerAgent (mirrors register_sip_call_watchers)."""
+
+    @room.on("participant_disconnected")
+    def _on_participant_left(participant: rtc.RemoteParticipant) -> None:
+        userdata = session.userdata
+        if not userdata.get("bridge_call_active"):
+            return
+        if not _is_driver_sip_participant(participant, userdata):
+            return
+
+        lang = userdata.get("lang", "vn")
+        summary = (
+            "Driver hung up. Bridge call ended."
+            if lang == "en"
+            else "Tài xế đã cúp máy. Cuộc gọi kết nối trực tiếp đã kết thúc."
+        )
+        logger.info("driver SIP disconnected | identity=%s", participant.identity)
+
+        _run_logged(
+            handback_to_customer(
+                session,
+                userdata,
+                summary,
+                silence_tracker=silence_tracker,
+            ),
+            name="handback_to_customer",
         )

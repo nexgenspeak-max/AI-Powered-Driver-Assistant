@@ -15,12 +15,12 @@ async def confirm_cancel_my_trip(raw_arguments: dict, context: RunContext) -> st
         return ERR_NO_PENDING_CANCEL
 
     try:
-        await backend_api.update_trip_status(trip_id, "rejected")
+        await backend_api.update_trip_status(trip_id, "cancelled")
     except Exception:
         logger.error("confirm_cancel_my_trip API failed", exc_info=True)
         return ERR_CANNOT_CANCEL
 
     context.userdata["pending_cancel_my_trip_id"] = None
-    context_store.patch_trip_by_id(context.userdata, trip_id, status="rejected")
+    context_store.patch_trip_by_id(context.userdata, trip_id, status="cancelled")
     context_store.remove_trip_from_lists(context.userdata, trip_id)
     return "Đã hủy chuyến đi của bạn. Cảm ơn bạn đã sử dụng dịch vụ."

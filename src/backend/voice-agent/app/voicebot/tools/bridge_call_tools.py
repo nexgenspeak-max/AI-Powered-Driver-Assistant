@@ -30,19 +30,23 @@ async def end_bridge_call(context: RunContext, summary: str = "") -> tuple[Agent
     )
     final_summary = summary.strip() or default_summary
 
-    cancel_bridge_timeout(context.userdata)
-    store_call_summary(context.userdata, final_summary, mode="bridge")
-    context.userdata["customer_call_active"] = False
-    context.userdata["bridge_call_active"] = False
-    restore_session_audio(context.session)
+    try:
+        cancel_bridge_timeout(context.userdata)
+        store_call_summary(context.userdata, final_summary, mode="bridge")
+        context.userdata["customer_call_active"] = False
+        context.userdata["bridge_call_active"] = False
+        restore_session_audio(context.session)
 
-    tracker = context.userdata.get("_silence_tracker")
-    if tracker:
-        tracker.resume()
+        tracker = context.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.resume()
 
-    logger.info("bridge call ended by wake phrase | summary=%s", final_summary[:120])
+        logger.info("bridge call ended by wake phrase | summary=%s", final_summary[:120])
 
-    driver = build_driver_agent(context.userdata, summary=final_summary)
+        driver = build_driver_agent(context.userdata, summary=final_summary)
+    except Exception:
+        logger.error("end_bridge_call failed", exc_info=True)
+        raise
     if lang == "en":
         return driver, f"Bridge call ended. {final_summary}"
     return driver, f"Đã kết thúc cuộc gọi trực tiếp. {final_summary}"

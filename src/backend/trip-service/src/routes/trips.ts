@@ -3,6 +3,7 @@ import * as tripService from '../services/tripService';
 import * as mapsService from '../services/mapsService';
 import * as dispatchService from '../services/dispatchService';
 import * as driverContextService from '../services/driverContextService';
+import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
 
@@ -10,28 +11,60 @@ const router = Router();
 
 const ALLOWED_STATUSES = new Set([
   'pending', 'notified', 'calling', 'confirmed', 'rejected', 'no_answer', 'completed',
-  'cancelled', 'CANCELLED_BY_DRIVER', 'no_show',
-  'ARRIVED_PICKUP', 'PICKED_UP', 'COMPLETED',
+  'cancelled', 'cancelled_by_driver', 'no_show', 'arrived_pickup', 'picked_up',
 ]);
 
 // Once a trip lands in one of these, it's done — no more status changes.
 // The customer/driver must book a new trip instead.
-const CANCELLED_STATUSES = new Set(['rejected', 'cancelled', 'CANCELLED_BY_DRIVER']);
+const CANCELLED_STATUSES = new Set(['rejected', 'cancelled', 'cancelled_by_driver']);
 
 // TODO(temporary): there's no real driver-matching/dispatch logic yet, so every
 // booking with no explicit driver_phone is auto-assigned to this hardcoded number.
 // Replace with real nearest-available-driver selection once that's built.
 
+// Requests from a real customer session carry their own account id in the token.
+// Service callers (voice-agent, admin panel) authenticate as themselves, not the
+// customer, so their token's `sub` must never be used as the trip's owner — look
+// the customer up in the accounts table by phone instead.
+async function resolveCustomerAccountId(req: Request, customerPhone?: string): Promise<string | undefined> {
+  if (req.user?.role === 'customer') return req.user.sub;
+  if (!customerPhone) return undefined;
+  const { data } = await authServiceClient.getByPhone<{ id: string }>(customerPhone, 'customer');
+  return data?.id;
+}
+
+function normalizePhone(phone?: string): string {
+  if (!phone) return '';
+  let p = phone.trim().replace(/^\+/, '');
+  if (p.startsWith('84')) p = `0${p.slice(2)}`;
+  return p;
+}
+
+// Service callers (voice-agent, admin panel) sign their own token with role='admin'
+// and act on behalf of whoever is on the call — they're trusted, so they bypass this.
+// Real driver/customer sessions can only touch their own trip.
+function isTripOwner(req: Request, trip: tripService.Trip): boolean {
+  const user = req.user;
+  if (!user || user.role === 'admin') return true;
+  if (user.role === 'driver') {
+    return !!user.phone && normalizePhone(user.phone) === normalizePhone(trip.driver_phone);
+  }
+  if (user.role === 'customer') {
+    if (trip.id_account) return trip.id_account === user.sub;
+    return !!user.phone && normalizePhone(user.phone) === normalizePhone(trip.customer_phone);
+  }
+  return false;
+}
 
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
     const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address, config.googleMapsApiKey);
+    const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
     const trip = await tripService.create({
       ...body,
       driver_phone: body.driver_phone || config.phoneDriver,
-      // Link the trip back to whichever authenticated account created it.
-      ...(req.user ? { id_account: req.user.sub } : {}),
+      ...(idAccount ? { id_account: idAccount } : {}),
       distance_km: route.distance_km ?? 0,
       eta_minutes: route.eta_minutes ?? 0,
       traffic_note: route.traffic_note ?? '',
@@ -75,12 +108,15 @@ router.get('/:tripId', async (req: Request, res: Response) => {
 
 router.patch('/:tripId', async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
+    const status = typeof req.body.status === 'string' ? req.body.status.toLowerCase() : req.body.status;
     if (!ALLOWED_STATUSES.has(status)) {
       return res.status(400).json({ detail: `status must be one of ${[...ALLOWED_STATUSES].join(', ')}` });
     }
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (!isTripOwner(req, trip)) {
+      return res.status(403).json({ detail: 'Not authorized to modify this trip' });
+    }
     if (CANCELLED_STATUSES.has(trip.status)) {
       return res.status(409).json({
         detail: `Trip already ${trip.status} — cannot change status anymore. Book a new trip instead.`,

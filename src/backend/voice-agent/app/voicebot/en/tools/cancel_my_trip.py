@@ -17,12 +17,12 @@ async def cancel_my_trip(raw_arguments: dict, context: RunContext) -> str:
 
     trip = active[0]
     trip_id = trip["trip_id"]
-    context_store.patch_trip_by_id(context.userdata, trip_id, status="rejected")
+    context_store.patch_trip_by_id(context.userdata, trip_id, status="cancelled")
     context_store.remove_trip_from_lists(context.userdata, trip_id)
 
     async def _sync() -> None:
         try:
-            await backend_api.update_trip_status(trip_id, "rejected")
+            await backend_api.update_trip_status(trip_id, "cancelled")
         except Exception:
             logger.error("cancel_my_trip — update failed", exc_info=True)
 

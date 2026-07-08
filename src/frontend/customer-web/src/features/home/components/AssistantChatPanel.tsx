@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, IconButton, Dialog, DialogContent, Snackbar, Alert, TextField, Typography, Tooltip } from '@mui/material'
-import MenuIcon from '@mui/icons-material/Menu'
+import { Box, IconButton, Snackbar, Alert, TextField, Typography, Tooltip } from '@mui/material'
 import MicIcon from '@mui/icons-material/Mic'
 import SendIcon from '@mui/icons-material/Send'
 import { useAssistantChat } from '../hooks/useAssistantChat'
@@ -39,7 +38,6 @@ export default function AssistantChatPanel() {
     else addBotMessage(text)
   })
   const [msg, setMsg] = useState('')
-  const [aboutOpen, setAboutOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
   const chatBoxRef = useRef<HTMLDivElement>(null)
@@ -88,29 +86,18 @@ export default function AssistantChatPanel() {
 
   return (
     <>
-      <IconButton
-        onClick={() => setAboutOpen(true)}
-        sx={{ position: 'absolute', left: 16, top: 16, zIndex: 3, bgcolor: '#222', color: '#fff', borderRadius: 1.5, '&:hover': { bgcolor: '#333' } }}
-      >
-        <MenuIcon fontSize="small" />
-      </IconButton>
-
-      <Dialog open={aboutOpen} onClose={() => setAboutOpen(false)}>
-        <DialogContent sx={{ bgcolor: '#1d1c1c', color: '#fff', textAlign: 'center', minWidth: 280 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Trợ lý 3D</Typography>
-          <Typography variant="body2" sx={{ color: '#ccc' }}>
-            Trợ lý ảo giúp bạn đặt xe và trả lời câu hỏi nhanh chóng.
-          </Typography>
-        </DialogContent>
-      </Dialog>
-
       <Box sx={{
-        position: 'absolute', right: 0, bottom: 0, height: '100%', width: { xs: '100%', sm: 400, md: 450 },
+        position: 'absolute', right: 0, bottom: 0, height: '100%', width: { xs: '100%', sm: 380, md: 450 },
         display: 'flex', flexDirection: 'column',
-        background: `linear-gradient(to right, ${DARK.panelFadeFrom}, ${DARK.panelFadeTo} 60%, ${DARK.panelFadeTo})`,
+        background: { xs: 'none', sm: 'none', md: `linear-gradient(to right, ${DARK.panelFadeFrom}, ${DARK.panelFadeTo} 60%, ${DARK.panelFadeTo})` },
         zIndex: 2,
       }}>
-        <Box ref={chatBoxRef} sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', px: 1.5, pt: 2 }}>
+        <Box ref={chatBoxRef} sx={{
+          flex: { xs: '0 1 auto', sm: '0 1 auto', md: 1 },
+          maxHeight: { xs: 176, sm: 200, md: 'none' },
+          mt: { xs: 'auto', sm: 'auto', md: 0 },
+          overflowY: 'auto', display: 'flex', flexDirection: 'column', px: 1.5, pt: 2,
+        }}>
           {chats.map((chat, i) => (
             <Box
               key={i}
@@ -131,7 +118,7 @@ export default function AssistantChatPanel() {
         </Box>
 
         <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1, mx: 1.5, mb: 2, px: 1, height: 50,
+          display: 'flex', alignItems: 'center', gap: 1, mx: { xs: 1, sm: 1.5 }, mb: { xs: 1.5, sm: 2 }, px: 1, height: 50,
           borderRadius: 999, border: '1px solid rgba(255,255,255,0.7)', bgcolor: 'rgba(50,49,49,0.68)',
         }}>
           <Tooltip title={MIC_LABEL[voice.status]}>

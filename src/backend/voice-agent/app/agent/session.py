@@ -25,7 +25,10 @@ from app.providers import get_stt, get_llm, get_tts
 from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
-from app.voicebot.processors.sip_call_watch import register_sip_call_watchers
+from app.voicebot.processors.sip_call_watch import (
+    register_customer_room_sip_watchers,
+    register_sip_call_watchers,
+)
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.services.conversation_service import ConversationService
 from app.services.silence_tracker import SilenceTracker
@@ -264,6 +267,12 @@ async def entrypoint(ctx: JobContext) -> None:
 
         if mode in ("driver", "custcall"):
             register_sip_call_watchers(
+                ctx.room,
+                session,
+                silence_tracker=silence_tracker,
+            )
+        elif mode == "customer":
+            register_customer_room_sip_watchers(
                 ctx.room,
                 session,
                 silence_tracker=silence_tracker,

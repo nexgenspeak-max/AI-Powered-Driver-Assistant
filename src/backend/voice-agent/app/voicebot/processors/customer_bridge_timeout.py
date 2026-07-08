@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from livekit.agents import AgentSession
 
 from app.config.settings import get_settings
-from app.voicebot.processors.handback import restore_session_audio
+from app.voicebot.processors.handback import build_customer_agent, restore_session_audio
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
@@ -38,8 +38,6 @@ async def _timeout_worker(session: AgentSession, userdata: dict, seconds: int) -
     if not userdata.get("bridge_call_active"):
         return
 
-    from app.voicebot import get_voicebot
-
     lang = userdata.get("lang", "vn")
     summary = _timeout_summary(lang, seconds)
     logger.info("customer bridge call timeout | seconds=%s", seconds)
@@ -48,10 +46,7 @@ async def _timeout_worker(session: AgentSession, userdata: dict, seconds: int) -
     userdata["driver_call_active"] = False
     restore_session_audio(session)
 
-    voicebot = get_voicebot(lang)
-    customer = voicebot.CustomerAgent(
-        customer_phone=userdata.get("customer_phone", ""), resume_summary=summary
-    )
+    customer = build_customer_agent(userdata, summary=summary)
     session.update_agent(customer)
 
     tracker: SilenceTracker | None = userdata.get("_silence_tracker")

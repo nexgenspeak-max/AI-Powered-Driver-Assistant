@@ -1,8 +1,13 @@
 import { createTheme } from '@mui/material/styles'
+import { PALETTE } from './palette'
 
 export const theme = createTheme({
+  breakpoints: {
+    // xs = mobile (<768), sm = tablet/iPad (768-1024), md+ = desktop (>=1024)
+    values: { xs: 0, sm: 768, md: 1024, lg: 1280, xl: 1536 },
+  },
   palette: {
-    background: { default: '#f0f2f8' },
+    background: { default: PALETTE.pale },
     primary: { main: '#6c8aff' },
   },
   typography: {

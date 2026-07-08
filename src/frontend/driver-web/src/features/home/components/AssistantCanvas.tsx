@@ -1,12 +1,32 @@
 import { Suspense } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Environment, OrthographicCamera, useTexture } from '@react-three/drei'
 import AssistantAvatar from './AssistantAvatar'
 
 const ASSETS_BASE = '/assets/avatar-3d'
 
+// zoom=1400 was tuned against an ~900px-tall canvas. An orthographic camera's
+// zoom is an absolute px-per-world-unit scale, so a fixed value renders the
+// avatar at a fixed pixel size regardless of canvas size — on a large/wide
+// desktop viewport it shrinks to a small box surrounded by empty canvas.
+// Scaling zoom by the canvas height keeps the avatar's on-screen size
+// proportional to the viewport instead.
+const BASE_ZOOM = 1400
+const REFERENCE_HEIGHT = 900  
+
+function ResponsiveCamera() {
+  const height = useThree(s => s.size.height)
+  return (
+    <OrthographicCamera
+      makeDefault
+      zoom={BASE_ZOOM * (height / REFERENCE_HEIGHT)}
+      position={[0, 1.65, 1]}
+    />
+  )
+}
+
 function Background() {
-  const texture = useTexture(`${ASSETS_BASE}/images/background.jpg`)
+  const texture = useTexture(`${ASSETS_BASE}/images/background.avif`)
   return (
     <mesh position={[0, 1.5, -4]} scale={[1.2, 1.2, 1.2]}>
       <planeGeometry />
@@ -18,7 +38,7 @@ function Background() {
 export default function AssistantCanvas() {
   return (
     <Canvas dpr={2}>
-      <OrthographicCamera makeDefault zoom={1400} position={[0, 1.65, 1]} />
+      <ResponsiveCamera />
 
       <Suspense fallback={null}>
         <Environment background={false} files={`${ASSETS_BASE}/images/photo_studio_loft_hall_1k.hdr`} />

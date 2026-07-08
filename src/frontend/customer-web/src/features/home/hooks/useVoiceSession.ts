@@ -23,7 +23,7 @@ const AGENT_THRESHOLD = 0.02
 export function useVoiceSession(onMessage?: (text: string, from: VoiceMessageSource) => void) {
   const [status, setStatus] = useState<VoiceSessionStatus>('idle')
   const roomRef = useRef<Room | null>(null)
-  const audioElRef = useRef<HTMLAudioElement | null>(null)
+  const audioElsRef = useRef<Set<HTMLAudioElement>>(new Set())
   const stopAnalyzersRef = useRef<Array<() => void>>([])
   const stateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -72,17 +72,27 @@ export function useVoiceSession(onMessage?: (text: string, from: VoiceMessageSou
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind !== Track.Kind.Audio) return
         const audioEl = track.attach()
-        audioElRef.current = audioEl
+        audioElsRef.current.add(audioEl)
         document.body.appendChild(audioEl)
         stopAnalyzersRef.current.push(
           analyzeTrack(track.mediaStreamTrack, rms => { audioLevels.agent = rms }),
         )
       })
 
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        if (track.kind !== Track.Kind.Audio) return
+        // A track can be attached to multiple elements; detach() with no args
+        // returns and detaches all of them so a stale track never keeps playing.
+        track.detach().forEach(el => {
+          audioElsRef.current.delete(el)
+          el.remove()
+        })
+      })
+
       room.on(RoomEvent.Disconnected, () => {
         roomRef.current = null
-        audioElRef.current?.remove()
-        audioElRef.current = null
+        audioElsRef.current.forEach(el => el.remove())
+        audioElsRef.current.clear()
         stopAudioAnalysis()
         setStatus('idle')
       })

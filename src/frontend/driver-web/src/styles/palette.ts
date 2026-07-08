@@ -6,4 +6,5 @@ export const PALETTE = {
   pale:    '#f3effa',
   ink:     '#2b2630',
   gray:    '#8b8792',
+  border:  '#e6e1ee',
 }

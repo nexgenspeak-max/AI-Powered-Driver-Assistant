@@ -4,8 +4,8 @@ import {
   Select, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Typography,
 } from '@mui/material'
-import type { Driver, Trip, TripStatus } from '../../../types'
-import { DISPATCHABLE_STATUSES, TRIP_STATUSES } from '../../../constants/status'
+import type { Driver, Trip } from '../../../types'
+import { DISPATCHABLE_STATUSES, TRIP_STATUSES, normalizeTripStatus } from '../../../constants/status'
 import { TripStatusChip } from './TripStatusChip'
 import { PALETTE } from '../../../styles/palette'
 
@@ -69,7 +69,7 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
               </TableRow>
             ) : (
               trips.map(trip => {
-                const canDispatch = DISPATCHABLE_STATUSES.includes(trip.status as TripStatus)
+                const canDispatch = DISPATCHABLE_STATUSES.includes(normalizeTripStatus(trip.status))
                 const driverPhone = selected[trip.trip_id] ?? ''
 
                 return (

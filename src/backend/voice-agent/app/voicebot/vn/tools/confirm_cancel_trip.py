@@ -15,7 +15,7 @@ async def confirm_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
         return ERR_NO_PENDING_CANCEL
 
     try:
-        await backend_api.update_trip_status(trip_id, "CANCELLED_BY_DRIVER")
+        await backend_api.update_trip_status(trip_id, "cancelled_by_driver")
     except Exception:
         logger.error("confirm_cancel_trip API failed", exc_info=True)
         return ERR_CANNOT_CANCEL

@@ -6,6 +6,11 @@ export type TripStatus =
   | 'rejected'
   | 'no_answer'
   | 'completed'
+  | 'cancelled'
+  | 'cancelled_by_driver'
+  | 'no_show'
+  | 'arrived_pickup'
+  | 'picked_up'
 
 export interface Trip {
   trip_id: string

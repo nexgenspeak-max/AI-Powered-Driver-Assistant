@@ -54,22 +54,30 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
 )
 async def end_customer_call(context: RunContext, summary: str):
     if context.userdata.get("isolated_call"):
-        await _finish_isolated_call(context, summary)
+        try:
+            await _finish_isolated_call(context, summary)
+        except Exception:
+            logger.error("end_customer_call (isolated) failed", exc_info=True)
+            raise
         return f"Background call completed. Summary: {summary}"
 
     lang = context.userdata.get("lang", "vn")
-    store_call_summary(context.userdata, summary, mode="agent")
-    context.userdata["customer_call_active"] = False
-    context.userdata["bridge_call_active"] = False
-    restore_session_audio(context.session)
+    try:
+        store_call_summary(context.userdata, summary, mode="agent")
+        context.userdata["customer_call_active"] = False
+        context.userdata["bridge_call_active"] = False
+        restore_session_audio(context.session)
 
-    tracker = context.userdata.get("_silence_tracker")
-    if tracker:
-        tracker.resume()
+        tracker = context.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.resume()
 
-    logger.info("customer call ended | summary=%s", summary[:120])
+        logger.info("customer call ended | summary=%s", summary[:120])
 
-    driver = build_driver_agent(context.userdata, summary=summary)
+        driver = build_driver_agent(context.userdata, summary=summary)
+    except Exception:
+        logger.error("end_customer_call failed", exc_info=True)
+        raise
     if lang == "en":
         return driver, f"Customer call ended. Summary: {summary}"
     return driver, f"Cuộc gọi với khách đã kết thúc. Tóm tắt: {summary}"

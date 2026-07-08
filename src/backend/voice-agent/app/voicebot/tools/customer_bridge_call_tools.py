@@ -3,9 +3,8 @@ import logging
 
 from livekit.agents import Agent, RunContext, function_tool
 
-from app.voicebot import get_voicebot
 from app.voicebot.processors.customer_bridge_timeout import cancel_customer_bridge_timeout
-from app.voicebot.processors.handback import restore_session_audio
+from app.voicebot.processors.handback import build_customer_agent, restore_session_audio, store_call_summary
 
 logger = logging.getLogger("voice-agent.tools.customer_bridge_call")
 
@@ -27,21 +26,23 @@ async def end_customer_bridge_call(context: RunContext, summary: str = "") -> tu
     )
     final_summary = summary.strip() or default_summary
 
-    cancel_customer_bridge_timeout(context.userdata)
-    context.userdata["bridge_call_active"] = False
-    context.userdata["driver_call_active"] = False
-    restore_session_audio(context.session)
+    try:
+        cancel_customer_bridge_timeout(context.userdata)
+        store_call_summary(context.userdata, final_summary, mode="bridge")
+        context.userdata["bridge_call_active"] = False
+        context.userdata["driver_call_active"] = False
+        restore_session_audio(context.session)
 
-    tracker = context.userdata.get("_silence_tracker")
-    if tracker:
-        tracker.resume()
+        tracker = context.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.resume()
 
-    logger.info("customer bridge call ended by wake phrase | summary=%s", final_summary[:120])
+        logger.info("customer bridge call ended by wake phrase | summary=%s", final_summary[:120])
 
-    voicebot = get_voicebot(lang)
-    customer = voicebot.CustomerAgent(
-        customer_phone=context.userdata.get("customer_phone", ""), resume_summary=final_summary
-    )
+        customer = build_customer_agent(context.userdata, summary=final_summary)
+    except Exception:
+        logger.error("end_customer_bridge_call failed", exc_info=True)
+        raise
     if lang == "en":
         return customer, f"Bridge call ended. {final_summary}"
     return customer, f"Đã kết thúc cuộc gọi trực tiếp. {final_summary}"
