@@ -6,7 +6,12 @@ from livekit.agents import Agent, RunContext, function_tool
 from livekit.agents.job import get_job_context
 
 from app.services import backend_api
-from app.voicebot.processors.handback import build_driver_agent, restore_session_audio, store_call_summary
+from app.voicebot.processors.handback import (
+    build_driver_agent,
+    disconnect_sip_participant,
+    restore_session_audio,
+    store_call_summary,
+)
 
 logger = logging.getLogger("voice-agent.tools.customer_call")
 
@@ -67,6 +72,7 @@ async def end_customer_call(context: RunContext, summary: str):
         context.userdata["customer_call_active"] = False
         context.userdata["bridge_call_active"] = False
         restore_session_audio(context.session)
+        await disconnect_sip_participant(context.userdata)
 
         tracker = context.userdata.get("_silence_tracker")
         if tracker:

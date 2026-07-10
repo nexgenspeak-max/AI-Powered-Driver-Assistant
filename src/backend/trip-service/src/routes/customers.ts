@@ -1,7 +1,16 @@
 import { Router, Request, Response } from 'express';
 import * as driverContextService from '../services/driverContextService';
+import * as customerService from '../services/customerService';
 
 const router = Router();
+
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    return res.json(await customerService.listAll());
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
 
 router.get('/me/context', async (req: Request, res: Response) => {
   try {

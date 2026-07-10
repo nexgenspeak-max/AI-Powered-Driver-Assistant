@@ -101,6 +101,12 @@ def register_sip_call_watchers(
         userdata = session.userdata
         if userdata.get("isolated_call"):
             if not _is_customer_sip_participant(participant, userdata):
+                logger.info(
+                    "participant_disconnected ignored | identity=%s reason=identity_mismatch "
+                    "isolated_call=True expected_sip_identity=%s",
+                    participant.identity,
+                    (userdata.get("customer_call") or {}).get("sip_identity", ""),
+                )
                 return
             lang = userdata.get("lang", "vn")
             summary = _disconnect_summary(lang, "background")
@@ -111,8 +117,21 @@ def register_sip_call_watchers(
             return
 
         if not userdata.get("customer_call_active") and not userdata.get("bridge_call_active"):
+            logger.info(
+                "participant_disconnected ignored | identity=%s reason=no_active_call "
+                "customer_call_active=%s bridge_call_active=%s",
+                participant.identity,
+                userdata.get("customer_call_active"),
+                userdata.get("bridge_call_active"),
+            )
             return
         if not _is_customer_sip_participant(participant, userdata):
+            logger.info(
+                "participant_disconnected ignored | identity=%s reason=identity_mismatch "
+                "expected_sip_identity=%s",
+                participant.identity,
+                (userdata.get("customer_call") or {}).get("sip_identity", ""),
+            )
             return
 
         lang = userdata.get("lang", "vn")
@@ -149,8 +168,18 @@ def register_customer_room_sip_watchers(
     def _on_participant_left(participant: rtc.RemoteParticipant) -> None:
         userdata = session.userdata
         if not userdata.get("bridge_call_active"):
+            logger.info(
+                "participant_disconnected ignored | identity=%s reason=no_active_bridge_call",
+                participant.identity,
+            )
             return
         if not _is_driver_sip_participant(participant, userdata):
+            logger.info(
+                "participant_disconnected ignored | identity=%s reason=identity_mismatch "
+                "expected_sip_identity=%s",
+                participant.identity,
+                (userdata.get("customer_call") or {}).get("sip_identity", ""),
+            )
             return
 
         lang = userdata.get("lang", "vn")

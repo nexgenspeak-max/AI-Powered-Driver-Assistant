@@ -4,6 +4,7 @@ import { TripTable } from '../features/trips/components/TripTable'
 import { useTrips } from '../features/trips/hooks/useTrips'
 import { useDispatchTrip } from '../features/trips/hooks/useDispatchTrip'
 import { useDrivers } from '../features/drivers/hooks/useDrivers'
+import { useCustomers } from '../features/customers/hooks/useCustomers'
 import { useUiStore } from '../stores/uiStore'
 import { normalizeTripStatus } from '../constants/status'
 
@@ -14,6 +15,7 @@ export default function TripBoardPage() {
   // totals; the status chips only filter what the table renders below.
   const { data: allTrips = [], isLoading: tripsLoading } = useTrips()
   const { data: drivers  = [] }                          = useDrivers()
+  const { data: customers = [] }                         = useCustomers()
   const { mutate: dispatch, isPending: dispatching }     = useDispatchTrip()
 
   const trips = filter
@@ -27,6 +29,7 @@ export default function TripBoardPage() {
         <TripTable
           trips={trips}
           drivers={drivers}
+          customers={customers}
           loading={tripsLoading}
           statusFilter={filter}
           onStatusFilter={setFilter}

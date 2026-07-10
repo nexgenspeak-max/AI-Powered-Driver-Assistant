@@ -4,14 +4,16 @@ import {
   Select, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Typography,
 } from '@mui/material'
-import type { Driver, Trip } from '../../../types'
+import type { Customer, Driver, Trip } from '../../../types'
 import { DISPATCHABLE_STATUSES, TRIP_STATUSES, normalizeTripStatus } from '../../../constants/status'
 import { TripStatusChip } from './TripStatusChip'
 import { PALETTE } from '../../../styles/palette'
+import { resolveAccountName } from '../utils/resolveAccountName'
 
 type Props = {
   trips: Trip[]
   drivers: Driver[]
+  customers: Customer[]
   loading: boolean
   statusFilter: string
   onStatusFilter: (filter: string) => void
@@ -19,7 +21,7 @@ type Props = {
   dispatching: boolean
 }
 
-export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilter, onDispatch, dispatching }: Props) {
+export function TripTable({ trips, drivers, customers, loading, statusFilter, onStatusFilter, onDispatch, dispatching }: Props) {
   const [selected, setSelected] = useState<Record<string, string>>({})
 
   return (
@@ -49,7 +51,7 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: PALETTE.surface }}>
-              {['Trip ID', 'Customer', 'Pickup', 'Dropoff', 'Status', 'Assign Driver', 'Booked via', ''].map((h, i) => (
+              {['Trip ID', 'Customer', 'Pickup', 'Dropoff', 'Status', 'Assign Driver', 'Booked via', 'Account Name', ''].map((h, i) => (
                 <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280' }}>{h}</TableCell>
               ))}
             </TableRow>
@@ -57,13 +59,13 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : trips.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#9ca3af' }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 6, color: '#9ca3af' }}>
                   No trips found
                 </TableCell>
               </TableRow>
@@ -114,6 +116,11 @@ export function TripTable({ trips, drivers, loading, statusFilter, onStatusFilte
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">{trip.booked_via || '—'}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {resolveAccountName(trip, customers) ?? '—'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       {canDispatch && (

@@ -22,6 +22,7 @@
 | FEAT-006 | Deploy call-logger (đã build xong nhưng chưa deploy) | call-logger | 🟢 Thấp | ⬜ | — |
 | FEAT-007 | Nhắc lịch/reminder trước giờ đón khách (kế hoạch cũ trong plan.md chưa từng làm) | trip-service, voice-agent | 🟢 Thấp | ⬜ | — |
 | FEAT-008 | Lớp test toàn diện (unit + integration) cho các service TS mới viết lại | tất cả backend TS | 🟡 Trung bình | ⬜ | — |
+| FEAT-009 | Cho phép tài xế nhờ AI gọi tới **bất kỳ số điện thoại nào** tài xế cung cấp, không chỉ số khách hàng của chuyến đang chạy | voice-agent, trip-service | 🟢 Thấp | ⬜ | [FEAT-009](tickets/FEAT-009.md) |
 
 ## Đã hoàn thành
 

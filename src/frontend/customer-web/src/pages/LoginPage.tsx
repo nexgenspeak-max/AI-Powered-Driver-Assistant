@@ -39,7 +39,7 @@ export default function LoginPage() {
     defaultValues: { phone: '', password: '' },
   })
 
-  const { mutate: login, isPending, isError } = useMutation({
+  const { mutate: login, isPending, isError, error } = useMutation({
     mutationFn: (data: FormValues) => authService.login({ role: 'customer', phone: data.phone, password: data.password }),
     onSuccess: ({ access_token, refresh_token, user }) => {
       setTokens(access_token, refresh_token)
@@ -113,7 +113,7 @@ export default function LoginPage() {
 
             {isError && (
               <Typography variant="body2" color="error">
-                Login failed. Check your details.
+                {(error as any)?.response?.data?.detail ?? 'Login failed. Check your details.'}
               </Typography>
             )}
 

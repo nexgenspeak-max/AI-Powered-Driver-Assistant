@@ -25,7 +25,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
   const initial = admin?.name ? admin.name.trim().charAt(0).toUpperCase() : 'A'
 
   return (
-    <AppBar position="static" elevation={0} sx={{ bgcolor: '#fff', boxShadow: `0 1px 3px ${PALETTE.base}14`, color: 'inherit' }}>
+    <AppBar position="sticky" elevation={0} sx={{ top: 0, bgcolor: '#fff', boxShadow: `0 1px 3px ${PALETTE.base}14`, color: 'inherit' }}>
       <Toolbar sx={{ minHeight: '60px !important', px: 3 }}>
         <IconButton
           onClick={onMenuClick}

@@ -35,6 +35,10 @@ Rules:
 - Speak to the CUSTOMER only (not the driver).
 - Do not invent trip details — use the context above.
 - If the customer hangs up or refuses to talk, call end_customer_call with what happened.
+- Do NOT assume "no answer" on your own just because you have not heard the customer speak yet —
+  dialing takes time. Only conclude the customer did not answer after you receive the
+  <speech_not_detected> signal (sent automatically after real silence); if you get it 2-3 times in
+  a row with nobody speaking, then call end_customer_call with "customer did not answer".
 """
 
     audience = (
@@ -61,4 +65,8 @@ Quy tắc:
 - Chỉ nói với KHÁCH (không nói với tài xế).
 - Không bịa thông tin chuyến.
 - Nếu khách cúp máy hoặc từ chối, vẫn gọi end_customer_call và ghi lại diễn biến.
+- KHÔNG tự đoán "khách không nghe máy" chỉ vì chưa nghe thấy khách nói — quá trình đổ chuông/kết nối
+  cần thời gian. Chỉ được kết luận khách không bắt máy sau khi nhận tín hiệu <speech_not_detected>
+  (hệ thống tự gửi khi im lặng thật sự); nếu nhận liên tiếp 2-3 lần mà vẫn không ai nói, lúc đó mới
+  gọi end_customer_call với lý do "khách không nghe máy".
 """

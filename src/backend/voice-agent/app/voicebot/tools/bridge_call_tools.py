@@ -6,6 +6,7 @@ from livekit.agents import Agent, RunContext, function_tool
 from app.voicebot.processors.handback import (
     build_driver_agent,
     cancel_bridge_timeout,
+    disconnect_sip_participant,
     restore_session_audio,
     store_call_summary,
 )
@@ -36,6 +37,7 @@ async def end_bridge_call(context: RunContext, summary: str = "") -> tuple[Agent
         context.userdata["customer_call_active"] = False
         context.userdata["bridge_call_active"] = False
         restore_session_audio(context.session)
+        await disconnect_sip_participant(context.userdata)
 
         tracker = context.userdata.get("_silence_tracker")
         if tracker:

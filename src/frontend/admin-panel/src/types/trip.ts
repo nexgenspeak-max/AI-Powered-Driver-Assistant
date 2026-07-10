@@ -18,6 +18,7 @@ export interface Trip {
   driver_phone: string
   customer_name: string
   customer_phone: string
+  id_account?: string
   pickup_address: string
   dropoff_address: string
   pickup_time: string

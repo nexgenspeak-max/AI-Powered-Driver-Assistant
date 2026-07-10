@@ -4,7 +4,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from livekit import api
 from livekit.agents import AgentSession
+from livekit.agents.job import get_job_context
 
 from app.voicebot import get_voicebot
 from app.voicebot.processors import context_store
@@ -18,6 +20,28 @@ logger = logging.getLogger("voice-agent.processors.handback")
 def restore_session_audio(session: AgentSession) -> None:
     session.input.set_audio_enabled(True)
     session.output.set_audio_enabled(True)
+
+
+async def disconnect_sip_participant(userdata: dict) -> None:
+    """
+    Actually hang up the other side's phone line (SIP leg) after a manual
+    'trợ lý kết thúc' command — end_*_call only restored the AI's own audio
+    and switched agents, it never removed the SIP participant from the room,
+    so the driver/customer phone stayed connected on the other end.
+    """
+    sip_identity = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    if not sip_identity:
+        return
+    try:
+        job_ctx = get_job_context()
+        await job_ctx.api.room.remove_participant(
+            api.RoomParticipantIdentity(room=job_ctx.room.name, identity=sip_identity)
+        )
+        logger.info("SIP participant disconnected | identity=%s", sip_identity)
+    except Exception:
+        logger.warning(
+            "failed to disconnect SIP participant | identity=%s", sip_identity, exc_info=True,
+        )
 
 
 def enter_bridge_listen_mode(session: AgentSession) -> None:

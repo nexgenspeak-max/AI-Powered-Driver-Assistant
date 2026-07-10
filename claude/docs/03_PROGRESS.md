@@ -15,7 +15,7 @@
 | trip-service | ⚠️ | CRUD + dispatch LiveKit hoạt động; phân quyền JWT theo chủ sở hữu trip đang được thêm (uncommitted). Thiếu logic ghép tài xế gần nhất — xem [FEAT-001](tickets/FEAT-001.md). |
 | call-center | ⚠️ | Webhook Twilio hoạt động; **regression** so với bản Python cũ — thiếu tóm tắt cuộc gọi bằng GPT-4o và cập nhật trạng thái trip qua DTMF — xem [BUG-002](tickets/BUG-002.md). |
 | call-logger | ✅ (chưa deploy) | Đã build xong, chưa deploy lên môi trường thật — xem [FEAT-006 trong backlog](01_BACKLOG.md). |
-| voice-agent | ✅ | DriverAgent + CustomerAgent, SIP bridge 2 chiều (driver gọi khách / khách gọi driver), silence tracker, noise cancel. Đang thêm log lỗi cho background task (uncommitted, cải thiện độ ổn định). |
+| voice-agent | ⚠️ | DriverAgent + CustomerAgent, SIP bridge 2 chiều (driver gọi khách / khách gọi driver), silence tracker, noise cancel. SIP bridge đang có nhiều lỗi đã ghi nhận (một số đã sửa, một số chưa) — xem bảng tóm tắt ở đầu [BUG-006](tickets/BUG-006.md) trước khi coi tính năng gọi điện là ổn định. |
 
 ## Frontend
 

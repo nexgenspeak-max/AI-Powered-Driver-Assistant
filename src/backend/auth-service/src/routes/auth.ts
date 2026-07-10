@@ -136,6 +136,10 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const user = await userService.getById(claims.sub);
     if (!user) return res.status(401).json({ detail: 'User no longer exists' });
 
+    // BUG-008 temp fix: an admin lock only takes effect once the current access
+    // token expires and the client comes here for a new one — there is no
+    // instant-logout path yet (needs a shared Redis flag checked per-request).
+    if (user.status === 'locked') return res.status(403).json({ detail: 'Account is locked' });
     // Reject if this refresh token was already rotated out or has expired server-side.
     if (
       user.refresh_token_hash !== hashToken(refresh_token) ||
