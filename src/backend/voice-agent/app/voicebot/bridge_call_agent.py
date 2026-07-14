@@ -4,12 +4,13 @@ import logging
 from livekit.agents import Agent
 
 from app.voicebot.prompts.bridge_call import bridge_greeting, build_bridge_instructions
+from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.bridge_call_tools import end_bridge_call
 
 logger = logging.getLogger("voice-agent.bridge_call_agent")
 
 
-class BridgeCallAgent(Agent):
+class BridgeCallAgent(SpeechTextFixMixin, Agent):
     """
     Activated when call_customer(mode='bridge').
     Customer joins via SIP; agent output is muted but STT stays on for driver wake phrases.
@@ -22,6 +23,9 @@ class BridgeCallAgent(Agent):
             instructions=build_bridge_instructions(lang),
             tools=[end_bridge_call],
         )
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return pronunciations_for_lang(self._lang)
 
     async def on_enter(self) -> None:
         from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout

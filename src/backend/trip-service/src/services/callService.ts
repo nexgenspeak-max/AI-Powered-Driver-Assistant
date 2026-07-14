@@ -127,7 +127,13 @@ export async function startCustomerCall(opts: {
   if (opts.mode === 'background') {
     const baseMeta: Record<string, string> = {
       trip_id: opts.tripId,
-      driver_phone: normalizePhone(opts.driverPhone),
+      // Must stay byte-identical to opts.driverPhone (not normalizePhone'd) —
+      // it round-trips back from the voice-agent job to complete the call via
+      // driverLastCallKey(), which is keyed by the same raw, unnormalized
+      // string the driver's own session uses everywhere else. Normalizing
+      // here silently splits the record onto a different Redis key, so the
+      // driver's "gọi xong chưa" query never sees status flip to completed.
+      driver_phone: opts.driverPhone,
       customer_name: opts.customerName ?? '',
       customer_phone: normalizePhone(opts.customerPhone),
       pickup_address: opts.pickupAddress ?? '',

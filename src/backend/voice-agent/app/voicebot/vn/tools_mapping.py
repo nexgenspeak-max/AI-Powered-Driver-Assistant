@@ -49,6 +49,18 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: call_custom_number → confirm_call_custom_number
+- Khi dùng: tài xế muốn gọi một số điện thoại BẤT KỲ, KHÔNG phải số khách của chuyến hiện tại
+  - "gọi giúp tôi số 09xx...", "gọi cho vợ tôi số...", "gọi tổng đài giúp tôi", "quay số này..."
+- Số không cần thuộc chuyến nào cả — chỉ cần là số điện thoại Việt Nam hợp lệ
+- LUÔN theo 2 bước, không được bỏ qua bước xác nhận (tránh nghe nhầm số qua giọng nói):
+  1. call_custom_number(phone_number, contact_name?) → tool tự đọc lại số để tài xế xác nhận
+  2. Tài xế xác nhận đúng ("đúng", "gọi đi", "ừ") → confirm_call_custom_number() mới thực sự gọi
+  3. Nếu tài xế nói số bị đọc sai → gọi lại call_custom_number với số mới, KHÔNG tự sửa số
+- Nếu số khách thuộc chuyến đang chạy → dùng call_customer, không dùng cặp tool này
+
+---
+
 ## Tool: get_customer_location
 - Khi dùng: "khách đứng ở đâu", "điểm đón ở đâu", "địa chỉ đón", "khách ở chỗ nào"
 

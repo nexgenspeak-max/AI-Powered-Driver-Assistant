@@ -107,6 +107,46 @@ raw_schema = {
         },
     },
 
+    "call_custom_number": {
+        "type": "function",
+        "name": "call_custom_number",
+        "description": (
+            "Bước 1: Gọi điện tới một số điện thoại BẤT KỲ do tài xế đọc ra — không phải số khách "
+            "của chuyến hiện tại (vd: người thân, tổng đài, một khách ngoài chuyến). "
+            "KHÔNG gọi thẳng tới số — tool này chỉ NHẮC LẠI số để tài xế xác nhận, tránh nghe nhầm "
+            "qua giọng nói. Sau khi tài xế xác nhận đúng số ('đúng', 'gọi đi', 'ừ'), mới gọi "
+            "confirm_call_custom_number để thực hiện cuộc gọi thật. "
+            "Nếu tài xế muốn gọi khách của chuyến đang chạy → dùng call_customer, không dùng tool này."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "phone_number": {
+                    "type": "string",
+                    "description": "Số điện thoại tài xế vừa đọc ra, giữ nguyên dạng số (vd: '0912345678').",
+                },
+                "contact_name": {
+                    "type": ["string", "null"],
+                    "description": (
+                        "Tên người/nơi cần gọi nếu tài xế có nói (vd: 'vợ tôi', 'tổng đài'). "
+                        "Để trống nếu tài xế chỉ đọc số. Dự phòng cho tính năng gọi theo danh bạ sau này."
+                    ),
+                },
+            },
+            "required": ["phone_number"],
+        },
+    },
+
+    "confirm_call_custom_number": {
+        "type": "function",
+        "name": "confirm_call_custom_number",
+        "description": (
+            "Bước 2: Thực hiện gọi số điện thoại tự do sau khi tài xế đã xác nhận đúng số qua "
+            "call_custom_number. Chỉ gọi sau khi tài xế nói 'đúng'/'gọi đi'/'ừ' xác nhận số vừa đọc lại."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_customer_location": {
         "type": "function",
         "name": "get_customer_location",

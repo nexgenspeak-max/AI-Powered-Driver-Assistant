@@ -9,7 +9,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 
 from livekit import api
 from livekit.agents import AgentSession, JobContext
@@ -33,6 +33,7 @@ class SilenceTracker:
         silence_message: str = "<speech_not_detected>",
         max_consecutive_silences: int = 3,
         end_session_on_timeout: bool = True,
+        on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
     ) -> None:
         self.session = session
         self.ctx = ctx
@@ -40,6 +41,7 @@ class SilenceTracker:
         self.silence_message = silence_message
         self.max_consecutive_silences = max_consecutive_silences
         self.end_session_on_timeout = end_session_on_timeout
+        self.on_timeout = on_timeout
 
         self._last_speech_time: Optional[float] = None
         self._silence_task: Optional[asyncio.Task] = None
@@ -175,6 +177,12 @@ class SilenceTracker:
     async def _end_session(self) -> None:
         try:
             await self.stop()
+
+            if self.on_timeout:
+                try:
+                    await self.on_timeout()
+                except Exception:
+                    logger.error("SilenceTracker | on_timeout callback failed", exc_info=True)
 
             remote_participants = list(self.ctx.room.remote_participants.values())
             if remote_participants:

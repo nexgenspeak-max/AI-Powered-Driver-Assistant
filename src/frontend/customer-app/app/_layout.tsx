@@ -2,25 +2,22 @@ import '../global.css'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { QueryProvider } from '../src/providers/QueryProvider'
-import { TamaguiProvider } from '../src/providers/TamaguiProvider'
+import { useAuthStore } from '../src/stores/authStore'
 
 export default function RootLayout() {
+  const customer = useAuthStore(s => s.customer)
+
   return (
-    <TamaguiProvider>
-      <QueryProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: '#1a1f36' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontWeight: '700' },
-            contentStyle: { backgroundColor: '#f4f6fb' },
-          }}
-        >
-          <Stack.Screen name="index" options={{ title: 'Book a Ride' }} />
-          <Stack.Screen name="trip/[id]" options={{ title: 'Trip Status' }} />
-        </Stack>
-      </QueryProvider>
-    </TamaguiProvider>
+    <QueryProvider>
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={!!customer}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!customer}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </QueryProvider>
   )
 }

@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline } from '@mui/material'
 import { QueryProvider } from './providers/QueryProvider'
 import { AppRoutes } from './routes'
 import { theme } from './styles/theme'
+import VoiceSessionWidget from './components/VoiceSessionWidget'
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <QueryProvider>
         <BrowserRouter>
           <AppRoutes />
+          <VoiceSessionWidget />
         </BrowserRouter>
       </QueryProvider>
     </ThemeProvider>

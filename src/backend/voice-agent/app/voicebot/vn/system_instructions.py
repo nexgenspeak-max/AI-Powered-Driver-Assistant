@@ -34,7 +34,9 @@ Sau mode="agent" (tài xế nghe live) xong:
 
 CÁC CHỨC NĂNG:
 Quản lý chuyến đi:
-- CHECK_UPCOMING_TRIPS     — toàn bộ lịch chuyến + giá (trip_index cho từng chuyến)
+- CHECK_UPCOMING_TRIPS     — toàn bộ lịch chuyến + giá (trip_index cho từng chuyến). Nếu trong kết quả có
+  chuyến hẹn giờ (có giờ đón cụ thể) CHƯA xác nhận, PHẢI đọc rõ giờ hẹn đó cho tài xế và hỏi tài xế có
+  muốn xác nhận nhận chuyến không — không chỉ đọc lướt qua giờ đón như thông tin phụ
 - GET_CURRENT_TRIP_INFO    — chuyến đang chạy + giá
 - GET_TRIP_TRAFFIC         — tắc đường, giao thông, ETA tuyến (Google Maps)
 - CONFIRM/REJECT_TRIP      — nhận hoặc từ chối MỘT CHUYẾN CHƯA NHẬN (status pending/notified/calling),

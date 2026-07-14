@@ -22,7 +22,7 @@ export interface Trip {
 }
 
 export interface CreateTripPayload {
-  driver_phone: string
+  driver_phone?: string
   customer_name: string
   customer_phone?: string
   pickup_address: string

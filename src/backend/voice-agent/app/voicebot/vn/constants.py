@@ -45,3 +45,6 @@ ERR_CUSTOMER_TRIP_FAIL = "Hiện không thể lấy thông tin chuyến đi. Vui
 ERR_NO_CUSTOMER_TRIP   = "Bạn hiện không có chuyến đi nào đang hoạt động."
 ERR_NO_CANCELLABLE     = "Không có chuyến đi nào có thể hủy lúc này."
 ERR_ETA_UNCONFIRMED    = "Tài xế chưa xác nhận chuyến. Vui lòng chờ thêm."
+ERR_INVALID_CUSTOM_PHONE  = "Số điện thoại này nghe không hợp lệ. Anh/chị đọc lại giúp tôi số điện thoại Việt Nam cần gọi."
+ERR_CUSTOM_CALL_LIMIT     = "Anh/chị đã dùng hết số lần gọi số tự do cho phiên này. Vui lòng thử lại ở phiên sau."
+ERR_NO_PENDING_CUSTOM_CALL = "Không có số điện thoại nào đang chờ xác nhận. Anh/chị đọc số cần gọi trước nhé."

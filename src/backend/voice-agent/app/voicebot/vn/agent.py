@@ -6,6 +6,8 @@ from livekit.agents import Agent
 from app.voicebot.vn.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
 from app.voicebot.vn.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
 from app.voicebot.vn.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.vn.pronunciations import PRONUNCIATIONS
+from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.vn.tools.check_upcoming_trips       import check_upcoming_trips
@@ -13,6 +15,8 @@ from app.voicebot.vn.tools.get_current_trip_info      import get_current_trip_in
 from app.voicebot.vn.tools.get_trip_traffic           import get_trip_traffic
 from app.voicebot.vn.tools.update_trip_status         import update_trip_status
 from app.voicebot.vn.tools.call_customer              import call_customer
+from app.voicebot.vn.tools.call_custom_number         import call_custom_number
+from app.voicebot.vn.tools.confirm_call_custom_number import confirm_call_custom_number
 from app.voicebot.vn.tools.get_customer_location      import get_customer_location
 from app.voicebot.vn.tools.confirm_trip_with_customer import confirm_trip_with_customer
 from app.voicebot.vn.tools.summarize_last_call        import summarize_last_call
@@ -64,6 +68,8 @@ _DRIVER_INBOUND_TOOLS = [
     confirm_cancel_trip,
     # Customer communication
     call_customer,
+    call_custom_number,
+    confirm_call_custom_number,
     get_customer_location,
     confirm_trip_with_customer,
     summarize_last_call,
@@ -92,11 +98,14 @@ _CUSTOMER_TOOLS = [
 ]
 
 
-class DriverAgent(Agent):
+class DriverAgent(SpeechTextFixMixin, Agent):
     """
     Handles both inbound (driver opens app) and outbound (system notifies driver) modes.
-    All responses are in Vietnamese. No mixin inheritance — tools are passed explicitly.
+    All responses are in Vietnamese.
     """
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(
         self,
@@ -145,8 +154,11 @@ class DriverAgent(Agent):
         return msg
 
 
-class CustomerAgent(Agent):
+class CustomerAgent(SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from Vietnamese-speaking customers."""
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone

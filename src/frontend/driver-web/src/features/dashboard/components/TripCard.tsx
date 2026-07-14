@@ -31,6 +31,7 @@ export default function TripCard({ trip }: { trip: Trip }) {
           </Stack>
 
           <Stack spacing={0.5} divider={<Divider />}>
+            {trip.pickup_time && <InfoRow label="Departure" value={trip.pickup_time} />}
             <InfoRow label="From" value={trip.pickup_address} />
             <InfoRow label="To" value={trip.dropoff_address} />
             {trip.eta_minutes > 0 && <InfoRow label="ETA" value={`${trip.eta_minutes} min`} />}

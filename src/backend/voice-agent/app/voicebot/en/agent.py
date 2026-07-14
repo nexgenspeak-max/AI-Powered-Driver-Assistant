@@ -5,6 +5,8 @@ from livekit.agents import Agent
 from app.voicebot.en.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
 from app.voicebot.en.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
 from app.voicebot.en.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.en.pronunciations import PRONUNCIATIONS
+from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.en.tools.check_upcoming_trips       import check_upcoming_trips
@@ -70,11 +72,14 @@ _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
 _CUSTOMER_TOOLS = [get_my_trip, cancel_my_trip, get_driver_eta, answer_app_faq]
 
 
-class DriverAgent(Agent):
+class DriverAgent(SpeechTextFixMixin, Agent):
     """
     Handles both inbound and outbound driver sessions.
-    All responses are in English. No mixin inheritance — tools are passed explicitly.
+    All responses are in English.
     """
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(
         self,
@@ -123,8 +128,11 @@ class DriverAgent(Agent):
         return msg
 
 
-class CustomerAgent(Agent):
+class CustomerAgent(SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from English-speaking customers."""
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone

@@ -15,7 +15,7 @@ PRONUNCIATIONS: list[tuple[str, str]] = [
     # English acronyms that TTS often mispronounces
     ("ETA",  "ê tê a"),
     ("SMS",  "ét em ét"),
-    ("AI",   "a i"),
+    ("AI",   "ây ai"),
     ("SIP",  "síp"),
 
     # Number formatting edge cases handled elsewhere; listed for reference

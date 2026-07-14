@@ -68,7 +68,14 @@ def _disconnect_summary(lang: str, mode: str) -> str:
     )
 
 
-async def _auto_complete_isolated(session: AgentSession, userdata: dict, summary: str) -> None:
+async def complete_isolated_call(session: AgentSession, userdata: dict, summary: str) -> None:
+    """Mark a background (isolated) customer call finished and tear down its room.
+
+    Shared by: SIP disconnect watcher, the no-answer watchdog, and the
+    SilenceTracker timeout callback — every path that can end a background
+    call must go through here so the driver's "tóm tắt cuộc gọi" query never
+    gets stuck on status=in_progress.
+    """
     if userdata.get("_handback_in_progress"):
         return
     userdata["_handback_in_progress"] = True
@@ -82,8 +89,8 @@ async def _auto_complete_isolated(session: AgentSession, userdata: dict, summary
                 api.DeleteRoomRequest(room=job_ctx.room.name)
             )
         except Exception:
-            logger.warning("failed to delete isolated room after SIP disconnect", exc_info=True)
-        logger.info("isolated call auto-completed on SIP disconnect")
+            logger.warning("failed to delete isolated room", exc_info=True)
+        logger.info("isolated call auto-completed | summary=%s", summary[:120])
     finally:
         userdata["_handback_in_progress"] = False
 
@@ -111,7 +118,7 @@ def register_sip_call_watchers(
             lang = userdata.get("lang", "vn")
             summary = _disconnect_summary(lang, "background")
             _run_logged(
-                _auto_complete_isolated(session, userdata, summary),
+                complete_isolated_call(session, userdata, summary),
                 name="auto_complete_isolated",
             )
             return

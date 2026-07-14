@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, IconButton, Snackbar, Alert, TextField, Typography, Tooltip } from '@mui/material'
 import MicIcon from '@mui/icons-material/Mic'
 import SendIcon from '@mui/icons-material/Send'
-import { useAssistantChat } from '../hooks/useAssistantChat'
-import { useVoiceSession } from '../hooks/useVoiceSession'
+import { useAssistantChatStore } from '../stores/assistantChatStore'
+import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useAuthStore } from '../../../stores/authStore'
 import { getAssistantReply } from '../../../services/api/assistant'
 import { useAssistantAnimStore } from '../stores/assistantAnimStore'
@@ -32,15 +32,22 @@ const MIC_LABEL = {
 
 export default function AssistantChatPanel() {
   const customer = useAuthStore(s => s.customer)
-  const { chats, addUserMessage, addBotMessage } = useAssistantChat()
-  const voice = useVoiceSession((text, from) => {
-    if (from === 'user') addUserMessage(text)
-    else addBotMessage(text)
-  })
+  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
+  const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
   const chatBoxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // TEMP DEBUG (remove once FEAT-010 chat-text investigation is done)
+    console.debug('[chat-panel] subscribing to voice messages')
+    return subscribeVoiceMessages((text, from) => {
+      console.debug('[chat-panel] listener fired', { from, text })
+      if (from === 'user') addUserMessage(text)
+      else addBotMessage(text)
+    })
+  }, [addUserMessage, addBotMessage])
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' })

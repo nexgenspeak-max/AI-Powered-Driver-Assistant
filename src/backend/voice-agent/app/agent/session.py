@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 import traceback
 from typing import Literal
 
@@ -26,6 +27,7 @@ from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
 from app.voicebot.processors.sip_call_watch import (
+    complete_isolated_call,
     register_customer_room_sip_watchers,
     register_sip_call_watchers,
 )
@@ -151,6 +153,8 @@ async def entrypoint(ctx: JobContext) -> None:
             "background_call_active": False,
             "isolated_call":          mode == "custcall",
             "_silence_tracker":       None,
+            "_call_started_at":       time.time(),
+            "_customer_spoke":        False,
         }
 
         if mode == "custcall" and trip:
@@ -190,7 +194,15 @@ async def entrypoint(ctx: JobContext) -> None:
                 customer_name=(trip or {}).get("customer_name", "khách"),
                 isolated=True,
             )
-            silence_seconds = 20.0
+            # The isolated job starts dialing+dispatching in parallel (see
+            # trip-service callService.ts startCustomerCall), so this clock is
+            # already running while the phone is still ringing. LiveKit has no
+            # reliable "answered" signal exposed to the agent job here (the SIP
+            # participant joins — and can subscribe a track — while still
+            # ringing, per livekit.SIPCallStatus.SCS_PARTICIPANT_JOINED), so we
+            # give ring time generous headroom instead of guessing an answer
+            # signal. Real answers are almost always well under this.
+            silence_seconds = 35.0
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 20.0   # customers may pause longer
@@ -214,9 +226,15 @@ async def entrypoint(ctx: JobContext) -> None:
             ),
             room_output_options=RoomOutputOptions(
                 transcription_enabled=True,
-                sync_transcription=True,
+                # False (not True): with sync_transcription on, the SDK's
+                # TranscriptSynchronizer paces text release to match estimated
+                # audio playback progress and never released it at all here
+                # (chat bubble missing even though the reply was fully heard)
+                # — send transcripts as soon as they're available instead.
+                sync_transcription=False,
             ),
         )
+
         conv_service.attach(session)
 
         # ── Silence tracker ───────────────────────────────────────────────────
@@ -232,6 +250,20 @@ async def entrypoint(ctx: JobContext) -> None:
             end_on_timeout = False
 
         if settings.silence_tracker_enabled:
+            async def _on_isolated_silence_timeout() -> None:
+                # Isolated (background) call safety timeout — covers both "never
+                # answered" and "answered then went silent". Must go through
+                # complete_isolated_call so the driver's "tóm tắt cuộc gọi" query
+                # never gets stuck on status=in_progress (previously this path
+                # just force-removed participants and shut the job down with no
+                # backend call at all).
+                summary = (
+                    "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
+                    if lang != "en" else
+                    "Could not reach the customer (no answer or prolonged silence)."
+                )
+                await complete_isolated_call(session, session_userdata, summary)
+
             silence_tracker = SilenceTracker(
                 session=session,
                 ctx=ctx,
@@ -239,6 +271,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 silence_message="<speech_not_detected>",
                 max_consecutive_silences=max_silences,
                 end_session_on_timeout=end_on_timeout,
+                on_timeout=_on_isolated_silence_timeout if mode == "custcall" else None,
             )
 
             @session.on("conversation_item_added")
@@ -246,11 +279,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 item = ev.item
                 if isinstance(item, ChatMessage) and item.role == "user" and item.text_content:
                     silence_tracker.reset_silence_timer()
+                    session_userdata["_customer_spoke"] = True
 
             @session.on("user_input_transcribed")
             def _on_user_transcribed(ev) -> None:
                 if ev.is_final and ev.transcript.strip():
                     silence_tracker.reset_silence_timer()
+                    session_userdata["_customer_spoke"] = True
 
             @session.on("agent_state_changed")
             def _on_agent_state(ev) -> None:

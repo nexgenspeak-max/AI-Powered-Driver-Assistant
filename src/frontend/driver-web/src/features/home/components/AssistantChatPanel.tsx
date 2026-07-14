@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, IconButton, Snackbar, Alert, TextField, Typography, Tooltip } from '@mui/material'
 import MicIcon from '@mui/icons-material/Mic'
 import SendIcon from '@mui/icons-material/Send'
-import { useAssistantChat } from '../hooks/useAssistantChat'
-import { useVoiceSession } from '../hooks/useVoiceSession'
+import { useAssistantChatStore } from '../stores/assistantChatStore'
+import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useAuthStore } from '../../../stores/authStore'
 import { getAssistantReply } from '../../../services/api/assistant'
 
@@ -30,15 +30,19 @@ const MIC_LABEL = {
 
 export default function AssistantChatPanel() {
   const driver = useAuthStore(s => s.driver)
-  const { chats, addUserMessage, addBotMessage } = useAssistantChat()
-  const voice = useVoiceSession((text, from) => {
-    if (from === 'user') addUserMessage(text)
-    else addBotMessage(text)
-  })
+  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
+  const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
   const chatBoxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    return subscribeVoiceMessages((text, from) => {
+      if (from === 'user') addUserMessage(text)
+      else addBotMessage(text)
+    })
+  }, [addUserMessage, addBotMessage])
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' })
