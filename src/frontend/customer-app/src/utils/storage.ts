@@ -11,12 +11,12 @@ if (Platform.OS === 'web') {
     removeItem: (key) => localStorage.removeItem(key),
   }
 } else {
-  const { MMKV } = require('react-native-mmkv')
-  const mmkv = new MMKV()
+  const { createMMKV } = require('react-native-mmkv')
+  const mmkv = createMMKV()
   storage = {
     getItem: (key) => mmkv.getString(key) ?? null,
     setItem: (key, value) => mmkv.set(key, value),
-    removeItem: (key) => mmkv.delete(key),
+    removeItem: (key) => mmkv.remove(key),
   }
 }
 

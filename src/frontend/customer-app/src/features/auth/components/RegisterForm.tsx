@@ -72,7 +72,7 @@ export function RegisterForm() {
 
         {isError && <Text className="text-red-500 text-xs">Registration failed. Check your details.</Text>}
 
-        <Button label="Sign Up" onPress={handleSubmit(onSubmit)} loading={isPending} full />
+        <Button className="mt-2" label="Sign Up" onPress={handleSubmit(onSubmit)} loading={isPending}/>
 
         <Text className="text-center text-gray-500 text-sm">
           Already have an account?{' '}
@@ -80,5 +80,7 @@ export function RegisterForm() {
         </Text>
       </View>
     </View>
+
+    
   )
 }

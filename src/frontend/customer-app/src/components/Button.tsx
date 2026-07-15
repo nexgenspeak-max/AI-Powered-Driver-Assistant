@@ -7,6 +7,7 @@ interface Props {
   loading?: boolean
   disabled?: boolean
   full?: boolean
+  className?: string
 }
 
 const VARIANTS = {
@@ -17,13 +18,13 @@ const VARIANTS = {
   success: { btn: 'bg-green-500', text: 'text-white'      },
 }
 
-export function Button({ label, onPress, variant = 'primary', loading, disabled, full }: Props) {
+export function Button({ label, onPress, variant = 'primary', loading, disabled, full, className }: Props) {
   const v = VARIANTS[variant]
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      className={`${v.btn} ${full ? 'flex-1' : ''} py-3 px-5 rounded-xl items-center flex-row justify-center gap-2 ${(disabled || loading) ? 'opacity-50' : ''}`}
+      className={`${v.btn} ${full ? 'flex-1 w-full' : ''} min-h-[52px] py-4 px-5 rounded-xl items-center flex-row justify-center gap-2 ${(disabled || loading) ? 'opacity-50' : ''} ${className ?? ''}`}
       activeOpacity={0.8}
     >
       {loading && <ActivityIndicator size="small" color="#fff" />}

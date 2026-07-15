@@ -4,7 +4,7 @@ import { registerGlobals, AudioSession } from '@livekit/react-native'
 // (RTCPeerConnection, MediaStream, ...) that livekit-client expects.
 registerGlobals()
 
-export { Room, RoomEvent, Track } from 'livekit-client'
+export { Room, RoomEvent, Track, ConnectionState } from 'livekit-client'
 
 export async function startAudioSession() {
   await AudioSession.startAudioSession()

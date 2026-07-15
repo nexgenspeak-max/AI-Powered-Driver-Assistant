@@ -168,12 +168,17 @@ async def entrypoint(ctx: JobContext) -> None:
                 "mode":           "background",
             }
 
+        # MultilingualModel's turn detector doesn't support Vietnamese — logs
+        # "Turn detector does not support language vi" on every user turn and,
+        # in practice, the pipeline stops picking up further speech after a
+        # couple of exchanges. Fall back to VAD-only (Silero) endpointing for
+        # "vn", which is language-agnostic and unaffected by this gap.
         session = AgentSession(
             stt=get_stt(),
             llm=get_llm(),
             tts=get_tts(),
             vad=ctx.proc.userdata["vad"],
-            turn_detection=MultilingualModel(),
+            turn_detection=MultilingualModel() if lang != "vn" else None,
             userdata=session_userdata,
         )
 

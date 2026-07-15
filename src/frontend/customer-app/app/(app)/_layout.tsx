@@ -1,18 +1,46 @@
-import { Stack } from 'expo-router'
+import { Tabs } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 
 export default function AppLayout() {
   return (
-    <Stack
+    <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#1a1f36' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
-        contentStyle: { backgroundColor: '#f4f6fb' },
         headerShown: false,
+        tabBarActiveTintColor: '#6c8aff',
+        tabBarInactiveTintColor: '#9ca3af',
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="trip/[id]" options={{ title: 'Trip Status', headerShown: true }} />
-    </Stack>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="booking"
+        options={{
+          title: 'Booking',
+          tabBarIcon: ({ color, size }) => <Ionicons name="car" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trips"
+        options={{
+          title: 'Trips',
+          tabBarIcon: ({ color, size }) => <Ionicons name="time" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
+      <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
+      <Tabs.Screen name="trip/[id]" options={{ href: null, title: 'Trip Status' }} />
+    </Tabs>
   )
 }

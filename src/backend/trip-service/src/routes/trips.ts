@@ -84,11 +84,17 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const status = req.query.status ? String(req.query.status) : '';
     const driverPhone = req.query.driver_phone ? String(req.query.driver_phone) : '';
-    const customerPhone = req.query.customer_phone ? String(req.query.customer_phone) : '';
+    // A logged-in customer can only ever list their own trips — the account id comes
+    // from their verified token, never from the query string, so one customer can't
+    // page through another's history by guessing an id_account/phone value.
+    // Service callers (admin panel) authenticate as 'admin' and may look up any account.
+    const idAccount = req.user?.role === 'customer'
+      ? req.user.sub
+      : (req.query.id_account ? String(req.query.id_account) : '');
 
     if (driverPhone && status) return res.json(await tripService.listByDriverAndStatus(driverPhone, status, limit));
     if (driverPhone) return res.json(await tripService.listByDriver(driverPhone, limit));
-    if (customerPhone) return res.json(await tripService.listByCustomer(customerPhone, limit));
+    if (idAccount) return res.json(await tripService.listByAccount(idAccount, limit));
     if (status) return res.json(await tripService.listByStatus(status, limit));
     return res.json(await tripService.listRecent(limit));
   } catch (err) {

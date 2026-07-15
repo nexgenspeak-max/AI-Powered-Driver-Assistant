@@ -71,7 +71,7 @@ export async function invalidateDriverContext(driverPhone: string) {
 }
 
 export async function buildCustomerContext(customerPhone: string) {
-  const trips = await tripService.listByCustomer(customerPhone, 20);
+  const trips = await tripService.listByCustomerPhone(customerPhone, 20);
   const active = trips.filter(
     t => !['completed', 'rejected', 'no_answer', 'cancelled', 'cancelled_by_driver'].includes(t.status),
   );

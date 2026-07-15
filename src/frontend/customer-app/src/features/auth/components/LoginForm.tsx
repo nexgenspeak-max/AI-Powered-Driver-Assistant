@@ -62,7 +62,7 @@ export function LoginForm() {
 
         {isError && <Text className="text-red-500 text-xs">Login failed. Check your details.</Text>}
 
-        <Button label="Log In" onPress={handleSubmit(onSubmit)} loading={isPending} full />
+        <Button className="mt-2" label="Log In" onPress={handleSubmit(onSubmit)} loading={isPending} />
 
         <Text className="text-center text-gray-500 text-sm">
           Don't have an account?{' '}

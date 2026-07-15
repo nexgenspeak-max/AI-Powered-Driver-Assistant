@@ -1,5 +1,5 @@
-import { BookingForm } from '../../src/features/booking/components/BookingForm'
+import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
 
 export default function HomeScreen() {
-  return <BookingForm />
+  return <AssistantChatPanel />
 }

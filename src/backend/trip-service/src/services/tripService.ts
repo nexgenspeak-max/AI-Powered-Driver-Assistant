@@ -137,7 +137,10 @@ export async function listByDriverAndStatus(driverPhone: string, status: string,
   return trips.filter(t => t.status === status).slice(0, limit);
 }
 
-export async function listByCustomer(customerPhone: string, limit = 50): Promise<Trip[]> {
+// No index on customer_phone — callers with an id_account should use listByAccount
+// instead. This stays Scan-based for the voice-agent, which only knows the caller's
+// phone number (no account id) when it looks up customer context mid-call.
+export async function listByCustomerPhone(customerPhone: string, limit = 50): Promise<Trip[]> {
   const result = await docClient.send(new ScanCommand({
     TableName: config.dynamodbTable,
     FilterExpression: 'customer_phone = :p',
@@ -146,4 +149,16 @@ export async function listByCustomer(customerPhone: string, limit = 50): Promise
   }));
   const items = (result.Items as Trip[]) ?? [];
   return items.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit);
+}
+
+export async function listByAccount(idAccount: string, limit = 50): Promise<Trip[]> {
+  const result = await docClient.send(new QueryCommand({
+    TableName: config.dynamodbTable,
+    IndexName: 'id_account-created_at-index',
+    KeyConditionExpression: 'id_account = :a',
+    ExpressionAttributeValues: { ':a': idAccount },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return (result.Items as Trip[]) ?? [];
 }
