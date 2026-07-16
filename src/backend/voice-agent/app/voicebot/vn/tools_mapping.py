@@ -139,6 +139,14 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: end_conversation
+- Khi dùng: tài xế chủ động muốn kết thúc cuộc gọi với trợ lý — "tạm biệt", "thôi tắt đi",
+  "kết thúc trợ lý", "dừng lại nhé", "thế thôi nha", "vậy thôi cảm ơn"
+- KHÔNG dùng khi tài xế chỉ đang im lặng tạm thời hoặc đang bận thao tác khác — chỉ gọi khi có
+  ý định kết thúc rõ ràng bằng lời nói
+
+---
+
 ## Tool: book_trip (customer agent)
 - Khi dùng: khách muốn đặt xe, cần đi đâu đó, cần xe đón — "tôi muốn đặt xe", "đặt giúp tôi chuyến xe", "cần xe đi..."
 - PHẢI hỏi đủ tên khách hàng, điểm đón, điểm đến trước khi gọi tool — không tự bịa thông tin còn thiếu

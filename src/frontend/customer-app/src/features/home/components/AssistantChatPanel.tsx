@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
+import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, XStack, Text, Theme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { StatusBar } from 'expo-status-bar'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useAuthStore } from '../../../stores/authStore'
@@ -67,35 +70,92 @@ export function AssistantChatPanel() {
   }
 
   return (
+    // Chat screen is always dark-branded regardless of the app-wide light/dark
+    // toggle (matches the signature AI-orb look) — force the dark theme here
+    // so $textPrimary/$accent/etc. don't flip to light-mode values against
+    // this screen's fixed near-black background.
+    <Theme name="dark">
+    <StatusBar style="light" />
     <KeyboardAvoidingView
-      className="flex-1 bg-dark"
+      style={{ flex: 1, backgroundColor: '#0B0B0F' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={60}
     >
-      <View className="pt-14">
+      <View paddingTop={56}>
         <AssistantAvatar status={voice.status} />
-        <Text className="text-center text-gray-400 text-xs -mt-4">{MIC_LABEL[voice.status]}</Text>
+        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop={-16}>
+          {MIC_LABEL[voice.status]}
+        </Text>
       </View>
 
-      <ScrollView ref={scrollRef} className="flex-1 px-4 mt-4" contentContainerClassName="gap-2 pb-2">
-        {chats.map((chat, i) => (
-          <View
-            key={i}
-            className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${chat.who === 'me' ? 'self-end bg-primary' : 'self-start bg-accent'}`}
-          >
-            <Text className="text-white">{chat.msg}</Text>
-          </View>
-        ))}
-        {stubLoading && <Text className="text-gray-400 text-xs px-1">Đang trả lời...</Text>}
-        {error && <Text className="text-red-400 text-xs px-1">{error}</Text>}
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1, paddingHorizontal: 16, marginTop: 16 }}
+        contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
+      >
+        {chats.map((chat, i) =>
+          chat.who === 'me' ? (
+            <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
+              <LinearGradient
+                colors={['#7C5B9C', '#A855F7']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+              >
+                <Text color="$textInverse">{chat.msg}</Text>
+              </LinearGradient>
+            </View>
+          ) : (
+            <View
+              key={i}
+              maxWidth="80%"
+              alignSelf="flex-start"
+              backgroundColor="$accent"
+              borderRadius="$bubble"
+              paddingHorizontal="$4"
+              paddingVertical={10}
+            >
+              <Text color="$textPrimary">{chat.msg}</Text>
+            </View>
+          ),
+        )}
+        {stubLoading && (
+          <Text color="$textSecondary" fontSize="$1" paddingHorizontal="$1">
+            Đang trả lời...
+          </Text>
+        )}
+        {error && (
+          <Text color="$danger" fontSize="$1" paddingHorizontal="$1">
+            {error}
+          </Text>
+        )}
       </ScrollView>
 
-      <View className="flex-row items-center gap-2 mx-4 mb-6 px-2 h-12 rounded-full border border-gray-600 bg-gray-900">
-        <TouchableOpacity onPress={handleMicPress} className="p-2">
+      <XStack
+        alignItems="center"
+        gap="$2"
+        marginHorizontal="$4"
+        marginBottom={100}
+        paddingHorizontal="$2"
+        height={48}
+        borderRadius="$pill"
+        borderWidth={1}
+        borderColor="rgba(255,255,255,0.08)"
+        backgroundColor="#15151C"
+      >
+        <TouchableOpacity onPress={handleMicPress} style={{ padding: 8 }}>
           <Ionicons
             name="mic"
             size={20}
-            color={voice.status === 'connected' ? '#35a4f3' : voice.status === 'connecting' ? '#f5a623' : voice.status === 'error' ? '#e05252' : '#fff'}
+            color={
+              voice.status === 'connected'
+                ? '#35a4f3'
+                : voice.status === 'connecting'
+                  ? '#f5a623'
+                  : voice.status === 'error'
+                    ? '#e05252'
+                    : '#fff'
+            }
           />
         </TouchableOpacity>
         <TextInput
@@ -103,13 +163,14 @@ export function AssistantChatPanel() {
           onChangeText={setMsg}
           onSubmitEditing={handleSend}
           placeholder="Nói gì đó..."
-          placeholderTextColor="#9ca3af"
-          className="flex-1 text-white"
+          placeholderTextColor="#8f7fb0"
+          style={{ flex: 1, color: '#fff' }}
         />
-        <TouchableOpacity onPress={handleSend} className="p-2">
+        <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
           <Ionicons name="send" size={18} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </XStack>
     </KeyboardAvoidingView>
+    </Theme>
   )
 }

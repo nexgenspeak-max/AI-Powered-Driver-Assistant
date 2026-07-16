@@ -121,6 +121,14 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: end_call
+- Use when the driver proactively wants to end the call with the assistant — "bye",
+  "that's it, hang up", "end the assistant", "stop the call", "that's all thanks"
+- Do NOT use when the driver is just briefly quiet or busy with something else — only call
+  when there is a clear spoken intent to end the conversation
+
+---
+
 ## Tool: get_my_trip (customer agent)
 - Use when: "is my driver coming", "what's the status", "where is my driver", "how long until pickup"
 

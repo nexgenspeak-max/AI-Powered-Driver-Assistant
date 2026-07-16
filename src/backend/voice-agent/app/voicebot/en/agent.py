@@ -34,6 +34,7 @@ from app.voicebot.en.tools.report_trip_issue          import report_trip_issue
 from app.voicebot.en.tools.extend_wait_time           import extend_wait_time
 from app.voicebot.en.tools.set_driver_status          import set_driver_status
 from app.voicebot.en.tools.answer_app_faq             import answer_app_faq
+from app.voicebot.en.tools.end_call                   import end_call
 
 logger = logging.getLogger("voice-agent.en.agent")
 
@@ -65,6 +66,8 @@ _DRIVER_INBOUND_TOOLS = [
     set_driver_status,
     # App playbook / FAQ (RAG)
     answer_app_faq,
+    # Ending the call
+    end_call,
 ]
 
 _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]

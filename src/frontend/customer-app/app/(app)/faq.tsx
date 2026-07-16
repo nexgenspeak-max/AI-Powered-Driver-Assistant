@@ -1,13 +1,16 @@
-import { View, ScrollView, Text } from 'react-native'
+import { ScrollView } from 'react-native'
+import { View, Text } from 'tamagui'
 import { BackButton } from '../../src/components/BackButton'
 import { FaqContent } from '../../src/features/info/components/FaqContent'
 
 export default function FaqScreen() {
   return (
-    <View className="flex-1 bg-surface">
+    <View flex={1} backgroundColor="$surface">
       <BackButton />
-      <ScrollView className="flex-1" contentContainerClassName="p-5 pt-28 gap-4">
-        <Text className="text-xl font-extrabold text-gray-900">Câu hỏi thường gặp</Text>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: 112, paddingBottom: 100, gap: 16 }}>
+        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+          Câu hỏi thường gặp
+        </Text>
         <FaqContent />
       </ScrollView>
     </View>

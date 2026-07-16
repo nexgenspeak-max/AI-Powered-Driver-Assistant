@@ -1,4 +1,5 @@
-import { View, Text, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
+import { View, Text, useTheme } from 'tamagui'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -29,23 +30,31 @@ export function BookingForm() {
   const onSubmit = (data: FormValues) => {
     book(data, { onSuccess: trip => router.push(`/trip/${trip.trip_id}`) })
   }
+  const theme = useTheme()
 
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerClassName="p-5 pt-16 gap-4">
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.surface.val }}
+      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 16 }}
+    >
       <View>
-        <Text className="text-2xl font-extrabold text-gray-900">Book a Ride</Text>
-        <Text className="text-gray-500 text-sm mt-1">Enter your trip details below</Text>
+        <Text fontSize="$7" fontWeight="800" color="$textPrimary">
+          Book a Ride
+        </Text>
+        <Text color="$textSecondary" fontSize="$3" marginTop="$1">
+          Enter your trip details below
+        </Text>
       </View>
 
       {activeTripId && (
-        <Card className="bg-green-50 border-green-300">
-          <Text className="text-green-800 text-sm" onPress={() => router.push(`/trip/${activeTripId}`)}>
-            You have an active trip. <Text className="underline font-semibold">View status →</Text>
+        <Card backgroundColor="$green4" borderColor="$green8">
+          <Text color="$green11" fontSize="$3" onPress={() => router.push(`/trip/${activeTripId}`)}>
+            You have an active trip. <Text textDecorationLine="underline" fontWeight="600">View status →</Text>
           </Text>
         </Card>
       )}
 
-      <Card className="gap-4">
+      <Card gap="$4">
         <Controller name="customer_name" control={control} render={({ field: { onChange, onBlur, value } }) => (
           <Input label="Your name" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.customer_name?.message} />
         )} />
@@ -59,7 +68,11 @@ export function BookingForm() {
           <Input label="Dropoff address" value={value} onChangeText={onChange} onBlur={onBlur} error={errors.dropoff_address?.message} />
         )} />
 
-        {isError && <Text className="text-red-500 text-xs">Failed to book. Please try again.</Text>}
+        {isError && (
+          <Text color="$danger" fontSize="$1">
+            Failed to book. Please try again.
+          </Text>
+        )}
 
         <Button label="Book Now" onPress={handleSubmit(onSubmit)} loading={isPending} full />
       </Card>

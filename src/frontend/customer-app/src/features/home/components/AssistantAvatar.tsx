@@ -1,16 +1,19 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Text, View } from 'react-native'
+import { Animated } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { View } from 'tamagui'
 import type { VoiceSessionStatus } from '../stores/voiceSessionStore'
 
-const STATUS_COLOR: Record<VoiceSessionStatus, string> = {
-  idle: '#6c8aff',
-  connecting: '#f5a623',
-  connected: '#35a4f3',
-  error: '#e05252',
+const STATUS_GRADIENT: Record<VoiceSessionStatus, [string, string]> = {
+  idle: ['#7C5B9C', '#A855F7'],
+  connecting: ['#f5a623', '#f5722c'],
+  connected: ['#35a4f3', '#6c8aff'],
+  error: ['#e05252', '#b23a5c'],
 }
 
 export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
   const pulse = useRef(new Animated.Value(1)).current
+  const [from, to] = STATUS_GRADIENT[status]
 
   useEffect(() => {
     if (status !== 'connected' && status !== 'connecting') {
@@ -28,12 +31,26 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
   }, [status, pulse])
 
   return (
-    <View className="items-center justify-center py-8">
+    <View alignItems="center" justifyContent="center" paddingVertical="$8">
       <Animated.View
-        style={{ transform: [{ scale: pulse }], backgroundColor: STATUS_COLOR[status] }}
-        className="w-28 h-28 rounded-full items-center justify-center"
+        style={{
+          transform: [{ scale: pulse }],
+          width: 128,
+          height: 128,
+          borderRadius: 64,
+          shadowColor: from,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.6,
+          shadowRadius: 30,
+          elevation: 12,
+        }}
       >
-        <Text className="text-5xl">🤖</Text>
+        <LinearGradient
+          colors={[from, to]}
+          start={{ x: 0.15, y: 0.1 }}
+          end={{ x: 0.9, y: 0.9 }}
+          style={{ width: '100%', height: '100%', borderRadius: 64 }}
+        />
       </Animated.View>
     </View>
   )

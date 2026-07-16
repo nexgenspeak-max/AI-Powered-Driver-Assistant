@@ -7,13 +7,12 @@ Adapted from genai-core-livekit-voice-platform/src/services/silence_tracker.py.
 """
 import asyncio
 import logging
-import os
 import time
 from typing import Awaitable, Callable, Optional
 
-from livekit import api
 from livekit.agents import AgentSession, JobContext
-from livekit.protocol.room import RoomParticipantIdentity
+
+from app.services.session_control import end_room_session
 
 logger = logging.getLogger("voice-agent.silence_tracker")
 
@@ -183,34 +182,10 @@ class SilenceTracker:
                     await self.on_timeout()
                 except Exception:
                     logger.error("SilenceTracker | on_timeout callback failed", exc_info=True)
-
-            remote_participants = list(self.ctx.room.remote_participants.values())
-            if remote_participants:
-                lk = api.LiveKitAPI(
-                    url=os.getenv("LIVEKIT_URL", ""),
-                    api_key=os.getenv("LIVEKIT_API_KEY", ""),
-                    api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
-                )
-                try:
-                    for p in remote_participants:
-                        try:
-                            await lk.room.remove_participant(
-                                RoomParticipantIdentity(
-                                    room=self.ctx.room.name,
-                                    identity=p.identity,
-                                )
-                            )
-                            logger.info("SilenceTracker | removed participant %s", p.identity)
-                        except Exception as exc:
-                            logger.warning(
-                                "SilenceTracker | could not remove %s: %s", p.identity, exc
-                            )
-                    await asyncio.sleep(0.5)
-                finally:
-                    await lk.aclose()
         except Exception as exc:
             logger.error("SilenceTracker | error during session teardown: %s", exc)
         finally:
-            self.ctx.shutdown(
-                reason=f"silence timeout after {self._consecutive_silence_count} consecutive silences"
+            await end_room_session(
+                self.ctx,
+                reason=f"silence timeout after {self._consecutive_silence_count} consecutive silences",
             )

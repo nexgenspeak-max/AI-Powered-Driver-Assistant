@@ -1,30 +1,42 @@
 import { useState } from 'react'
-import { View, Text, TouchableOpacity } from 'react-native'
+import { YStack, XStack, Text, useTheme } from 'tamagui'
+import { TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FAQ_ITEMS } from '../data/faqData'
 
 export function FaqContent() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const theme = useTheme()
 
   return (
-    <View className="gap-2.5">
+    <YStack gap={10}>
       {FAQ_ITEMS.map((item, i) => {
         const isOpen = openIndex === i
         return (
-          <View key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <TouchableOpacity
-              onPress={() => setOpenIndex(isOpen ? null : i)}
-              className="flex-row items-center justify-between px-4 py-3"
-            >
-              <Text className="font-semibold text-gray-900 flex-1 pr-2">{item.question}</Text>
-              <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#9ca3af" />
+          <YStack
+            key={i}
+            backgroundColor="$surfaceElevated"
+            borderWidth={1}
+            borderColor="$border"
+            borderRadius="$control"
+            overflow="hidden"
+          >
+            <TouchableOpacity onPress={() => setOpenIndex(isOpen ? null : i)}>
+              <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$3">
+                <Text fontWeight="600" color="$textPrimary" flex={1} paddingRight="$2">
+                  {item.question}
+                </Text>
+                <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted.val} />
+              </XStack>
             </TouchableOpacity>
             {isOpen && (
-              <Text className="text-gray-500 leading-6 px-4 pb-3.5">{item.answer}</Text>
+              <Text color="$textSecondary" lineHeight={24} paddingHorizontal="$4" paddingBottom={14}>
+                {item.answer}
+              </Text>
             )}
-          </View>
+          </YStack>
         )
       })}
-    </View>
+    </YStack>
   )
 }

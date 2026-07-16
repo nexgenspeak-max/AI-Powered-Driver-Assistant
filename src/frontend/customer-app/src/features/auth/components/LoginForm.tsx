@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native'
+import { YStack, Text, Theme } from 'tamagui'
+import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -44,13 +45,22 @@ export function LoginForm() {
   const onSubmit = (data: FormValues) => login(data)
 
   return (
-    <View className="flex-1 bg-dark items-center justify-center p-6 gap-6">
-      <View className="items-center gap-2">
-        <Text className="text-white text-2xl font-extrabold">Welcome back</Text>
-        <Text className="text-gray-300 text-sm">Log in to book your next ride</Text>
-      </View>
+    // Auth screens are always dark-branded regardless of the app-wide theme
+    // toggle — force dark so nested tokens ($textSecondary, Input's
+    // $surfaceElevated, etc.) don't flip to light-mode values.
+    <Theme name="dark">
+    <StatusBar style="light" />
+    <YStack flex={1} backgroundColor="$dark" alignItems="center" justifyContent="center" padding="$6" gap="$6">
+      <YStack alignItems="center" gap="$2">
+        <Text color="$textInverse" fontSize="$7" fontWeight="800">
+          Welcome back
+        </Text>
+        <Text color="#d1d5db" fontSize="$3">
+          Log in to book your next ride
+        </Text>
+      </YStack>
 
-      <View className="w-full max-w-sm bg-white rounded-3xl p-6 gap-4">
+      <YStack width="100%" maxWidth={384} backgroundColor="$surfaceElevated" borderRadius="$8" padding="$6" gap="$4">
         <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
           <Input label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
@@ -60,15 +70,20 @@ export function LoginForm() {
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
         )} />
 
-        {isError && <Text className="text-red-500 text-xs">Login failed. Check your details.</Text>}
+        {isError && (
+          <Text color="$danger" fontSize="$1">
+            Login failed. Check your details.
+          </Text>
+        )}
 
-        <Button className="mt-2" label="Log In" onPress={handleSubmit(onSubmit)} loading={isPending} />
+        <Button label="Log In" onPress={handleSubmit(onSubmit)} loading={isPending} marginTop="$2" />
 
-        <Text className="text-center text-gray-500 text-sm">
+        <Text textAlign="center" color="$textSecondary" fontSize="$3">
           Don't have an account?{' '}
-          <Link href="/register" className="text-primary font-semibold">Sign up</Link>
+          <Link href="/register" style={{ color: '#6c8aff', fontWeight: '600' }}>Sign up</Link>
         </Text>
-      </View>
-    </View>
+      </YStack>
+    </YStack>
+    </Theme>
   )
 }

@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { YStack, XStack, Text } from 'tamagui'
 import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
 import type { Driver, DriverProfile } from '../../../types'
@@ -9,46 +9,75 @@ interface Props {
 }
 
 export function ProfileCard({ driver, profile }: Props) {
+  const isOnline = driver.status === 'online'
   return (
-    <View className="gap-4">
-      <Card className="items-center gap-2 py-6">
-        <View className="w-16 h-16 rounded-full bg-primary items-center justify-center">
-          <Text className="text-white text-2xl font-bold">{driver.name.charAt(0).toUpperCase()}</Text>
-        </View>
-        <Text className="text-lg font-bold text-gray-900">{driver.name}</Text>
-        <Text className="text-gray-400 text-sm">{driver.phone}</Text>
-        <Badge label={driver.status === 'online' ? 'Online' : 'Offline'}
-          className={driver.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'} />
+    <YStack gap="$4">
+      <Card alignItems="center" gap="$2" paddingVertical="$6">
+        <YStack
+          width={64}
+          height={64}
+          borderRadius="$pill"
+          backgroundColor="$primary"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Text color="$textInverse" fontSize="$8" fontWeight="700">
+            {driver.name.charAt(0).toUpperCase()}
+          </Text>
+        </YStack>
+        <Text fontSize="$5" fontWeight="700" color="$textPrimary">
+          {driver.name}
+        </Text>
+        <Text color="$textSecondary" fontSize="$3">
+          {driver.phone}
+        </Text>
+        <Badge
+          label={isOnline ? 'Online' : 'Offline'}
+          backgroundColor={isOnline ? '$green4' : '$gray4'}
+          color={isOnline ? '$green11' : '$gray11'}
+        />
       </Card>
 
       {!!driver.vehicle_name && (
-        <Card className="gap-2">
-          <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Vehicle</Text>
-          <Text className="text-gray-900 font-medium">{driver.vehicle_name}</Text>
-          <Text className="text-gray-500 text-sm">{driver.vehicle_plate}</Text>
+        <Card gap="$2">
+          <Text fontSize="$1" fontWeight="600" color="$textSecondary" textTransform="uppercase" letterSpacing={0.5}>
+            Vehicle
+          </Text>
+          <Text color="$textPrimary" fontWeight="500">
+            {driver.vehicle_name}
+          </Text>
+          <Text color="$textSecondary" fontSize="$3">
+            {driver.vehicle_plate}
+          </Text>
         </Card>
       )}
 
-      <Card className="gap-3">
-        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Performance</Text>
-        <View className="flex-row justify-between">
+      <Card gap="$3">
+        <Text fontSize="$1" fontWeight="600" color="$textSecondary" textTransform="uppercase" letterSpacing={0.5}>
+          Performance
+        </Text>
+        <XStack justifyContent="space-between">
           <StatBlock label="Rating" value={profile.rating.toFixed(2)} />
           <StatBlock label="Trips" value={String(profile.total_trips)} />
-        </View>
-        <View className="flex-row justify-between">
+        </XStack>
+        <XStack justifyContent="space-between">
           <StatBlock label="Acceptance" value={`${profile.acceptance_rate.toFixed(0)}%`} />
           <StatBlock label="Completion" value={`${profile.completion_rate.toFixed(0)}%`} />
-        </View>
+        </XStack>
       </Card>
-    </View>
+    </YStack>
   )
 }
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-1 items-center">
-      <Text className="text-xl font-bold text-gray-900">{value}</Text>
-      <Text className="text-xs text-gray-400">{label}</Text>
-    </View>
+    <YStack flex={1} alignItems="center">
+      <Text fontSize="$6" fontWeight="700" color="$textPrimary">
+        {value}
+      </Text>
+      <Text fontSize="$1" color="$textSecondary">
+        {label}
+      </Text>
+    </YStack>
   )
 }

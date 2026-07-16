@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { View, Text } from 'tamagui'
 import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
 import type { Customer } from '../../../types'
@@ -9,14 +9,23 @@ interface Props {
 
 export function ProfileCard({ customer }: Props) {
   return (
-    <Card className="items-center gap-2 py-6">
-      <View className="w-16 h-16 rounded-full bg-primary items-center justify-center">
-        <Text className="text-white text-2xl font-bold">{customer.name.charAt(0).toUpperCase()}</Text>
+    <Card alignItems="center" gap="$2" paddingVertical="$6">
+      <View width={64} height={64} borderRadius={32} backgroundColor="$primary" alignItems="center" justifyContent="center">
+        <Text color="$textInverse" fontSize="$7" fontWeight="700">
+          {customer.name.charAt(0).toUpperCase()}
+        </Text>
       </View>
-      <Text className="text-lg font-bold text-gray-900">{customer.name}</Text>
-      <Text className="text-gray-400 text-sm">{customer.phone}</Text>
-      <Badge label={customer.status === 'online' ? 'Online' : 'Offline'}
-        className={customer.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'} />
+      <Text fontSize="$5" fontWeight="700" color="$textPrimary">
+        {customer.name}
+      </Text>
+      <Text color="$textSecondary" fontSize="$3">
+        {customer.phone}
+      </Text>
+      <Badge
+        label={customer.status === 'online' ? 'Online' : 'Offline'}
+        backgroundColor={customer.status === 'online' ? '$green4' : '#f3f4f6'}
+        color={customer.status === 'online' ? '$green11' : '#4b5563'}
+      />
     </Card>
   )
 }

@@ -153,6 +153,7 @@ async def entrypoint(ctx: JobContext) -> None:
             "background_call_active": False,
             "isolated_call":          mode == "custcall",
             "_silence_tracker":       None,
+            "_job_ctx":               ctx,
             "_call_started_at":       time.time(),
             "_customer_spoke":        False,
         }
@@ -208,9 +209,11 @@ async def entrypoint(ctx: JobContext) -> None:
             # give ring time generous headroom instead of guessing an answer
             # signal. Real answers are almost always well under this.
             silence_seconds = 35.0
+            max_silences_default = 3
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 20.0   # customers may pause longer
+            max_silences_default = 3
         else:
             context_hint = context_store.build_context_hint(
                 session_userdata, lang="en" if lang == "en" else "vi"
@@ -219,6 +222,9 @@ async def entrypoint(ctx: JobContext) -> None:
                 trip=trip, driver_phone=phone, context_hint=context_hint
             )
             silence_seconds = 15.0   # drivers on the road, faster cut-off
+            # One check-in nudge at 15s, then hang up at 30s of total silence
+            # — matches how a hands-free wake-word call should feel.
+            max_silences_default = 2
 
         # BVCTelephony is for SIP/phone audio — it can strip speech from mobile WebRTC mics.
         noise_cancel = _NOISE_CANCEL if mode == "outbound" else None
@@ -248,7 +254,11 @@ async def entrypoint(ctx: JobContext) -> None:
             if settings.silence_threshold_seconds > 0
             else silence_seconds
         )
-        max_silences = settings.silence_max_consecutive
+        max_silences = (
+            settings.silence_max_consecutive
+            if settings.silence_max_consecutive > 0
+            else max_silences_default
+        )
         # Local dev / simulator: do not kick participants when there is no mic input.
         end_on_timeout = settings.silence_end_session
         if settings.env in ("local", "dev"):

@@ -498,4 +498,19 @@ raw_schema = {
             "required": ["question"],
         },
     },
+    "end_conversation": {
+        "type": "function",
+        "name": "end_conversation",
+        "description": (
+            "Chủ động kết thúc cuộc gọi với trợ lý AI theo yêu cầu của tài xế. "
+            "Gọi khi tài xế nói lời tạm biệt hoặc yêu cầu dừng/tắt trợ lý, ví dụ: "
+            "'tạm biệt', 'thôi tắt đi', 'kết thúc trợ lý', 'dừng lại nhé', 'thế thôi nha'. "
+            "KHÔNG gọi khi tài xế chỉ đang tạm dừng nói hoặc đang bận việc khác."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
 }

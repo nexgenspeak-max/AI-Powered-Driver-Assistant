@@ -1,10 +1,14 @@
-import { View, Text } from 'react-native'
+import { XStack, Text } from 'tamagui'
 
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row justify-between">
-      <Text className="text-gray-400 text-xs">{label}</Text>
-      <Text className="text-gray-900 text-xs font-medium">{value}</Text>
-    </View>
+    <XStack justifyContent="space-between">
+      <Text color="$textSecondary" fontSize="$1">
+        {label}
+      </Text>
+      <Text color="$textPrimary" fontSize="$1" fontWeight="500">
+        {value}
+      </Text>
+    </XStack>
   )
 }

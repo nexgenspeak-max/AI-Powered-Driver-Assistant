@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Switch, RefreshControl } from 'react-native'
+import { ScrollView, Switch, RefreshControl } from 'react-native'
+import { View, XStack, Text, useTheme } from 'tamagui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { TripSection } from '../../src/features/dashboard/components/TripSection'
@@ -13,6 +14,7 @@ export default function DashboardScreen() {
   const qc = useQueryClient()
 
   const { data: context, isLoading, isRefetching, refetch } = useDriverContext()
+  const theme = useTheme()
 
   const { mutate: toggleOnline } = useMutation({
     mutationFn: (online: boolean) => driversService.update(driver.phone, { status: online ? 'online' : 'offline' }),
@@ -27,30 +29,34 @@ export default function DashboardScreen() {
   ]
 
   return (
-    <View className="flex-1 bg-surface">
-      <View className="bg-dark px-5 pt-14 pb-4">
-        <View className="flex-row items-center justify-between">
+    <View flex={1} backgroundColor="$surface">
+      <View backgroundColor="$dark" paddingHorizontal="$5" paddingTop={56} paddingBottom="$4">
+        <XStack alignItems="center" justifyContent="space-between">
           <View>
-            <Text className="text-white font-bold text-lg">{driver.name}</Text>
-            <Text className="text-gray-400 text-xs">{driver.phone}</Text>
+            <Text color="$textInverse" fontWeight="700" fontSize="$5">
+              {driver.name}
+            </Text>
+            <Text color="$textSecondary" fontSize="$1">
+              {driver.phone}
+            </Text>
           </View>
-          <View className="flex-row items-center gap-2">
-            <Text className="text-xs font-medium" style={{ color: isOnline ? '#4ade80' : '#9ca3af' }}>
+          <XStack alignItems="center" gap="$2">
+            <Text fontSize="$1" fontWeight="500" color={isOnline ? '#4ade80' : theme.textMuted.val}>
               {isOnline ? 'Online' : 'Offline'}
             </Text>
             <Switch
               value={isOnline}
               onValueChange={toggleOnline}
-              trackColor={{ false: '#374151', true: '#166534' }}
-              thumbColor={isOnline ? '#4ade80' : '#6b7280'}
+              trackColor={{ false: theme.borderStrong.val, true: '#166534' }}
+              thumbColor={isOnline ? '#4ade80' : theme.textMuted.val}
             />
-          </View>
-        </View>
+          </XStack>
+        </XStack>
       </View>
 
       <ScrollView
-        className="flex-1"
-        contentContainerClassName="p-4 gap-4"
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
         {!isLoading && (

@@ -1,4 +1,5 @@
-import { View, Text, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
+import { FlatList, ActivityIndicator, RefreshControl } from 'react-native'
+import { View, Text, useTheme } from 'tamagui'
 import { router } from 'expo-router'
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -10,6 +11,7 @@ export function TripHistoryList() {
   const { data: trips, isLoading, isError } = useTripHistory()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
+  const theme = useTheme()
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -19,7 +21,7 @@ export function TripHistoryList() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface">
+      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$surface">
         <ActivityIndicator size="large" color="#6c8aff" />
       </View>
     )
@@ -27,24 +29,32 @@ export function TripHistoryList() {
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface p-6">
-        <Text className="text-red-500 text-base font-medium">Could not load trip history.</Text>
+      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$surface" padding="$6">
+        <Text color="$danger" fontSize="$4" fontWeight="500">
+          Could not load trip history.
+        </Text>
       </View>
     )
   }
 
   return (
     <FlatList
-      className="flex-1 bg-surface"
-      contentContainerClassName="p-5 pt-16 gap-3"
+      style={{ flex: 1, backgroundColor: theme.surface.val }}
+      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 12 }}
       data={trips ?? []}
       keyExtractor={item => item.trip_id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6c8aff']} />}
-      ListHeaderComponent={<Text className="text-2xl font-extrabold text-gray-900 mb-1">My Trips</Text>}
+      ListHeaderComponent={
+        <Text fontSize="$7" fontWeight="800" color="$textPrimary" marginBottom="$1">
+          My Trips
+        </Text>
+      }
       ListEmptyComponent={
-        <View className="items-center gap-2 py-16">
+        <View alignItems="center" gap="$2" paddingVertical={64}>
           <Ionicons name="time-outline" size={40} color="#c3aee0" />
-          <Text className="text-gray-400 text-sm">You have no trips yet.</Text>
+          <Text color="$textSecondary" fontSize="$3">
+            You have no trips yet.
+          </Text>
         </View>
       }
       renderItem={({ item }) => (

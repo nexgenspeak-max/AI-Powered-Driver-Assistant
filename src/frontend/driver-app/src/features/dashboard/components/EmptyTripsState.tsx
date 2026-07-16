@@ -1,15 +1,17 @@
-import { View, Text } from 'react-native'
+import { YStack, Text } from 'tamagui'
 
 export function EmptyTripsState({ isOnline }: { isOnline: boolean }) {
   return (
-    <View className="flex-1 items-center justify-center py-20">
-      <Text className="text-5xl mb-3">✅</Text>
-      <Text className="font-bold text-gray-600 text-base">
+    <YStack flex={1} alignItems="center" justifyContent="center" paddingVertical="$10">
+      <Text fontSize={48} marginBottom="$3">
+        ✅
+      </Text>
+      <Text fontWeight="700" color="$textSecondary" fontSize="$4">
         {isOnline ? 'No trips right now' : 'You are offline'}
       </Text>
-      <Text className="text-sm text-gray-400 mt-1 text-center">
+      <Text fontSize="$2" color="$textSecondary" marginTop="$1" textAlign="center">
         {isOnline ? 'Waiting for new assignments...' : 'Toggle Online to start receiving trips'}
       </Text>
-    </View>
+    </YStack>
   )
 }

@@ -1,4 +1,6 @@
-import { View, Text, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
+import { YStack, Text, Theme } from 'tamagui'
+import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -52,13 +54,25 @@ export function RegisterForm() {
   const onSubmit = (data: FormValues) => register(data)
 
   return (
-    <ScrollView className="flex-1 bg-dark" contentContainerClassName="items-center justify-center p-6 gap-6">
-      <View className="items-center gap-2 mt-10">
-        <Text className="text-white text-2xl font-extrabold">Become a Driver</Text>
-        <Text className="text-gray-300 text-sm">Sign up to start earning with Czen</Text>
-      </View>
+    // Auth screens are always dark-branded regardless of the app-wide theme
+    // toggle — force dark so nested tokens ($textSecondary, Input's
+    // $surfaceElevated, etc.) don't flip to light-mode values.
+    <Theme name="dark">
+    <StatusBar style="light" />
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#0B0B0F' }}
+      contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+    >
+      <YStack alignItems="center" gap="$2" marginTop="$10">
+        <Text color="$textInverse" fontSize="$7" fontWeight="800">
+          Become a Driver
+        </Text>
+        <Text color="#d1d5db" fontSize="$3">
+          Sign up to start earning with Czen
+        </Text>
+      </YStack>
 
-      <View className="w-full max-w-sm bg-white rounded-3xl p-6 gap-4">
+      <YStack width="100%" maxWidth={384} backgroundColor="$surfaceElevated" borderRadius="$8" padding="$6" gap="$4">
         <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
           <Input label="Full name" placeholder="Nguyễn Văn A"
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
@@ -87,15 +101,20 @@ export function RegisterForm() {
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_name?.message} />
         )} />
 
-        {isError && <Text className="text-red-500 text-xs">Registration failed. Check your details.</Text>}
+        {isError && (
+          <Text color="$danger" fontSize="$1">
+            Registration failed. Check your details.
+          </Text>
+        )}
 
         <Button label="Sign Up" onPress={handleSubmit(onSubmit)} loading={isPending} full />
 
-        <Text className="text-center text-gray-500 text-sm">
+        <Text textAlign="center" color="$textSecondary" fontSize="$3">
           Already have an account?{' '}
-          <Link href="/login" className="text-primary font-semibold">Log in</Link>
+          <Link href="/login" style={{ color: '#6c8aff', fontWeight: '600' }}>Log in</Link>
         </Text>
-      </View>
+      </YStack>
     </ScrollView>
+    </Theme>
   )
 }

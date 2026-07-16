@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from 'expo-router'
-import { View, Text, ActivityIndicator } from 'react-native'
+import { ActivityIndicator } from 'react-native'
+import { View, Text } from 'tamagui'
 import { TripStatusCard } from '../../../src/features/trips/components/TripStatusCard'
 import { useTripStatus } from '../../../src/features/trips/hooks/useTripStatus'
 
@@ -9,7 +10,7 @@ export default function TripStatusScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface">
+      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$surface">
         <ActivityIndicator size="large" color="#6c8aff" />
       </View>
     )
@@ -17,8 +18,10 @@ export default function TripStatusScreen() {
 
   if (isError || !trip) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface p-6">
-        <Text className="text-red-500 text-base font-medium">Trip not found.</Text>
+      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$surface" padding="$6">
+        <Text color="$danger" fontSize="$4" fontWeight="500">
+          Trip not found.
+        </Text>
       </View>
     )
   }

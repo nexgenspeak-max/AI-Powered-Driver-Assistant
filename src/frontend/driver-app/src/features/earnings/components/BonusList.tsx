@@ -1,21 +1,36 @@
-import { View, Text } from 'react-native'
+import { YStack, Text } from 'tamagui'
 import { Card } from '../../../components/Card'
 import type { Bonus } from '../../../types'
 
 export function BonusList({ bonuses }: { bonuses: Bonus[] }) {
   if (bonuses.length === 0) return null
   return (
-    <View className="gap-3">
-      <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active bonuses</Text>
+    <YStack gap="$3">
+      <Text fontSize="$1" fontWeight="600" color="$textSecondary" textTransform="uppercase" letterSpacing={0.5}>
+        Active bonuses
+      </Text>
       {bonuses.map((bonus, i) => (
-        <Card key={i} className="flex-row items-center justify-between bg-yellow-50 border-yellow-200">
-          <View className="flex-1 pr-2">
-            <Text className="text-gray-900 font-medium">{bonus.description}</Text>
-            <Text className="text-gray-400 text-xs mt-0.5">Expires {bonus.expires_at}</Text>
-          </View>
-          <Text className="text-yellow-700 font-bold text-lg">{bonus.amount}</Text>
+        <Card
+          key={i}
+          flexDirection="row"
+          alignItems="center"
+          justifyContent="space-between"
+          backgroundColor="$yellow2"
+          borderColor="$yellow6"
+        >
+          <YStack flex={1} paddingRight="$2">
+            <Text color="$textPrimary" fontWeight="500">
+              {bonus.description}
+            </Text>
+            <Text color="$textSecondary" fontSize="$1" marginTop={2}>
+              Expires {bonus.expires_at}
+            </Text>
+          </YStack>
+          <Text color="$yellow11" fontWeight="700" fontSize="$5">
+            {bonus.amount}
+          </Text>
         </Card>
       ))}
-    </View>
+    </YStack>
   )
 }

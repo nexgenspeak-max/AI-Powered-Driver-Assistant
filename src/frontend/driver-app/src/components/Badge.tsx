@@ -1,11 +1,26 @@
-import { View, Text } from 'react-native'
+import { styled, Text, View, useTheme } from 'tamagui'
 
-interface Props { label: string; className?: string }
+const BadgeFrame = styled(View, {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: '$pill',
+  alignSelf: 'flex-start',
+})
 
-export function Badge({ label, className }: Props) {
+interface Props {
+  label: string
+  /** Tamagui color token or literal color, e.g. "$primaryMuted" or "rgba(255,255,255,0.08)". Defaults to a neutral theme-aware chip. */
+  backgroundColor?: string
+  color?: string
+}
+
+export function Badge({ label, backgroundColor, color }: Props) {
+  const theme = useTheme()
   return (
-    <View className={`px-2.5 py-1 rounded-full ${className ?? 'bg-gray-100'}`}>
-      <Text className="text-xs font-semibold">{label}</Text>
-    </View>
+    <BadgeFrame backgroundColor={backgroundColor ?? theme.border.val}>
+      <Text fontSize={11} fontWeight="600" color={color ?? theme.textSecondary.val}>
+        {label}
+      </Text>
+    </BadgeFrame>
   )
 }

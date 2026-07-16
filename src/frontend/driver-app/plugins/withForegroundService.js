@@ -25,6 +25,29 @@ function withForegroundService(config) {
         },
       },
     )
+
+    // Required by NotificationConfig.getChannelName()/getChannelDescription()
+    // (android/.../NotificationConfig.java) — without these, Bundle.getString()
+    // on the missing manifest key silently returns null (no exception, so the
+    // library's own "fall back to default" branch never runs), the channel
+    // gets created with a null name, and NotificationManager.createNotification
+    // Channel() throws IllegalArgumentException on every start() call.
+    app['meta-data'] = app['meta-data'] ?? []
+    app['meta-data'].push(
+      {
+        $: {
+          'android:name': 'com.supersami.foregroundservice.notification_channel_name',
+          'android:value': 'Czen Driver',
+        },
+      },
+      {
+        $: {
+          'android:name': 'com.supersami.foregroundservice.notification_channel_description',
+          'android:value': 'Trạng thái trợ lý AI và cuộc gọi',
+        },
+      },
+    )
+
     return config
   })
 }

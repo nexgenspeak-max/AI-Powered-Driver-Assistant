@@ -45,7 +45,13 @@
           "android": { "audioType": "communication" }
         }
       ],
-      "./plugins/withForegroundService.js"
+      "./plugins/withForegroundService.js",
+      [
+        "react-native-vosk",
+        {
+          "models": ["assets/model-vi-vn"]
+        }
+      ]
     ],
     "scheme": "customer-app"
   }

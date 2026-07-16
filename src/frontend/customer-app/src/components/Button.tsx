@@ -1,34 +1,69 @@
-import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native'
+import { styled, Text, GetProps } from 'tamagui'
+import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 
-interface Props {
+const ButtonFrame = styled(TouchableOpacity, {
+  minHeight: 52,
+  paddingVertical: '$3',
+  paddingHorizontal: '$4',
+  borderRadius: '$control',
+  alignItems: 'center',
+  flexDirection: 'row',
+  justifyContent: 'center',
+  gap: '$2',
+  overflow: 'hidden',
+
+  variants: {
+    variant: {
+      primary: {},
+      dark: { backgroundColor: '$surfaceElevated', borderWidth: 1, borderColor: '$border' },
+      outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '$borderStrong' },
+      danger: { backgroundColor: '$danger' },
+      success: { backgroundColor: '$success' },
+    },
+    full: { true: { flex: 1, width: '100%' } },
+    isDisabled: { true: { opacity: 0.5 } },
+  } as const,
+
+  defaultVariants: { variant: 'primary' },
+})
+
+type FrameProps = GetProps<typeof ButtonFrame>
+
+interface Props extends Omit<FrameProps, 'variant' | 'disabled'> {
   label: string
-  onPress?: () => void
   variant?: 'primary' | 'outline' | 'danger' | 'success' | 'dark'
   loading?: boolean
   disabled?: boolean
-  full?: boolean
-  className?: string
 }
 
-const VARIANTS = {
-  primary: { btn: 'bg-primary',   text: 'text-white'      },
-  dark:    { btn: 'bg-dark',      text: 'text-white'      },
-  outline: { btn: 'bg-white border border-gray-300', text: 'text-gray-700' },
-  danger:  { btn: 'bg-red-500',   text: 'text-white'      },
-  success: { btn: 'bg-green-500', text: 'text-white'      },
-}
-
-export function Button({ label, onPress, variant = 'primary', loading, disabled, full, className }: Props) {
-  const v = VARIANTS[variant]
+export function Button({ label, variant = 'primary', loading, disabled, ...rest }: Props) {
+  const isDisabled = disabled || loading
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || loading}
-      className={`${v.btn} ${full ? 'flex-1 w-full' : ''} min-h-[52px] py-4 px-5 rounded-xl items-center flex-row justify-center gap-2 ${(disabled || loading) ? 'opacity-50' : ''} ${className ?? ''}`}
-      activeOpacity={0.8}
+    <ButtonFrame
+      variant={variant}
+      isDisabled={isDisabled}
+      disabled={isDisabled}
+      activeOpacity={0.85}
+      {...rest}
     >
+      {variant === 'primary' && (
+        <LinearGradient
+          colors={['#7C5B9C', '#A855F7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       {loading && <ActivityIndicator size="small" color="#fff" />}
-      <Text className={`${v.text} font-semibold text-base`}>{label}</Text>
-    </TouchableOpacity>
+      <Text
+        fontWeight="600"
+        fontSize="$4"
+        color={variant === 'outline' || variant === 'dark' ? '$textPrimary' : '$textInverse'}
+        zIndex={1}
+      >
+        {label}
+      </Text>
+    </ButtonFrame>
   )
 }

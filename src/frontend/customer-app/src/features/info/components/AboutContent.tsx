@@ -1,12 +1,16 @@
-import { View, Text } from 'react-native'
+import { View, Text } from 'tamagui'
 import { ABOUT_TITLE, ABOUT_PARAGRAPHS } from '../data/faqData'
 
 export function AboutContent() {
   return (
     <View>
-      <Text className="text-xl font-extrabold text-gray-900 mb-3">{ABOUT_TITLE}</Text>
+      <Text fontSize="$6" fontWeight="800" color="$textPrimary" marginBottom="$3">
+        {ABOUT_TITLE}
+      </Text>
       {ABOUT_PARAGRAPHS.map((paragraph, i) => (
-        <Text key={i} className="text-gray-500 leading-6 mb-3">{paragraph}</Text>
+        <Text key={i} color="$textSecondary" lineHeight={24} marginBottom="$3">
+          {paragraph}
+        </Text>
       ))}
     </View>
   )

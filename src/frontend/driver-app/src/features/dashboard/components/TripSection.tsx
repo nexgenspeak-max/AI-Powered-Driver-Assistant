@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { YStack, Text } from 'tamagui'
 import { TripCard } from './TripCard'
 import type { Trip } from '../../../types'
 
@@ -10,9 +10,13 @@ interface Props {
 export function TripSection({ title, trips }: Props) {
   if (trips.length === 0) return null
   return (
-    <View className="gap-3">
-      <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</Text>
-      {trips.map(trip => <TripCard key={trip.trip_id} trip={trip} />)}
-    </View>
+    <YStack gap="$3">
+      <Text fontSize="$1" fontWeight="600" color="$textSecondary" textTransform="uppercase" letterSpacing={0.5}>
+        {title}
+      </Text>
+      {trips.map(trip => (
+        <TripCard key={trip.trip_id} trip={trip} />
+      ))}
+    </YStack>
   )
 }

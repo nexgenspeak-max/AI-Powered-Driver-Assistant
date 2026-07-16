@@ -10,14 +10,17 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   completed: 'Completed',
 }
 
-export const TRIP_STATUS_COLORS: Record<TripStatus, string> = {
-  pending:   'bg-yellow-100 text-yellow-800',
-  notified:  'bg-blue-100 text-blue-800',
-  calling:   'bg-purple-100 text-purple-800',
-  confirmed: 'bg-green-100 text-green-800',
-  rejected:  'bg-red-100 text-red-800',
-  no_answer: 'bg-orange-100 text-orange-800',
-  completed: 'bg-gray-100 text-gray-700',
+// Tamagui color-scale token pairs (light background step 4, readable text
+// step 11) — @tamagui/config/v3 ships yellow/blue/purple/green/red/orange/
+// gray scales, matching the previous Tailwind color choices 1:1.
+export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }> = {
+  pending:   { bg: '$yellow4', text: '$yellow11' },
+  notified:  { bg: '$blue4', text: '$blue11' },
+  calling:   { bg: '$purple4', text: '$purple11' },
+  confirmed: { bg: '$green4', text: '$green11' },
+  rejected:  { bg: '$red4', text: '$red11' },
+  no_answer: { bg: '$orange4', text: '$orange11' },
+  completed: { bg: '$gray4', text: '$gray11' },
 }
 
 export const DISPATCHABLE_STATUSES: TripStatus[] = ['pending', 'no_answer', 'rejected']

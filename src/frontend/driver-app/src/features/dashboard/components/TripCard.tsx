@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { XStack, YStack, Text } from 'tamagui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
@@ -34,27 +34,31 @@ export function TripCard({ trip }: { trip: Trip & { estimated_fare?: number } })
     onSuccess: invalidate,
   })
 
-  return (
-    <Card className="gap-3">
-      <View className="flex-row items-center justify-between">
-        <Text className="font-bold text-gray-900 text-base">{trip.customer_name}</Text>
-        <Badge label={TRIP_STATUS_LABELS[trip.status]} className={TRIP_STATUS_COLORS[trip.status]} />
-      </View>
+  const statusColor = TRIP_STATUS_COLORS[trip.status]
 
-      <View className="gap-1.5">
+  return (
+    <Card gap="$3">
+      <XStack alignItems="center" justifyContent="space-between">
+        <Text fontWeight="700" color="$textPrimary" fontSize="$4">
+          {trip.customer_name}
+        </Text>
+        <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} />
+      </XStack>
+
+      <YStack gap="$1.5">
         <InfoRow label="Pickup" value={trip.pickup_address} />
         <InfoRow label="Dropoff" value={trip.dropoff_address} />
         {!!trip.pickup_time && <InfoRow label="Pickup time" value={trip.pickup_time} />}
         {trip.eta_minutes > 0 && <InfoRow label="ETA" value={`${trip.eta_minutes} min`} />}
         {trip.distance_km > 0 && <InfoRow label="Distance" value={`${trip.distance_km.toFixed(1)} km`} />}
         {trip.estimated_fare != null && <InfoRow label="Estimated fare" value={formatCurrency(trip.estimated_fare)} />}
-      </View>
+      </YStack>
 
       {(trip.status === 'notified' || trip.status === 'calling') && (
-        <View className="flex-row gap-2">
+        <XStack gap="$2">
           <Button label="Reject" variant="outline" onPress={() => reject()} loading={rejecting} full />
           <Button label="Accept" variant="primary" onPress={() => accept()} loading={accepting} full />
-        </View>
+        </XStack>
       )}
       {trip.status === 'confirmed' && (
         <Button label="Arrived at Pickup" variant="dark" onPress={() => arrivedPickup()} loading={arriving} full />

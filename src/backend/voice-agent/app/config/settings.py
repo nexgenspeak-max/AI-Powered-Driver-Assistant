@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     # ── Silence tracker ───────────────────────────────────────────────────────
     silence_tracker_enabled: bool = True
     silence_threshold_seconds: float = 0.0   # 0 = use per-mode default in session.py
-    silence_max_consecutive: int = 3
+    silence_max_consecutive: int = 0   # 0 = use per-mode default in session.py
     # When false, silence prompts still fire but the room is not torn down (simulator dev).
     silence_end_session: bool = True
 
