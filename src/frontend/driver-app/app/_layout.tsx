@@ -1,7 +1,9 @@
-import '../web.css'
+// import '../web.css'
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { TamaguiProvider, Theme } from 'tamagui'
 import tamaguiConfig from '../tamagui.config'
 import { QueryProvider } from '../src/providers/QueryProvider'
@@ -24,20 +26,24 @@ export default function RootLayout() {
   }, [driver, wakeWordEnabled])
 
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme={themeMode}>
-      <Theme name={themeMode}>
-        <QueryProvider>
-          <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Protected guard={!!driver}>
-              <Stack.Screen name="(app)" />
-            </Stack.Protected>
-            <Stack.Protected guard={!driver}>
-              <Stack.Screen name="(auth)" />
-            </Stack.Protected>
-          </Stack>
-        </QueryProvider>
-      </Theme>
-    </TamaguiProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <TamaguiProvider config={tamaguiConfig} defaultTheme={themeMode}>
+          <Theme name={themeMode}>
+            <QueryProvider>
+              <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Protected guard={!!driver}>
+                  <Stack.Screen name="(app)" />
+                </Stack.Protected>
+                <Stack.Protected guard={!driver}>
+                  <Stack.Screen name="(auth)" />
+                </Stack.Protected>
+              </Stack>
+            </QueryProvider>
+          </Theme>
+        </TamaguiProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }

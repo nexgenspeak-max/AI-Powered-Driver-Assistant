@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ScrollView } from 'react-native'
 import { Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { useEarningsSummary } from '../../src/features/earnings/hooks/useEarningsSummary'
 import { TodayEarningsCard } from '../../src/features/earnings/components/TodayEarningsCard'
@@ -12,11 +13,12 @@ export default function EarningsScreen() {
   const { data: context, isLoading: contextLoading } = useDriverContext()
   const { data: summary, isLoading: summaryLoading } = useEarningsSummary(period)
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.val }}
-      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 16 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 16 }}
     >
       <Text fontSize="$7" fontWeight="800" color="$textPrimary">
         Earnings

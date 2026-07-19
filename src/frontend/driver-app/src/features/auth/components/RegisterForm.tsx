@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
 import { Input } from '../../../components/Input'
 import { Button } from '../../../components/Button'
+import { Card } from '../../../components/Card'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
 import { VehicleTypeSelect } from './VehicleTypeSelect'
@@ -60,7 +61,8 @@ export function RegisterForm() {
     <Theme name="dark">
     <StatusBar style="light" />
     <ScrollView
-      style={{ flex: 1, backgroundColor: '#0B0B0F' }}
+      style={{ flex: 1, backgroundColor: '#1A1420' }}
+      // Plain RN style object (no Tamagui token resolution) — 24 matches `$6` below.
       contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
     >
       <YStack alignItems="center" gap="$2" marginTop="$10">
@@ -72,7 +74,7 @@ export function RegisterForm() {
         </Text>
       </YStack>
 
-      <YStack width="100%" maxWidth={384} backgroundColor="$surfaceElevated" borderRadius="$8" padding="$6" gap="$4">
+      <Card width="100%" maxWidth={384} gap="$4">
         <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
           <Input label="Full name" placeholder="Nguyễn Văn A"
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
@@ -113,7 +115,7 @@ export function RegisterForm() {
           Already have an account?{' '}
           <Link href="/login" style={{ color: '#6c8aff', fontWeight: '600' }}>Log in</Link>
         </Text>
-      </YStack>
+      </Card>
     </ScrollView>
     </Theme>
   )

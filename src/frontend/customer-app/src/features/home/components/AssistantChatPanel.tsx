@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
 import { View, XStack, Text, Theme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { GlassSheen } from '../../../components/LiquidGlass'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -25,6 +27,7 @@ export function AssistantChatPanel() {
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+  const insets = useSafeAreaInsets()
 
   useEffect(() => subscribeVoiceMessages((text, from) => {
     if (from === 'user') addUserMessage(text)
@@ -77,20 +80,20 @@ export function AssistantChatPanel() {
     <Theme name="dark">
     <StatusBar style="light" />
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#0B0B0F' }}
+      style={{ flex: 1, backgroundColor: '#1A1420' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={60}
     >
-      <View paddingTop={56}>
+      <View width="100%" paddingTop={insets.top}>
         <AssistantAvatar status={voice.status} />
-        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop={-16}>
+        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2">
           {MIC_LABEL[voice.status]}
         </Text>
       </View>
 
       <ScrollView
         ref={scrollRef}
-        style={{ flex: 1, paddingHorizontal: 16, marginTop: 16 }}
+        style={{ flex: 1, paddingHorizontal: 20, marginTop: 16 }}
         contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
       >
         {chats.map((chat, i) =>
@@ -112,7 +115,7 @@ export function AssistantChatPanel() {
               alignSelf="flex-start"
               backgroundColor="$accent"
               borderRadius="$bubble"
-              paddingHorizontal="$4"
+              paddingHorizontal={16}
               paddingVertical={10}
             >
               <Text color="$textPrimary">{chat.msg}</Text>
@@ -134,15 +137,18 @@ export function AssistantChatPanel() {
       <XStack
         alignItems="center"
         gap="$2"
-        marginHorizontal="$4"
+        marginHorizontal={20}
         marginBottom={100}
         paddingHorizontal="$2"
         height={48}
         borderRadius="$pill"
-        borderWidth={1}
-        borderColor="rgba(255,255,255,0.08)"
-        backgroundColor="#15151C"
+        backgroundColor="$surfaceElevated"
+        shadowColor="#000"
+        shadowOffset={{ width: 0, height: 2 }}
+        shadowOpacity={0.3}
+        shadowRadius={8}
       >
+        <GlassSheen borderRadius={24} />
         <TouchableOpacity onPress={handleMicPress} style={{ padding: 8 }}>
           <Ionicons
             name="mic"

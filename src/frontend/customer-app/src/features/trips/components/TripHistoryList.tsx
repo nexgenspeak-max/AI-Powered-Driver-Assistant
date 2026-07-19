@@ -1,5 +1,6 @@
 import { FlatList, ActivityIndicator, RefreshControl } from 'react-native'
 import { View, Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -12,6 +13,7 @@ export function TripHistoryList() {
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -40,7 +42,7 @@ export function TripHistoryList() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: theme.surface.val }}
-      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 12 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 16 }}
       data={trips ?? []}
       keyExtractor={item => item.trip_id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6c8aff']} />}
@@ -50,7 +52,7 @@ export function TripHistoryList() {
         </Text>
       }
       ListEmptyComponent={
-        <View alignItems="center" gap="$2" paddingVertical={64}>
+        <View alignItems="center" gap="$2" paddingVertical="$10">
           <Ionicons name="time-outline" size={40} color="#c3aee0" />
           <Text color="$textSecondary" fontSize="$3">
             You have no trips yet.

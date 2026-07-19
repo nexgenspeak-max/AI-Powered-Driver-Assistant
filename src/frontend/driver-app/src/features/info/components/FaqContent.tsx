@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { YStack, XStack, Text, useTheme } from 'tamagui'
 import { TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Card } from '../../../components/Card'
 import { FAQ_ITEMS } from '../data/faqData'
 
 export function FaqContent() {
@@ -9,18 +10,11 @@ export function FaqContent() {
   const theme = useTheme()
 
   return (
-    <YStack gap={10}>
+    <YStack gap="$3">
       {FAQ_ITEMS.map((item, i) => {
         const isOpen = openIndex === i
         return (
-          <YStack
-            key={i}
-            backgroundColor="$surfaceElevated"
-            borderWidth={1}
-            borderColor="$border"
-            borderRadius="$control"
-            overflow="hidden"
-          >
+          <Card key={i} padding={0} overflow="hidden">
             <TouchableOpacity onPress={() => setOpenIndex(isOpen ? null : i)}>
               <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$3">
                 <Text fontWeight="600" color="$textPrimary" flex={1} paddingRight="$2">
@@ -30,11 +24,11 @@ export function FaqContent() {
               </XStack>
             </TouchableOpacity>
             {isOpen && (
-              <Text color="$textSecondary" lineHeight={24} paddingHorizontal="$4" paddingBottom={14}>
+              <Text color="$textSecondary" lineHeight={24} paddingHorizontal="$4" paddingBottom="$4">
                 {item.answer}
               </Text>
             )}
-          </YStack>
+          </Card>
         )
       })}
     </YStack>

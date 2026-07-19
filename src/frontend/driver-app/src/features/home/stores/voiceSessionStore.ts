@@ -51,6 +51,8 @@ const messageListeners = new Set<VoiceMessageListener>()
 
 interface VoiceSessionState {
   status: VoiceSessionStatus
+  /** Smoothed 0..1 audio level of the AI agent's voice track, from LiveKit's ActiveSpeakersChanged — 0 when silent/not connected. */
+  agentAudioLevel: number
   connect: (driverPhone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
@@ -58,6 +60,7 @@ interface VoiceSessionState {
 
 export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
   status: 'idle',
+  agentAudioLevel: 0,
 
   connect: async (driverPhone: string) => {
     // A stale room can be left behind if the app was backgrounded and the
@@ -104,7 +107,15 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
         audioEls.clear()
         stopAudioSession()
         stopCallForegroundService()
-        set({ status: 'idle' })
+        set({ status: 'idle', agentAudioLevel: 0 })
+      })
+
+      // Drives the assistant orb's shape from the AI's actual voice loudness
+      // instead of a fixed animation — fires ~every 200ms with the current
+      // speakers sorted by level. The agent is whichever participant isn't us.
+      r.on(RoomEvent.ActiveSpeakersChanged, speakers => {
+        const agent = speakers.find(p => p.identity !== r.localParticipant.identity)
+        set({ agentAudioLevel: agent?.audioLevel ?? 0 })
       })
 
       // Both the driver's own speech-to-text and the agent's replies arrive on
@@ -128,7 +139,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
       room = null
       stopAudioSession()
       stopCallForegroundService()
-      set({ status: 'error' })
+      set({ status: 'error', agentAudioLevel: 0 })
     }
   },
 

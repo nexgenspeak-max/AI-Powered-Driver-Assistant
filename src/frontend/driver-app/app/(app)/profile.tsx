@@ -1,5 +1,6 @@
 import { ScrollView, TouchableOpacity, Switch } from 'react-native'
 import { View, XStack, YStack, Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
@@ -19,23 +20,24 @@ export default function ProfileScreen() {
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.val }}
-      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 16 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 16 }}
     >
       {!isLoading && context && <ProfileCard driver={driver} profile={context.driver_profile} />}
 
       <Card padding={0} overflow="hidden">
-        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical={14}>
+        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
             <Ionicons name="mic-circle-outline" size={20} color={theme.textSecondary.val} />
             <YStack flex={1}>
               <Text color="$textPrimary" fontWeight="500">
                 Trợ lý rảnh tay
               </Text>
-              <Text color="$textSecondary" fontSize={11} marginTop={2}>
+              <Text color="$textSecondary" fontSize={11} marginTop="$1">
                 Nghe từ khoá đánh thức ở chế độ nền, kể cả khi đang dùng app khác
               </Text>
             </YStack>
@@ -43,7 +45,7 @@ export default function ProfileScreen() {
           <Switch value={wakeWordEnabled} onValueChange={setWakeWordEnabled} />
         </XStack>
         <View height={1} backgroundColor="$border" />
-        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical={14}>
+        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
             <Ionicons name={themeMode === 'dark' ? 'moon-outline' : 'sunny-outline'} size={20} color={theme.textSecondary.val} />
             <Text color="$textPrimary" fontWeight="500">
@@ -69,7 +71,7 @@ function MenuRow({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMa
   const theme = useTheme()
   return (
     <TouchableOpacity onPress={onPress}>
-      <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical={14}>
+      <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
         <XStack alignItems="center" gap="$3">
           <Ionicons name={icon} size={20} color={theme.textSecondary.val} />
           <Text color="$textPrimary" fontWeight="500">

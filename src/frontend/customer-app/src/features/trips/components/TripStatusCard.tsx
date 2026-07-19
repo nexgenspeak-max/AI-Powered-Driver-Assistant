@@ -1,18 +1,21 @@
 import { ScrollView } from 'react-native'
 import { View, YStack, XStack, Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
+import { getBackButtonClearance } from '../../../components/BackButton'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '../../../constants/status'
 import type { Trip } from '../../../types'
 
 export function TripStatusCard({ trip }: { trip: Trip }) {
   const statusColor = TRIP_STATUS_COLORS[trip.status]
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.val }}
-      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 16 }}
+      contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 16 }}
     >
       <View>
         <Text fontSize="$7" fontWeight="800" color="$textPrimary">

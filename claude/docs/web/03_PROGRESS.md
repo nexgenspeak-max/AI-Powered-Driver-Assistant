@@ -22,7 +22,7 @@
 | App | Trạng thái | Ghi chú |
 |---|---|---|
 | admin-panel | ✅ | Trip board, quản lý tài xế, login, trang customers, call logs (đang refactor thành feature module, uncommitted). |
-| customer-web | 🔨 | Đặt chuyến + gọi tài xế qua voicebot hoạt động. Nút "AI assistant" là placeholder chưa nối LLM — [FEAT-002](tickets/FEAT-002.md). |
+| customer-web | 🔨 | Đặt chuyến + gọi tài xế qua voicebot hoạt động. Nút "AI assistant" là placeholder chưa nối LLM — xem [customer/03_PROGRESS.md](customer/03_PROGRESS.md). |
 | driver-web | 🔨 | Tương tự customer-web, mới thêm 2026-07-07. |
 | mobile-app/customer-app (Expo) | ✅ | Đã build, có màn hình support qua LiveKit. Quan hệ với `customer-web` chưa chốt. |
 | mobile-app/driver-app (Expo) | ✅ | Đã build, có DigitalHumanScreen (voice qua LiveKit). Quan hệ với `driver-web` chưa chốt. |

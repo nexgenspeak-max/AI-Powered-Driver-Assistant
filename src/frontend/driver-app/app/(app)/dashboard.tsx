@@ -1,5 +1,6 @@
 import { ScrollView, Switch, RefreshControl } from 'react-native'
 import { View, XStack, Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { TripSection } from '../../src/features/dashboard/components/TripSection'
@@ -15,6 +16,7 @@ export default function DashboardScreen() {
 
   const { data: context, isLoading, isRefetching, refetch } = useDriverContext()
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   const { mutate: toggleOnline } = useMutation({
     mutationFn: (online: boolean) => driversService.update(driver.phone, { status: online ? 'online' : 'offline' }),
@@ -30,7 +32,7 @@ export default function DashboardScreen() {
 
   return (
     <View flex={1} backgroundColor="$surface">
-      <View backgroundColor="$dark" paddingHorizontal="$5" paddingTop={56} paddingBottom="$4">
+      <View backgroundColor="$dark" paddingHorizontal="$5" paddingTop={insets.top + 16} paddingBottom="$4">
         <XStack alignItems="center" justifyContent="space-between">
           <View>
             <Text color="$textInverse" fontWeight="700" fontSize="$5">
@@ -41,14 +43,14 @@ export default function DashboardScreen() {
             </Text>
           </View>
           <XStack alignItems="center" gap="$2">
-            <Text fontSize="$1" fontWeight="500" color={isOnline ? '#4ade80' : theme.textMuted.val}>
+            <Text fontSize="$1" fontWeight="500" color={isOnline ? theme.success.val : theme.textMuted.val}>
               {isOnline ? 'Online' : 'Offline'}
             </Text>
             <Switch
               value={isOnline}
               onValueChange={toggleOnline}
-              trackColor={{ false: theme.borderStrong.val, true: '#166534' }}
-              thumbColor={isOnline ? '#4ade80' : theme.textMuted.val}
+              trackColor={{ false: theme.borderStrong.val, true: theme.successContainer.val }}
+              thumbColor={isOnline ? theme.success.val : theme.textMuted.val}
             />
           </XStack>
         </XStack>
@@ -56,7 +58,7 @@ export default function DashboardScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
         {!isLoading && (

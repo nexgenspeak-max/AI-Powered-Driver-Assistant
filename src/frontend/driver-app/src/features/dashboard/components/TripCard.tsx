@@ -1,4 +1,4 @@
-import { XStack, YStack, Text } from 'tamagui'
+import { XStack, YStack, View, Text } from 'tamagui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
@@ -38,27 +38,44 @@ export function TripCard({ trip }: { trip: Trip & { estimated_fare?: number } })
 
   return (
     <Card gap="$3">
-      <XStack alignItems="center" justifyContent="space-between">
-        <Text fontWeight="700" color="$textPrimary" fontSize="$4">
-          {trip.customer_name}
-        </Text>
-        <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} />
+      <XStack alignItems="center" gap="$3">
+        <View width={40} height={40} borderRadius={20} backgroundColor="$primaryMuted" alignItems="center" justifyContent="center">
+          <Text color="$primary" fontWeight="700" fontSize="$3">
+            {trip.customer_name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <YStack flex={1}>
+          <Text fontWeight="700" color="$textPrimary" fontSize="$4">
+            {trip.customer_name}
+          </Text>
+          {!!trip.pickup_time && (
+            <Text color="$textSecondary" fontSize={12}>
+              {trip.pickup_time}
+            </Text>
+          )}
+        </YStack>
+        <YStack alignItems="flex-end" gap="$1">
+          <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} />
+          {trip.estimated_fare != null && (
+            <Text color="$textSecondary" fontSize={11}>
+              {formatCurrency(trip.estimated_fare)}
+            </Text>
+          )}
+        </YStack>
       </XStack>
 
-      <YStack gap="$1.5">
+      <YStack gap="$2">
         <InfoRow label="Pickup" value={trip.pickup_address} />
         <InfoRow label="Dropoff" value={trip.dropoff_address} />
-        {!!trip.pickup_time && <InfoRow label="Pickup time" value={trip.pickup_time} />}
         {trip.eta_minutes > 0 && <InfoRow label="ETA" value={`${trip.eta_minutes} min`} />}
         {trip.distance_km > 0 && <InfoRow label="Distance" value={`${trip.distance_km.toFixed(1)} km`} />}
-        {trip.estimated_fare != null && <InfoRow label="Estimated fare" value={formatCurrency(trip.estimated_fare)} />}
       </YStack>
 
       {(trip.status === 'notified' || trip.status === 'calling') && (
-        <XStack gap="$2">
+        <YStack gap="$2">
           <Button label="Reject" variant="outline" onPress={() => reject()} loading={rejecting} full />
           <Button label="Accept" variant="primary" onPress={() => accept()} loading={accepting} full />
-        </XStack>
+        </YStack>
       )}
       {trip.status === 'confirmed' && (
         <Button label="Arrived at Pickup" variant="dark" onPress={() => arrivedPickup()} loading={arriving} full />

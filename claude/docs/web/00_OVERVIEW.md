@@ -2,6 +2,8 @@
 
 > File này trả lời câu hỏi: **"Dự án này là gì, gồm những gì?"**
 > Cập nhật khi kiến trúc tổng thể thay đổi (thêm/bỏ service, đổi stack chính). Không ghi chi tiết công việc hằng ngày ở đây — việc đó thuộc [`02_WORK_LOG.md`](02_WORK_LOG.md).
+>
+> **Chi tiết riêng từng app** (web lẫn mobile): [`web/customer/`](customer/00_OVERVIEW.md), [`web/driver/`](driver/00_OVERVIEW.md), [`../mobile/customer/`](../mobile/customer/00_OVERVIEW.md), [`../mobile/driver/`](../mobile/driver/00_OVERVIEW.md). File này chỉ giữ bức tranh toàn hệ thống (backend, admin-panel, mối quan hệ giữa các app).
 
 ## Dự án là gì
 

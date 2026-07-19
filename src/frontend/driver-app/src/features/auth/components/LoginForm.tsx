@@ -7,6 +7,7 @@ import { useMutation } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
 import { Input } from '../../../components/Input'
 import { Button } from '../../../components/Button'
+import { Card } from '../../../components/Card'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
 
@@ -62,7 +63,7 @@ export function LoginForm() {
         </Text>
       </YStack>
 
-      <YStack width="100%" maxWidth={384} backgroundColor="$surfaceElevated" borderRadius="$8" padding="$6" gap="$4">
+      <Card width="100%" maxWidth={384} gap="$4">
         <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
           <Input label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
             value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
@@ -84,7 +85,7 @@ export function LoginForm() {
           Don't have an account?{' '}
           <Link href="/register" style={{ color: '#6c8aff', fontWeight: '600' }}>Sign up</Link>
         </Text>
-      </YStack>
+      </Card>
     </YStack>
     </Theme>
   )

@@ -1,5 +1,6 @@
 import { ScrollView } from 'react-native'
 import { View, Text, useTheme } from 'tamagui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -31,11 +32,12 @@ export function BookingForm() {
     book(data, { onSuccess: trip => router.push(`/trip/${trip.trip_id}`) })
   }
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.val }}
-      contentContainerStyle={{ padding: 20, paddingTop: 64, paddingBottom: 100, gap: 16 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 16 }}
     >
       <View>
         <Text fontSize="$7" fontWeight="800" color="$textPrimary">
@@ -47,8 +49,8 @@ export function BookingForm() {
       </View>
 
       {activeTripId && (
-        <Card backgroundColor="$green4" borderColor="$green8">
-          <Text color="$green11" fontSize="$3" onPress={() => router.push(`/trip/${activeTripId}`)}>
+        <Card backgroundColor="$successContainer">
+          <Text color="$onSuccessContainer" fontSize="$3" onPress={() => router.push(`/trip/${activeTripId}`)}>
             You have an active trip. <Text textDecorationLine="underline" fontWeight="600">View status →</Text>
           </Text>
         </Card>

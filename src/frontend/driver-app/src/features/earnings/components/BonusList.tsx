@@ -15,18 +15,17 @@ export function BonusList({ bonuses }: { bonuses: Bonus[] }) {
           flexDirection="row"
           alignItems="center"
           justifyContent="space-between"
-          backgroundColor="$yellow2"
-          borderColor="$yellow6"
+          backgroundColor="$warningContainer"
         >
           <YStack flex={1} paddingRight="$2">
             <Text color="$textPrimary" fontWeight="500">
               {bonus.description}
             </Text>
-            <Text color="$textSecondary" fontSize="$1" marginTop={2}>
+            <Text color="$textSecondary" fontSize="$1" marginTop="$1">
               Expires {bonus.expires_at}
             </Text>
           </YStack>
-          <Text color="$yellow11" fontWeight="700" fontSize="$5">
+          <Text color="$onWarningContainer" fontWeight="700" fontSize="$5">
             {bonus.amount}
           </Text>
         </Card>
