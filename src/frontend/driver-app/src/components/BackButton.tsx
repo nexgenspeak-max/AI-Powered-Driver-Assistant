@@ -40,10 +40,6 @@ export function BackButton() {
             width: BACK_BUTTON_SIZE,
             height: BACK_BUTTON_SIZE,
             borderRadius: BACK_BUTTON_SIZE / 2,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 8,
           },
           stretchStyle,
         ]}

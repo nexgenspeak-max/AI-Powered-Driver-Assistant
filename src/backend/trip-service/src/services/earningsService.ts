@@ -1,12 +1,27 @@
 import * as tripService from './tripService';
+import { phoneVariants } from '../utils/phone';
 
 const FARE_PER_KM = 12000;
 const BASE_FARE = 15000;
 
-function isToday(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
-  return d.toDateString() === now.toDateString();
+// Same phone-variant union as tripsForDriver in driverContextService.ts —
+// driver_phone isn't stored in one consistent format, so a range query for
+// a single exact phone string can undercount. Queried per-variant (not a
+// single BETWEEN scan) because the GSI's partition key is the exact
+// driver_phone value; there's no OR-across-partition-keys in a single
+// Query.
+async function tripsForDriverInRange(driverPhone: string, fromIso: string, toIso: string): Promise<tripService.Trip[]> {
+  const seen = new Set<string>();
+  const trips: tripService.Trip[] = [];
+  for (const variant of phoneVariants(driverPhone)) {
+    for (const trip of await tripService.listByDriverInRange(variant, fromIso, toIso)) {
+      if (trip.trip_id && !seen.has(trip.trip_id)) {
+        seen.add(trip.trip_id);
+        trips.push(trip);
+      }
+    }
+  }
+  return trips;
 }
 
 export function tripFare(trip: tripService.Trip): number {
@@ -19,10 +34,10 @@ export function enrichTrip(trip: tripService.Trip) {
 }
 
 export async function todayForDriver(driverPhone: string) {
-  const trips = await tripService.listByDriver(driverPhone, 100);
-  const completedToday = trips.filter(
-    t => t.status === 'completed' && isToday(t.updated_at || t.created_at),
-  );
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const trips = await tripsForDriverInRange(driverPhone, startOfDay.toISOString(), new Date().toISOString());
+  const completedToday = trips.filter(t => t.status === 'completed');
   const total = completedToday.reduce((sum, t) => sum + tripFare(t), 0);
   return {
     total_earnings: total,
@@ -34,18 +49,21 @@ export async function todayForDriver(driverPhone: string) {
 }
 
 export async function summaryForDriver(driverPhone: string, period: 'week' | 'month' = 'week') {
-  const trips = await tripService.listByDriver(driverPhone, 200);
   const days = period === 'month' ? 30 : 7;
-  const cutoff = Date.now() - days * 86400000;
-  const inPeriod = trips.filter(t => {
-    if (t.status !== 'completed') return false;
-    return new Date(t.updated_at || t.created_at).getTime() >= cutoff;
-  });
-  const total = inPeriod.reduce((sum, t) => sum + tripFare(t), 0);
+  const from = new Date(Date.now() - days * 86400000).toISOString();
+  const to = new Date().toISOString();
+  // Bucketed by created_at (the GSI's range key), not updated_at — a trip
+  // created within the window counts toward that window's earnings even if
+  // it was marked completed slightly later, which also matches how a
+  // driver actually thinks about "trips in the last 7 days" (when the ride
+  // happened, not when its status row last changed).
+  const trips = await tripsForDriverInRange(driverPhone, from, to);
+  const completed = trips.filter(t => t.status === 'completed');
+  const total = completed.reduce((sum, t) => sum + tripFare(t), 0);
   return {
     period,
     total_earnings: total,
-    trip_count: inPeriod.length,
+    trip_count: completed.length,
     currency: 'VND',
   };
 }

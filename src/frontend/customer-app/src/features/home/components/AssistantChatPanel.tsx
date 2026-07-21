@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
-import { View, XStack, Text, Theme } from 'tamagui'
+import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSheen } from '../../../components/LiquidGlass'
 import { Ionicons } from '@expo/vector-icons'
@@ -9,8 +9,11 @@ import { StatusBar } from 'expo-status-bar'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useAuthStore } from '../../../stores/authStore'
+import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
+import { voiceService } from '../../../services/api/voice'
 import { AssistantAvatar } from './AssistantAvatar'
+import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
   idle: 'Bấm để nói chuyện với AI',
@@ -21,13 +24,25 @@ const MIC_LABEL = {
 
 export function AssistantChatPanel() {
   const customer = useAuthStore(s => s.customer)
+  const themeMode = useThemeStore(s => s.mode)
+  const isLight = themeMode === 'light'
+  const theme = useTheme()
   const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
   const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
+  const [hasVoiceprint, setHasVoiceprint] = useState<boolean | null>(null)
   const scrollRef = useRef<ScrollView>(null)
   const insets = useSafeAreaInsets()
+
+  // Gate the very first AI conversation on voiceprint enrollment — checked once
+  // per mount, not on every mic press, so an already-enrolled customer's tap
+  // connects instantly instead of waiting on this network round-trip.
+  useEffect(() => {
+    if (!customer?.id) return
+    voiceService.checkVoiceprint(customer.id).then(setHasVoiceprint).catch(() => setHasVoiceprint(true))
+  }, [customer?.id])
 
   useEffect(() => subscribeVoiceMessages((text, from) => {
     if (from === 'user') addUserMessage(text)
@@ -73,14 +88,22 @@ export function AssistantChatPanel() {
   }
 
   return (
-    // Chat screen is always dark-branded regardless of the app-wide light/dark
-    // toggle (matches the signature AI-orb look) — force the dark theme here
-    // so $textPrimary/$accent/etc. don't flip to light-mode values against
-    // this screen's fixed near-black background.
-    <Theme name="dark">
-    <StatusBar style="light" />
+    // Follows the app-wide light/dark toggle now (previously always forced
+    // dark, regardless of the user's setting). Chat bubble colors below are
+    // still fixed on purpose, not theme tokens: AI = white text on black,
+    // user = black text on purple, in light mode specifically.
+    <Theme name={themeMode}>
+    <StatusBar style={isLight ? 'dark' : 'light'} />
+    {hasVoiceprint === false && customer ? (
+      // Mandatory first-time gate: no voiceprint enrolled yet -> the whole
+      // chat UI is replaced by enrollment, not just blocked on mic-press —
+      // the customer can't reach chat/text-only fallback until this passes.
+      <View flex={1} backgroundColor="$surface" justifyContent="center" paddingHorizontal={20}>
+        <VoiceEnrollPanel phone={customer.phone} accountId={customer.id} onDone={setHasVoiceprint} />
+      </View>
+    ) : (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#1A1420' }}
+      style={{ flex: 1, backgroundColor: theme.surface.val }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={60}
     >
@@ -98,6 +121,8 @@ export function AssistantChatPanel() {
       >
         {chats.map((chat, i) =>
           chat.who === 'me' ? (
+            // User bubble: purple gradient, black text in light mode (white
+            // in dark, where black text on this same gradient reads poorly).
             <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
               <LinearGradient
                 colors={['#7C5B9C', '#A855F7']}
@@ -105,20 +130,23 @@ export function AssistantChatPanel() {
                 end={{ x: 1, y: 1 }}
                 style={{ paddingHorizontal: 16, paddingVertical: 10 }}
               >
-                <Text color="$textInverse">{chat.msg}</Text>
+                <Text color={isLight ? '#000000' : '$textInverse'}>{chat.msg}</Text>
               </LinearGradient>
             </View>
           ) : (
+            // AI bubble: fixed black background + white text in light mode
+            // (so it stays legible against the now-white screen background);
+            // dark mode keeps the theme-derived $accent/$textPrimary pair.
             <View
               key={i}
               maxWidth="80%"
               alignSelf="flex-start"
-              backgroundColor="$accent"
+              backgroundColor={isLight ? '#000000' : '$accent'}
               borderRadius="$bubble"
               paddingHorizontal={16}
               paddingVertical={10}
             >
-              <Text color="$textPrimary">{chat.msg}</Text>
+              <Text color={isLight ? '#ffffff' : '$textPrimary'}>{chat.msg}</Text>
             </View>
           ),
         )}
@@ -144,9 +172,9 @@ export function AssistantChatPanel() {
         borderRadius="$pill"
         backgroundColor="$surfaceElevated"
         shadowColor="#000"
-        shadowOffset={{ width: 0, height: 2 }}
-        shadowOpacity={0.3}
-        shadowRadius={8}
+        shadowOffset={{ width: 0, height: 8 }}
+        shadowOpacity={0.35}
+        shadowRadius={18}
       >
         <GlassSheen borderRadius={24} />
         <TouchableOpacity onPress={handleMicPress} style={{ padding: 8 }}>
@@ -160,7 +188,7 @@ export function AssistantChatPanel() {
                   ? '#f5a623'
                   : voice.status === 'error'
                     ? '#e05252'
-                    : '#fff'
+                    : isLight ? '#1a1a1a' : '#fff'
             }
           />
         </TouchableOpacity>
@@ -169,14 +197,15 @@ export function AssistantChatPanel() {
           onChangeText={setMsg}
           onSubmitEditing={handleSend}
           placeholder="Nói gì đó..."
-          placeholderTextColor="#8f7fb0"
-          style={{ flex: 1, color: '#fff' }}
+          placeholderTextColor={isLight ? '#8b8792' : '#8f7fb0'}
+          style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff' }}
         />
         <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
-          <Ionicons name="send" size={18} color="#fff" />
+          <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />
         </TouchableOpacity>
       </XStack>
     </KeyboardAvoidingView>
+    )}
     </Theme>
   )
 }

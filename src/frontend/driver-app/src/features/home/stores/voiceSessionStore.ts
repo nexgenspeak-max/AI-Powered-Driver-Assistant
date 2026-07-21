@@ -54,15 +54,14 @@ interface VoiceSessionState {
   /** Smoothed 0..1 audio level of the AI agent's voice track, from LiveKit's ActiveSpeakersChanged — 0 when silent/not connected. */
   agentAudioLevel: number
   connect: (driverPhone: string) => Promise<void>
+  /** One-time voiceprint enrollment session — same LiveKit plumbing as connect(), routed to EnrollAgent server-side via a distinct room-name prefix. */
+  enroll: (phone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
 
-export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
-  status: 'idle',
-  agentAudioLevel: 0,
-
-  connect: async (driverPhone: string) => {
+export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
+  const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
     // suspends WebRTC threads while the app isn't in the foreground) — treat
@@ -76,7 +75,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
     set({ status: 'connecting' })
     try {
       await startAudioSession()
-      const { token, livekit_url } = await voiceService.getDriverToken(driverPhone)
+      const { token, livekit_url } = await getToken()
       const r = new Room()
       room = r
 
@@ -141,18 +140,26 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
       stopCallForegroundService()
       set({ status: 'error', agentAudioLevel: 0 })
     }
-  },
+  }
 
-  disconnect: () => {
-    room?.disconnect()
-  },
+  return {
+    status: 'idle',
+    agentAudioLevel: 0,
 
-  sendText: async (text: string) => {
-    if (!room || get().status !== 'connected') return false
-    await room.localParticipant.sendText(text, { topic: CHAT_TOPIC })
-    return true
-  },
-}))
+    connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
+    enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'driver')),
+
+    disconnect: () => {
+      room?.disconnect()
+    },
+
+    sendText: async (text: string) => {
+      if (!room || get().status !== 'connected') return false
+      await room.localParticipant.sendText(text, { topic: CHAT_TOPIC })
+      return true
+    },
+  }
+})
 
 /** Subscribe to transcribed/chat messages from the active voice session. Returns an unsubscribe fn. */
 export function subscribeVoiceMessages(listener: VoiceMessageListener): () => void {

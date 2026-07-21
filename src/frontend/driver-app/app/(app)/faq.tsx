@@ -11,7 +11,7 @@ export default function FaqScreen() {
       <BackButton />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
         <Text fontSize="$6" fontWeight="800" color="$textPrimary">
           Câu hỏi thường gặp

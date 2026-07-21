@@ -3,6 +3,7 @@ import { View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-
 import { GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated from 'react-native-reanimated'
+import { useThemeName } from 'tamagui'
 import { GlassSheen, GlowOverlay, useGlassPress } from './LiquidGlass'
 
 interface TabButtonProps {
@@ -20,6 +21,7 @@ interface TabButtonProps {
 // Passed to expo-router's `Tabs` as `screenOptions.tabBarButton`.
 export function GlassTabButton({ children, onPress, accessibilityState, style }: TabButtonProps) {
   const focused = !!accessibilityState?.selected
+  const isLight = useThemeName() === 'light'
   const [size, setSize] = useState({ width: 60, height: 44 })
 
   const { gesture, stretchStyle, touchX, touchY, glowOpacity } = useGlassPress(size.width, size.height, {
@@ -34,7 +36,12 @@ export function GlassTabButton({ children, onPress, accessibilityState, style }:
     setSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })
   }
 
-  if (!focused) {
+  // Light mode: no filled pill behind the active tab — a black pill would
+  // just hide the black active-tint text again (same bug as the earlier
+  // white-on-white pass, mirrored). Active vs. inactive there is purely the
+  // darker/lighter text-icon color set via tabBarActiveTintColor in
+  // app/_layout.tsx, so this renders identically to the unfocused branch.
+  if (!focused || isLight) {
     return (
       <GestureDetector gesture={gesture}>
         <Animated.View
@@ -48,6 +55,7 @@ export function GlassTabButton({ children, onPress, accessibilityState, style }:
     )
   }
 
+  // Dark mode active tab: unchanged glossy purple gradient pill.
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
@@ -56,12 +64,22 @@ export function GlassTabButton({ children, onPress, accessibilityState, style }:
       >
         <View
           style={{
-            borderRadius: 22,
+            // 999, not a guessed fixed number — RN clamps to the box's own
+            // half-height automatically (same trick as Button's `$button`
+            // token), so this is always a true full pill/stadium shape
+            // regardless of icon+label height, instead of a fixed radius
+            // that under-rounds once the actual content is taller than
+            // whatever number was guessed.
+            borderRadius: 999,
             shadowColor: '#A855F7',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.65,
-            shadowRadius: 14,
-            elevation: 10,
+            // Radius 18/opacity 0.55 on a ~60x44 pill blurred into a big
+            // shapeless halo (worse still against the blurred tab-bar
+            // background behind it) — tightened so the pill itself reads as
+            // the active-tab indicator, not the glow around it.
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            elevation: 6,
           }}
         >
           <LinearGradient
@@ -69,7 +87,7 @@ export function GlassTabButton({ children, onPress, accessibilityState, style }:
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
-              borderRadius: 22,
+              borderRadius: 999,
               paddingHorizontal: 14,
               paddingVertical: 7,
               alignItems: 'center',
@@ -77,7 +95,7 @@ export function GlassTabButton({ children, onPress, accessibilityState, style }:
               overflow: 'hidden',
             }}
           >
-            <GlassSheen borderRadius={22} />
+            <GlassSheen borderRadius={999} />
             <GlowOverlay size={100} id="tabGlowActive" touchX={touchX} touchY={touchY} glowOpacity={glowOpacity} />
             {children}
           </LinearGradient>

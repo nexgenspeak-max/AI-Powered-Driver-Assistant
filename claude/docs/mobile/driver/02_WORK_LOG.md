@@ -5,6 +5,14 @@
 
 ---
 
+### 2026-07-20 — Xác thực giọng nói "chủ nhân" cho wake-word (voiceprint) — [FEAT-M003](tickets/FEAT-M003.md)
+- Wake-word gốc chỉ nhận diện văn bản, không quan tâm ai nói. Yêu cầu mới: chỉ đúng giọng chủ tài khoản mới dùng được trợ lý AI.
+- `react-native-vosk` không expose audio thô (chỉ text) — chọn xác thực ở backend (`voice-agent`) ngay sau khi phiên LiveKit bắt đầu, tái dùng audio đã nhận qua STT pipeline, thay vì thêm 1 bộ ghi âm thứ 2 chạy song song với Vosk (rủi ro cao, từng gây câm mic — xem [BUG-M001](tickets/BUG-M001.md)).
+- Model: onnxruntime + WeSpeaker ResNet34-LM (ONNX chính thức, CC-BY-4.0) — chọn thay vì torch+speechbrain theo yêu cầu người dùng (nhẹ, khởi động nhanh, không phình Docker image). Trích fbank qua `kaldi-native-fbank`.
+- Luồng: lần đầu bấm mic chưa enroll → bắt buộc qua màn `voice-enroll` (đọc 3-4 câu, giống Voice ID iPhone) → lưu voiceprint ở `auth-service`. Mọi lần sau, `voice-agent` tự so giọng ngay sau `session.start()`; chưa enroll thì luôn cho qua (backward-compatible).
+- Chi tiết đầy đủ file/service đã sửa xem [FEAT-M003](tickets/FEAT-M003.md).
+- Verify: `tsc --noEmit` sạch ở cả 4 service TypeScript, `py_compile`/AST parse sạch ở voice-agent. **Chưa chạy thử end-to-end** — máy dev Windows hiện tại (Python 3.14) chưa build được `kaldi-native-fbank` cục bộ (thiếu Visual Studio Build Tools); production Docker (Python 3.11-slim) có sẵn wheel nên không bị ảnh hưởng, nhưng cần test qua Docker hoặc thiết bị thật trước khi coi là xong.
+
 ### 2026-07-19 — Tách `LiquidGlass.tsx` thành module + tách `GlassTabButton` khỏi route file
 - `src/components/LiquidGlass.tsx` (265 dòng, gộp 4 việc: component hiển thị, gesture hook, glow overlay) → tách thành thư mục `src/components/LiquidGlass/`:
   - `GlassMaterial.tsx` — `GlassMaterial`, `GlassSheen`, gradient layers.

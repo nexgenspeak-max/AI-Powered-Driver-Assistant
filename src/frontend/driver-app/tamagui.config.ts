@@ -32,10 +32,12 @@ const light = {
   surfaceHigh: '#ffffff',
   surfaceVariant: '#EEE9F3',
   onSurfaceVariant: '#5B5566',
-  // Text hierarchy
+  // Text hierarchy — darker than the original Tailwind gray-500/400 pair
+  // (#6b7280/#9ca3af); against the semi-transparent glass surfaces those
+  // read as faint/washed-out. Primary stays near-black, unaffected.
   textPrimary: '#111827',
-  textSecondary: '#6b7280',
-  textMuted: '#9ca3af',
+  textSecondary: '#4b5563',
+  textMuted: '#6b7280',
   // Borders / dividers — kept faint, definition mostly comes from shadow
   border: '#e5e7eb',
   borderStrong: '#d1d5db',

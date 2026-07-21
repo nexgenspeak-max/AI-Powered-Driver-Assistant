@@ -54,7 +54,12 @@ class Settings(BaseSettings):
     # ── Downstream services ───────────────────────────────────────────────────
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
+    auth_service_url: str = ""   # http://localhost:8003 — voiceprint lookup/enroll only
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
+
+    # ── Speaker verification (wake-word voiceprint gate) ─────────────────────
+    speaker_verify_enabled: bool = True
+    speaker_verify_threshold: float = 0.6
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True

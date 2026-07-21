@@ -3,20 +3,12 @@ import * as driverService from '../services/driverService';
 import * as tripService from '../services/tripService';
 import * as earningsService from '../services/earningsService';
 import * as driverContextService from '../services/driverContextService';
+import { phoneVariants } from '../utils/phone';
 
 const router = Router();
 
 const UPCOMING_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed']);
 const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
-
-function phoneVariants(phone: string): string[] {
-  const p = phone.trim();
-  const bare = p.replace(/^\+/, '');
-  const variants = [p];
-  if (p !== bare) variants.push(bare);
-  if (!p.startsWith('+')) variants.push(`+${bare}`);
-  return [...new Set(variants)];
-}
 
 async function tripsForDriver(phone: string) {
   const seen = new Set<string>();

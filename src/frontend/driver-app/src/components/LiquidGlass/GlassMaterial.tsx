@@ -1,8 +1,9 @@
-import { type ReactNode, useMemo } from 'react'
-import { StyleSheet, View, type ViewStyle } from 'react-native'
-import { BlurView } from 'expo-blur'
-import { LinearGradient } from 'expo-linear-gradient'
-import MaskedView from '@react-native-masked-view/masked-view'
+import { type ReactNode, useMemo } from "react";
+import { StyleSheet, View, type ViewStyle } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { useThemeName } from "tamagui";
+import { randomSpecularVariation } from "../../utils/glassSpecular";
 
 // Frosted-glass surface ported from the actual working reference —
 // https://github.com/SchroederNathan/linear-tab-bar (GlassMaterial.tsx) —
@@ -12,16 +13,89 @@ import MaskedView from '@react-native-masked-view/masked-view'
 // blur, a plain top-lighter/bottom-dimmer gradient wash, and a genuine 1px
 // gradient-colored edge (via MaskedView) instead of computed distance fields.
 
-const FILL_GRADIENT_START = { x: 0.5, y: 0 }
-const FILL_GRADIENT_END = { x: 0.5, y: 1 }
-const BORDER_GRADIENT_START = { x: 0.49, y: 0 }
-const BORDER_GRADIENT_END = { x: 0.51, y: 1 }
+const FILL_GRADIENT_START = { x: 0.5, y: 0 };
+const FILL_GRADIENT_END = { x: 0.5, y: 1 };
+// Fast falloff (locations) instead of an even 0->1 ramp — reads as a bright
+// glossy strip hugging the top edge, then settles to the faint wash below,
+// matching a physical glass/acrylic surface catching light from above.
+const GLASS_GRADIENT_LOCATIONS = [0, 0.35, 1] as const;
+const BASE_LIGHT_HIGHLIGHT_ANGLE_DEG = -24;
 
-const GLASS_GRADIENT_TOP = 'rgba(255,255,255,0.11)'
-const GLASS_GRADIENT_BOTTOM = 'rgba(255,255,255,0.05)'
-const BORDER_GRADIENT_BRIGHT = 'rgba(255,255,255,0.16)'
-const BORDER_GRADIENT_DIM = 'rgba(255,255,255,0.01)'
-const BORDER_GRADIENT_MEDIUM = 'rgba(255,255,255,0.06)'
+// elevation:14/opacity:0.45/radius:24 (a previous pass) is modal/FAB-strength
+// — on small elements (buttons, back button, tab pill) it doesn't read as a
+// soft shadow, it paints a solid dark patch behind the content, worse in
+// dark mode since it doesn't fade into the already-dark background. Tuned
+// down to card/button-strength instead.
+export function getGlassShadow(isLight: boolean) {
+  return {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: isLight ? 10 : 6 },
+    shadowOpacity: isLight ? 0.24 : 0.28,
+    shadowRadius: isLight ? 20 : 14,
+    elevation: isLight ? 8 : 5,
+  } as const;
+}
+// kept for backwards compatibility if needed, but not used internally now
+export const GLASS_SHADOW = {
+  shadowColor: "#000000",
+  shadowOffset: { width: 0, height: 12 },
+  shadowOpacity: 0.18,
+  shadowRadius: 24,
+  elevation: 14,
+} as const;
+
+// Apple-style concentric nesting: a rounded shape inset by `padding` inside
+// a container of `outerRadius` should itself use `outerRadius - padding` so
+// both curves share the same center — not a fixed/guessed constant, which
+// drifts out of sync the moment either size changes.
+export function getConcentricRadius(outerRadius: number, padding: number) {
+  return Math.max(0, outerRadius - padding);
+}
+
+function GlassHighlightOverlay({ borderRadius }: { borderRadius: number }) {
+  const themeName = useThemeName();
+  const isLight = themeName === "light";
+  const variation = useMemo(
+    () => randomSpecularVariation(BASE_LIGHT_HIGHLIGHT_ANGLE_DEG),
+    [],
+  );
+
+  if (!isLight) {
+    return null;
+  }
+
+  const top = `${8 + variation.offsetY * 18}%`;
+  const left = `${10 + variation.offsetX * 28}%`;
+  const width = `${55 + variation.sizeScale * 20}%`;
+  const height = `${24 + variation.sizeScale * 12}%`;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top,
+        left,
+        width,
+        height,
+        borderRadius: 999,
+        transform: [{ rotate: `${variation.angleDeg}deg` }],
+        overflow: "hidden",
+      }}
+    >
+      <LinearGradient
+        colors={[
+          "rgba(255,255,255,0.18)",
+          "rgba(255,255,255,0)",
+          "rgba(255,255,255,0.18)",
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
 
 // The gradient wash + gradient border, factored out so it can be used two
 // ways: as a full owning container (`GlassMaterial`, for components like
@@ -37,68 +111,169 @@ const BORDER_GRADIENT_MEDIUM = 'rgba(255,255,255,0.06)'
 // tab bar — radius = half the height) don't show it because there's no short
 // tight corner, just one continuous curve. `withBorder` lets flat-cornered
 // surfaces skip the border and keep only the wash.
-function GlassGradientLayers({ borderRadius, withBorder = true }: { borderRadius: number; withBorder?: boolean }) {
+function GlassGradientLayers({
+  borderRadius,
+  withBorder = true,
+  intensity = "normal",
+}: {
+  borderRadius: number;
+  withBorder?: boolean;
+  /** 'strong' for small elements (icon badges, chips) where the toned-down
+   *  'normal' dark-mode wash is too faint to read at all. Only affects dark
+   *  mode — light mode's wash never had the tall-card banding problem below. */
+  intensity?: "normal" | "strong";
+}) {
+  const themeName = useThemeName();
+  const isLight = themeName === "light";
+  const strong = intensity === "strong";
+
+  // iOS 26 Liquid Glass style:
+  // Pure white translucent washes for a clean frost aesthetic.
+  // Purple tint is kept strictly to the shadows as requested.
+  //
+  // Light-mode values toned back down from an earlier pass (0.7/0.3 top/mid,
+  // 0.9 top-border) — that bright a glare sitting on top of white CTA text
+  // (primary Button, active tab pill) made the label nearly disappear into
+  // the sheen. This keeps the glass visible without competing with text.
+  //
+  // Dark mode sits on an *opaque* card background (`$surfaceElevated`), so
+  // unlike light mode (white-on-white ≈ invisible) this wash is genuinely
+  // visible — on a short button that reads as a nice sheen, but stretched
+  // over a tall card (a whole VoiceEnrollPanel-height card, say) the top 35%
+  // vs. the rest banded into two visibly different shades, like two panels
+  // stacked instead of one surface. Halved so it stays a hint, not a band —
+  // but that same halved value on a small 40-ish px badge is nearly
+  // invisible, so those pass `intensity="strong"` for a brighter wash sized
+  // for how little vertical room it has to fade across.
+  const topColor = isLight
+    ? "rgba(255,255,255,0.35)"
+    : strong
+      ? "rgba(255,255,255,0.22)"
+      : "rgba(255,255,255,0.08)";
+  const midColor = isLight
+    ? "rgba(255,255,255,0.12)"
+    : strong
+      ? "rgba(255,255,255,0.1)"
+      : "rgba(255,255,255,0.03)";
+  const bottomColor = isLight
+    ? "rgba(255,255,255,0.03)"
+    : strong
+      ? "rgba(255,255,255,0.04)"
+      : "rgba(255,255,255,0.015)";
+
+  const borderBright = isLight
+    ? "rgba(255,255,255,0.8)"
+    : "rgba(168,85,247,0.5)";
+  const borderDim = isLight ? "rgba(255,255,255,0.2)" : "rgba(124,91,156,0.08)";
+
   return (
     <>
       <LinearGradient
-        colors={[GLASS_GRADIENT_TOP, GLASS_GRADIENT_BOTTOM]}
+        colors={[topColor, midColor, bottomColor]}
+        locations={GLASS_GRADIENT_LOCATIONS}
         start={FILL_GRADIENT_START}
         end={FILL_GRADIENT_END}
         style={StyleSheet.absoluteFill}
       />
-      {/* Gradient border: mask a linear-gradient to only show through a 1px border ring */}
+      <GlassHighlightOverlay borderRadius={borderRadius} />
+
+      {/* 
+        Cross-platform Glass Border: 
+        MaskedView fails on React Native Web and renders a solid black line. 
+        Replaced with a solid translucent border which works perfectly on Web/iOS/Android. 
+        To simulate the top-light effect, we can use a top border color and left/right/bottom differently,
+        but for simplicity and rounded corners, a unified translucent border does the glass job effectively.
+      */}
       {withBorder && (
-        <MaskedView
-          style={StyleSheet.absoluteFill}
-          maskElement={<View style={{ flex: 1, borderWidth: 1, borderColor: 'black', borderRadius }} />}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius,
+              borderWidth: 1,
+              borderColor: isLight
+                ? "rgba(255, 255, 255, 0.35)"
+                : "rgba(255, 255, 255, 0.1)",
+              // Add a secondary inner ring to simulate depth (top reflection)
+              borderTopWidth: 1.5,
+              borderTopColor: isLight
+                ? "rgba(255, 255, 255, 0.55)"
+                : "rgba(255, 255, 255, 0.2)",
+            },
+          ]}
           pointerEvents="none"
-        >
-          <LinearGradient
-            colors={[BORDER_GRADIENT_BRIGHT, BORDER_GRADIENT_DIM, BORDER_GRADIENT_MEDIUM]}
-            start={BORDER_GRADIENT_START}
-            end={BORDER_GRADIENT_END}
-            locations={[0, 0.5, 1]}
-            style={{ flex: 1 }}
-          />
-        </MaskedView>
+        />
       )}
     </>
-  )
+  );
 }
 
 export interface GlassMaterialProps {
-  children?: ReactNode
-  style?: ViewStyle | ViewStyle[]
-  borderRadius?: number
-  tint?: 'light' | 'dark'
-  blurIntensity?: number
+  children?: ReactNode;
+  style?: ViewStyle | ViewStyle[];
+  borderRadius?: number;
+  tint?: "light" | "dark";
+  blurIntensity?: number;
+  /** Set false to skip the built-in floating shadow — e.g. when a parent view already owns one. */
+  shadow?: boolean;
 }
 
 // Owns its own box (size comes from `style`/flex, not a measured width/height)
 // — for components that build their visual entirely themselves: BackButton,
 // the tab bar pill, the chat input pill, primary Button.
-export function GlassMaterial({ children, style, borderRadius = 24, tint = 'dark', blurIntensity = 40 }: GlassMaterialProps) {
-  const fill = useMemo(() => [StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden' as const }], [borderRadius])
+//
+// Split into two nested Views because RN clips shadows on any view that also
+// sets `overflow: hidden` — the outer view owns size + shadow (no clipping),
+// the inner one owns the borderRadius clip for the blur/gradient layers.
+export function GlassMaterial({
+  children,
+  style,
+  borderRadius = 24,
+  tint,
+  blurIntensity = 50, // Slightly higher for more pronounced frost
+  shadow = true,
+}: GlassMaterialProps) {
+  const themeName = useThemeName();
+  const isLight = themeName === "light";
+  const resolvedTint = tint || (isLight ? "light" : "dark");
+
+  const fill = useMemo(
+    () => [
+      StyleSheet.absoluteFill,
+      { borderRadius, overflow: "hidden" as const },
+    ],
+    [borderRadius],
+  );
 
   return (
-    <View style={[{ borderRadius, overflow: 'hidden' }, style]} collapsable={false}>
-      <BlurView tint={tint} intensity={blurIntensity} style={fill} />
-      <GlassGradientLayers borderRadius={borderRadius} />
-      <View
-        style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]}
-        pointerEvents="box-none"
-      >
-        {children}
+    <View
+      style={[shadow && getGlassShadow(isLight), { borderRadius }, style]}
+      collapsable={false}
+    >
+      <View style={{ flex: 1, borderRadius, overflow: "hidden" }}>
+        <BlurView tint={resolvedTint} intensity={blurIntensity} style={fill} />
+        <GlassGradientLayers borderRadius={borderRadius} />
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            { alignItems: "center", justifyContent: "center" },
+          ]}
+          pointerEvents="box-none"
+        >
+          {children}
+        </View>
       </View>
     </View>
-  )
+  );
 }
 
 export interface GlassSheenProps {
-  borderRadius?: number
+  borderRadius?: number;
   /** Set false for flat-cornered rectangles (Card) — see note on `GlassGradientLayers`. */
-  withBorder?: boolean
-  style?: ViewStyle
+  withBorder?: boolean;
+  style?: ViewStyle;
+  /** 'strong' for small elements (icon badges, chips) — see `GlassGradientLayers`. */
+  intensity?: "normal" | "strong";
 }
 
 // Decorative-only, absolute-fill, no blur and no box of its own — drop this
@@ -106,10 +281,26 @@ export interface GlassSheenProps {
 // background and shadow (Card, Badge). No blur because these sit on a flat
 // background; blurring nothing behind them added no visual value and made
 // the surface underneath harder to read.
-export function GlassSheen({ borderRadius = 24, withBorder = true, style }: GlassSheenProps) {
+export function GlassSheen({
+  borderRadius = 24,
+  withBorder = true,
+  style,
+  intensity = "normal",
+}: GlassSheenProps) {
   return (
-    <View style={[StyleSheet.absoluteFillObject, { borderRadius, overflow: 'hidden' }, style]} pointerEvents="none">
-      <GlassGradientLayers borderRadius={borderRadius} withBorder={withBorder} />
+    <View
+      style={[
+        StyleSheet.absoluteFillObject,
+        { borderRadius, overflow: "hidden" },
+        style,
+      ]}
+      pointerEvents="none"
+    >
+      <GlassGradientLayers
+        borderRadius={borderRadius}
+        withBorder={withBorder}
+        intensity={intensity}
+      />
     </View>
-  )
+  );
 }

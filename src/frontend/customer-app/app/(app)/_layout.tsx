@@ -8,20 +8,23 @@ import { GlassTabButton } from '../../src/components/GlassTabButton'
 export default function AppLayout() {
   const theme = useTheme()
   const themeMode = useThemeStore(s => s.mode)
+  const isLight = themeMode !== 'dark'
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        // White icon/label when active — they now sit on the purple glass
-        // blob (GlassTabButton) instead of the plain dark bar.
-        tabBarActiveTintColor: '#ffffff',
+        // Light mode: no filled pill behind the active tab anymore (see
+        // GlassTabButton) — active vs. inactive is just darker-vs-lighter
+        // black/gray text, no white-on-white or black-on-black risk. Dark
+        // mode keeps the white-on-purple-pill look unchanged.
+        tabBarActiveTintColor: isLight ? '#000000' : '#ffffff',
         tabBarInactiveTintColor: theme.textMuted.val,
         tabBarButton: props => <GlassTabButton {...props} />,
         // Frosted-glass floating bar — real native blur + gradient wash +
         // gradient hairline border, see LiquidGlass.tsx `GlassMaterial`.
         tabBarBackground: () => (
-          <GlassMaterial borderRadius={30} tint={themeMode === 'dark' ? 'dark' : 'light'} blurIntensity={55} style={{ flex: 1 }} />
+          <GlassMaterial borderRadius={30} tint={isLight ? 'light' : 'dark'} blurIntensity={55} style={{ flex: 1 }} />
         ),
         tabBarStyle: {
           position: 'absolute',

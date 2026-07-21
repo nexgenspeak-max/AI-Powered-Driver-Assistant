@@ -1,7 +1,8 @@
 import { YStack, XStack, View, Text } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import { Card } from '../../../components/Card'
+import { GlassSurface } from '../../../components/GlassSurface'
 import { Badge } from '../../../components/Badge'
+import { GlossyAvatar } from './GlossyAvatar'
 import type { Driver, DriverProfile } from '../../../types'
 
 interface Props {
@@ -9,36 +10,35 @@ interface Props {
   profile: DriverProfile
 }
 
-// Telegram/Nicegram-style profile: big centered avatar + name, then grouped
-// "settings list" rows (icon circle · label/value) instead of a stat grid.
+// Telegram/Nicegram-style profile: big centered avatar + name in its own
+// glass card, then grouped "settings list" glass cards (icon circle ·
+// label/value) instead of a stat grid.
 export function ProfileCard({ driver, profile }: Props) {
   const isOnline = driver.status === 'online'
 
   return (
     <YStack gap="$4">
-      <YStack alignItems="center" gap="$2" paddingVertical="$4">
-        <View width={96} height={96} borderRadius={48} backgroundColor="$primary" alignItems="center" justifyContent="center">
-          <Text color="$textInverse" fontSize={36} fontWeight="700">
-            {driver.name.charAt(0).toUpperCase()}
+      <GlassSurface cornerRadius={20}>
+        <YStack alignItems="center" gap="$2" paddingVertical="$5">
+          <GlossyAvatar letter={driver.name.charAt(0).toUpperCase()} size={96} />
+          <Text fontSize="$6" fontWeight="700" color="$textPrimary" marginTop="$2">
+            {driver.name}
           </Text>
-        </View>
-        <Text fontSize="$6" fontWeight="700" color="$textPrimary" marginTop="$2">
-          {driver.name}
-        </Text>
-        {/* Plain wrapper neutralizes Badge's own `alignSelf: flex-start`
-            (meant for inline row usage elsewhere) so it centers here instead
-            of sticking to the left edge under the centered name. */}
-        <View>
-          <Badge
-            label={isOnline ? 'ONLINE' : 'OFFLINE'}
-            backgroundColor={isOnline ? '$successContainer' : '$primaryMuted'}
-            color={isOnline ? '$onSuccessContainer' : '$textPrimary'}
-            icon={<Ionicons name="ellipse" size={7} color={isOnline ? '#34d399' : '#7C5B9C'} />}
-          />
-        </View>
-      </YStack>
+          {/* Plain wrapper neutralizes Badge's own `alignSelf: flex-start`
+              (meant for inline row usage elsewhere) so it centers here
+              instead of sticking to the left edge under the centered name. */}
+          <View>
+            <Badge
+              label={isOnline ? 'ONLINE' : 'OFFLINE'}
+              backgroundColor={isOnline ? '$successContainer' : '$primaryMuted'}
+              color={isOnline ? '$onSuccessContainer' : '$textPrimary'}
+              icon={<Ionicons name="ellipse" size={7} color={isOnline ? '#34d399' : '#7C5B9C'} />}
+            />
+          </View>
+        </YStack>
+      </GlassSurface>
 
-      <Card padding={0} overflow="hidden">
+      <GlassSurface cornerRadius={20}>
         <InfoRow icon="call-outline" label="Số điện thoại" value={driver.phone} />
         {!!driver.vehicle_name && (
           <>
@@ -46,9 +46,9 @@ export function ProfileCard({ driver, profile }: Props) {
             <InfoRow icon="car-outline" label="Phương tiện" value={`${driver.vehicle_name} · ${driver.vehicle_plate}`} />
           </>
         )}
-      </Card>
+      </GlassSurface>
 
-      <Card padding={0} overflow="hidden">
+      <GlassSurface cornerRadius={20}>
         <InfoRow icon="star-outline" label="Đánh giá" value={profile.rating.toFixed(2)} />
         <Divider />
         <InfoRow icon="checkmark-done-outline" label="Tổng chuyến" value={String(profile.total_trips)} />
@@ -56,7 +56,7 @@ export function ProfileCard({ driver, profile }: Props) {
         <InfoRow icon="trending-up-outline" label="Tỉ lệ nhận chuyến" value={`${profile.acceptance_rate.toFixed(0)}%`} />
         <Divider />
         <InfoRow icon="checkmark-circle-outline" label="Tỉ lệ hoàn thành" value={`${profile.completion_rate.toFixed(0)}%`} />
-      </Card>
+      </GlassSurface>
     </YStack>
   )
 }

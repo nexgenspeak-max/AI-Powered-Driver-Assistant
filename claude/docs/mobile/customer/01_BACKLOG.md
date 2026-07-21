@@ -8,6 +8,7 @@
 | ID | Mô tả | Ưu tiên | Trạng thái | Ticket |
 |---|---|---|---|---|
 | FEAT-M001 | Xác nhận wake-word chạy ổn định trên điện thoại thật (dùng chung với driver-app) | 🔴 Cao | ⬜ | xem [`../driver/tickets/BUG-M001.md`](../driver/tickets/BUG-M001.md) |
+| FEAT-M003 | Xác thực giọng nói "chủ nhân" cho wake-word (voiceprint) — dùng chung code/backend với driver-app | 🟡 Trung bình | 🔨 Đã code, chưa test thiết bị thật | xem [`../driver/tickets/FEAT-M003.md`](../driver/tickets/FEAT-M003.md) |
 | FEAT-005 | Chốt quan hệ giữa `customer-app` và `customer-web` (mục chung, xem [`../../web/customer/01_BACKLOG.md`](../../web/customer/01_BACKLOG.md)) | 🟡 Trung bình | ⬜ | — |
 
 ## Đã hoàn thành

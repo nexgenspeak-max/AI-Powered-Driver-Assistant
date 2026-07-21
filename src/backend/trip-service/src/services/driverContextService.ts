@@ -2,18 +2,10 @@ import * as driverService from './driverService';
 import * as tripService from './tripService';
 import * as earningsService from './earningsService';
 import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey } from '../cache/redis';
+import { phoneVariants } from '../utils/phone';
 
 const UPCOMING = new Set(['pending', 'notified', 'calling', 'confirmed']);
 const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
-
-function phoneVariants(phone: string): string[] {
-  const p = phone.trim();
-  const bare = p.replace(/^\+/, '');
-  const variants = [p, bare, `+${bare}`];
-  if (bare.startsWith('84')) variants.push(`0${bare.slice(2)}`);
-  if (bare.startsWith('0')) variants.push(`+84${bare.slice(1)}`);
-  return [...new Set(variants)];
-}
 
 async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
   const seen = new Set<string>();
