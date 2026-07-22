@@ -1,9 +1,16 @@
 import { useEffect } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View, Image } from 'react-native'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
-import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { GlassMaterial, getConcentricRadius } from './LiquidGlass'
+
+// Flat, full-color icons (assets/icons/) — swapped in for the plain
+// Ionicons "sunny"/"moon" glyphs this switch used before. Fixed-palette
+// raster images, not tintable via a `color` prop, so the track's two static
+// icons use opacity (not color) to show which side is "active", and the
+// thumb just swaps source outright based on `isDark`.
+const SUN_ICON = require('../../assets/icons/light/sun.png')
+const MOON_ICON = require('../../assets/icons/light/moon.png')
 
 const TRACK_WIDTH = 64
 const TRACK_HEIGHT = 34
@@ -71,8 +78,8 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
               paddingHorizontal: 9,
             }}
           >
-            <Ionicons name="sunny" size={14} color={isDark ? 'rgba(255,255,255,0.45)' : '#9ca3af'} />
-            <Ionicons name="moon" size={13} color={isDark ? '#ffffff' : 'rgba(124,91,156,0.15)'} />
+            <Image source={SUN_ICON} style={{ width: 16, height: 16, opacity: isDark ? 0.4 : 1 }} resizeMode="contain" />
+            <Image source={MOON_ICON} style={{ width: 15, height: 15, opacity: isDark ? 1 : 0.25 }} resizeMode="contain" />
           </View>
         </GlassMaterial>
 
@@ -94,7 +101,7 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
               style={[StyleSheet.absoluteFillObject, { borderRadius: THUMB_RADIUS }]}
               pointerEvents="none"
             />
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={14} color={isDark ? '#7C5B9C' : '#4b5563'} />
+            <Image source={isDark ? MOON_ICON : SUN_ICON} style={{ width: 16, height: 16 }} resizeMode="contain" />
           </GlassMaterial>
         </Animated.View>
       </View>

@@ -44,9 +44,11 @@ interface Props extends Omit<FrameProps, 'variant' | 'disabled' | 'onPress'> {
   loading?: boolean
   disabled?: boolean
   onPress?: () => void
+  /** Optional leading icon, e.g. a themed `<Image source={require(...)} />` — rendered before the label, hidden while `loading` (same slot as the spinner). */
+  icon?: React.ReactNode
 }
 
-export function Button({ label, variant = 'primary', loading, disabled, onPress, full, ...rest }: Props) {
+export function Button({ label, variant = 'primary', loading, disabled, onPress, full, icon, ...rest }: Props) {
   const isDisabled = !!(disabled || loading)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const { gesture, stretchStyle, touchX, touchY, glowOpacity } = useGlassPress(size.width, size.height, {
@@ -128,6 +130,7 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
               </>
             )}
             {loading && <ActivityIndicator size="small" color={spinnerColor} />}
+            {!loading && icon}
             <Text
               fontWeight="600"
               fontSize="$4"

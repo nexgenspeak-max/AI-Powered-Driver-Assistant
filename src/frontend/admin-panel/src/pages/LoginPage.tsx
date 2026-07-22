@@ -17,6 +17,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const setAdmin = useAuthStore(s => s.setAdmin)
   const setTokens = useAuthStore(s => s.setTokens)
+  const logout = useAuthStore(s => s.logout)
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
 
@@ -25,17 +26,23 @@ export default function LoginPage() {
 
   const { mutate: login, isPending, error } = useMutation({
     mutationFn: async () => {
-      const res = await authService.login({ role: 'admin', email: form.email, password: form.password })
+      // Login is token-only now (see services/api/auth.ts) — the profile
+      // has to be fetched via me() before the role can even be checked, so
+      // the token goes into the store first and comes back out (logout())
+      // if the check below fails.
+      const { access_token, refresh_token } = await authService.login({ role: 'admin', email: form.email, password: form.password })
+      setTokens(access_token, refresh_token)
+      const user = await authService.me()
       // auth-service's admin login looks up the account by email only (not scoped
       // by role), so a driver/customer account with the same email could otherwise
       // authenticate here — reject anything that isn't actually role=admin.
-      if (res.user.role !== 'admin') {
+      if (user.role !== 'admin') {
+        logout()
         throw new Error('Tài khoản này không có quyền truy cập Admin Panel.')
       }
-      return res
+      return user
     },
-    onSuccess: ({ access_token, refresh_token, user }) => {
-      setTokens(access_token, refresh_token)
+    onSuccess: user => {
       setAdmin({
         id: user.id,
         name: user.name,

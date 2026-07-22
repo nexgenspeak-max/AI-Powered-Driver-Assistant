@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollView, TouchableOpacity, Switch, Modal, StyleSheet } from 'react-native'
+import { ScrollView, TouchableOpacity, Switch, Modal, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
 import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -13,6 +13,7 @@ import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
+import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 import { VoiceEnrollPanel } from '../../src/features/home/components/VoiceEnrollPanel'
 
 // Literal per-screen background — same treatment as customer-app's Profile
@@ -23,8 +24,39 @@ import { VoiceEnrollPanel } from '../../src/features/home/components/VoiceEnroll
 const DARK_SCREEN_BACKGROUND = '#15111F'
 const LIGHT_SCREEN_GRADIENT = ['#F4F4F6', '#E2E2E6'] as const
 
+// Light mode: flat, full-color icon set (assets/icons/light/) — swapped in
+// for the plain Ionicons glyphs these settings rows used before. Fixed
+// palette raster images (not tintable like a vector Ionicon), so they're
+// sized larger and rendered without a `color` prop instead of relying on
+// theme tinting for legibility.
+// Dark mode: single-color silhouette set (assets/icons/dark/), tinted white
+// so it reads against the dark background (see the `tintColor` on each Image
+// below).
+const ICONS = {
+  voiceAssistant: require('../../assets/icons/light/voice-assistant.png') as ImageSourcePropType,
+  sun: require('../../assets/icons/light/sun.png') as ImageSourcePropType,
+  moon: require('../../assets/icons/light/moon.png') as ImageSourcePropType,
+  microphone: require('../../assets/icons/light/microphone.png') as ImageSourcePropType,
+  chatInfo: require('../../assets/icons/light/chat-info.png') as ImageSourcePropType,
+  faq: require('../../assets/icons/light/faq.png') as ImageSourcePropType,
+  logout: require('../../assets/icons/light/logout.png') as ImageSourcePropType,
+}
+const DARK_ICONS = {
+  voiceAssistant: require('../../assets/icons/dark/voice-assistant.png') as ImageSourcePropType,
+  sun: require('../../assets/icons/dark/sun.png') as ImageSourcePropType,
+  moon: require('../../assets/icons/dark/moon.png') as ImageSourcePropType,
+  microphone: require('../../assets/icons/dark/microphone.png') as ImageSourcePropType,
+  chatInfo: require('../../assets/icons/dark/chat-info.png') as ImageSourcePropType,
+  faq: require('../../assets/icons/dark/faq.png') as ImageSourcePropType,
+  logout: require('../../assets/icons/dark/logout.png') as ImageSourcePropType,
+}
+
 export default function ProfileScreen() {
-  const driver = useAuthStore(s => s.driver)!
+  // Profile is fetched (GET /auth/me), not persisted — see authStore.ts and
+  // useCurrentUser.ts for why. This screen only renders inside the (app)
+  // group, which already implies a valid access token, so the only wait
+  // here is the network round trip, not "logged in or not".
+  const { data: driver } = useCurrentUser()
   const logout = useAuthStore(s => s.logout)
   const { data: context, isLoading } = useDriverContext()
   const wakeWordEnabled = useWakeWordSettingsStore(s => s.enabled)
@@ -33,8 +65,11 @@ export default function ProfileScreen() {
   const toggleTheme = useThemeStore(s => s.toggle)
   const theme = useTheme()
   const isLight = useThemeName() === 'light'
+  const isDark = !isLight
   const insets = useSafeAreaInsets()
   const [showVoiceEnroll, setShowVoiceEnroll] = useState(false)
+
+  if (!driver) return null
 
   return (
     <View flex={1}>
@@ -49,10 +84,14 @@ export default function ProfileScreen() {
       >
       {!isLoading && context && <ProfileCard driver={driver} profile={context.driver_profile} />}
 
-      <GlassSurface cornerRadius={20}>
+      <GlassSurface cornerRadius={20} outline>
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
-            <Ionicons name="mic-circle-outline" size={20} color={theme.textSecondary.val} />
+            <Image
+              source={isDark ? DARK_ICONS.voiceAssistant : ICONS.voiceAssistant}
+              style={{ width: isDark ? 23 : 28, height: isDark ? 23 : 28, tintColor: isDark ? '#ffffff' : undefined }}
+              resizeMode="contain"
+            />
             <YStack flex={1}>
               <Text color="$textPrimary" fontWeight="500">
                 Trợ lý rảnh tay
@@ -67,7 +106,11 @@ export default function ProfileScreen() {
         <View height={1} backgroundColor="$border" />
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
-            <Ionicons name={themeMode === 'dark' ? 'moon-outline' : 'sunny-outline'} size={20} color={theme.textSecondary.val} />
+            <Image
+              source={isDark ? DARK_ICONS.moon : ICONS.sun}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
+              resizeMode="contain"
+            />
             <Text color="$textPrimary" fontWeight="500">
               Chế độ tối
             </Text>
@@ -75,15 +118,42 @@ export default function ProfileScreen() {
           <ThemeToggle isDark={themeMode === 'dark'} onToggle={toggleTheme} />
         </XStack>
         <View height={1} backgroundColor="$border" />
-        <MenuRow icon="mic-outline" label="Đổi giọng nói của bạn" onPress={() => setShowVoiceEnroll(true)} />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.microphone : ICONS.microphone}
+          isDark={isDark}
+          label="Đổi giọng nói của bạn"
+          onPress={() => setShowVoiceEnroll(true)}
+        />
         <View height={1} backgroundColor="$border" />
-        <MenuRow icon="information-circle-outline" label="Giới thiệu" onPress={() => router.push('/about')} />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.chatInfo : ICONS.chatInfo}
+          isDark={isDark}
+          label="Giới thiệu"
+          onPress={() => router.push('/about')}
+        />
         <View height={1} backgroundColor="$border" />
-        <MenuRow icon="help-circle-outline" label="Câu hỏi thường gặp" onPress={() => router.push('/faq')} />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.faq : ICONS.faq}
+          isDark={isDark}
+          label="Câu hỏi thường gặp"
+          onPress={() => router.push('/faq')}
+        />
       </GlassSurface>
 
       <View marginTop="$2">
-        <Button label="Log Out" variant="outline" onPress={() => logout()} full />
+        <Button
+          label="Log Out"
+          variant="outline"
+          onPress={() => logout()}
+          full
+          icon={
+            <Image
+              source={isDark ? DARK_ICONS.logout : ICONS.logout}
+              style={{ width: isDark ? 17 : 20, height: isDark ? 17 : 20, tintColor: isDark ? '#ffffff' : undefined }}
+              resizeMode="contain"
+            />
+          }
+        />
       </View>
       </ScrollView>
 
@@ -106,13 +176,27 @@ export default function ProfileScreen() {
   )
 }
 
-function MenuRow({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+function MenuRow({
+  icon,
+  isDark,
+  label,
+  onPress,
+}: {
+  icon: ImageSourcePropType
+  isDark: boolean
+  label: string
+  onPress: () => void
+}) {
   const theme = useTheme()
   return (
     <TouchableOpacity onPress={onPress}>
       <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
         <XStack alignItems="center" gap="$3">
-          <Ionicons name={icon} size={20} color={theme.textSecondary.val} />
+          <Image
+            source={icon}
+            style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
+            resizeMode="contain"
+          />
           <Text color="$textPrimary" fontWeight="500">
             {label}
           </Text>

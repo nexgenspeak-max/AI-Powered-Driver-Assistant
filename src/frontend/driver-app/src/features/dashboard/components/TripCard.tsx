@@ -29,18 +29,6 @@ export function TripCard({
     mutationFn: () => tripsService.reject(trip.trip_id),
     onSuccess: invalidate,
   });
-  const { mutate: arrivedPickup, isPending: arriving } = useMutation({
-    mutationFn: () => tripsService.arrivedPickup(trip.trip_id),
-    onSuccess: invalidate,
-  });
-  const { mutate: pickedUp, isPending: pickingUp } = useMutation({
-    mutationFn: () => tripsService.pickedUp(trip.trip_id),
-    onSuccess: invalidate,
-  });
-  const { mutate: complete, isPending: completing } = useMutation({
-    mutationFn: () => tripsService.complete(trip.trip_id),
-    onSuccess: invalidate,
-  });
 
   const isLight = useThemeName() === "light";
   const statusColor = TRIP_STATUS_COLORS[trip.status];
@@ -117,34 +105,6 @@ export function TripCard({
               full
             />
           </XStack>
-        )}
-
-        {trip.status === "confirmed" && (
-          <Button
-            label="Arrived at Pickup"
-            variant="outline"
-            onPress={() => arrivedPickup()}
-            loading={arriving}
-            full
-          />
-        )}
-        {trip.status === "arrived_pickup" && (
-          <Button
-            label="Picked Up Customer"
-            variant="outline"
-            onPress={() => pickedUp()}
-            loading={pickingUp}
-            full
-          />
-        )}
-        {trip.status === "picked_up" && (
-          <Button
-            label="Complete Trip"
-            variant="success"
-            onPress={() => complete()}
-            loading={completing}
-            full
-          />
         )}
       </YStack>
     </GlassSurface>

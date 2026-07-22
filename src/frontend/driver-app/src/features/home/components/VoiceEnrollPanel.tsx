@@ -56,6 +56,7 @@ export function VoiceEnrollPanel({ phone, accountId, onDone, sheet }: Props) {
       cornerRadius={sheet ? 28 : 20}
       bottomCornerRadius={sheet ? 0 : undefined}
       style={{ width: '100%' }}
+      outline
     >
       <YStack gap="$4" padding="$5" paddingBottom={sheet ? insets.bottom + 20 : undefined}>
         <YStack gap="$2">

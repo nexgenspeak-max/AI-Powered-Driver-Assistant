@@ -35,4 +35,3 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
 }
 
 export const PENDING_STATUSES: TripStatus[] = ['notified', 'calling']
-export const ACTIVE_STATUSES: TripStatus[] = ['confirmed', 'arrived_pickup', 'picked_up']

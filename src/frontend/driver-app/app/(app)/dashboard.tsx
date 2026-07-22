@@ -4,14 +4,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDriverContext } from "../../src/features/dashboard/hooks/useDriverContext";
 import { TripSection } from "../../src/features/dashboard/components/TripSection";
+import { ActiveTripCard } from "../../src/features/dashboard/components/ActiveTripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
 import { driversService } from "../../src/services/api/drivers";
-import { useAuthStore } from "../../src/stores/authStore";
-import { PENDING_STATUSES, ACTIVE_STATUSES } from "../../src/constants/status";
+import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
+import { PENDING_STATUSES } from "../../src/constants/status";
 
 export default function DashboardScreen() {
-  const driver = useAuthStore((s) => s.driver)!;
-  const setDriver = useAuthStore((s) => s.setDriver);
+  // Profile is fetched (GET /auth/me), not persisted — see authStore.ts and
+  // useCurrentUser.ts for why.
+  const { data: driver } = useCurrentUser();
   const qc = useQueryClient();
 
   const {
@@ -22,35 +24,33 @@ export default function DashboardScreen() {
   } = useDriverContext();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const isLight = useThemeName() === "light";
 
   const { mutate: toggleOnline } = useMutation({
     mutationFn: (online: boolean) =>
-      driversService.update(driver.phone, {
+      driversService.update(driver!.phone, {
         status: online ? "online" : "offline",
       }),
     onSuccess: (d) => {
-      setDriver(d);
+      // Updates the same ['me'] cache useCurrentUser() reads from, in place
+      // — no separate driver-profile store to keep in sync anymore.
+      qc.setQueryData(["me"], d);
       qc.invalidateQueries({ queryKey: ["driverContext"] });
     },
   });
 
+  if (!driver) return null;
+
   const isOnline = driver.status === "online";
-  const isLight = useThemeName() === "light";
   const pending =
     context?.upcoming_trips.filter((t) =>
       PENDING_STATUSES.includes(t.status),
     ) ?? [];
-  const active = [
-    ...(context?.current_trip &&
-    ACTIVE_STATUSES.includes(context.current_trip.status)
-      ? [context.current_trip]
-      : []),
-    ...(context?.upcoming_trips.filter(
-      (t) =>
-        ACTIVE_STATUSES.includes(t.status) &&
-        t.trip_id !== context.current_trip?.trip_id,
-    ) ?? []),
-  ];
+  // A driver can hold more than one active trip at once (e.g. wrapping up a
+  // current ride while already confirmed for the next pickup) — active_trips
+  // covers every confirmed/arrived_pickup/picked_up trip, unlike current_trip
+  // which only ever surfaces a single one.
+  const active = context?.active_trips ?? [];
 
   const screenBackground = isLight ? "#F5F4F8" : theme.surface.val;
   const headerBackground = isLight ? "#F8F8FB" : "#000000";
@@ -107,10 +107,14 @@ export default function DashboardScreen() {
         {!isLoading && (
           <>
             <TripSection
+              title={`Active Trip${active.length > 1 ? "s" : ""} (${active.length})`}
+              trips={active}
+              renderItem={(trip) => <ActiveTripCard trip={trip} />}
+            />
+            <TripSection
               title={`Trip Requests (${pending.length})`}
               trips={pending}
             />
-            <TripSection title="Active Trip" trips={active} />
             {pending.length === 0 && active.length === 0 && (
               <EmptyTripsState isOnline={isOnline} />
             )}

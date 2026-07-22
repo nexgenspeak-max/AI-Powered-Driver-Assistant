@@ -12,4 +12,11 @@ export const tripsService = {
   // an identifier, and a customer can never fetch another account's history.
   history: (limit = 50) =>
     apiClient.get<Trip[]>('/trips', { params: { limit } }).then(r => r.data),
+
+  // Customer-initiated cancel — only valid while the trip hasn't progressed
+  // past the driver accepting it (pending/notified/calling/confirmed); the
+  // backend's ALLOWED_STATUSES/isTripOwner checks still enforce this and
+  // ownership server-side regardless of what the UI gates on.
+  cancel: (tripId: string) =>
+    apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'cancelled' }).then(r => r.data),
 }

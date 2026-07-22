@@ -93,9 +93,12 @@ if (!effect) {
 // cards' much brighter highlight) and a lighter inner shadow, so the glass
 // cues read as an overlay on top of the brand purple rather than fighting
 // it for attention. Dark mode is untouched (its previous fixed values).
+// Specular top-left glint removed per spec (specularIntensity: 0) — the
+// shader term is still computed (harmless at 0) rather than deleted, so
+// re-enabling it later is a one-line change instead of rewriting the shader.
 const THEME_PARAMS = {
-  dark: { topShadowAlpha: 0.22, specularAngle: -0.42, specularIntensity: 0.16 },
-  light: { topShadowAlpha: 0.16, specularAngle: -0.33, specularIntensity: 0.3 },
+  dark: { topShadowAlpha: 0.22, specularAngle: -0.42, specularIntensity: 0 },
+  light: { topShadowAlpha: 0.16, specularAngle: -0.33, specularIntensity: 0 },
 }
 
 export interface GlassButtonProps {

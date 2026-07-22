@@ -1,13 +1,17 @@
+import { Fragment } from "react";
 import { YStack, Text, View, useThemeName } from "tamagui";
 import { TripCard } from "./TripCard";
 import type { Trip } from "../../../types";
 
+type TripWithFare = Trip & { estimated_fare?: number };
+
 interface Props {
   title: string;
-  trips: (Trip & { estimated_fare?: number })[];
+  trips: TripWithFare[];
+  renderItem?: (trip: TripWithFare) => React.ReactNode;
 }
 
-export function TripSection({ title, trips }: Props) {
+export function TripSection({ title, trips, renderItem }: Props) {
   const isLight = useThemeName() === "light";
   if (trips.length === 0) return null;
 
@@ -40,7 +44,9 @@ export function TripSection({ title, trips }: Props) {
           badge instead of a normal shadow gap between list items. */}
       <YStack padding="$3" gap="$7">
         {trips.map((trip) => (
-          <TripCard key={trip.trip_id} trip={trip} />
+          <Fragment key={trip.trip_id}>
+            {renderItem ? renderItem(trip) : <TripCard trip={trip} />}
+          </Fragment>
         ))}
       </YStack>
     </YStack>

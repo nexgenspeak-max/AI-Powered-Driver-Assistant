@@ -1,4 +1,5 @@
-import { YStack, XStack, View, Text } from 'tamagui'
+import { Image } from 'react-native'
+import { YStack, XStack, View, Text, useThemeName } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassSurface } from '../../../components/GlassSurface'
 import { Badge } from '../../../components/Badge'
@@ -9,10 +10,18 @@ interface Props {
   customer: Customer
 }
 
+// Light mode: flat, full-color icon (assets/icons/light/phone-call.png).
+// Dark mode: single-color silhouette (assets/icons/dark/), tinted white so
+// it reads against the dark background — the light-mode asset has no such
+// treatment since it's already a multi-color illustration.
+const PHONE_ICON = require('../../../../assets/icons/light/phone-call.png')
+const PHONE_ICON_DARK = require('../../../../assets/icons/dark/phone-call.png')
+
 // Telegram/Nicegram-style profile: big centered avatar + name in its own
 // glass card, then a separate glass card for the phone number row.
 export function ProfileCard({ customer }: Props) {
   const isOnline = customer.status === 'online'
+  const isDark = useThemeName() === 'dark'
 
   return (
     <YStack gap="$4">
@@ -38,9 +47,11 @@ export function ProfileCard({ customer }: Props) {
 
       <GlassSurface cornerRadius={20}>
         <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$4">
-          <View width={34} height={34} borderRadius={17} backgroundColor="$primaryMuted" alignItems="center" justifyContent="center">
-            <Ionicons name="call-outline" size={16} color="#7C5B9C" />
-          </View>
+          <Image
+            source={isDark ? PHONE_ICON_DARK : PHONE_ICON}
+            style={{ width: isDark ? 26 : 32, height: isDark ? 26 : 32, tintColor: isDark ? '#ffffff' : undefined }}
+            resizeMode="contain"
+          />
           <YStack flex={1}>
             <Text color="$textSecondary" fontSize={11}>
               Số điện thoại

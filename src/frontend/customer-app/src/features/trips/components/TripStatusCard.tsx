@@ -1,21 +1,58 @@
-import { ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet, Alert } from "react-native";
 import { View, YStack, XStack, Text, useTheme, useThemeName } from "tamagui";
 import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GlassSurface } from "../../../components/GlassSurface";
 import { Badge } from "../../../components/Badge";
+import { Button } from "../../../components/Button";
 import { getBackButtonClearance } from "../../../components/BackButton";
+import { tripsService } from "../../../services/api/trips";
 import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
 } from "../../../constants/status";
-import type { Trip } from "../../../types";
+import type { Trip, TripStatus } from "../../../types";
+
+// Mirrors the backend's CANCEL_RULES.cancelled window (trips.ts) — a
+// customer can cancel any time before a driver has moved past confirming
+// the trip, including rejected/no_answer: those just mean *this* driver
+// didn't take it, not that the trip itself is resolved — it's still
+// awaiting redispatch to another driver (see POST /:tripId/dispatch), so
+// the customer shouldn't be stuck waiting out a retry they no longer want.
+// The server enforces this independently regardless of what this gates in
+// the UI; this just avoids showing a button that would 409.
+const CUSTOMER_CANCELLABLE_STATUSES: TripStatus[] = [
+  "pending",
+  "notified",
+  "calling",
+  "confirmed",
+  "rejected",
+  "no_answer",
+];
 
 export function TripStatusCard({ trip }: { trip: Trip }) {
   const themeName = useThemeName();
   const isLight = themeName === "light";
   const statusColor = TRIP_STATUS_COLORS[trip.status];
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const { mutate: cancelTrip, isPending: cancelling } = useMutation({
+    mutationFn: () => tripsService.cancel(trip.trip_id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["trip", trip.trip_id] }),
+  });
+  const canCancel = CUSTOMER_CANCELLABLE_STATUSES.includes(trip.status);
+
+  const confirmCancel = () => {
+    Alert.alert(
+      "Cancel this trip?",
+      "This can't be undone — you'll need to book a new trip instead.",
+      [
+        { text: "Keep trip", style: "cancel" },
+        { text: "Cancel trip", style: "destructive", onPress: () => cancelTrip() },
+      ],
+    );
+  };
 
   return (
     <ScrollView
@@ -156,6 +193,15 @@ export function TripStatusCard({ trip }: { trip: Trip }) {
           </YStack>
         </YStack>
       </GlassSurface>
+
+      {canCancel && (
+        <Button
+          label="Cancel Trip"
+          variant="danger"
+          onPress={confirmCancel}
+          loading={cancelling}
+        />
+      )}
     </ScrollView>
   );
 }

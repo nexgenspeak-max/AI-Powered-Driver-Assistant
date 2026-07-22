@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { TouchableOpacity, View as RNView, StyleSheet } from "react-native";
-import { useThemeName } from "tamagui";
+import { useTheme, useThemeName } from "tamagui";
 import { LinearGradient } from "expo-linear-gradient";
 import { randomSpecularVariation } from "../utils/glassSpecular";
 
@@ -34,7 +34,10 @@ const THEME_PARAMS = {
       "rgba(255,255,255,0)",
       "rgba(255,255,255,0)",
     ] as const,
-    specularPeak: "rgba(255,255,255,0.16)",
+    // Specular top-left glint removed per spec — transparent-to-transparent
+    // is a no-op for the radial-gradient it feeds, kept (not deleted) so
+    // re-enabling it later is a one-line change.
+    specularPeak: "rgba(255,255,255,0)",
   },
   light: {
     washColors: ["rgba(255,255,255,0.97)", "rgba(230,230,234,0.92)"] as const,
@@ -43,9 +46,7 @@ const THEME_PARAMS = {
       "rgba(255,255,255,0)",
       "rgba(255,255,255,0.55)",
     ] as const,
-    // Softer/fainter than before (0.55 -> 0.2) — paired with a bigger blob
-    // below, this reads as a diffuse glow instead of a crisp bright blob.
-    specularPeak: "rgba(255,255,255,0.2)",
+    specularPeak: "rgba(255,255,255,0)",
   },
 };
 
@@ -56,6 +57,11 @@ export interface GlassSurfaceProps {
   onPress?: () => void;
   style?: { flex?: number; [key: string]: unknown };
   children?: ReactNode;
+  /** See GlassSurface.tsx — fully transparent interior + flat 1px
+   *  `$borderStrong` border, no wash/specular/shadow at all. Was silently
+   *  ignored on web before (this file never implemented it), so `outline`
+   *  callers still rendered the full glass treatment on web specifically. */
+  outline?: boolean;
 }
 
 export function GlassSurface({
@@ -64,8 +70,10 @@ export function GlassSurface({
   onPress,
   style,
   children,
+  outline = false,
 }: GlassSurfaceProps) {
   const isLight = useThemeName() === "light";
+  const theme = useTheme();
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark;
   const [height, setHeight] = useState(0);
   // Rolled once per mounted instance — each surface keeps its own
@@ -87,7 +95,16 @@ export function GlassSurface({
     borderBottomRightRadius: bottomCornerRadius,
   };
 
-  const overlays = (
+  // Same flat 1px border as the outline Button variant, resolved to a
+  // literal hex here since this is a plain RN View, not a Tamagui one.
+  const outlineBorderStyle = outline
+    ? { borderWidth: 1, borderColor: theme.borderStrong.val }
+    : null;
+
+  // `outline` skips the wash/shadow/specular overlays entirely — no fill of
+  // any opacity, matching the outline Button's genuinely transparent
+  // interior rather than just a lighter glass tint.
+  const overlays = outline ? null : (
     <>
       <LinearGradient
         colors={params.washColors}
@@ -158,7 +175,8 @@ export function GlassSurface({
         activeOpacity={0.85}
         style={[
           { ...cornerStyle, overflow: "hidden" },
-          getSurfaceOuterShadow(isLight),
+          !outline && getSurfaceOuterShadow(isLight),
+          outlineBorderStyle,
           style,
         ]}
         onLayout={handleLayout}
@@ -170,11 +188,14 @@ export function GlassSurface({
   }
 
   return (
-    <RNView style={[cornerStyle, getSurfaceOuterShadow(isLight), style]}>
+    <RNView style={[cornerStyle, !outline && getSurfaceOuterShadow(isLight), style]}>
       {/* Forwards only the caller's own `flex` value — see GlassSurface.tsx
           for why a blanket `flex: 1` here was wrong. */}
       <RNView
-        style={{ ...cornerStyle, overflow: "hidden", flex: style?.flex }}
+        style={[
+          { ...cornerStyle, overflow: "hidden", flex: style?.flex },
+          outlineBorderStyle,
+        ]}
         onLayout={handleLayout}
       >
         {overlays}

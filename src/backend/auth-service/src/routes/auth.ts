@@ -31,6 +31,12 @@ function sanitize(user: userService.User) {
   return safe;
 }
 
+// Mobile clients only persist the token pair (see customer-app/driver-app
+// authStore.ts) — profile data is fetched separately via GET /me and kept in
+// memory only, never written to disk. Login/refresh responses stay
+// token-only for that reason; register is the one exception (see its call
+// site) since the client genuinely has no other way to get the just-created
+// profile without an extra round trip.
 async function issueTokens(user: userService.User) {
   const claims = toClaims(user);
   const access_token = signAccessToken(claims);
@@ -41,7 +47,7 @@ async function issueTokens(user: userService.User) {
     refresh_token_expires_at: durationFromNow(config.jwtRefreshExpiresIn),
   }, user.id);
 
-  return { access_token, refresh_token, user: sanitize(user) };
+  return { access_token, refresh_token };
 }
 
 router.post('/register', async (req: Request, res: Response) => {
@@ -59,7 +65,7 @@ router.post('/register', async (req: Request, res: Response) => {
       const user = await userService.create({
         role, name, email, password_hash, permissions: DEFAULT_PERMISSIONS.admin,
       });
-      return res.status(201).json(await issueTokens(user));
+      return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
     }
 
     if (!phone) return res.status(400).json({ detail: 'phone is required' });
@@ -79,14 +85,14 @@ router.post('/register', async (req: Request, res: Response) => {
         name, email, password_hash,
         ...(role === 'driver' ? { vehicle_type, vehicle_plate, vehicle_name } : {}),
       }) as userService.User;
-      return res.status(201).json(await issueTokens(updated));
+      return res.status(201).json({ ...(await issueTokens(updated)), user: sanitize(updated) });
     }
 
     const user = await userService.create({
       role, name, phone, email, password_hash, permissions: DEFAULT_PERMISSIONS[role],
       ...(role === 'driver' ? { vehicle_type, vehicle_plate, vehicle_name } : {}),
     });
-    return res.status(201).json(await issueTokens(user));
+    return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

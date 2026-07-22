@@ -51,7 +51,8 @@
         {
           "models": ["assets/model-vi-vn"]
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "customer-app"
   }

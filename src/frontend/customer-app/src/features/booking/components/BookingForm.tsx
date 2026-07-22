@@ -10,7 +10,6 @@ import { GlassBookingInput } from './GlassBookingInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
 import { useBookTrip } from '../../trips/hooks/useBookTrip'
-import { useBookingStore } from '../../../stores/bookingStore'
 
 // Literal per-screen background, matching the trips screen's approach
 // (features/trips/components/TripHistoryList.tsx) — dark mode locked to the
@@ -34,7 +33,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function BookingForm() {
-  const activeTripId = useBookingStore(s => s.activeTripId)
   const { mutate: book, isPending, isError } = useBookTrip()
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({
@@ -72,14 +70,6 @@ export function BookingForm() {
           Enter your trip details below
         </Text>
       </View>
-
-      {activeTripId && (
-        <Card backgroundColor="$successContainer">
-          <Text color="$onSuccessContainer" fontSize="$3" onPress={() => router.push(`/trip/${activeTripId}`)}>
-            You have an active trip. <Text textDecorationLine="underline" fontWeight="600">View status →</Text>
-          </Text>
-        </Card>
-      )}
 
      <Card
   gap="$4"

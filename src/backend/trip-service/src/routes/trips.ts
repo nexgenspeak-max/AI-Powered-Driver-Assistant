@@ -15,8 +15,34 @@ const ALLOWED_STATUSES = new Set([
 ]);
 
 // Once a trip lands in one of these, it's done — no more status changes.
-// The customer/driver must book a new trip instead.
-const CANCELLED_STATUSES = new Set(['rejected', 'cancelled', 'cancelled_by_driver']);
+// The customer/driver must book a new trip instead. `rejected`/`no_answer`
+// are deliberately NOT here even though they sound terminal — POST
+// /:tripId/dispatch explicitly retries from either (redispatches to another
+// driver), so a rejected/unanswered trip is still "alive" from the
+// customer's point of view, just waiting on a different driver.
+const CANCELLED_STATUSES = new Set(['cancelled', 'cancelled_by_driver']);
+
+// Who may cancel, and from which states — enforced here (not just by which
+// button the FE happens to show), so a customer can't cancel a trip already
+// past pickup and a driver can't back out via `cancelled_by_driver` before
+// they've actually accepted it:
+//   - Customer can cancel (`cancelled`) any time before a driver has
+//     committed — pending/notified/calling/confirmed, plus rejected/
+//     no_answer (this specific driver didn't take it, but the trip itself
+//     is still pending redispatch, not resolved — the customer shouldn't
+//     have to wait out a retry they no longer want). Once a driver has
+//     moved past confirmed (arrived_pickup/picked_up), only the driver can
+//     back out.
+//   - Driver can cancel (`cancelled_by_driver`) only after they've confirmed
+//     the trip — confirmed/arrived_pickup/picked_up. They can't "cancel" a
+//     trip they haven't accepted yet; that's `reject`.
+const CANCEL_RULES: Partial<Record<string, { role: 'customer' | 'driver'; fromStatuses: Set<string> }>> = {
+  cancelled: {
+    role: 'customer',
+    fromStatuses: new Set(['pending', 'notified', 'calling', 'confirmed', 'rejected', 'no_answer']),
+  },
+  cancelled_by_driver: { role: 'driver', fromStatuses: new Set(['confirmed', 'arrived_pickup', 'picked_up']) },
+};
 
 // TODO(temporary): there's no real driver-matching/dispatch logic yet, so every
 // booking with no explicit driver_phone is auto-assigned to this hardcoded number.
@@ -127,6 +153,18 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
       return res.status(409).json({
         detail: `Trip already ${trip.status} — cannot change status anymore. Book a new trip instead.`,
       });
+    }
+    const cancelRule = CANCEL_RULES[status];
+    if (cancelRule) {
+      const role = req.user?.role;
+      if (role && role !== 'admin' && role !== cancelRule.role) {
+        return res.status(403).json({ detail: `Only the ${cancelRule.role} can cancel a trip this way` });
+      }
+      if (!cancelRule.fromStatuses.has(trip.status)) {
+        return res.status(409).json({
+          detail: `Cannot set status=${status} from status=${trip.status}`,
+        });
+      }
     }
     const updated = await tripService.updateStatus(req.params.tripId, status);
     await driverContextService.invalidateTripParties(updated);

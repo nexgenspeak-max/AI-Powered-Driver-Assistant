@@ -72,7 +72,8 @@
         {
           "models": ["assets/model-vi-vn"]
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

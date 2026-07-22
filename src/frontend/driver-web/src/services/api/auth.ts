@@ -15,9 +15,15 @@ export interface AuthUser {
   updated_at: string
 }
 
+// login/refresh are token-only — the driver's profile is fetched separately
+// via me() instead. register is the one exception: the caller has no other
+// way to get the just-created profile without an extra round trip.
 export interface AuthTokens {
   access_token: string
   refresh_token: string
+}
+
+export interface AuthRegisterResponse extends AuthTokens {
   user: AuthUser
 }
 
@@ -29,8 +35,10 @@ export const authService = {
     role: 'driver'; phone: string; name: string; email: string; password: string;
     vehicle_type: string; vehicle_plate: string; vehicle_name: string;
   }) =>
-    authClient.post<AuthTokens>('/auth/register', payload).then(r => r.data),
+    authClient.post<AuthRegisterResponse>('/auth/register', payload).then(r => r.data),
 
   refresh: (refresh_token: string) =>
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
+
+  me: () => authClient.get<AuthUser>('/auth/me').then(r => r.data),
 }

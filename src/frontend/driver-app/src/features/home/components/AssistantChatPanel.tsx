@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
-import { useAuthStore } from '../../../stores/authStore'
+import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
 import { voiceService } from '../../../services/api/voice'
@@ -23,7 +23,7 @@ const MIC_LABEL = {
 }
 
 export function AssistantChatPanel() {
-  const driver = useAuthStore(s => s.driver)
+  const { data: driver } = useCurrentUser()
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()

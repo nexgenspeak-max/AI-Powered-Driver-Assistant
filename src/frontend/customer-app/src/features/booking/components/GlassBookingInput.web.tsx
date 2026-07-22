@@ -37,7 +37,10 @@ const THEME_PARAMS = {
     washColors: ['rgba(41,33,49,0.5)', 'rgba(20,18,28,0.5)'] as const,
     topShadowColors: ['rgba(0,0,0,0.24)', 'rgba(0,0,0,0)'] as const,
     bottomHighlightColors: ['rgba(255,255,255,0)', 'rgba(255,255,255,0)'] as const,
-    specularPeak: 'rgba(255,255,255,0.1)',
+    // Specular top-left glint removed per spec — transparent-to-transparent
+    // is a no-op for the radial-gradient it feeds, kept (not deleted) so
+    // re-enabling it later is a one-line change.
+    specularPeak: 'rgba(255,255,255,0)',
     ringColor: 'rgba(255,255,255,0.05)',
   },
   light: {
@@ -46,8 +49,7 @@ const THEME_PARAMS = {
     // shadow alone (transparent-to-transparent below is a no-op).
     topShadowColors: ['rgba(0,0,0,0)', 'rgba(0,0,0,0)'] as const,
     bottomHighlightColors: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.5)'] as const,
-    // Softer/fainter than before (0.5 -> 0.16).
-    specularPeak: 'rgba(255,255,255,0.16)',
+    specularPeak: 'rgba(255,255,255,0)',
     ringColor: 'rgba(255,255,255,0.7)',
   },
 }

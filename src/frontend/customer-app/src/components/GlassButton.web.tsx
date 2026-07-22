@@ -13,9 +13,12 @@ const DISABLED_COLOR = '#4A4552'
 // cards' much brighter highlight) — reads as an overlay on the brand
 // purple rather than fighting it for attention. Dark mode keeps its
 // previous fixed values.
+// Specular top-left glint removed per spec — transparent specularPeak is a
+// no-op for the radial-gradient it feeds, kept (not deleted) so re-enabling
+// it later is a one-line change.
 const THEME_PARAMS = {
-  dark: { topShadowColors: ['rgba(0,0,0,0.22)', 'rgba(0,0,0,0)'] as const, specularPeak: 'rgba(255,255,255,0.18)', specularAngle: '-24deg' },
-  light: { topShadowColors: ['rgba(0,0,0,0.14)', 'rgba(0,0,0,0)'] as const, specularPeak: 'rgba(255,255,255,0.3)', specularAngle: '-19deg' },
+  dark: { topShadowColors: ['rgba(0,0,0,0.22)', 'rgba(0,0,0,0)'] as const, specularPeak: 'rgba(255,255,255,0)', specularAngle: '-24deg' },
+  light: { topShadowColors: ['rgba(0,0,0,0.14)', 'rgba(0,0,0,0)'] as const, specularPeak: 'rgba(255,255,255,0)', specularAngle: '-19deg' },
 }
 
 function getButtonOuterShadow(isLight: boolean) {

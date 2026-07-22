@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { StyleSheet, TouchableOpacity, View as RNView } from "react-native";
+import { StyleSheet, TouchableOpacity, View as RNView, Image } from "react-native";
 import { Text, XStack, YStack, View, useThemeName, useTheme } from "tamagui";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,6 +7,8 @@ import { Badge } from "../../../components/Badge";
 import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
+  TRIP_STATUS_ICON,
+  TRIP_STATUS_ICON_DARK,
 } from "../../../constants/status";
 import { formatDate } from "../../../utils/format";
 import { randomSpecularVariation } from "../../../utils/glassSpecular";
@@ -61,7 +63,10 @@ const THEME_PARAMS = {
       "rgba(255,255,255,0)",
       "rgba(255,255,255,0)",
     ] as const,
-    specularPeak: "rgba(255,255,255,0.15)",
+    // Specular top-left glint removed per spec — transparent-to-transparent
+    // is a no-op for the radial-gradient it feeds, kept (not deleted) so
+    // re-enabling it later is a one-line change.
+    specularPeak: "rgba(255,255,255,0)",
   },
   light: {
     washColors: ["rgba(255,255,255,0.97)", "rgba(230,230,234,0.92)"] as const, // #FFFFFF -> #E6E6EA
@@ -72,9 +77,7 @@ const THEME_PARAMS = {
       "rgba(255,255,255,0)",
       "rgba(255,255,255,0.55)",
     ] as const,
-    // Softer/fainter than before (0.55 -> 0.2) — paired with a bigger blob
-    // below, this reads as a diffuse glow instead of a crisp bright blob.
-    specularPeak: "rgba(255,255,255,0.2)",
+    specularPeak: "rgba(255,255,255,0)",
   },
 };
 
@@ -87,6 +90,7 @@ export function GlassTripCard({ trip, onPress }: GlassTripCardProps) {
   const isLight = useThemeName() === "light";
   const theme = useTheme();
   const statusColor = TRIP_STATUS_COLORS[trip.status];
+  const statusIcon = isLight ? TRIP_STATUS_ICON[trip.status] : TRIP_STATUS_ICON_DARK[trip.status];
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark;
   // Rolled once per mounted card instance — each card in the list keeps its
   // own randomized glint for its whole lifetime.
@@ -187,16 +191,24 @@ export function GlassTripCard({ trip, onPress }: GlassTripCardProps) {
       </RNView>
 
       <XStack alignItems="center" gap="$3" padding="$3" zIndex={1}>
-        <View
-          width={44}
-          height={44}
-          borderRadius={22}
-          backgroundColor={statusColor.bg}
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Ionicons name="car" size={20} color={theme.textPrimary.val} />
-        </View>
+        {statusIcon ? (
+          <Image
+            source={statusIcon}
+            style={{ width: isLight ? 44 : 36, height: isLight ? 44 : 36, tintColor: isLight ? undefined : "#ffffff" }}
+            resizeMode="contain"
+          />
+        ) : (
+          <View
+            width={44}
+            height={44}
+            borderRadius={22}
+            backgroundColor={statusColor.bg}
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Ionicons name="car" size={20} color={theme.textPrimary.val} />
+          </View>
+        )}
         <YStack flex={1} gap="$1">
           <Text
             color="$textPrimary"

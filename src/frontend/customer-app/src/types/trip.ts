@@ -1,6 +1,8 @@
 export type TripStatus =
   | 'pending' | 'notified' | 'calling'
-  | 'confirmed' | 'rejected' | 'no_answer' | 'completed'
+  | 'confirmed' | 'rejected' | 'no_answer'
+  | 'arrived_pickup' | 'picked_up' | 'completed'
+  | 'cancelled' | 'cancelled_by_driver' | 'no_show'
 
 export interface Trip {
   trip_id: string

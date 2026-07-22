@@ -1,15 +1,16 @@
-import { YStack, Text, Theme } from 'tamagui'
+import { YStack, Text, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
-import { Input } from '../../../components/Input'
-import { Button } from '../../../components/Button'
+import { GlassAuthInput } from '../../../components/GlassAuthInput'
+import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
+import { authGlassTheme } from '../../../theme'
 
 const schema = z.object({
   phone: z.string().min(8, 'Valid phone required'),
@@ -18,7 +19,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginForm() {
-  const setCustomer = useAuthStore(s => s.setCustomer)
   const setTokens = useAuthStore(s => s.setTokens)
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({
@@ -28,63 +28,71 @@ export function LoginForm() {
 
   const { mutate: login, isPending, isError } = useMutation({
     mutationFn: (data: FormValues) => authService.login({ role: 'customer', phone: data.phone, password: data.password }),
-    onSuccess: ({ access_token, refresh_token, user }) => {
+    onSuccess: ({ access_token, refresh_token }) => {
+      // No profile in this response by design (see authService.ts) — the
+      // customer's name/phone/etc. is fetched separately via useCurrentUser()
+      // once inside (app), and the "mark online" call moves with it (root
+      // _layout.tsx reacts to that profile becoming available instead of
+      // needing the id here).
       setTokens(access_token, refresh_token)
-      setCustomer({
-        id: user.id,
-        name: user.name,
-        phone: user.phone ?? '',
-        status: 'online',
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      })
-      authService.setStatus(user.id, 'online').catch(() => {})
       router.replace('/')
     },
   })
 
   const onSubmit = (data: FormValues) => login(data)
+  const isLight = useThemeName() === 'light'
 
   return (
-    // Auth screens are always dark-branded regardless of the app-wide theme
-    // toggle — force dark so nested tokens ($textSecondary, Input's
-    // $surfaceElevated, etc.) don't flip to light-mode values.
-    <Theme name="dark">
-    <StatusBar style="light" />
-    <YStack flex={1} backgroundColor="$dark" alignItems="center" justifyContent="center" padding="$6" gap="$6">
-      <YStack alignItems="center" gap="$2">
-        <Text color="$textInverse" fontSize="$7" fontWeight="800">
-          Welcome back
-        </Text>
-        <Text color="#d1d5db" fontSize="$3">
-          Log in to book your next ride
-        </Text>
-      </YStack>
-
-      <Card width="100%" maxWidth={384} gap="$4">
-        <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-          <Input label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
-            value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
-        )} />
-        <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-          <Input label="Password" secureTextEntry
-            value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
-        )} />
-
-        {isError && (
-          <Text color="$danger" fontSize="$1">
-            Login failed. Check your details.
+    <>
+      <StatusBar style={isLight ? 'dark' : 'light'} />
+      <YStack
+        flex={1}
+        backgroundColor={isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark}
+        alignItems="center"
+        justifyContent="center"
+        padding="$6"
+        gap="$6"
+      >
+        <YStack alignItems="center" gap="$2">
+          <Text color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark} fontSize="$7" fontWeight="800">
+            Welcome back
           </Text>
-        )}
+          <Text color="$textSecondary" fontSize="$3">
+            Log in to book your next ride
+          </Text>
+        </YStack>
 
-        <Button label="Log In" onPress={handleSubmit(onSubmit)} loading={isPending} marginTop="$2" />
+        <Card
+          width="100%"
+          maxWidth={authGlassTheme.card.maxWidth}
+          gap="$4"
+          shadowIntensity="strong"
+          borderRadius={28}
+          backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+        >
+          <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
+            <GlassAuthInput label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
+              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
+          )} />
+          <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
+            <GlassAuthInput label="Password" secureTextEntry
+              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
+          )} />
 
-        <Text textAlign="center" color="$textSecondary" fontSize="$3">
-          Don't have an account?{' '}
-          <Link href="/register" style={{ color: '#6c8aff', fontWeight: '600' }}>Sign up</Link>
-        </Text>
-      </Card>
-    </YStack>
-    </Theme>
+          {isError && (
+            <Text color="$danger" fontSize="$1">
+              Login failed. Check your details.
+            </Text>
+          )}
+
+          <GlassButton label="Log In" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+
+          <Text textAlign="center" color="$textSecondary" fontSize="$3">
+            Don't have an account?{' '}
+            <Link href="/register" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Sign up</Link>
+          </Text>
+        </Card>
+      </YStack>
+    </>
   )
 }

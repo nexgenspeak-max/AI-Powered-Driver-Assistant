@@ -19,4 +19,12 @@ export const tripsService = {
 
   pickedUp: (tripId: string) =>
     apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'picked_up' }).then(r => r.data),
+
+  // Distinct from `reject` (a pending request the driver never accepted) —
+  // this is the driver backing out of a trip they already confirmed
+  // (confirmed/arrived_pickup/picked_up), so it's tracked as its own status
+  // rather than reusing `cancelled` (the customer-initiated equivalent) —
+  // see backend trips.ts's ALLOWED_STATUSES/CANCELLED_STATUSES.
+  cancel: (tripId: string) =>
+    apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'cancelled_by_driver' }).then(r => r.data),
 }

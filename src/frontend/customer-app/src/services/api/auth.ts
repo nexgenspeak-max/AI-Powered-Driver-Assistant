@@ -12,9 +12,16 @@ export interface AuthUser {
   updated_at: string
 }
 
+// login/refresh are token-only now — the customer's profile is never sent
+// (or stored) on those calls, only fetched on demand via me(). register is
+// the one exception: the client has no other way to get the just-created
+// profile without an extra round trip.
 export interface AuthTokens {
   access_token: string
   refresh_token: string
+}
+
+export interface AuthRegisterResponse extends AuthTokens {
   user: AuthUser
 }
 
@@ -23,10 +30,12 @@ export const authService = {
     authClient.post<AuthTokens>('/auth/login', payload).then(r => r.data),
 
   register: (payload: { role: 'customer'; phone: string; name: string; email: string; password: string }) =>
-    authClient.post<AuthTokens>('/auth/register', payload).then(r => r.data),
+    authClient.post<AuthRegisterResponse>('/auth/register', payload).then(r => r.data),
 
   refresh: (refresh_token: string) =>
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
+
+  me: () => authClient.get<AuthUser>('/auth/me').then(r => r.data),
 
   setStatus: (id: string, status: 'online' | 'offline') =>
     authClient.patch(`/accounts/${id}`, { status }).then(r => r.data),

@@ -47,6 +47,7 @@ export interface DriverContext {
   today_earnings: TodayEarnings
   active_bonuses: Bonus[]
   upcoming_trips: (import('./trip').Trip & { estimated_fare: number })[]
+  active_trips: (import('./trip').Trip & { estimated_fare: number })[]
   current_trip: (import('./trip').Trip & { estimated_fare: number }) | null
   last_call: { call_id: string; summary?: string } | null
   fetched_at: string

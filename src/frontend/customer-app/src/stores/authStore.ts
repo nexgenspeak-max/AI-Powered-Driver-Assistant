@@ -1,30 +1,43 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { storage } from '../utils/storage'
-import type { Customer } from '../types'
+import { secureTokenStorage } from '../utils/secureTokenStorage'
 
 interface AuthState {
-  customer: Customer | null
   accessToken: string | null
   refreshToken: string | null
-  setCustomer: (customer: Customer) => void
+  // SecureStore reads are async, unlike the old MMKV-backed store — the
+  // root layout waits on this before deciding whether to route into (app)
+  // or (auth), so it never flashes the login screen for an already-logged-in
+  // customer while the token is still being read off disk.
+  hasHydrated: boolean
   setTokens: (accessToken: string, refreshToken: string) => void
+  setHasHydrated: (hasHydrated: boolean) => void
   logout: () => void
 }
 
+// Tokens only — the customer's profile is never written to disk. It's
+// fetched via GET /auth/me (see features/auth/hooks/useCurrentUser.ts) and
+// lives only in the React Query cache, which is memory-only and clears on
+// app restart. This is a deliberate security choice, not an oversight: see
+// secureTokenStorage.ts for why tokens specifically need Keychain/Keystore.
 export const useAuthStore = create<AuthState>()(
   persist(
     set => ({
-      customer: null,
       accessToken: null,
       refreshToken: null,
-      setCustomer: customer => set({ customer }),
+      hasHydrated: false,
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      logout: () => set({ customer: null, accessToken: null, refreshToken: null }),
+      setHasHydrated: hasHydrated => set({ hasHydrated }),
+      logout: () => set({ accessToken: null, refreshToken: null }),
     }),
     {
-      name: 'customer-auth',
-      storage: createJSONStorage(() => storage),
+      name: 'customer-auth-tokens',
+      storage: createJSONStorage(() => secureTokenStorage),
+      // Only tokens are ever written to SecureStore — `hasHydrated` is
+      // runtime-only state, persisting it would make it (wrongly) start
+      // `true` on the very next app launch, before the real read completes.
+      partialize: state => ({ accessToken: state.accessToken, refreshToken: state.refreshToken }),
+      onRehydrateStorage: () => state => state?.setHasHydrated(true),
     },
   ),
 )

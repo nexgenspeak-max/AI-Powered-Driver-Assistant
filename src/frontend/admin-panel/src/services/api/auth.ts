@@ -1,5 +1,5 @@
 import { authClient } from './authClient'
-import type { AuthTokens } from '../../types/auth'
+import type { AuthTokens, AuthUser } from '../../types/auth'
 
 export const authService = {
   login: (payload: { role: 'admin'; email: string; password: string }) =>
@@ -7,6 +7,8 @@ export const authService = {
 
   refresh: (refresh_token: string) =>
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
+
+  me: () => authClient.get<AuthUser>('/auth/me').then(r => r.data),
 
   setStatus: (id: string, status: 'online' | 'offline' | 'locked') =>
     authClient.patch(`/accounts/${id}`, { status }).then(r => r.data),

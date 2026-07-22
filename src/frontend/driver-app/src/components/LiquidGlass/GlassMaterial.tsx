@@ -3,7 +3,6 @@ import { StyleSheet, View, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useThemeName } from "tamagui";
-import { randomSpecularVariation } from "../../utils/glassSpecular";
 
 // Frosted-glass surface ported from the actual working reference —
 // https://github.com/SchroederNathan/linear-tab-bar (GlassMaterial.tsx) —
@@ -19,7 +18,6 @@ const FILL_GRADIENT_END = { x: 0.5, y: 1 };
 // glossy strip hugging the top edge, then settles to the faint wash below,
 // matching a physical glass/acrylic surface catching light from above.
 const GLASS_GRADIENT_LOCATIONS = [0, 0.35, 1] as const;
-const BASE_LIGHT_HIGHLIGHT_ANGLE_DEG = -24;
 
 // elevation:14/opacity:0.45/radius:24 (a previous pass) is modal/FAB-strength
 // — on small elements (buttons, back button, tab pill) it doesn't read as a
@@ -52,50 +50,9 @@ export function getConcentricRadius(outerRadius: number, padding: number) {
   return Math.max(0, outerRadius - padding);
 }
 
-function GlassHighlightOverlay({ borderRadius }: { borderRadius: number }) {
-  const themeName = useThemeName();
-  const isLight = themeName === "light";
-  const variation = useMemo(
-    () => randomSpecularVariation(BASE_LIGHT_HIGHLIGHT_ANGLE_DEG),
-    [],
-  );
-
-  if (!isLight) {
-    return null;
-  }
-
-  const top = `${8 + variation.offsetY * 18}%`;
-  const left = `${10 + variation.offsetX * 28}%`;
-  const width = `${55 + variation.sizeScale * 20}%`;
-  const height = `${24 + variation.sizeScale * 12}%`;
-
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        top,
-        left,
-        width,
-        height,
-        borderRadius: 999,
-        transform: [{ rotate: `${variation.angleDeg}deg` }],
-        overflow: "hidden",
-      }}
-    >
-      <LinearGradient
-        colors={[
-          "rgba(255,255,255,0.18)",
-          "rgba(255,255,255,0)",
-          "rgba(255,255,255,0.18)",
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-    </View>
-  );
-}
+// Static top-left corner glint removed per spec (was light-mode-only,
+// randomized position/size via randomSpecularVariation) — every card/badge/
+// input/button using GlassSheen or GlassMaterial no longer shows it.
 
 // The gradient wash + gradient border, factored out so it can be used two
 // ways: as a full owning container (`GlassMaterial`, for components like
@@ -175,9 +132,8 @@ function GlassGradientLayers({
         end={FILL_GRADIENT_END}
         style={StyleSheet.absoluteFill}
       />
-      <GlassHighlightOverlay borderRadius={borderRadius} />
 
-      {/* 
+      {/*
         Cross-platform Glass Border: 
         MaskedView fails on React Native Web and renders a solid black line. 
         Replaced with a solid translucent border which works perfectly on Web/iOS/Android. 

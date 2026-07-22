@@ -2,8 +2,9 @@ import { Platform, Linking } from 'react-native'
 import * as ExpoLinking from 'expo-linking'
 import ForegroundService from '@supersami/rn-foreground-service'
 import * as Vosk from 'react-native-vosk'
-import { useAuthStore } from '../../stores/authStore'
+import { queryClient } from '../../providers/QueryProvider'
 import { useVoiceSessionStore } from '../home/stores/voiceSessionStore'
+import type { Customer } from '../../types'
 
 // Model downloaded from https://alphacephei.com/vosk/models (Apache-2.0, no
 // account needed) and unpacked into assets/model-vi-vn — see the
@@ -77,7 +78,10 @@ async function onWakeWordDetected() {
   clearRestartTimer()
   stopListening()
 
-  const customer = useAuthStore.getState().customer
+  // Not persisted (see authStore.ts) — this module runs outside the
+  // component tree (a Vosk event callback), so it reads the profile
+  // straight from the React Query cache useCurrentUser() populates.
+  const customer = queryClient.getQueryData<Customer>(['me'])
   if (!customer) {
     triggered = false
     return

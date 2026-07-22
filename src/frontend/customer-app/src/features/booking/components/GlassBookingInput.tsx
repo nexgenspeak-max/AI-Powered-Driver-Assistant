@@ -130,7 +130,10 @@ const THEME_PARAMS = {
     ringColor: [1, 1, 1, 0.05] as [number, number, number, number],
     topShadowAlpha: 0.24,
     bottomHighlightAlpha: 0,
-    specularIntensity: 0.1,
+    // Specular top-left glint removed per spec — the shader term is still
+    // computed (harmless at 0) rather than deleted, so re-enabling it later
+    // is a one-line change instead of rewriting the shader.
+    specularIntensity: 0,
     specularScale: 1,
   },
   light: {
@@ -139,7 +142,7 @@ const THEME_PARAMS = {
     ringColor: [1, 1, 1, 0.7] as [number, number, number, number],
     topShadowAlpha: 0,
     bottomHighlightAlpha: 0.5,
-    specularIntensity: 0.14,
+    specularIntensity: 0,
     specularScale: 1.6,
   },
 }

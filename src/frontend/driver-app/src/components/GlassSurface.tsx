@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { TouchableOpacity, View as RNView, StyleSheet } from "react-native";
-import { useThemeName } from "tamagui";
+import { useTheme, useThemeName } from "tamagui";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import { randomSpecularVariation, degToRad } from "../utils/glassSpecular";
 
@@ -134,7 +134,10 @@ const THEME_PARAMS = {
     bottomColor: [1, 1, 1, 0.05] as [number, number, number, number],
     topShadowAlpha: 0.22,
     bottomHighlightAlpha: 0,
-    specularIntensity: 0.16,
+    // Specular top-left glint removed per spec — the shader term is still
+    // computed (harmless at 0) rather than deleted, so re-enabling it later
+    // is a one-line change instead of rewriting the shader.
+    specularIntensity: 0,
     specularScale: 1,
   },
   light: {
@@ -142,7 +145,7 @@ const THEME_PARAMS = {
     bottomColor: [0.9, 0.9, 0.918, 0.92] as [number, number, number, number], // ~#E6E6EA
     topShadowAlpha: 0,
     bottomHighlightAlpha: 0.55,
-    specularIntensity: 0.16,
+    specularIntensity: 0,
     specularScale: 1.5,
   },
 };
@@ -157,6 +160,11 @@ export interface GlassSurfaceProps {
   onPress?: () => void;
   style?: { flex?: number; [key: string]: unknown };
   children?: ReactNode;
+  /** Matches the outline Button's look — fully transparent interior (no
+   *  wash/shader fill at all, not just a lighter one) plus a flat 1px
+   *  `$borderStrong` border, no outer shadow. Opt-in: every other existing
+   *  caller keeps the default glass wash unchanged. */
+  outline?: boolean;
 }
 
 // Reusable "finalized" glassmorphism card — same recipe as customer-app's
@@ -171,8 +179,10 @@ export function GlassSurface({
   onPress,
   style,
   children,
+  outline = false,
 }: GlassSurfaceProps) {
   const isLight = useThemeName() === "light";
+  const theme = useTheme();
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark;
   const [layout, setLayout] = useState({ width: 0, height: 0 });
   // Rolled once per mounted instance (empty deps), not per render or per
@@ -226,7 +236,10 @@ export function GlassSurface({
       height: e.nativeEvent.layout.height,
     });
 
-  const canvas = layout.width > 0 && (
+  // `outline` skips the wash/shader canvas entirely — no fill of any
+  // opacity, matching the outline Button's genuinely transparent interior
+  // rather than just a lighter glass tint.
+  const canvas = !outline && layout.width > 0 && (
     <Canvas style={StyleSheet.absoluteFillObject} pointerEvents="none">
       <Fill>
         {/* Non-null assertion: `effect` is validated once at module load
@@ -242,6 +255,12 @@ export function GlassSurface({
     borderBottomLeftRadius: bottomCornerRadius,
     borderBottomRightRadius: bottomCornerRadius,
   };
+  // Same flat 1px border as the outline Button variant
+  // (components/Button.tsx's `borderColor: '$borderStrong'`) — resolved to
+  // a literal hex here since this is a plain RN View, not a Tamagui one.
+  const outlineBorderStyle = outline
+    ? { borderWidth: 1, borderColor: theme.borderStrong.val }
+    : null;
 
   if (onPress) {
     return (
@@ -250,7 +269,8 @@ export function GlassSurface({
         activeOpacity={0.85}
         style={[
           { ...cornerStyle, overflow: "hidden" },
-          getSurfaceOuterShadow(isLight),
+          !outline && getSurfaceOuterShadow(isLight),
+          outlineBorderStyle,
           style,
         ]}
         onLayout={handleLayout}
@@ -268,7 +288,7 @@ export function GlassSurface({
     // Android's overflow-clips-elevation quirk (see GlassMaterial.tsx). Both
     // share the same corner radii so the shadow's own silhouette still matches the
     // visible card exactly.
-    <RNView style={[cornerStyle, getSurfaceOuterShadow(isLight), style]}>
+    <RNView style={[cornerStyle, !outline && getSurfaceOuterShadow(isLight), style]}>
       {/* Forwards only the caller's own `flex` value (not a blanket
           `flex: 1`) to this inner view — which is what the Canvas actually
           measures via onLayout, so it has to match whatever sizing the
@@ -282,7 +302,10 @@ export function GlassSurface({
           GlassSurface. Only EarningsScreen's outer "sheet" container passes
           `style={{ flex: 1, ... }}` and actually wants this. */}
       <RNView
-        style={{ ...cornerStyle, overflow: "hidden", flex: style?.flex }}
+        style={[
+          { ...cornerStyle, overflow: "hidden", flex: style?.flex },
+          outlineBorderStyle,
+        ]}
         onLayout={handleLayout}
       >
         {canvas}

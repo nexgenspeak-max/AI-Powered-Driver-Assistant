@@ -6,6 +6,15 @@ import { phoneVariants } from '../utils/phone';
 
 const UPCOMING = new Set(['pending', 'notified', 'calling', 'confirmed']);
 const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
+// Every trip the driver has actually accepted and is executing right now —
+// unlike ACTIVE above (which also matches notified/calling, used only to
+// pick a single `current_trip`), this covers arrived_pickup/picked_up too,
+// so a driver holding more than one accepted trip at once (e.g. wrapping up
+// one ride while already confirmed for the next pickup) doesn't lose the
+// other one: `current_trip` only ever surfaces a single trip, so anything
+// past confirmed that isn't picked as `current_trip` would otherwise never
+// appear in the response at all.
+const IN_PROGRESS = new Set(['confirmed', 'arrived_pickup', 'picked_up']);
 
 async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
   const seen = new Set<string>();
@@ -32,6 +41,9 @@ export async function buildDriverContext(driverPhone: string) {
   const upcoming = trips
     .filter(t => UPCOMING.has(t.status))
     .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
+  const inProgress = trips
+    .filter(t => IN_PROGRESS.has(t.status))
+    .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
   const currentRaw = trips.find(t => ACTIVE.has(t.status)) ?? null;
   const current = currentRaw ? earningsService.enrichTrip(currentRaw) : null;
 
@@ -41,6 +53,7 @@ export async function buildDriverContext(driverPhone: string) {
     today_earnings: todayEarnings,
     active_bonuses: earningsService.activeBonuses(),
     upcoming_trips: upcoming.map(earningsService.enrichTrip),
+    active_trips: inProgress.map(earningsService.enrichTrip),
     current_trip: current,
     last_call: lastCall,
     fetched_at: new Date().toISOString(),
@@ -59,7 +72,14 @@ export async function getDriverContext(driverPhone: string, fresh = false) {
 }
 
 export async function invalidateDriverContext(driverPhone: string) {
-  await cacheDel(driverContextKey(driverPhone));
+  // driverContextKey only strips a leading '+' — it does not fold the
+  // '0xxxxxxxxx' / '84xxxxxxxxx' formats together. A trip's stored
+  // driver_phone and the format the driver's own session reads the cache
+  // under (X-Driver-Phone header) can differ, so invalidating only the raw
+  // input phone can miss the actual cached entry, leaving it to serve a
+  // stale snapshot (e.g. pre-completion earnings) until its TTL expires.
+  // Invalidate every phone-variant's key to guarantee the real one is hit.
+  await cacheDel(...phoneVariants(driverPhone).map(driverContextKey));
 }
 
 export async function buildCustomerContext(customerPhone: string) {

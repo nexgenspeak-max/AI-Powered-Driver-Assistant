@@ -141,7 +141,10 @@ const THEME_PARAMS = {
     bottomColor: [1, 1, 1, 0.05] as [number, number, number, number],
     topShadowAlpha: 0.22,
     bottomHighlightAlpha: 0,
-    specularIntensity: 0.16,
+    // Specular top-left glint removed per spec — the shader term is still
+    // computed (harmless at 0) rather than deleted, so re-enabling it later
+    // is a one-line change instead of rewriting the shader.
+    specularIntensity: 0,
     specularScale: 1,
   },
   light: {
@@ -149,7 +152,7 @@ const THEME_PARAMS = {
     bottomColor: [0.9, 0.9, 0.918, 0.92] as [number, number, number, number], // ~#E6E6EA
     topShadowAlpha: 0,
     bottomHighlightAlpha: 0.55,
-    specularIntensity: 0.16,
+    specularIntensity: 0,
     specularScale: 1.5,
   },
 };
@@ -183,6 +186,8 @@ export function GlassSurface({
   onPress,
   style,
   children,
+  topShadowAlpha,
+  bottomHighlightAlpha,
 }: GlassSurfaceProps) {
   const isLight = useThemeName() === "light";
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark;
@@ -227,6 +232,8 @@ export function GlassSurface({
       specularAngleDeg,
       isLight,
       lightVariation.sizeScale,
+      topShadowAlpha,
+      bottomHighlightAlpha,
     ],
   );
 
