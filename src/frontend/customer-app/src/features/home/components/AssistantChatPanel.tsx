@@ -198,6 +198,12 @@ export function AssistantChatPanel() {
           onSubmitEditing={handleSend}
           placeholder="Nói gì đó..."
           placeholderTextColor={isLight ? '#8b8792' : '#8f7fb0'}
+          // Highlighted-text (select-all) color — was left at the OS
+          // default (a generic blue), which clashed against this app's
+          // purple-branded glass fields. Brighter in dark mode (#C084FC vs
+          // #8B5CF6) since a highlight needs more contrast against a dark
+          // field than a light one.
+          selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
           style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff' }}
         />
         <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>

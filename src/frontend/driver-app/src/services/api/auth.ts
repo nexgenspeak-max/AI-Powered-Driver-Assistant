@@ -47,4 +47,13 @@ export const authService = {
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
 
   me: () => authClient.get<AuthUser>('/auth/me').then(r => r.data),
+
+  // Only these fields are actually persisted — accounts.ts's EDITABLE_FIELDS
+  // covers exactly `name`, `vehicle_type`, `vehicle_plate`, `vehicle_name`
+  // (plus fcm_token) — phone/email stay read-only in the app.
+  updateProfile: (id: string, payload: { name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
+
+  updateVehicle: (id: string, payload: { vehicle_type: string; vehicle_plate: string; vehicle_name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
 }

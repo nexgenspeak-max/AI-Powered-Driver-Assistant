@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 const BUTTON_HEIGHT = 52
 // Purple CTA exception: the gradient fill never changes between themes —
 // only the glass cues on top of it do (see THEME_PARAMS).
-const DEFAULT_GRADIENT_COLORS = ['#8B5CF6', '#C084FC'] as const
+const DEFAULT_GRADIENT_COLORS = ['#6D28D9', '#A855F7'] as const
 const DISABLED_COLOR = '#4A4552'
 
 // Dimmer specular + lighter inner shadow for light mode (vs. the white

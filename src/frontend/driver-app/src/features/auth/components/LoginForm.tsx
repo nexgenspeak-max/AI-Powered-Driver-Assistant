@@ -83,7 +83,7 @@ export function LoginForm() {
             </Text>
           )}
 
-          <GlassButton label="Log In" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+          <GlassButton label="Đăng nhập" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
 
           <Text textAlign="center" color="$textSecondary" fontSize="$3">
             Don't have an account?{' '}

@@ -4,7 +4,21 @@ import { View as RNView, ActivityIndicator, StyleSheet, type LayoutChangeEvent }
 import { GestureDetector } from 'react-native-gesture-handler'
 import Animated from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
-import { GlassSheen, GlowOverlay, useGlassPress } from './LiquidGlass'
+import { GlassSheen, GlowOverlay, getGlassShadow, useGlassPress } from './LiquidGlass'
+
+// Same purple-tinted outer shadow as GlassButton (the "Bắt đầu" CTA) —
+// duplicated rather than imported since GlassButton doesn't export it, but
+// kept byte-for-byte identical so every primary Button now casts the exact
+// same shadow.
+function getPrimaryOuterShadow(isLight: boolean) {
+  return {
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: isLight ? 10 : 8 },
+    shadowOpacity: isLight ? 0.4 : 0.3,
+    shadowRadius: isLight ? 18 : 16,
+    elevation: 6,
+  } as const
+}
 
 const ButtonFrame = styled(View, {
   minHeight: 52,
@@ -62,23 +76,22 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
 
   const { useThemeName } = require('tamagui')
   const isLight = useThemeName() === 'light'
-  const { getGlassShadow } = require('./LiquidGlass')
   const theme = useTheme()
 
-  const dynamicProps = variant === 'primary' ? getGlassShadow(isLight) : {}
-  // Primary's purple gradient reads better with black text in light mode
-  // specifically (requested) — dark mode keeps white, and outline/dark
-  // variants were already using textPrimary since they sit on a light-ish
-  // surface (transparent border box, or `$surfaceElevated` — white in light
-  // mode) where a hardcoded white spinner/label was invisible.
-  const labelColor =
-    variant === 'outline' || variant === 'dark' ? '$textPrimary' : variant === 'primary' && isLight ? '#000000' : '$textInverse'
+  // Matches GlassButton's ("Bắt đầu" CTA) purple-tinted outer shadow exactly
+  // — same recipe now backs every primary button, not just that one screen.
+  // Every other variant (outline/dark/danger/success) had no shadow at all —
+  // fine in dark mode where the border/fill already reads against the dark
+  // background, but in light mode an outline button all but disappears into
+  // a light screen. Light mode now gets the same soft glass shadow
+  // Card/Input use; dark mode is left exactly as it was.
+  const dynamicProps = variant === 'primary' ? getPrimaryOuterShadow(isLight) : isLight ? getGlassShadow(isLight) : {}
+  // Primary always renders white text now (like GlassButton) — the previous
+  // light-mode black-text carve-out was tuned for the old lighter gradient
+  // (#7C5B9C); the darker one below reads fine with white in both themes.
+  const labelColor = variant === 'outline' || variant === 'dark' ? '$textPrimary' : variant === 'primary' ? '#ffffff' : '$textInverse'
   const spinnerColor =
-    variant === 'outline' || variant === 'dark'
-      ? theme.textPrimary.val
-      : variant === 'primary' && isLight
-        ? theme.textPrimary.val
-        : theme.textInverse.val
+    variant === 'outline' || variant === 'dark' ? theme.textPrimary.val : variant === 'primary' ? '#ffffff' : theme.textInverse.val
 
   return (
     <GestureDetector gesture={gesture}>
@@ -112,7 +125,7 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
               // poking out right at the pill's tightest curve (the left/right
               // end-caps).
               <LinearGradient
-                colors={['#7C5B9C', '#A855F7']}
+                colors={['#6D28D9', '#A855F7']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[StyleSheet.absoluteFillObject, { borderRadius: 999 }]}
@@ -120,12 +133,17 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
             )}
             {!isDisabled && (
               <>
-                {/* $button token is a pill (999) — RN clamps borderRadius to the
-                    box's own half-height automatically, so passing that same
-                    constant here always matches ButtonFrame's clip exactly
-                    (using a measured size.height/2 raced the first layout
-                    pass and briefly drew a square-cornered ring). */}
-                <GlassSheen borderRadius={999} />
+                {/* Primary skips the white glass sheen entirely — matches
+                    GlassButton's flatter, cleaner look (just the gradient +
+                    the purple outer shadow above, no glossy wash on top).
+                    Other variants (outline/dark/danger/success) keep it
+                    unchanged. $button token is a pill (999) — RN clamps
+                    borderRadius to the box's own half-height automatically,
+                    so passing that same constant here always matches
+                    ButtonFrame's clip exactly (using a measured
+                    size.height/2 raced the first layout pass and briefly
+                    drew a square-cornered ring). */}
+                {variant !== 'primary' && <GlassSheen borderRadius={999} />}
                 <GlowOverlay size={140} id="buttonGlow" touchX={touchX} touchY={touchY} glowOpacity={glowOpacity} />
               </>
             )}

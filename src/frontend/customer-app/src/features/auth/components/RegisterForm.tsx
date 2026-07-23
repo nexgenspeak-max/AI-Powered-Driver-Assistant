@@ -103,7 +103,7 @@ export function RegisterForm() {
             </Text>
           )}
 
-          <GlassButton label="Sign Up" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+          <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
 
           <Text textAlign="center" color="$textSecondary" fontSize="$3">
             Already have an account?{' '}

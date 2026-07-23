@@ -87,6 +87,7 @@ export function BookingForm() {
           onChangeText={onChange}
           onBlur={onBlur}
           error={errors.customer_name?.message}
+         
         />
       )}
     />

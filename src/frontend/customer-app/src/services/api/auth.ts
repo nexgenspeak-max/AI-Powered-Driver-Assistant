@@ -39,4 +39,9 @@ export const authService = {
 
   setStatus: (id: string, status: 'online' | 'offline') =>
     authClient.patch(`/accounts/${id}`, { status }).then(r => r.data),
+
+  // Only `name` is actually persisted — accounts.ts's EDITABLE_FIELDS doesn't
+  // include email/phone, so those stay read-only in the edit-profile screen.
+  updateProfile: (id: string, payload: { name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
 }

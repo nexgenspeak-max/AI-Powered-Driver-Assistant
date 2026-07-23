@@ -12,7 +12,7 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
   const currentIndex = STEPS.findIndex((s) => s.status === status);
 
   return (
-    <XStack alignItems="flex-start">
+    <XStack alignItems="flex-start" width="96.5%">
       {STEPS.map((step, i) => {
         const isDone = i < currentIndex;
         const isCurrent = i === currentIndex;
@@ -24,11 +24,16 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
 
         return (
           <XStack key={step.status} flex={i === STEPS.length - 1 ? 0 : 1} alignItems="flex-start">
-            <YStack alignItems="center" gap="$1" width={64}>
+            {/* `flexShrink={0}` pins this column to its own width — without
+                it, the two flex:1 siblings' line segments can squeeze this
+                below 56px in some layouts (seen clipping "Picked Up" to
+                "Pic" on a wide/web viewport), since a plain `width` alone
+                doesn't stop a flex child from shrinking. */}
+            <YStack alignItems="center" gap="$1" width={50} flexShrink={0}>
               <View
-                width={22}
-                height={22}
-                borderRadius={11}
+                width={16}
+                height={16}
+                borderRadius={8}
                 alignItems="center"
                 justifyContent="center"
                 backgroundColor={isDone ? theme.success.val : "transparent"}
@@ -36,25 +41,27 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
                 borderColor={isCurrent ? theme.success.val : theme.borderStrong.val}
               >
                 {isDone && (
-                  <Text fontSize={12} fontWeight="700" color={theme.textInverse.val}>
+                  <Text fontSize={9} fontWeight="700" color={theme.textInverse.val}>
                     ✓
                   </Text>
                 )}
                 {isCurrent && (
-                  <View width={8} height={8} borderRadius={4} backgroundColor={theme.success.val} />
+                  <View width={6} height={6} borderRadius={3} backgroundColor={theme.success.val} />
                 )}
               </View>
               <Text
-                fontSize={10}
+                fontSize={9}
                 fontWeight={isCurrent ? "700" : "500"}
                 color={isCurrent ? "$textPrimary" : "$textSecondary"}
                 textAlign="center"
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {step.label}
               </Text>
             </YStack>
             {i < STEPS.length - 1 && (
-              <View flex={1} height={2} marginTop={10} backgroundColor={lineColor} />
+              <View flex={1} height={2} marginTop={7} backgroundColor={lineColor}  />
             )}
           </XStack>
         );

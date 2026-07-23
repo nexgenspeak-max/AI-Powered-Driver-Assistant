@@ -4,6 +4,7 @@ export interface Driver {
   id: string
   phone: string
   name: string
+  email?: string
   status: DriverStatus
   vehicle_type?: string
   vehicle_plate?: string

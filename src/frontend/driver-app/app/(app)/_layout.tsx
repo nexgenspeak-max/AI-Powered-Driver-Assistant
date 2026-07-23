@@ -2,8 +2,7 @@ import { Image, type ImageSourcePropType } from 'react-native'
 import { Tabs } from 'expo-router'
 import { useTheme } from 'tamagui'
 import { useThemeStore } from '../../src/stores/themeStore'
-import { GlassMaterial } from '../../src/components/LiquidGlass'
-import { GlassTabButton } from '../../src/components/GlassTabButton'
+import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
 
 // Light mode: flat, full-color icon set (assets/icons/light/) — fixed
 // palette raster images, not tintable, so active/inactive is opacity there.
@@ -59,84 +58,72 @@ export default function AppLayout() {
   const isDark = !isLight
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        // Light mode: no filled pill behind the active tab anymore (see
-        // GlassTabButton) — active vs. inactive is just darker-vs-lighter
-        // black/gray text, no white-on-white or black-on-black risk. Dark
-        // mode keeps the white-on-purple-pill look unchanged.
-        tabBarActiveTintColor: isLight ? '#000000' : '#ffffff',
-        tabBarInactiveTintColor: theme.textMuted.val,
-        tabBarButton: props => <GlassTabButton {...props} />,
-        // Frosted-glass floating bar — real native blur + gradient wash +
-        // gradient hairline border, see LiquidGlass.tsx `GlassMaterial`.
-        tabBarBackground: () => (
-          <GlassMaterial borderRadius={30} tint={isLight ? 'light' : 'dark'} blurIntensity={55} style={{ flex: 1 }} />
-        ),
-        tabBarStyle: {
-          position: 'absolute',
-          left: 20,
-          right: 20,
-          bottom: 16,
-          height: 76,
-          borderRadius: 30,
-          borderTopWidth: 0,
-          backgroundColor: 'transparent',
-          elevation: 0,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 16,
-          // React Navigation adds its own safe-area bottom padding by default
-          // (to clear the home indicator) — redundant since the whole bar is
-          // already floated up via `bottom: 16`, and it was pushing the icon
-          // row toward the top of the bar instead of centering it.
-          paddingTop: 0,
-          paddingBottom: 0,
-        },
-        tabBarItemStyle: { justifyContent: 'center', alignItems: 'center' },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ size, focused }) => (
-            <TabIcon source={ICONS.home} darkSource={DARK_ICONS.home} size={size} focused={focused} isDark={isDark} />
-          ),
+    // Shares the `pageBlur` shared value between the tab bar (writer, on
+    // long-press) and PageBlurOverlay (reader, wrapping each screen below).
+    <LiquidGlassProvider>
+      <Tabs
+        // Wraps each screen's own content only — not the tab bar itself, so
+        // long-pressing a tab blurs the page behind it while the tab bar +
+        // its glass pill stay sharp.
+        screenLayout={({ children }) => <PageBlurOverlay>{children}</PageBlurOverlay>}
+        tabBar={props => <LiquidGlassTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          // Brand purple for the selected tab in both themes — matches the
+          // rest of the app's CTA/accent color instead of the old
+          // black/white split (that was tuned for GlassTabButton's own
+          // dark-mode purple pill background, which LiquidGlassTabBar
+          // doesn't have; the active tab needs its own color cue now).
+          tabBarActiveTintColor: ACTIVE_PURPLE,
+          tabBarInactiveTintColor: theme.textMuted.val,
         }}
-      />
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ size, focused }) => (
-            <TabIcon source={ICONS.dashboard} darkSource={DARK_ICONS.dashboard} size={size} focused={focused} isDark={isDark} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          title: 'Earnings',
-          tabBarIcon: ({ size, focused }) => (
-            <TabIcon source={ICONS.earnings} darkSource={DARK_ICONS.earnings} size={size} focused={focused} isDark={isDark} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ size, focused }) => (
-            <TabIcon source={ICONS.profile} darkSource={DARK_ICONS.profile} size={size} focused={focused} isDark={isDark} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
-      <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ size, focused }) => (
+              <TabIcon source={ICONS.home} darkSource={DARK_ICONS.home} size={size} focused={focused} isDark={isDark} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            title: 'Dashboard',
+            tabBarIcon: ({ size, focused }) => (
+              <TabIcon source={ICONS.dashboard} darkSource={DARK_ICONS.dashboard} size={size} focused={focused} isDark={isDark} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="earnings"
+          options={{
+            title: 'Earnings',
+            tabBarIcon: ({ size, focused }) => (
+              <TabIcon source={ICONS.earnings} darkSource={DARK_ICONS.earnings} size={size} focused={focused} isDark={isDark} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ size, focused }) => (
+              <TabIcon source={ICONS.profile} darkSource={DARK_ICONS.profile} size={size} focused={focused} isDark={isDark} />
+            ),
+          }}
+        />
+        <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
+        <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null, title: 'Edit Profile' }} />
+        <Tabs.Screen name="vehicle" options={{ href: null, title: 'Vehicle' }} />
+        <Tabs.Screen name="bank-info" options={{ href: null, title: 'Bank Info' }} />
+        <Tabs.Screen name="documents" options={{ href: null, title: 'Documents' }} />
+        <Tabs.Screen name="safety" options={{ href: null, title: 'Safety' }} />
+        <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
+        <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
+      </Tabs>
+    </LiquidGlassProvider>
   )
 }

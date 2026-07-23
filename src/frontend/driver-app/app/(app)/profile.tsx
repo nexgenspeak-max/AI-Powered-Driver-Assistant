@@ -5,10 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import Constants from 'expo-constants'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { ProfileCard } from '../../src/features/profile/components/ProfileCard'
 import { GlassSurface } from '../../src/components/GlassSurface'
-import { Button } from '../../src/components/Button'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
@@ -40,6 +40,13 @@ const ICONS = {
   chatInfo: require('../../assets/icons/light/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/light/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/light/logout.png') as ImageSourcePropType,
+  editProfile: require('../../assets/icons/light/edit-profile.png') as ImageSourcePropType,
+  vehicle: require('../../assets/icons/light/vehicle.png') as ImageSourcePropType,
+  bank: require('../../assets/icons/light/bank.png') as ImageSourcePropType,
+  documents: require('../../assets/icons/light/documents.png') as ImageSourcePropType,
+  safety: require('../../assets/icons/light/safety.png') as ImageSourcePropType,
+  support: require('../../assets/icons/light/support.png') as ImageSourcePropType,
+  terms: require('../../assets/icons/light/terms.png') as ImageSourcePropType,
 }
 const DARK_ICONS = {
   voiceAssistant: require('../../assets/icons/dark/voice-assistant.png') as ImageSourcePropType,
@@ -49,6 +56,13 @@ const DARK_ICONS = {
   chatInfo: require('../../assets/icons/dark/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/dark/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/dark/logout.png') as ImageSourcePropType,
+  editProfile: require('../../assets/icons/dark/edit-profile.png') as ImageSourcePropType,
+  vehicle: require('../../assets/icons/dark/vehicle.png') as ImageSourcePropType,
+  bank: require('../../assets/icons/dark/bank.png') as ImageSourcePropType,
+  documents: require('../../assets/icons/dark/documents.png') as ImageSourcePropType,
+  safety: require('../../assets/icons/dark/safety.png') as ImageSourcePropType,
+  support: require('../../assets/icons/dark/support.png') as ImageSourcePropType,
+  terms: require('../../assets/icons/dark/terms.png') as ImageSourcePropType,
 }
 
 export default function ProfileScreen() {
@@ -84,7 +98,66 @@ export default function ProfileScreen() {
       >
       {!isLoading && context && <ProfileCard driver={driver} profile={context.driver_profile} />}
 
-      <GlassSurface cornerRadius={20} outline>
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Tài khoản</SectionTitle>
+        <MenuRow
+          icon={isDark ? DARK_ICONS.editProfile : ICONS.editProfile}
+          isDark={isDark}
+          label="Chỉnh sửa hồ sơ"
+          onPress={() => router.push('/edit-profile')}
+        />
+        <View height={1} backgroundColor="$border" />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.vehicle : ICONS.vehicle}
+          isDark={isDark}
+          label="Quản lý xe"
+          onPress={() => router.push('/vehicle')}
+        />
+      </GlassSurface>
+
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Thanh toán & Giấy tờ</SectionTitle>
+        <MenuRow
+          icon={isDark ? DARK_ICONS.bank : ICONS.bank}
+          isDark={isDark}
+          label="Tài khoản ngân hàng"
+          onPress={() => router.push('/bank-info')}
+        />
+        <View height={1} backgroundColor="$border" />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.documents : ICONS.documents}
+          isDark={isDark}
+          label="Giấy tờ xác minh"
+          onPress={() => router.push('/documents')}
+        />
+      </GlassSurface>
+
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Hỗ trợ & Pháp lý</SectionTitle>
+        <MenuRow
+          icon={isDark ? DARK_ICONS.safety : ICONS.safety}
+          isDark={isDark}
+          label="Trung tâm an toàn"
+          onPress={() => router.push('/safety')}
+        />
+        <View height={1} backgroundColor="$border" />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.support : ICONS.support}
+          isDark={isDark}
+          label="Hỗ trợ"
+          onPress={() => router.push('/support')}
+        />
+        <View height={1} backgroundColor="$border" />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.terms : ICONS.terms}
+          isDark={isDark}
+          label="Điều khoản & Chính sách bảo mật"
+          onPress={() => router.push('/terms')}
+        />
+      </GlassSurface>
+
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Cài đặt</SectionTitle>
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
             <Image
@@ -138,23 +211,20 @@ export default function ProfileScreen() {
           label="Câu hỏi thường gặp"
           onPress={() => router.push('/faq')}
         />
+        <View height={1} backgroundColor="$border" />
+        <MenuRow
+          icon={isDark ? DARK_ICONS.logout : ICONS.logout}
+          isDark={isDark}
+          label="Đăng xuất"
+          labelColor="$danger"
+          showChevron={false}
+          onPress={() => logout()}
+        />
       </GlassSurface>
 
-      <View marginTop="$2">
-        <Button
-          label="Log Out"
-          variant="outline"
-          onPress={() => logout()}
-          full
-          icon={
-            <Image
-              source={isDark ? DARK_ICONS.logout : ICONS.logout}
-              style={{ width: isDark ? 17 : 20, height: isDark ? 17 : 20, tintColor: isDark ? '#ffffff' : undefined }}
-              resizeMode="contain"
-            />
-          }
-        />
-      </View>
+      <Text color="$textMuted" fontSize={12} textAlign="center">
+        Phiên bản {Constants.expoConfig?.version ?? '1.0.0'}
+      </Text>
       </ScrollView>
 
       {/* Bottom-sheet presentation per the reference mockup: the top area is
@@ -176,15 +246,30 @@ export default function ProfileScreen() {
   )
 }
 
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <Text color="$textSecondary" fontSize={12} fontWeight="700" paddingHorizontal="$4" paddingTop="$4" paddingBottom="$1">
+      {children}
+    </Text>
+  )
+}
+
 function MenuRow({
   icon,
+  ionIcon,
   isDark,
   label,
+  labelColor = '$textPrimary',
+  showChevron = true,
   onPress,
 }: {
-  icon: ImageSourcePropType
+  icon?: ImageSourcePropType
+  /** Alternative to `icon` for rows added without a matching light/dark PNG asset — a themed vector glyph instead. */
+  ionIcon?: keyof typeof Ionicons.glyphMap
   isDark: boolean
   label: string
+  labelColor?: string
+  showChevron?: boolean
   onPress: () => void
 }) {
   const theme = useTheme()
@@ -192,16 +277,22 @@ function MenuRow({
     <TouchableOpacity onPress={onPress}>
       <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
         <XStack alignItems="center" gap="$3">
-          <Image
-            source={icon}
-            style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
-            resizeMode="contain"
-          />
-          <Text color="$textPrimary" fontWeight="500">
+          {icon ? (
+            <Image
+              source={icon}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
+              resizeMode="contain"
+            />
+          ) : (
+            <View width={24} alignItems="center">
+              <Ionicons name={ionIcon} size={20} color={theme.textSecondary.val} />
+            </View>
+          )}
+          <Text color={labelColor} fontWeight="500">
             {label}
           </Text>
         </XStack>
-        <Ionicons name="chevron-forward" size={18} color={theme.textMuted.val} />
+        {showChevron && <Ionicons name="chevron-forward" size={18} color={theme.textMuted.val} />}
       </XStack>
     </TouchableOpacity>
   )

@@ -31,7 +31,16 @@ export function BackButton({ onPress }: BackButtonProps) {
     BACK_BUTTON_SIZE,
     BACK_BUTTON_SIZE,
     {
-      onPress:(() => router.replace("/trips")),
+      // `router.back()` doesn't work here — these are hidden *tabs* inside
+      // the same Tabs navigator (href: null), not Stack children, so there's
+      // no real push/pop history to pop; it fell back to the tab
+      // navigator's first route (Home) instead of wherever the user
+      // actually came from. Every one of the 10 screens using this default
+      // (About, FAQ, Edit Profile, Safety, Support, Terms, Payment Methods,
+      // Addresses, Promotions, Referral) is only ever reached from Profile,
+      // so that's the one correct fixed destination — Trip Detail is the
+      // one exception and passes its own `onPress` (back to Trips).
+      onPress: onPress ?? (() => router.replace("/profile")),
       hitSlop: 10,
     },
   );

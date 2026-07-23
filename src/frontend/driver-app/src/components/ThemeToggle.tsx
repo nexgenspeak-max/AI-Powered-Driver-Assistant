@@ -76,6 +76,7 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
               alignItems: 'center',
               justifyContent: 'space-between',
               paddingHorizontal: 9,
+              gap: 10,
             }}
           >
             <Image source={SUN_ICON} style={{ width: 16, height: 16, opacity: isDark ? 0.4 : 1 }} resizeMode="contain" />
@@ -89,7 +90,7 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
             thumbStyle,
           ]}
         >
-          <GlassMaterial borderRadius={THUMB_RADIUS} tint="light" style={{ width: THUMB_SIZE, height: THUMB_SIZE }}>
+          <GlassMaterial borderRadius={THUMB_RADIUS} tint="light" style={{ width: THUMB_SIZE, height: THUMB_SIZE  }}>
             {/* Small glossy "raised block" sheen — a bright top-left glint
                 fading to nothing, distinct from GlassMaterial's own subtle
                 wash, so the thumb reads as a small glossy 3D nub rather
@@ -98,7 +99,7 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
               colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0)']}
               start={{ x: 0.25, y: 0.15 }}
               end={{ x: 0.75, y: 0.85 }}
-              style={[StyleSheet.absoluteFillObject, { borderRadius: THUMB_RADIUS }]}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: THUMB_RADIUS  }]}
               pointerEvents="none"
             />
             <Image source={isDark ? MOON_ICON : SUN_ICON} style={{ width: 16, height: 16 }} resizeMode="contain" />

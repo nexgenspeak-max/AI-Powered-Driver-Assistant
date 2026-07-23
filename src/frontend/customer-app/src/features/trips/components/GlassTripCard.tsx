@@ -193,6 +193,13 @@ export function GlassTripCard({ trip, onPress }: GlassTripCardProps) {
   const theme = useTheme();
   const statusColor = TRIP_STATUS_COLORS[trip.status];
   const statusIcon = isLight ? TRIP_STATUS_ICON[trip.status] : TRIP_STATUS_ICON_DARK[trip.status];
+  // Dark-mode icons are a single-color silhouette PNG, tinted via this prop
+  // (light mode's icons are already multi-color flat illustrations, no tint
+  // needed) — was hardcoded white regardless of status; resolves the same
+  // Tamagui color-scale token the status Badge already uses (`$red11`,
+  // `$pink11`, ...) to its real theme value so the icon reads the same
+  // color as the badge next to it.
+  const statusIconTint = (theme as Record<string, { val: string }>)[statusColor.text.slice(1)]?.val ?? "#ffffff";
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark;
   const [layout, setLayout] = useState({ width: 0, height: CARD_MIN_HEIGHT });
   // Rolled once per mounted card instance (empty deps) — each card in the
@@ -274,7 +281,7 @@ export function GlassTripCard({ trip, onPress }: GlassTripCardProps) {
         {statusIcon ? (
           <Image
             source={statusIcon}
-            style={{ width: isLight ? 44 : 36, height: isLight ? 44 : 36, tintColor: isLight ? undefined : "#ffffff" }}
+            style={{ width: isLight ? 44 : 36, height: isLight ? 44 : 36, tintColor: isLight ? undefined : statusIconTint }}
             resizeMode="contain"
           />
         ) : (

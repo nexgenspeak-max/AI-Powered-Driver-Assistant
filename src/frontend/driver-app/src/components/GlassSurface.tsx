@@ -236,6 +236,14 @@ export function GlassSurface({
       height: e.nativeEvent.layout.height,
     });
 
+  // `outline` still skips the shadow entirely in dark mode (transparent
+  // interior + a 1px border was enough contrast against the dark background
+  // it was originally designed for) — but in light mode that same
+  // transparent card all but disappears against the light gradient screen
+  // backgrounds, so it gets the normal outer shadow too, same as every
+  // other surface.
+  const showShadow = !outline || isLight;
+
   // `outline` skips the wash/shader canvas entirely — no fill of any
   // opacity, matching the outline Button's genuinely transparent interior
   // rather than just a lighter glass tint.
@@ -269,7 +277,7 @@ export function GlassSurface({
         activeOpacity={0.85}
         style={[
           { ...cornerStyle, overflow: "hidden" },
-          !outline && getSurfaceOuterShadow(isLight),
+          showShadow && getSurfaceOuterShadow(isLight),
           outlineBorderStyle,
           style,
         ]}
@@ -288,7 +296,7 @@ export function GlassSurface({
     // Android's overflow-clips-elevation quirk (see GlassMaterial.tsx). Both
     // share the same corner radii so the shadow's own silhouette still matches the
     // visible card exactly.
-    <RNView style={[cornerStyle, !outline && getSurfaceOuterShadow(isLight), style]}>
+    <RNView style={[cornerStyle, showShadow && getSurfaceOuterShadow(isLight), style]}>
       {/* Forwards only the caller's own `flex` value (not a blanket
           `flex: 1`) to this inner view — which is what the Canvas actually
           measures via onLayout, so it has to match whatever sizing the

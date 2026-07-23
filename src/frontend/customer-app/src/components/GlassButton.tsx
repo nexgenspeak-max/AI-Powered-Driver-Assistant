@@ -9,7 +9,7 @@ const BUTTON_HEIGHT = 52
 // themes — only the glass cues layered on top of it do (see THEME_PARAMS
 // below and the shader's comment for why the fill and the glass overlay
 // are two separate layers).
-const DEFAULT_GRADIENT_COLORS = ['#8B5CF6', '#C084FC'] as const
+const DEFAULT_GRADIENT_COLORS = ['#6D28D9', '#A855F7'] as const
 const DISABLED_COLOR = '#4A4552'
 
 // Outer drop shadow — X-offset locked to 0, no spread (RN's shadow props

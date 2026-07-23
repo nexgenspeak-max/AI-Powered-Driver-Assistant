@@ -43,7 +43,7 @@ export function ProfileCard({ driver, profile }: Props) {
 
   return (
     <YStack gap="$4">
-      <GlassSurface cornerRadius={20} outline>
+      <GlassSurface cornerRadius={20}>
         <YStack alignItems="center" gap="$2" paddingVertical="$5">
           <GlossyAvatar letter={driver.name.charAt(0).toUpperCase()} size={96} />
           <Text fontSize="$6" fontWeight="700" color="$textPrimary" marginTop="$2">
@@ -63,7 +63,8 @@ export function ProfileCard({ driver, profile }: Props) {
         </YStack>
       </GlassSurface>
 
-      <GlassSurface cornerRadius={20} outline>
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Thông tin liên hệ</SectionTitle>
         <InfoRow icon={isDark ? DARK_ICONS.phone : ICONS.phone} isDark={isDark} label="Số điện thoại" value={driver.phone} />
         {!!driver.vehicle_name && (
           <>
@@ -78,7 +79,8 @@ export function ProfileCard({ driver, profile }: Props) {
         )}
       </GlassSurface>
 
-      <GlassSurface cornerRadius={20} outline>
+      <GlassSurface cornerRadius={20}>
+        <SectionTitle>Thống kê</SectionTitle>
         <InfoRow icon={isDark ? DARK_ICONS.star : ICONS.star} isDark={isDark} label="Đánh giá" value={profile.rating.toFixed(2)} />
         <Divider />
         <InfoRow
@@ -133,6 +135,21 @@ function InfoRow({
         </Text>
       </YStack>
     </XStack>
+  )
+}
+
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <Text
+      color="$textSecondary"
+      fontSize={12}
+      fontWeight="700"
+      paddingHorizontal="$4"
+      paddingTop="$4"
+      paddingBottom="$1"
+    >
+      {children}
+    </Text>
   )
 }
 

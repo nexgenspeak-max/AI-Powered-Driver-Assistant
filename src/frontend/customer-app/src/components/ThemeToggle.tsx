@@ -76,6 +76,7 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
               alignItems: 'center',
               justifyContent: 'space-between',
               paddingHorizontal: 9,
+              gap: 10,
             }}
           >
             <Image source={SUN_ICON} style={{ width: 16, height: 16, opacity: isDark ? 0.4 : 1 }} resizeMode="contain" />

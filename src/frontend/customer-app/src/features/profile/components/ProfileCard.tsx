@@ -46,6 +46,16 @@ export function ProfileCard({ customer }: Props) {
       </GlassSurface>
 
       <GlassSurface cornerRadius={20}>
+        <Text
+          color="$textSecondary"
+          fontSize={12}
+          fontWeight="700"
+          paddingHorizontal="$4"
+          paddingTop="$4"
+          paddingBottom="$1"
+        >
+          Thông tin liên hệ
+        </Text>
         <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$4">
           <Image
             source={isDark ? PHONE_ICON_DARK : PHONE_ICON}

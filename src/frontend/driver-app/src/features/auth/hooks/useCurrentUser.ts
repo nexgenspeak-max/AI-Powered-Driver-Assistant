@@ -8,6 +8,7 @@ function toDriver(user: AuthUser): Driver {
     id: user.id,
     phone: user.phone ?? '',
     name: user.name,
+    email: user.email,
     status: user.status === 'locked' ? 'offline' : user.status,
     vehicle_type: user.vehicle_type,
     vehicle_plate: user.vehicle_plate,

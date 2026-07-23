@@ -70,6 +70,12 @@ export function GlassAuthInput({ label, error, style, secureTextEntry, ...props 
         >
           <StyledInput
             placeholderTextColor={theme.textMuted.val}
+            // Highlighted-text (select-all) color — was left at the OS
+            // default (a generic blue), which clashed against this app's
+            // purple-branded glass fields. Brighter in dark mode (#C084FC
+            // vs #8B5CF6) since a highlight needs more contrast against a
+            // dark field than a light one.
+            selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
             secureTextEntry={isPassword && !visible}
             style={[
               { fontSize: 16, color: theme.textPrimary.val },

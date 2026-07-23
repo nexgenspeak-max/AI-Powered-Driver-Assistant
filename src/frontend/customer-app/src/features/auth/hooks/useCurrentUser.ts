@@ -8,6 +8,7 @@ function toCustomer(user: AuthUser): Customer {
     id: user.id,
     name: user.name,
     phone: user.phone ?? '',
+    email: user.email,
     status: user.status === 'locked' ? 'offline' : user.status,
     created_at: user.created_at,
     updated_at: user.updated_at,
