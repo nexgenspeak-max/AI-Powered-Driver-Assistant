@@ -1,7 +1,7 @@
 import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
-from app.voicebot.vn.constants import ERR_NO_PENDING_CANCEL, TRIP_CANCELLED
+from app.voicebot.vn.constants import ERR_NO_PENDING_CANCEL, ERR_CANNOT_CANCEL, TRIP_CANCELLED
 from app.services import backend_api
 from app.voicebot.processors import context_store
 
@@ -14,15 +14,13 @@ async def confirm_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
     if not trip_id:
         return ERR_NO_PENDING_CANCEL
 
+    try:
+        await backend_api.update_trip_status(trip_id, "cancelled_by_driver")
+    except Exception:
+        logger.error("confirm_cancel_trip API failed", exc_info=True)
+        return ERR_CANNOT_CANCEL
+
     context.userdata["pending_cancel_trip_id"] = None
     context_store.remove_trip_from_lists(context.userdata, trip_id)
     context_store.set_current_trip(context.userdata, None)
-
-    async def _sync() -> None:
-        try:
-            await backend_api.update_trip_status(trip_id, "CANCELLED_BY_DRIVER")
-        except Exception:
-            logger.error("confirm_cancel_trip API failed", exc_info=True)
-
-    context_store.schedule_sync(_sync())
     return TRIP_CANCELLED

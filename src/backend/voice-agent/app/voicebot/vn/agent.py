@@ -1,10 +1,13 @@
 """Vietnamese driver and customer voice agents."""
 import logging
+from datetime import datetime, timedelta, timezone
 from livekit.agents import Agent
 
 from app.voicebot.vn.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
 from app.voicebot.vn.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
 from app.voicebot.vn.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.vn.pronunciations import PRONUNCIATIONS
+from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.vn.tools.check_upcoming_trips       import check_upcoming_trips
@@ -12,6 +15,8 @@ from app.voicebot.vn.tools.get_current_trip_info      import get_current_trip_in
 from app.voicebot.vn.tools.get_trip_traffic           import get_trip_traffic
 from app.voicebot.vn.tools.update_trip_status         import update_trip_status
 from app.voicebot.vn.tools.call_customer              import call_customer
+from app.voicebot.vn.tools.call_custom_number         import call_custom_number
+from app.voicebot.vn.tools.confirm_call_custom_number import confirm_call_custom_number
 from app.voicebot.vn.tools.get_customer_location      import get_customer_location
 from app.voicebot.vn.tools.confirm_trip_with_customer import confirm_trip_with_customer
 from app.voicebot.vn.tools.summarize_last_call        import summarize_last_call
@@ -21,9 +26,12 @@ from app.voicebot.vn.tools.request_cancel_trip        import request_cancel_trip
 from app.voicebot.vn.tools.confirm_cancel_trip        import confirm_cancel_trip
 from app.voicebot.vn.tools.confirm_trip               import confirm_trip
 from app.voicebot.vn.tools.reject_trip                import reject_trip
+from app.voicebot.vn.tools.book_trip                  import book_trip
 from app.voicebot.vn.tools.get_my_trip                import get_my_trip
-from app.voicebot.vn.tools.cancel_my_trip             import cancel_my_trip
+from app.voicebot.vn.tools.request_cancel_my_trip     import request_cancel_my_trip
+from app.voicebot.vn.tools.confirm_cancel_my_trip     import confirm_cancel_my_trip
 from app.voicebot.vn.tools.get_driver_eta             import get_driver_eta
+from app.voicebot.vn.tools.call_driver                import call_driver
 from app.voicebot.vn.tools.get_today_earnings         import get_today_earnings
 from app.voicebot.vn.tools.get_driver_stats           import get_driver_stats
 from app.voicebot.vn.tools.get_bonus_info             import get_bonus_info
@@ -32,19 +40,37 @@ from app.voicebot.vn.tools.report_trip_issue          import report_trip_issue
 from app.voicebot.vn.tools.extend_wait_time           import extend_wait_time
 from app.voicebot.vn.tools.set_driver_status          import set_driver_status
 from app.voicebot.vn.tools.answer_app_faq             import answer_app_faq
+from app.voicebot.vn.tools.end_conversation           import end_conversation
 
 logger = logging.getLogger("voice-agent.vn.agent")
+
+_VN_TZ = timezone(timedelta(hours=7))
+
+
+def _current_time_hint() -> str:
+    now = datetime.now(_VN_TZ)
+    return f"\n\nTHỜI ĐIỂM HIỆN TẠI: {now.strftime('%H:%M ngày %d/%m/%Y')} (giờ Việt Nam)."
+
+
+def _registered_phone_hint(customer_phone: str) -> str:
+    if not customer_phone:
+        return ""
+    return f"\n\nSỐ ĐIỆN THOẠI ĐÃ ĐĂNG KÝ TÀI KHOẢN CỦA KHÁCH: {customer_phone}"
 
 _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
     get_current_trip_info,
     get_trip_traffic,
+    confirm_trip,
+    reject_trip,
     update_trip_status,
     request_cancel_trip,
     confirm_cancel_trip,
     # Customer communication
     call_customer,
+    call_custom_number,
+    confirm_call_custom_number,
     get_customer_location,
     confirm_trip_with_customer,
     summarize_last_call,
@@ -63,18 +89,26 @@ _DRIVER_INBOUND_TOOLS = [
     set_driver_status,
     # App playbook / FAQ (RAG)
     answer_app_faq,
+    # Ending the call
+    end_conversation,
 ]
 
 _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
 
-_CUSTOMER_TOOLS = [get_my_trip, cancel_my_trip, get_driver_eta, answer_app_faq]
+_CUSTOMER_TOOLS = [
+    book_trip, get_my_trip, request_cancel_my_trip, confirm_cancel_my_trip,
+    get_driver_eta, call_driver, answer_app_faq,
+]
 
 
-class DriverAgent(Agent):
+class DriverAgent(SpeechTextFixMixin, Agent):
     """
     Handles both inbound (driver opens app) and outbound (system notifies driver) modes.
-    All responses are in Vietnamese. No mixin inheritance — tools are passed explicitly.
+    All responses are in Vietnamese.
     """
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(
         self,
@@ -123,15 +157,31 @@ class DriverAgent(Agent):
         return msg
 
 
-class CustomerAgent(Agent):
+class CustomerAgent(SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from Vietnamese-speaking customers."""
 
-    def __init__(self, customer_phone: str = "") -> None:
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
+
+    def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone
+        self._resume_summary = resume_summary
         super().__init__(
-            instructions=CUSTOMER_SUPPORT_PROMPT + "\n" + TOOLS_MAPPING_PROMPT,
+            instructions=(
+                CUSTOMER_SUPPORT_PROMPT
+                + "\n"
+                + TOOLS_MAPPING_PROMPT
+                + _current_time_hint()
+                + _registered_phone_hint(customer_phone)
+            ),
             tools=_CUSTOMER_TOOLS,
         )
 
     async def on_enter(self) -> None:
+        if self._resume_summary:
+            await self.session.say(
+                f"Cuộc gọi với tài xế đã kết thúc. {self._resume_summary}",
+                allow_interruptions=False,
+            )
+            return
         await self.session.say(GREETING_CUSTOMER, allow_interruptions=False)

@@ -20,8 +20,21 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: confirm_trip
+- Khi dùng: tài xế ĐỒNG Ý NHẬN một chuyến chưa nhận (status pending/notified/calling)
+- "có", "nhận", "đồng ý", "ok chuyến này", "tôi sẽ đi chuyến đó", "tôi xác nhận muốn chở chuyến đó"
+- Áp dụng cả khi đang trong cuộc gọi thông báo chuyến mới LẪN khi tài xế hỏi assistant bình
+  thường về một chuyến "notified" đang có trong lịch
+- KHÔNG dùng update_trip_status cho việc này
+
+## Tool: reject_trip
+- Khi dùng: tài xế TỪ CHỐI một chuyến chưa nhận — "không", "từ chối", "bận", "bỏ qua chuyến đó"
+- Chuyến ĐÃ nhận rồi mà muốn hủy → dùng request_cancel_trip, không phải tool này
+
+---
+
 ## Tool: update_trip_status
-- Khi dùng: tài xế thông báo trạng thái di chuyển
+- Khi dùng: tài xế thông báo TIẾN ĐỘ của chuyến ĐÃ NHẬN (đã confirmed) — không dùng để nhận chuyến mới
   - status=ARRIVED_PICKUP: "tôi đến nơi rồi", "đã đến điểm đón", "đang chờ khách"
   - status=PICKED_UP: "đã đón khách", "khách đã lên xe", "đón xong"
   - status=COMPLETED: "xong chuyến", "đã trả khách", "hoàn thành"
@@ -33,6 +46,18 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - Bắt buộc hỏi chế độ trước khi gọi tool:
   - mode=agent: AI tự nói chuyện → "để AI gọi", "AI nói giúp tôi", "tóm tắt lại"
   - mode=bridge: kết nối trực tiếp → "tôi tự nói", "kết nối trực tiếp", "nghe máy"
+
+---
+
+## Tool: call_custom_number → confirm_call_custom_number
+- Khi dùng: tài xế muốn gọi một số điện thoại BẤT KỲ, KHÔNG phải số khách của chuyến hiện tại
+  - "gọi giúp tôi số 09xx...", "gọi cho vợ tôi số...", "gọi tổng đài giúp tôi", "quay số này..."
+- Số không cần thuộc chuyến nào cả — chỉ cần là số điện thoại Việt Nam hợp lệ
+- LUÔN theo 2 bước, không được bỏ qua bước xác nhận (tránh nghe nhầm số qua giọng nói):
+  1. call_custom_number(phone_number, contact_name?) → tool tự đọc lại số để tài xế xác nhận
+  2. Tài xế xác nhận đúng ("đúng", "gọi đi", "ừ") → confirm_call_custom_number() mới thực sự gọi
+  3. Nếu tài xế nói số bị đọc sai → gọi lại call_custom_number với số mới, KHÔNG tự sửa số
+- Nếu số khách thuộc chuyến đang chạy → dùng call_customer, không dùng cặp tool này
 
 ---
 
@@ -62,14 +87,6 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: confirm_cancel_trip
 - Khi dùng: sau khi đã hỏi xác nhận và tài xế nói "có" / "đồng ý"
-
----
-
-## Tool: confirm_trip (outbound only)
-- Khi dùng: tài xế đồng ý nhận chuyến mới — "có", "nhận", "đồng ý", "ok"
-
-## Tool: reject_trip (outbound only)
-- Khi dùng: tài xế từ chối — "không", "từ chối", "bận", "không nhận"
 
 ---
 
@@ -122,14 +139,40 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: end_conversation
+- Khi dùng: tài xế chủ động muốn kết thúc cuộc gọi với trợ lý — "tạm biệt", "thôi tắt đi",
+  "kết thúc trợ lý", "dừng lại nhé", "thế thôi nha", "vậy thôi cảm ơn"
+- KHÔNG dùng khi tài xế chỉ đang im lặng tạm thời hoặc đang bận thao tác khác — chỉ gọi khi có
+  ý định kết thúc rõ ràng bằng lời nói
+
+---
+
+## Tool: book_trip (customer agent)
+- Khi dùng: khách muốn đặt xe, cần đi đâu đó, cần xe đón — "tôi muốn đặt xe", "đặt giúp tôi chuyến xe", "cần xe đi..."
+- PHẢI hỏi đủ tên khách hàng, điểm đón, điểm đến trước khi gọi tool — không tự bịa thông tin còn thiếu
+- PHẢI hỏi khách muốn đón NGAY BÂY GIỜ hay HẸN GIỜ khác (pickup_time)
+- PHẢI đọc SỐ ĐIỆN THOẠI ĐÃ ĐĂNG KÝ cho khách nghe và hỏi dùng số này hay số khác (contact_phone)
+
 ## Tool: get_my_trip (customer agent)
 - Khi dùng: "xe đến chưa", "chuyến tôi thế nào", "tài xế ở đâu", "còn bao lâu"
 
-## Tool: cancel_my_trip (customer agent)
-- Khi dùng: khách muốn hủy chuyến — hỏi xác nhận trước khi gọi
+## Tool: request_cancel_my_trip (customer agent)
+- Khi dùng: khách muốn hủy chuyến — LUÔN hỏi xác nhận, không hủy ngay
+- "tôi muốn hủy chuyến", "hủy giúp tôi", "không đi nữa"
+
+## Tool: confirm_cancel_my_trip (customer agent)
+- Khi dùng: sau khi đã hỏi qua request_cancel_my_trip và khách nói "có" / "đồng ý"
+- Sau khi hủy, chuyến không thể đổi trạng thái nữa — khách phải đặt chuyến mới nếu cần đi
 
 ## Tool: get_driver_eta (customer agent)
 - Khi dùng: "còn bao lâu tài xế đến", "tài xế gần chưa", "bao nhiêu phút nữa"
+
+## Tool: call_driver (customer agent)
+- Khi dùng: khách muốn nói chuyện trực tiếp với tài xế — "cho tôi gặp tài xế", "kết nối với tài xế", "gọi tài xế giúp tôi", "tôi muốn dặn tài xế"
+- TỰ kiểm tra trạng thái chuyến trước (dùng get_my_trip nếu chưa rõ) rồi quyết định gọi tool
+  hay không — KHÔNG hỏi ngược khách "chuyến đã confirmed chưa", khách không biết điều đó
+- Nếu status=confirmed → gọi call_driver luôn
+- Nếu chưa confirmed → báo khách tài xế chưa nhận chuyến, mời chờ thêm (không gọi tool này)
 
 </KeywordsMappingForToolUsage>
 """

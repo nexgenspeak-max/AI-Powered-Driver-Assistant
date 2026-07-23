@@ -7,13 +7,12 @@ Adapted from genai-core-livekit-voice-platform/src/services/silence_tracker.py.
 """
 import asyncio
 import logging
-import os
 import time
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 
-from livekit import api
 from livekit.agents import AgentSession, JobContext
-from livekit.protocol.room import RoomParticipantIdentity
+
+from app.services.session_control import end_room_session
 
 logger = logging.getLogger("voice-agent.silence_tracker")
 
@@ -33,6 +32,7 @@ class SilenceTracker:
         silence_message: str = "<speech_not_detected>",
         max_consecutive_silences: int = 3,
         end_session_on_timeout: bool = True,
+        on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
     ) -> None:
         self.session = session
         self.ctx = ctx
@@ -40,6 +40,7 @@ class SilenceTracker:
         self.silence_message = silence_message
         self.max_consecutive_silences = max_consecutive_silences
         self.end_session_on_timeout = end_session_on_timeout
+        self.on_timeout = on_timeout
 
         self._last_speech_time: Optional[float] = None
         self._silence_task: Optional[asyncio.Task] = None
@@ -176,33 +177,15 @@ class SilenceTracker:
         try:
             await self.stop()
 
-            remote_participants = list(self.ctx.room.remote_participants.values())
-            if remote_participants:
-                lk = api.LiveKitAPI(
-                    url=os.getenv("LIVEKIT_URL", ""),
-                    api_key=os.getenv("LIVEKIT_API_KEY", ""),
-                    api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
-                )
+            if self.on_timeout:
                 try:
-                    for p in remote_participants:
-                        try:
-                            await lk.room.remove_participant(
-                                RoomParticipantIdentity(
-                                    room=self.ctx.room.name,
-                                    identity=p.identity,
-                                )
-                            )
-                            logger.info("SilenceTracker | removed participant %s", p.identity)
-                        except Exception as exc:
-                            logger.warning(
-                                "SilenceTracker | could not remove %s: %s", p.identity, exc
-                            )
-                    await asyncio.sleep(0.5)
-                finally:
-                    await lk.aclose()
+                    await self.on_timeout()
+                except Exception:
+                    logger.error("SilenceTracker | on_timeout callback failed", exc_info=True)
         except Exception as exc:
             logger.error("SilenceTracker | error during session teardown: %s", exc)
         finally:
-            self.ctx.shutdown(
-                reason=f"silence timeout after {self._consecutive_silence_count} consecutive silences"
+            await end_room_session(
+                self.ctx,
+                reason=f"silence timeout after {self._consecutive_silence_count} consecutive silences",
             )

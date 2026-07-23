@@ -4,7 +4,7 @@ GREETING_INBOUND = "Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể
 GREETING_OUTBOUND_PREFIX = "Xin chào! Hệ thống trợ lý tài xế."
 GREETING_CUSTOMER = (
     "Xin chào! Tôi là trợ lý AI hỗ trợ khách hàng. "
-    "Tôi có thể giúp bạn kiểm tra chuyến xe hoặc các vấn đề liên quan. "
+    "Tôi có thể giúp bạn đặt xe, kiểm tra chuyến đi hoặc các vấn đề liên quan. "
     "Bạn cần hỗ trợ gì ạ?"
 )
 
@@ -44,5 +44,7 @@ ERR_NO_ACTIVE_CANCEL  = "Không có chuyến đang hoạt động để hủy."
 ERR_CUSTOMER_TRIP_FAIL = "Hiện không thể lấy thông tin chuyến đi. Vui lòng thử lại."
 ERR_NO_CUSTOMER_TRIP   = "Bạn hiện không có chuyến đi nào đang hoạt động."
 ERR_NO_CANCELLABLE     = "Không có chuyến đi nào có thể hủy lúc này."
-ERR_CUSTOMER_CANCEL_FAIL = "Không thể hủy chuyến lúc này. Vui lòng thử lại."
 ERR_ETA_UNCONFIRMED    = "Tài xế chưa xác nhận chuyến. Vui lòng chờ thêm."
+ERR_INVALID_CUSTOM_PHONE  = "Số điện thoại này nghe không hợp lệ. Anh/chị đọc lại giúp tôi số điện thoại Việt Nam cần gọi."
+ERR_CUSTOM_CALL_LIMIT     = "Anh/chị đã dùng hết số lần gọi số tự do cho phiên này. Vui lòng thử lại ở phiên sau."
+ERR_NO_PENDING_CUSTOM_CALL = "Không có số điện thoại nào đang chờ xác nhận. Anh/chị đọc số cần gọi trước nhé."

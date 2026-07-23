@@ -1,17 +1,26 @@
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, useLocation } from 'react-router-dom'
 import { ThemeProvider } from '../providers/ThemeProvider'
 import { QueryProvider } from '../providers/QueryProvider'
 import { DashboardLayout } from '../layouts/DashboardLayout'
 import { AppRoutes } from '../routes'
+import { ROUTES } from '../constants'
+
+function AppShell() {
+  const { pathname } = useLocation()
+  if (pathname === ROUTES.LOGIN) return <AppRoutes />
+  return (
+    <DashboardLayout>
+      <AppRoutes />
+    </DashboardLayout>
+  )
+}
 
 export default function App() {
   return (
     <ThemeProvider>
       <QueryProvider>
         <BrowserRouter>
-          <DashboardLayout>
-            <AppRoutes />
-          </DashboardLayout>
+          <AppShell />
         </BrowserRouter>
       </QueryProvider>
     </ThemeProvider>

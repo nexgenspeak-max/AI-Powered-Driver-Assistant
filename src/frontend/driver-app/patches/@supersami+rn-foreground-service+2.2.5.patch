@@ -1,0 +1,36 @@
+diff --git a/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/ForegroundService.java b/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/ForegroundService.java
+index 9d7751d..aebd40c 100644
+--- a/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/ForegroundService.java
++++ b/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/ForegroundService.java
+@@ -99,11 +99,11 @@ public class ForegroundService extends Service {
+             return true;
+ 
+         } catch (Exception e) {
++            Log.e("ForegroundService", "Failed to start service: " + e.toString(), e);
+             if (reactContext != null) {
+-                Log.e("ForegroundService", "Failed to start service: " + e.getMessage());
+                 reactContext
+                         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+-                        .emit("onServiceError", e.getMessage());
++                        .emit("onServiceError", e.toString());
+             }
+             return false;
+         }
+diff --git a/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/NotificationHelper.java b/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/NotificationHelper.java
+index d8f69ea..c822c5d 100644
+--- a/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/NotificationHelper.java
++++ b/node_modules/@supersami/rn-foreground-service/android/src/main/java/com/supersami/foregroundservice/NotificationHelper.java
+@@ -295,7 +295,12 @@ class NotificationHelper {
+                     importance = NotificationManager.IMPORTANCE_DEFAULT;
+                     break;
+                 case "max":
+-                    importance = NotificationManager.IMPORTANCE_MAX;
++                    // NotificationManager.IMPORTANCE_MAX (5) is rejected by
++                    // NotificationManager.createNotificationChannel() — Android
++                    // caps app-created channels at IMPORTANCE_HIGH (4) and throws
++                    // IllegalArgumentException otherwise (confirmed on Android 16 /
++                    // API 36; this is long-standing platform behavior, not new).
++                    importance = NotificationManager.IMPORTANCE_HIGH;
+                     break;
+                 case "high":
+                     importance = NotificationManager.IMPORTANCE_HIGH;

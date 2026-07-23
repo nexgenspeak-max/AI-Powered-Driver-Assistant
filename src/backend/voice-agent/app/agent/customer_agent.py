@@ -1,7 +1,7 @@
 """
 CustomerAgent — LiveKit Agent for the customer-facing support line.
 
-Tools: get_my_trip, cancel_my_trip, get_driver_eta
+Tools: book_trip, get_my_trip, cancel_my_trip, get_driver_eta
 """
 import logging
 from livekit.agents import Agent, RunContext
@@ -24,7 +24,7 @@ class CustomerAgent(CustomerAgentMixin, Agent):
     async def on_enter(self) -> None:
         await self.session.say(
             "Xin chào! Tôi là trợ lý AI hỗ trợ khách hàng. "
-            "Tôi có thể giúp bạn kiểm tra chuyến xe hoặc các vấn đề liên quan. "
+            "Tôi có thể giúp bạn đặt xe, kiểm tra chuyến đi hoặc các vấn đề liên quan. "
             "Bạn cần hỗ trợ gì ạ?",
             allow_interruptions=False,
         )

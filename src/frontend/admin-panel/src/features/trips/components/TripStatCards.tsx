@@ -1,7 +1,11 @@
-import { Card, CardContent, Stack, Typography } from '@mui/material'
+import PendingActionsIcon from '@mui/icons-material/PendingActions'
+import BoltIcon from '@mui/icons-material/Bolt'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import LocalTaxiIcon from '@mui/icons-material/LocalTaxi'
 import type { Trip } from '../../../types/trip'
 import type { Driver } from '../../../types/driver'
 import { PALETTE } from '../../../styles/palette'
+import { StatCardGrid } from '../../../components/StatCard'
 
 type Props = {
   trips: Trip[]
@@ -15,22 +19,11 @@ export function TripStatCards({ trips, drivers }: Props) {
   const online    = drivers.filter(d => d.status === 'online').length
 
   const stats = [
-    { label: 'Pending',        value: pending,   color: '#f59e0b' },
-    { label: 'Active',         value: active,    color: PALETTE.base },
-    { label: 'Completed',      value: completed, color: '#4ade80' },
-    { label: 'Drivers Online', value: online,    color: '#22d3ee' },
+    { label: 'Pending',        value: pending,   color: '#f59e0b', icon: <PendingActionsIcon fontSize="small" /> },
+    { label: 'Active',         value: active,    color: PALETTE.base, icon: <BoltIcon fontSize="small" /> },
+    { label: 'Completed',      value: completed, color: '#4ade80', icon: <CheckCircleIcon fontSize="small" /> },
+    { label: 'Drivers Online', value: online,    color: '#22d3ee', icon: <LocalTaxiIcon fontSize="small" /> },
   ]
 
-  return (
-    <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
-      {stats.map(s => (
-        <Card key={s.label} elevation={0} sx={{ flex: 1, minWidth: 140, borderRadius: 3 }}>
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">{s.label}</Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: s.color, mt: 0.5 }}>{s.value}</Typography>
-          </CardContent>
-        </Card>
-      ))}
-    </Stack>
-  )
+  return <StatCardGrid stats={stats} />
 }

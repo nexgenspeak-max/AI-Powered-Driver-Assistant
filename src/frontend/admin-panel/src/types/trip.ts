@@ -6,6 +6,11 @@ export type TripStatus =
   | 'rejected'
   | 'no_answer'
   | 'completed'
+  | 'cancelled'
+  | 'cancelled_by_driver'
+  | 'no_show'
+  | 'arrived_pickup'
+  | 'picked_up'
 
 export interface Trip {
   trip_id: string
@@ -13,6 +18,7 @@ export interface Trip {
   driver_phone: string
   customer_name: string
   customer_phone: string
+  id_account?: string
   pickup_address: string
   dropoff_address: string
   pickup_time: string

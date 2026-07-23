@@ -67,4 +67,29 @@ router.post('/customer-token', async (req: Request, res: Response) => {
   }
 });
 
+// Voiceprint enrollment — same shape as /token and /customer-token above, just
+// a distinct room-name prefix so voice-agent's session.py routes it to
+// EnrollAgent instead of DriverAgent/CustomerAgent.
+router.post('/enroll-token', async (req: Request, res: Response) => {
+  try {
+    const { phone, role } = req.query;
+    if (!config.livekitApiKey || !config.livekitApiSecret) {
+      return res.status(503).json({ detail: 'LiveKit not configured' });
+    }
+    if (role !== 'driver' && role !== 'customer') {
+      return res.status(400).json({ detail: 'role must be "driver" or "customer"' });
+    }
+
+    const phoneStr = String(phone).replace('+', '');
+    const roomName = `enroll-${role}-${phoneStr}-${Math.floor(Date.now() / 1000)}`;
+    const token = await makeToken(`${role}-${phoneStr}`, phoneStr, roomName);
+
+    await dispatchAgent(roomName, config.livekitAgentName);
+
+    return res.json({ token, room_name: roomName, livekit_url: config.livekitUrl });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 export default router;

@@ -17,14 +17,12 @@ async def update_trip_status(raw_arguments: dict, context: RunContext) -> str:
         return ERR_NO_CURRENT_TRIP
 
     trip_id = current["trip_id"]
-    context_store.patch_current_trip(context.userdata, status=status)
 
-    async def _sync() -> None:
-        try:
-            updated = await backend_api.update_trip_status(trip_id, status)
-            context_store.patch_current_trip(context.userdata, **updated)
-        except Exception:
-            logger.error("update_trip_status API failed", exc_info=True)
+    try:
+        updated = await backend_api.update_trip_status(trip_id, status)
+    except Exception:
+        logger.error("update_trip_status API failed", exc_info=True)
+        return ERR_CANNOT_UPDATE
 
-    context_store.schedule_sync(_sync())
+    context_store.patch_current_trip(context.userdata, **updated)
     return f"Đã cập nhật trạng thái: {label}."

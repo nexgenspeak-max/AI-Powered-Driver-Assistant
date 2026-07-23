@@ -253,6 +253,10 @@ Resources:
           AttributeType: S
         - AttributeName: driver_phone
           AttributeType: S
+        - AttributeName: customer_phone
+          AttributeType: S
+        - AttributeName: id_account
+          AttributeType: S
         - AttributeName: created_at
           AttributeType: S
       KeySchema:
@@ -270,6 +274,22 @@ Resources:
         - IndexName: driver_phone-created_at-index
           KeySchema:
             - AttributeName: driver_phone
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: customer_phone-created_at-index
+          KeySchema:
+            - AttributeName: customer_phone
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: id_account-created_at-index
+          KeySchema:
+            - AttributeName: id_account
               KeyType: HASH
             - AttributeName: created_at
               KeyType: RANGE

@@ -25,8 +25,11 @@ export const useDriverLogin = () => {
   return useMutation({
     mutationFn: (data: { phone: string; password: string }) =>
       authService.login({ role: 'driver', phone: data.phone, password: data.password }),
-    onSuccess: ({ access_token, refresh_token, user }) => {
+    onSuccess: async ({ access_token, refresh_token }) => {
+      // Login no longer hands back the profile (see authService.ts) — fetch
+      // it separately once the token is in place.
       setTokens(access_token, refresh_token)
+      const user = await authService.me()
       setDriver(toDriver(user))
     },
   })

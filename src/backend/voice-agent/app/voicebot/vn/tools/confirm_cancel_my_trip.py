@@ -1,0 +1,26 @@
+import logging
+from livekit.agents import RunContext, function_tool
+from app.voicebot.vn.tools_definition import raw_schema
+from app.voicebot.vn.constants import ERR_NO_PENDING_CANCEL, ERR_CANNOT_CANCEL
+from app.services import backend_api
+from app.voicebot.processors import context_store
+
+logger = logging.getLogger("voice-agent.vn.tools.confirm_cancel_my_trip")
+
+
+@function_tool(raw_schema=raw_schema["confirm_cancel_my_trip"])
+async def confirm_cancel_my_trip(raw_arguments: dict, context: RunContext) -> str:
+    trip_id = context.userdata.get("pending_cancel_my_trip_id")
+    if not trip_id:
+        return ERR_NO_PENDING_CANCEL
+
+    try:
+        await backend_api.update_trip_status(trip_id, "cancelled")
+    except Exception:
+        logger.error("confirm_cancel_my_trip API failed", exc_info=True)
+        return ERR_CANNOT_CANCEL
+
+    context.userdata["pending_cancel_my_trip_id"] = None
+    context_store.patch_trip_by_id(context.userdata, trip_id, status="cancelled")
+    context_store.remove_trip_from_lists(context.userdata, trip_id)
+    return "Đã hủy chuyến đi của bạn. Cảm ơn bạn đã sử dụng dịch vụ."

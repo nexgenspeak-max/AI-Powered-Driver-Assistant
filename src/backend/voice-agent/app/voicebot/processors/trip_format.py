@@ -109,6 +109,26 @@ def format_traffic_info(trip: dict, lang: str = "vi") -> str:
     return msg
 
 
+_UNCONFIRMED_STATUSES = ("pending", "notified", "calling")
+
+
+def _needs_schedule_confirm(trip: dict) -> bool:
+    """A trip is an unconfirmed scheduled pickup if it has a pickup_time and isn't accepted yet."""
+    return bool(trip.get("pickup_time")) and trip.get("status") in _UNCONFIRMED_STATUSES
+
+
+def _schedule_confirm_prompt(index: int, time: str, lang: str) -> str:
+    if lang == "en":
+        return (
+            f" Trip {index} is a scheduled pickup at {time} awaiting your confirmation."
+            " Would you like to confirm it?"
+        )
+    return (
+        f" Chuyến {index} là chuyến hẹn giờ lúc {time}, đang chờ anh/chị xác nhận."
+        " Anh/chị có muốn xác nhận nhận chuyến này không?"
+    )
+
+
 def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
     pickup = short_address(trip.get("pickup_address", ""))
     dropoff = short_address(trip.get("dropoff_address", ""))
@@ -135,6 +155,8 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
         traffic = trip.get("traffic_note")
         if traffic:
             msg += f" Traffic: {traffic}."
+        if _needs_schedule_confirm(trip):
+            msg += _schedule_confirm_prompt(index, time, lang)
         return msg
 
     msg = (
@@ -152,6 +174,8 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
     traffic = trip.get("traffic_note")
     if traffic:
         msg += f" {traffic}."
+    if _needs_schedule_confirm(trip):
+        msg += _schedule_confirm_prompt(index, time, lang)
     return msg
 
 
@@ -160,8 +184,12 @@ def format_trip_brief(trip: dict, index: int, lang: str = "vi") -> str:
     dropoff = short_address(trip.get("dropoff_address", ""), 36)
     fare = fmt_money(estimated_fare(trip), lang)
     time = trip.get("pickup_time", "")
-    time_prefix = f"{time} — " if time else ""
-    return f"{index}. {time_prefix}{pickup} → {dropoff} ({fare})"
+    # Plain words instead of "—"/"→" — this string is spoken aloud by TTS, and
+    # ElevenLabs (eleven_flash_v2_5) noticeably destabilizes pacing/tone when
+    # it hits non-standard punctuation glyphs in a dense, list-like sentence.
+    time_prefix = f"{time}, " if time else ""
+    arrow_word = "đến" if lang != "en" else "to"
+    return f"{index}. {time_prefix}{pickup} {arrow_word} {dropoff} ({fare})"
 
 
 def format_trip_list(trips: list[dict], lang: str = "vi") -> str:
@@ -184,4 +212,24 @@ def format_trip_list(trips: list[dict], lang: str = "vi") -> str:
         suffix = " Anh/chị muốn biết chi tiết chuyến nào thì nói số thứ tự."
 
     lines = [format_trip_brief(t, i, lang) for i, t in enumerate(shown, 1)]
-    return header + ": " + "; ".join(lines) + "." + suffix
+    msg = header + ": " + "; ".join(lines) + "." + suffix
+
+    scheduled = [
+        (i, t) for i, t in enumerate(shown, 1) if _needs_schedule_confirm(t)
+    ]
+    if scheduled:
+        if lang == "en":
+            idxs = ", ".join(str(i) for i, _ in scheduled)
+            noun = "Trip" if len(scheduled) == 1 else "Trips"
+            msg += (
+                f" {noun} {idxs} {'is' if len(scheduled) == 1 else 'are'} scheduled"
+                " pickup(s) awaiting your confirmation — let me know which one to confirm."
+            )
+        else:
+            idxs = ", ".join(str(i) for i, _ in scheduled)
+            noun = "Chuyến" if len(scheduled) == 1 else "Các chuyến"
+            msg += (
+                f" {noun} {idxs} là chuyến hẹn giờ đang chờ xác nhận."
+                " Anh/chị cho biết muốn xác nhận chuyến nào."
+            )
+    return msg

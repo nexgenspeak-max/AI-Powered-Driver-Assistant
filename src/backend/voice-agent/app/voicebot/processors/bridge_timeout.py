@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from livekit.agents import AgentSession
 
 from app.config.settings import get_settings
-from app.voicebot.processors.handback import handback_to_driver
+from app.voicebot.processors.handback import cancel_bridge_timeout, handback_to_driver
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker

@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/authenticate';
 const router = Router();
 
 function sanitize(user: userService.User) {
-  const { password_hash, refresh_token_hash, refresh_token_expires_at, ...safe } = user;
+  const { password_hash, refresh_token_hash, refresh_token_expires_at, voice_embedding, ...safe } = user;
   return safe;
 }
 
@@ -25,7 +25,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 
 router.get('/phone/:phone', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await userService.getByPhone(req.params.phone);
+    const role = req.query.role as userService.Role | undefined;
+    const user = await userService.getByPhone(req.params.phone, role);
     if (!user) return res.status(404).json({ detail: 'Account not found' });
     return res.json(sanitize(user));
   } catch (err) {
@@ -65,6 +66,42 @@ router.patch('/:id', authenticate, async (req: Request, res: Response) => {
     const updated = await userService.update(req.params.id, fields, req.user!.sub);
     if (!updated) return res.status(404).json({ detail: 'Account not found' });
     return res.json(sanitize(updated));
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Voiceprint (wake-word speaker verification) — deliberately separate from the
+// generic PATCH /:id above: never exposed via sanitize(), and not part of
+// EDITABLE_FIELDS so a normal profile-edit payload can never touch it.
+router.get('/:id/voiceprint', authenticate, async (req: Request, res: Response) => {
+  try {
+    const isSelf = req.user!.sub === req.params.id;
+    const isAdmin = req.user!.role === 'admin';
+    if (!isSelf && !isAdmin) return res.status(403).json({ detail: 'Not authorized to read this voiceprint' });
+
+    const user = await userService.getById(req.params.id);
+    if (!user) return res.status(404).json({ detail: 'Account not found' });
+    return res.json({ has_voiceprint: !!user.voice_embedding, embedding: user.voice_embedding ?? null });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.put('/:id/voiceprint', authenticate, async (req: Request, res: Response) => {
+  try {
+    const isSelf = req.user!.sub === req.params.id;
+    const isAdmin = req.user!.role === 'admin';
+    if (!isSelf && !isAdmin) return res.status(403).json({ detail: 'Not authorized to edit this voiceprint' });
+
+    const { embedding } = req.body as { embedding?: unknown };
+    if (!Array.isArray(embedding) || !embedding.every(v => typeof v === 'number')) {
+      return res.status(400).json({ detail: 'embedding must be an array of numbers' });
+    }
+
+    const updated = await userService.update(req.params.id, { voice_embedding: embedding }, req.user!.sub);
+    if (!updated) return res.status(404).json({ detail: 'Account not found' });
+    return res.json({ has_voiceprint: true });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

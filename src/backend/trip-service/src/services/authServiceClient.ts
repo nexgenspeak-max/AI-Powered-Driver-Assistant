@@ -38,7 +38,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ statu
 }
 
 export const authServiceClient = {
-  getByPhone: <T>(phone: string) => request<T>(`/api/v1/accounts/phone/${encodeURIComponent(phone)}`),
+  getByPhone: <T>(phone: string, role?: string) =>
+    request<T>(
+      `/api/v1/accounts/phone/${encodeURIComponent(phone)}${role ? `?role=${encodeURIComponent(role)}` : ''}`,
+    ),
   listByRole: <T>(role: string) => request<T>(`/api/v1/accounts?role=${encodeURIComponent(role)}`),
   update: <T>(id: string, fields: Record<string, unknown>) =>
     request<T>(`/api/v1/accounts/${encodeURIComponent(id)}`, {

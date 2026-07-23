@@ -39,18 +39,22 @@ export default function LoginPage() {
     defaultValues: { phone: '', password: '' },
   })
 
-  const { mutate: login, isPending, isError } = useMutation({
+  const { mutate: login, isPending, isError, error } = useMutation({
     mutationFn: (data: FormValues) => authService.login({ role: 'customer', phone: data.phone, password: data.password }),
-    onSuccess: ({ access_token, refresh_token, user }) => {
+    onSuccess: async ({ access_token, refresh_token }) => {
+      // Login no longer hands back the profile (see authService.ts) —
+      // fetch it separately once the token is in place.
       setTokens(access_token, refresh_token)
+      const user = await authService.me()
       setCustomer({
         id: user.id,
         name: user.name,
         phone: user.phone ?? '',
-        status: user.status === 'locked' ? 'offline' : user.status,
+        status: 'online',
         created_at: user.created_at,
         updated_at: user.updated_at,
       })
+      authService.setStatus(user.id, 'online').catch(() => {})
       navigate('/')
     },
   })
@@ -112,7 +116,7 @@ export default function LoginPage() {
 
             {isError && (
               <Typography variant="body2" color="error">
-                Login failed. Check your details.
+                {(error as any)?.response?.data?.detail ?? 'Login failed. Check your details.'}
               </Typography>
             )}
 

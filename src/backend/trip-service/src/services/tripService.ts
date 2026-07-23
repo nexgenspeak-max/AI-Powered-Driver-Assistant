@@ -132,12 +132,40 @@ export async function listByDriver(driverPhone: string, limit = 50): Promise<Tri
   return (result.Items as Trip[]) ?? [];
 }
 
+// Bounded date-range query on the same GSI as listByDriver, instead of
+// fetching a fixed N most-recent trips and filtering client-side by a
+// timestamp — that approach (still used by listByDriverAndStatus below)
+// silently drops in-range trips once a driver has more than N trips total.
+// Paginated via LastEvaluatedKey since a driver's full 7/30-day trip count
+// can exceed a single Query page (DynamoDB's ~1MB-per-page limit), so
+// there's no arbitrary cap to outgrow here.
+export async function listByDriverInRange(driverPhone: string, fromIso: string, toIso: string): Promise<Trip[]> {
+  const items: Trip[] = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const result = await docClient.send(new QueryCommand({
+      TableName: config.dynamodbTable,
+      IndexName: 'driver_phone-created_at-index',
+      KeyConditionExpression: 'driver_phone = :p AND created_at BETWEEN :from AND :to',
+      ExpressionAttributeValues: { ':p': driverPhone, ':from': fromIso, ':to': toIso },
+      ScanIndexForward: false,
+      ExclusiveStartKey: exclusiveStartKey,
+    }));
+    items.push(...((result.Items as Trip[]) ?? []));
+    exclusiveStartKey = result.LastEvaluatedKey;
+  } while (exclusiveStartKey);
+  return items;
+}
+
 export async function listByDriverAndStatus(driverPhone: string, status: string, limit = 50): Promise<Trip[]> {
   const trips = await listByDriver(driverPhone, 200);
   return trips.filter(t => t.status === status).slice(0, limit);
 }
 
-export async function listByCustomer(customerPhone: string, limit = 50): Promise<Trip[]> {
+// No index on customer_phone — callers with an id_account should use listByAccount
+// instead. This stays Scan-based for the voice-agent, which only knows the caller's
+// phone number (no account id) when it looks up customer context mid-call.
+export async function listByCustomerPhone(customerPhone: string, limit = 50): Promise<Trip[]> {
   const result = await docClient.send(new ScanCommand({
     TableName: config.dynamodbTable,
     FilterExpression: 'customer_phone = :p',
@@ -146,4 +174,16 @@ export async function listByCustomer(customerPhone: string, limit = 50): Promise
   }));
   const items = (result.Items as Trip[]) ?? [];
   return items.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit);
+}
+
+export async function listByAccount(idAccount: string, limit = 50): Promise<Trip[]> {
+  const result = await docClient.send(new QueryCommand({
+    TableName: config.dynamodbTable,
+    IndexName: 'id_account-created_at-index',
+    KeyConditionExpression: 'id_account = :a',
+    ExpressionAttributeValues: { ':a': idAccount },
+    ScanIndexForward: false,
+    Limit: limit,
+  }));
+  return (result.Items as Trip[]) ?? [];
 }

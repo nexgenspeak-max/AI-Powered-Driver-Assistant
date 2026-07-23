@@ -4,6 +4,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { useTripStatus } from '../features/trips/hooks/useTripStatus'
 import { useBookingStore } from '../stores/bookingStore'
 import type { TripStatus } from '../types'
+import { PALETTE } from '../styles/palette'
 
 const STATUS_COLOR: Record<TripStatus, 'default' | 'warning' | 'info' | 'success' | 'error'> = {
   pending:   'warning',
@@ -65,7 +66,7 @@ export default function TripStatusPage() {
         <Typography variant="body2" color="grey.400">#{trip.trip_id.slice(0, 8)}</Typography>
       </Box>
 
-      <Box sx={{ flex: 1, bgcolor: '#f0f2f8', borderRadius: '24px 24px 0 0', p: 3 }}>
+      <Box sx={{ flex: 1, bgcolor: PALETTE.pale, borderRadius: '24px 24px 0 0', p: 3 }}>
         {/* Status card */}
         <Card sx={{ borderRadius: 3, mb: 2, border: '1px solid #e8eaf0', textAlign: 'center', py: 1 }}>
           <CardContent>

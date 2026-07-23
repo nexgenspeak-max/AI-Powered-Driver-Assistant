@@ -52,7 +52,7 @@ def load_customer_trips(userdata: dict, trips: list[dict]) -> None:
 def _customer_payload_from_trips(trips: list[dict]) -> dict:
     active = [
         t for t in trips
-        if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "CANCELLED_BY_DRIVER")
+        if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "cancelled_by_driver")
     ]
     return {
         "trips": trips,
@@ -154,6 +154,14 @@ def build_context_hint(userdata: dict, lang: str = "vi") -> str:
 
 def get_active_customer_trip(userdata: dict) -> dict | None:
     return get(userdata, "active_trip")
+
+
+def add_customer_trip(userdata: dict, trip: dict) -> None:
+    """Register a newly booked trip so later tool calls in the same session see it immediately."""
+    ctx = userdata.setdefault("context", {})
+    ctx["active_trip"] = trip
+    trips = ctx.setdefault("trips", [])
+    trips.insert(0, trip)
 
 
 def resolve_driver_trip(userdata: dict) -> dict | None:

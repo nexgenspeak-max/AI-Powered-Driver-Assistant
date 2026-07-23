@@ -1,9 +1,16 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Anchored to this file's location (not the process's CWD) so the right .env
+# still loads no matter which directory the agent (or a spawned job process)
+# was launched from — a CWD-relative path here previously caused job
+# processes to silently miss envs/.env.local and fall back to the hardcoded
+# defaults below (e.g. a different ElevenLabs voice_id than configured).
+_BASE_DIR = Path(__file__).resolve().parents[2]
 _ENV = os.getenv("ENV", "local")
-_ENV_FILE = f"envs/.env.{_ENV}"
+_ENV_FILE = _BASE_DIR / "envs" / f".env.{_ENV}"
 
 
 class Settings(BaseSettings):
@@ -47,7 +54,12 @@ class Settings(BaseSettings):
     # ── Downstream services ───────────────────────────────────────────────────
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
+    auth_service_url: str = ""   # http://localhost:8003 — voiceprint lookup/enroll only
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
+
+    # ── Speaker verification (wake-word voiceprint gate) ─────────────────────
+    speaker_verify_enabled: bool = True
+    speaker_verify_threshold: float = 0.6
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True
@@ -59,7 +71,7 @@ class Settings(BaseSettings):
     # ── Silence tracker ───────────────────────────────────────────────────────
     silence_tracker_enabled: bool = True
     silence_threshold_seconds: float = 0.0   # 0 = use per-mode default in session.py
-    silence_max_consecutive: int = 3
+    silence_max_consecutive: int = 0   # 0 = use per-mode default in session.py
     # When false, silence prompts still fire but the room is not torn down (simulator dev).
     silence_end_session: bool = True
 

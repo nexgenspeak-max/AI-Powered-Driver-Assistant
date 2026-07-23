@@ -2,9 +2,19 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "jsxImportSource": "nativewind",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // Metro (RN's bundler) resolves platform-suffixed files (`.native.ts`,
+    // `.web.ts`) automatically at build time when you import the bare
+    // module name — `tsc` doesn't know that convention on its own, so a
+    // module that only exists as e.g. `livekitRuntime.native.ts` +
+    // `livekitRuntime.web.ts` (no base `livekitRuntime.ts`) resolves fine
+    // at runtime but fails `tsc --noEmit` with "Cannot find module". "" is
+    // listed first so an existing base file (the dominant pattern in this
+    // codebase — e.g. `GlassSurface.tsx` + a `.web.tsx` override) always
+    // wins over a suffixed one; `.native` is checked before `.web` since
+    // this app's primary target is mobile.
+    "moduleSuffixes": ["", ".native", ".web"]
   }
 }

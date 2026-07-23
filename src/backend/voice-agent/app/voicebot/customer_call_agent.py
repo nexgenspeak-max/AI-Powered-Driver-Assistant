@@ -4,12 +4,13 @@ import logging
 from livekit.agents import Agent
 
 from app.voicebot.prompts.customer_call import build_customer_call_prompt
+from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.customer_call_tools import end_customer_call
 
 logger = logging.getLogger("voice-agent.customer_call_agent")
 
 
-class CustomerCallAgent(Agent):
+class CustomerCallAgent(SpeechTextFixMixin, Agent):
     """
     - mode=agent: handoff in driver room; driver listens live.
     - mode=background: separate custcall-* room; driver keeps DriverAgent elsewhere.
@@ -35,6 +36,9 @@ class CustomerCallAgent(Agent):
             isolated=isolated,
         )
         super().__init__(instructions=instructions, tools=[end_customer_call])
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return pronunciations_for_lang(self._lang)
 
     async def on_enter(self) -> None:
         if self._isolated:

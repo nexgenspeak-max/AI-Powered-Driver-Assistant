@@ -1,6 +1,7 @@
-export type DriverStatus = 'online' | 'offline'
+export type DriverStatus = 'online' | 'offline' | 'locked'
 
 export interface Driver {
+  id: string
   phone: string
   name: string
   fcm_token: string

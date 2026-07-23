@@ -89,6 +89,62 @@ cd src/frontend/mobile-app/customer-app && npx react-native run-ios
 | `customer-84901234567-1748700000` | Customer support | CustomerAgent |
 | `trip-abc12345` | Outbound SIP call to driver | DriverAgent (reads metadata) |
 
+### Trip status values
+
+Source of truth: `ALLOWED_STATUSES` in [`trips.ts`](../src/backend/trip-service/src/routes/trips.ts).
+
+| Status | Meaning | Terminal? |
+|---|---|---|
+| `pending` | Trip created, not yet notified/dispatched | |
+| `notified` | Driver notified of the trip request | |
+| `calling` | AI/SIP call to driver in progress | |
+| `confirmed` | Driver confirmed the trip | |
+| `no_answer` | Driver didn't answer the call | |
+| `arrived_pickup` | Driver arrived at pickup location | |
+| `picked_up` | Customer picked up, trip underway | |
+| `completed` | Trip finished successfully | ✅ |
+| `rejected` | Driver rejected the trip | ✅ |
+| `cancelled` | Trip cancelled (customer/system) | ✅ |
+| `cancelled_by_driver` | Trip cancelled by driver | ✅ |
+| `no_show` | Customer didn't show up | ✅ |
+
+Terminal statuses (`rejected`, `cancelled`, `cancelled_by_driver`) block further status changes — a new trip must be booked instead.
+
+### Trip status flow
+
+```
+                    ┌──────────────────────────────┐
+                    │   POST /trips/:id/dispatch    │  (retry allowed from
+                    ▼                                │   pending/notified/
+pending ──(auto)──▶ notified ──dispatch──▶ calling ──┘   rejected/no_answer)
+                                              │
+                    ┌─────────────┬───────────┼───────────────┐
+                    ▼             ▼           ▼               ▼
+                confirmed     rejected    no_answer        (retry via
+             (confirm_trip)  (reject_trip)  (SIP timeout)   /dispatch)
+                    │             ✅            │
+                    ▼                           └──▶ back to calling (redispatch)
+              arrived_pickup
+                    │
+                    ▼
+                picked_up
+                    │
+                    ▼
+                completed ✅
+
+  From almost any non-terminal state:
+    • cancel_my_trip / customer_support cancel  ──▶ cancelled ✅
+    • confirm_cancel_trip (driver)               ──▶ cancelled_by_driver ✅
+    • POST /trips/:id/no-show                    ──▶ no_show ✅
+```
+
+- `pending → notified` happens automatically right after trip creation (`tripService.create` → immediate `updateStatus('notified')`).
+- `notified/pending/rejected/no_answer → calling` only via `POST /trips/:tripId/dispatch` (also triggers the SIP call). This is how a rejected or unanswered trip gets redispatched to try again.
+- `calling → confirmed` / `calling → rejected` are set by the driver via voice tools (`confirm_trip.py`, `reject_trip.py`) through the generic `PATCH /trips/:tripId`.
+- `arrived_pickup → picked_up → completed` are set by the driver app / `update_trip_status` voice tool, no dedicated endpoints — same generic `PATCH`.
+- Once a trip hits a terminal status (✅), `PATCH` is rejected with `409` — the app must book a new trip instead of resurrecting the old one.
+- Simplified version of this flow (Vietnamese, driver-facing) also lives in [`app-playbook.md §5`](../src/backend/voice-agent/requirements/knowledge/vi/app-playbook.md#L115) — keep both in sync if status logic changes.
+
 ---
 
 ## Completed Work (by step)

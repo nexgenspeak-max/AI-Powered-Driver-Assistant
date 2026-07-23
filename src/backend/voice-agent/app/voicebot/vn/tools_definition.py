@@ -65,8 +65,10 @@ raw_schema = {
         "type": "function",
         "name": "update_trip_status",
         "description": (
-            "Cập nhật trạng thái chuyến đi hiện tại của tài xế. "
-            "Gọi khi tài xế nói đã đến điểm đón, đã đón được khách, hoặc đã hoàn thành chuyến."
+            "Cập nhật TIẾN ĐỘ của chuyến đi ĐÃ ĐƯỢC NHẬN (đã confirmed) — KHÔNG dùng để nhận "
+            "chuyến mới. Gọi khi tài xế nói đã đến điểm đón, đã đón được khách, hoặc đã hoàn "
+            "thành chuyến. Nếu tài xế đang muốn ĐỒNG Ý nhận một chuyến mới → dùng confirm_trip, "
+            "không phải tool này."
         ),
         "parameters": {
             "type": "object",
@@ -103,6 +105,46 @@ raw_schema = {
             },
             "required": ["mode"],
         },
+    },
+
+    "call_custom_number": {
+        "type": "function",
+        "name": "call_custom_number",
+        "description": (
+            "Bước 1: Gọi điện tới một số điện thoại BẤT KỲ do tài xế đọc ra — không phải số khách "
+            "của chuyến hiện tại (vd: người thân, tổng đài, một khách ngoài chuyến). "
+            "KHÔNG gọi thẳng tới số — tool này chỉ NHẮC LẠI số để tài xế xác nhận, tránh nghe nhầm "
+            "qua giọng nói. Sau khi tài xế xác nhận đúng số ('đúng', 'gọi đi', 'ừ'), mới gọi "
+            "confirm_call_custom_number để thực hiện cuộc gọi thật. "
+            "Nếu tài xế muốn gọi khách của chuyến đang chạy → dùng call_customer, không dùng tool này."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "phone_number": {
+                    "type": "string",
+                    "description": "Số điện thoại tài xế vừa đọc ra, giữ nguyên dạng số (vd: '0912345678').",
+                },
+                "contact_name": {
+                    "type": ["string", "null"],
+                    "description": (
+                        "Tên người/nơi cần gọi nếu tài xế có nói (vd: 'vợ tôi', 'tổng đài'). "
+                        "Để trống nếu tài xế chỉ đọc số. Dự phòng cho tính năng gọi theo danh bạ sau này."
+                    ),
+                },
+            },
+            "required": ["phone_number"],
+        },
+    },
+
+    "confirm_call_custom_number": {
+        "type": "function",
+        "name": "confirm_call_custom_number",
+        "description": (
+            "Bước 2: Thực hiện gọi số điện thoại tự do sau khi tài xế đã xác nhận đúng số qua "
+            "call_custom_number. Chỉ gọi sau khi tài xế nói 'đúng'/'gọi đi'/'ừ' xác nhận số vừa đọc lại."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
     "get_customer_location": {
@@ -301,8 +343,12 @@ raw_schema = {
         "type": "function",
         "name": "confirm_trip",
         "description": (
-            "Xác nhận nhận chuyến đi mới. "
-            "Gọi khi tài xế đồng ý, nói 'có', 'nhận', hoặc 'đồng ý' trong cuộc gọi thông báo chuyến mới."
+            "Xác nhận NHẬN một chuyến đi mới (chuyến đang ở trạng thái chờ/thông báo, "
+            "CHƯA nhận) — đổi trạng thái chuyến thành 'confirmed'. "
+            "Gọi khi tài xế đồng ý nhận chuyến: 'có', 'nhận', 'đồng ý', 'tôi sẽ đi chuyến đó', "
+            "'tôi xác nhận muốn chở chuyến đó', 'ok chuyến này' — dù đang trong cuộc gọi thông báo "
+            "chuyến mới hay đang hỏi assistant bình thường về một chuyến 'notified' trong lịch. "
+            "KHÔNG dùng update_trip_status cho việc này — đó là tool báo cáo tiến độ SAU KHI đã nhận chuyến."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -311,13 +357,70 @@ raw_schema = {
         "type": "function",
         "name": "reject_trip",
         "description": (
-            "Từ chối chuyến đi mới. "
-            "Gọi khi tài xế không muốn nhận, nói 'không', 'từ chối', hoặc 'bận' trong cuộc gọi thông báo."
+            "Từ chối một chuyến đi mới (chuyến CHƯA nhận, đang ở trạng thái chờ/thông báo). "
+            "Gọi khi tài xế không muốn nhận: 'không', 'từ chối', 'bận', 'bỏ qua chuyến đó' — dù "
+            "đang trong cuộc gọi thông báo hay đang hỏi assistant về một chuyến 'notified' trong lịch. "
+            "Chuyến ĐÃ nhận rồi muốn hủy → dùng request_cancel_trip, không dùng tool này."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
     # ── Customer agent ────────────────────────────────────────────────────────
+
+    "book_trip": {
+        "type": "function",
+        "name": "book_trip",
+        "description": (
+            "Đặt một chuyến xe mới cho khách hàng. "
+            "Gọi khi khách nói muốn đặt xe, cần đi đâu đó, hoặc cần xe đón. "
+            "Trước khi gọi, PHẢI hỏi đủ nếu chưa có: tên khách hàng, điểm đón, điểm đến, "
+            "khách muốn xe đón NGAY BÂY GIỜ hay HẸN GIỜ khác, và khách muốn tài xế liên "
+            "hệ qua số điện thoại đã đăng ký tài khoản (đọc số đó ra cho khách nghe) hay "
+            "một số khác. Không tự bịa thông tin còn thiếu."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customer_name": {
+                    "type": "string",
+                    "description": "Tên của khách hàng đặt xe.",
+                },
+                "pickup_address": {
+                    "type": "string",
+                    "description": "Địa chỉ điểm đón khách.",
+                },
+                "dropoff_address": {
+                    "type": "string",
+                    "description": "Địa chỉ điểm đến.",
+                },
+                "pickup_time": {
+                    "type": "string",
+                    "description": (
+                        "Thời điểm đón khách, định dạng ISO 8601 "
+                        "(YYYY-MM-DDTHH:mm:ss), theo giờ Việt Nam. "
+                        "Để trống ('') nếu khách muốn xe đón NGAY BÂY GIỜ. "
+                        "Nếu khách hẹn giờ khác (vd: '7 giờ tối nay', '8h sáng mai'), "
+                        "tự tính ra ngày giờ cụ thể dựa trên THỜI ĐIỂM HIỆN TẠI "
+                        "được cung cấp trong hướng dẫn hệ thống."
+                    ),
+                },
+                "contact_phone": {
+                    "type": "string",
+                    "description": (
+                        "Số điện thoại tài xế dùng để liên hệ khách cho chuyến này. "
+                        "Để trống ('') nếu khách đồng ý dùng SỐ ĐÃ ĐĂNG KÝ TÀI KHOẢN "
+                        "(số này được cung cấp trong hướng dẫn hệ thống — PHẢI đọc số "
+                        "đó ra cho khách nghe rồi hỏi có muốn dùng số này không). "
+                        "Nếu khách muốn dùng số khác, điền số khách vừa đọc vào đây."
+                    ),
+                },
+            },
+            "required": [
+                "customer_name", "pickup_address", "dropoff_address",
+                "pickup_time", "contact_phone",
+            ],
+        },
+    },
 
     "get_my_trip": {
         "type": "function",
@@ -329,13 +432,23 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
-    "cancel_my_trip": {
+    "request_cancel_my_trip": {
         "type": "function",
-        "name": "cancel_my_trip",
+        "name": "request_cancel_my_trip",
         "description": (
-            "Hủy chuyến đi của khách hàng. "
-            "Gọi sau khi khách xác nhận muốn hủy. "
-            "Luôn hỏi xác nhận trước: 'Bạn có chắc muốn hủy chuyến không?'"
+            "Bước 1: Hỏi xác nhận trước khi hủy chuyến của khách hàng. "
+            "Gọi khi khách muốn hủy chuyến. KHÔNG hủy ngay — phải hỏi xác nhận trước."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "confirm_cancel_my_trip": {
+        "type": "function",
+        "name": "confirm_cancel_my_trip",
+        "description": (
+            "Bước 2: Thực hiện hủy chuyến sau khi khách đã xác nhận. "
+            "Chỉ gọi sau khi đã hỏi qua request_cancel_my_trip và khách đã nói 'có'. "
+            "Sau khi hủy, chuyến này KHÔNG thể đổi trạng thái nữa — khách phải đặt chuyến mới."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -346,6 +459,18 @@ raw_schema = {
         "description": (
             "Lấy thông tin ETA (thời gian dự kiến tài xế đến) và vị trí tài xế. "
             "Gọi khi khách hỏi 'còn bao lâu', 'xe đến chưa', 'tài xế gần chưa'."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "call_driver": {
+        "type": "function",
+        "name": "call_driver",
+        "description": (
+            "Kết nối trực tiếp khách hàng với tài xế qua điện thoại (chế độ nghe trực tiếp). "
+            "CHỈ dùng khi chuyến đã có tài xế xác nhận (status=confirmed) — nếu chưa, báo khách "
+            "chờ thêm, không gọi tool này. "
+            "Gọi khi khách muốn nói chuyện trực tiếp với tài xế, hỏi đường, dặn dò tài xế..."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -371,6 +496,21 @@ raw_schema = {
                 }
             },
             "required": ["question"],
+        },
+    },
+    "end_conversation": {
+        "type": "function",
+        "name": "end_conversation",
+        "description": (
+            "Chủ động kết thúc cuộc gọi với trợ lý AI theo yêu cầu của tài xế. "
+            "Gọi khi tài xế nói lời tạm biệt hoặc yêu cầu dừng/tắt trợ lý, ví dụ: "
+            "'tạm biệt', 'thôi tắt đi', 'kết thúc trợ lý', 'dừng lại nhé', 'thế thôi nha'. "
+            "KHÔNG gọi khi tài xế chỉ đang tạm dừng nói hoặc đang bận việc khác."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
         },
     },
 }

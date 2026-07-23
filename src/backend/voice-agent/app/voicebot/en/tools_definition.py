@@ -372,4 +372,19 @@ raw_schema = {
             "required": ["question"],
         },
     },
+    "end_call": {
+        "type": "function",
+        "name": "end_call",
+        "description": (
+            "Proactively end the call with the AI assistant at the driver's request. "
+            "Call when the driver says goodbye or asks to stop/end the assistant, e.g. "
+            "'bye', 'that's it, hang up', 'end the assistant', 'stop the call'. "
+            "Do NOT call this if the driver is just pausing or busy with something else."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
 }

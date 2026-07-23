@@ -1,40 +1,23 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import {
-  Avatar, Box, IconButton, InputAdornment, ListItemIcon, ListItemText,
-  Menu, MenuItem, TextField, Tooltip, Typography,
-} from '@mui/material'
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
-import SearchIcon from '@mui/icons-material/Search'
-import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Box, IconButton, Menu, Tooltip, Typography } from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
 import LogoutIcon from '@mui/icons-material/Logout'
-import TranslateIcon from '@mui/icons-material/Translate'
-import CheckIcon from '@mui/icons-material/Check'
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { useAuthStore } from '../../../stores/authStore'
+import { useLogout } from '../../auth/hooks/useLogout'
 import { PALETTE } from '../../../styles/palette'
+import { NAV_ITEMS } from '../navItems'
+import MobileNavDrawer from './MobileNavDrawer'
 
-const LANGUAGES = [
-  { code: 'vi', label: 'Tiếng Việt' },
-  { code: 'en', label: 'English' },
-]
-
-type HeaderComponentProps = {
-  onSearchAddress?: (address: string) => void
-}
-
-export default function HeaderComponent({ onSearchAddress }: HeaderComponentProps) {
+export default function HeaderComponent() {
+  const { pathname } = useLocation()
   const navigate = useNavigate()
   const customer = useAuthStore(s => s.customer)
-  const logout = useAuthStore(s => s.logout)
+  const logout = useLogout()
 
-  const [address, setAddress] = useState('')
-  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null)
-  const [lang, setLang] = useState('vi')
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearchAddress?.(address)
-  }
+  const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null)
+  const [navOpen, setNavOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -43,104 +26,93 @@ export default function HeaderComponent({ onSearchAddress }: HeaderComponentProp
 
   const initials = customer?.name ? customer.name.trim().charAt(0).toUpperCase() : ''
 
-  const iconBtnSx = {
-    width: 40, height: 40, bgcolor: '#fff', color: PALETTE.base,
-    border: `1px solid ${PALETTE.border}`,
-    boxShadow: `0 2px 6px ${PALETTE.base}12`,
-    transition: 'all 0.15s ease',
-    '&:hover': { bgcolor: PALETTE.pale, borderColor: PALETTE.light, transform: 'translateY(-1px)', boxShadow: `0 4px 10px ${PALETTE.base}1f` },
-  }
-
   return (
     <Box sx={{
-      display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 3 }, px: { xs: 2, sm: 3 }, py: 1.5,
-      bgcolor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)',
-      boxShadow: `0 2px 12px ${PALETTE.base}14`, position: 'sticky', top: 0, zIndex: 10,
+      display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, px: { xs: 1.5, sm: 3 }, py: 1.5,
+      background: `linear-gradient(150deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 55%, ${PALETTE.mid} 100%)`,
+      position: 'sticky', top: 0, zIndex: 10,
     }}>
-      <Box component={Link} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, textDecoration: 'none', flexShrink: 0 }}>
-        <Box sx={{
-          width: 38, height: 38, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: `linear-gradient(135deg, ${PALETTE.light} 0%, ${PALETTE.base} 100%)`,
-          boxShadow: `0 4px 10px ${PALETTE.base}40`,
-        }}>
-          <DirectionsCarIcon sx={{ color: '#fff', fontSize: 21 }} />
+      <IconButton
+        onClick={() => setNavOpen(true)}
+        sx={{ display: { xs: 'inline-flex', sm: 'inline-flex', md: 'none' }, color: '#fff', p: 0.75 }}
+      >
+        <MenuIcon />
+      </IconButton>
+
+      <Typography
+        component={Link}
+        to="/"
+        sx={{
+          fontWeight: 800, fontSize: { xs: 16, sm: 19 }, letterSpacing: '-0.01em',
+          color: '#fff', textDecoration: 'none', flexShrink: 0,
+        }}
+      >
+        Czen.
+      </Typography>
+
+      <Box sx={{ flex: 1, display: { xs: 'none', sm: 'none', md: 'flex' }, justifyContent: 'center', minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: 0.5, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.1)' }}>
+          {NAV_ITEMS.map(item => {
+            const Icon = item.icon
+            const active = pathname === item.to
+            return (
+              <Box
+                key={item.to}
+                component={Link}
+                to={item.to}
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 0.75,
+                  px: 2.25, py: 0.75, borderRadius: 999,
+                  fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                  textDecoration: 'none', transition: 'all 0.15s ease',
+                  color: active ? PALETTE.darkest : 'rgba(255,255,255,0.75)',
+                  bgcolor: active ? '#fff' : 'transparent',
+                  '&:hover': { bgcolor: active ? '#fff' : 'rgba(255,255,255,0.14)', color: active ? PALETTE.darkest : '#fff' },
+                }}
+              >
+                <Icon sx={{ fontSize: 17 }} />
+                {item.label}
+              </Box>
+            )
+          })}
         </Box>
-        <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: '-0.01em', color: PALETTE.ink, display: { xs: 'none', sm: 'block' } }}>
-          Czen
-        </Typography>
       </Box>
 
-      <Box component="form" onSubmit={handleSearchSubmit} sx={{ flex: 1, maxWidth: 520, mx: 'auto' }}>
-        <TextField
-          fullWidth
-          size="small"
-          value={address}
-          onChange={e => setAddress(e.target.value)}
-          placeholder="Bạn muốn đến đâu?"
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: PALETTE.mid }} />
-                </InputAdornment>
-              ),
-            },
-          }}
+      <MobileNavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
+
+      <Box sx={{ flex: { xs: 1, sm: 1, md: 0 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.75, sm: 1 }, flexShrink: 0 }}>
+        <Box
+          onClick={e => setProfileAnchor(e.currentTarget)}
           sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '999px',
-              backgroundColor: PALETTE.surface,
-              transition: 'box-shadow 0.15s ease',
-              '& fieldset': { borderColor: PALETTE.border },
-              '&:hover fieldset': { borderColor: PALETTE.light },
-              '&.Mui-focused': { boxShadow: `0 4px 14px ${PALETTE.base}26` },
-              '&.Mui-focused fieldset': { borderColor: PALETTE.base, borderWidth: '1.5px' },
-            },
+            width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            bgcolor: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.3)', transition: 'all 0.15s ease', flexShrink: 0,
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
           }}
-        />
-      </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-        <Tooltip title="Ngôn ngữ">
-          <IconButton onClick={e => setLangAnchor(e.currentTarget)} sx={iconBtnSx}>
-            <TranslateIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Menu
-          anchorEl={langAnchor}
-          open={!!langAnchor}
-          onClose={() => setLangAnchor(null)}
-          slotProps={{ paper: { sx: { mt: 1, borderRadius: 2, boxShadow: `0 8px 24px ${PALETTE.base}26` } } }}
         >
-          {LANGUAGES.map(l => (
-            <MenuItem key={l.code} selected={lang === l.code} onClick={() => { setLang(l.code); setLangAnchor(null) }}>
-              {lang === l.code && (
-                <ListItemIcon>
-                  <CheckIcon fontSize="small" sx={{ color: PALETTE.base }} />
-                </ListItemIcon>
-              )}
-              <ListItemText inset={lang !== l.code}>{l.label}</ListItemText>
-            </MenuItem>
-          ))}
+          {initials || <PersonOutlineOutlinedIcon sx={{ fontSize: 18 }} />}
+        </Box>
+        <Menu
+          anchorEl={profileAnchor}
+          open={!!profileAnchor}
+          onClose={() => setProfileAnchor(null)}
+          slotProps={{ paper: { sx: { mt: 1, borderRadius: 2, minWidth: 200, boxShadow: `0 8px 24px ${PALETTE.base}26` } } }}
+        >
+          <Box sx={{ px: 2, py: 1.25 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 14, color: PALETTE.ink }}>{customer?.name ?? 'Khách hàng'}</Typography>
+            <Typography variant="caption" sx={{ color: PALETTE.gray }}>{customer?.phone}</Typography>
+          </Box>
         </Menu>
 
-        <Tooltip title="Hồ sơ của bạn">
-          <IconButton component={Link} to="/profile" sx={iconBtnSx}>
-            {initials ? (
-              <Avatar sx={{
-                width: 26, height: 26, fontSize: 13, fontWeight: 700, color: '#fff',
-                background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
-              }}>
-                {initials}
-              </Avatar>
-            ) : (
-              <PersonOutlineOutlinedIcon fontSize="small" />
-            )}
-          </IconButton>
-        </Tooltip>
-
         <Tooltip title="Đăng xuất">
-          <IconButton onClick={handleLogout} sx={iconBtnSx}>
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.12)', color: '#fff',
+              border: '1px solid rgba(255,255,255,0.25)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
+            }}
+          >
             <LogoutIcon fontSize="small" />
           </IconButton>
         </Tooltip>

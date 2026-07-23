@@ -7,3 +7,7 @@ export function formatRoute(eta?: number, km?: number): string {
   if (!eta) return '—'
   return `${eta} min · ${km ?? 0} km`
 }
+
+export function formatCurrency(amount: number, currency = 'VND'): string {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency }).format(amount)
+}

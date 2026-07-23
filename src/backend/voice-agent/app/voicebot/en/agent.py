@@ -5,6 +5,8 @@ from livekit.agents import Agent
 from app.voicebot.en.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
 from app.voicebot.en.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
 from app.voicebot.en.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.en.pronunciations import PRONUNCIATIONS
+from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.en.tools.check_upcoming_trips       import check_upcoming_trips
@@ -32,6 +34,7 @@ from app.voicebot.en.tools.report_trip_issue          import report_trip_issue
 from app.voicebot.en.tools.extend_wait_time           import extend_wait_time
 from app.voicebot.en.tools.set_driver_status          import set_driver_status
 from app.voicebot.en.tools.answer_app_faq             import answer_app_faq
+from app.voicebot.en.tools.end_call                   import end_call
 
 logger = logging.getLogger("voice-agent.en.agent")
 
@@ -63,6 +66,8 @@ _DRIVER_INBOUND_TOOLS = [
     set_driver_status,
     # App playbook / FAQ (RAG)
     answer_app_faq,
+    # Ending the call
+    end_call,
 ]
 
 _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
@@ -70,11 +75,14 @@ _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
 _CUSTOMER_TOOLS = [get_my_trip, cancel_my_trip, get_driver_eta, answer_app_faq]
 
 
-class DriverAgent(Agent):
+class DriverAgent(SpeechTextFixMixin, Agent):
     """
     Handles both inbound and outbound driver sessions.
-    All responses are in English. No mixin inheritance — tools are passed explicitly.
+    All responses are in English.
     """
+
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
 
     def __init__(
         self,
@@ -123,15 +131,25 @@ class DriverAgent(Agent):
         return msg
 
 
-class CustomerAgent(Agent):
+class CustomerAgent(SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from English-speaking customers."""
 
-    def __init__(self, customer_phone: str = "") -> None:
+    def _speech_pronunciations(self) -> list[tuple[str, str]]:
+        return PRONUNCIATIONS
+
+    def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone
+        self._resume_summary = resume_summary
         super().__init__(
             instructions=CUSTOMER_SUPPORT_PROMPT + "\n" + TOOLS_MAPPING_PROMPT,
             tools=_CUSTOMER_TOOLS,
         )
 
     async def on_enter(self) -> None:
+        if self._resume_summary:
+            await self.session.say(
+                f"The call with the driver has ended. {self._resume_summary}",
+                allow_interruptions=False,
+            )
+            return
         await self.session.say(GREETING_CUSTOMER, allow_interruptions=False)

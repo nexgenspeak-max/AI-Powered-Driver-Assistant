@@ -7,3 +7,8 @@ llama-index-core>=0.12.0
 llama-index-readers-file>=0.4.0
 llama-index-embeddings-openai>=0.3.0
 llama-index-llms-openai>=0.3.0
+
+# ── Speaker verification (wake-word voiceprint gate) ───────────────────────────
+onnxruntime>=1.18.0
+kaldi-native-fbank>=1.20.0
+numpy>=1.26.0

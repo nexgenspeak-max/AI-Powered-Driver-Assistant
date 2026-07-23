@@ -9,6 +9,8 @@ const TripStatusPage = lazy(() => import('../pages/TripStatusPage'))
 const HomePage       = lazy(() => import('../pages/HomePage'))
 const LoginPage      = lazy(() => import('../pages/LoginPage'))
 const RegisterPage   = lazy(() => import('../pages/RegisterPage'))
+const AboutPage      = lazy(() => import('../pages/AboutPage'))
+const FaqPage        = lazy(() => import('../pages/FaqPage'))
 
 
 const Loader = () => (
@@ -35,6 +37,8 @@ export function AppRoutes() {
           <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
           <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
         <Route path="/trip/:id"  element={<ProtectedRoute><TripStatusPage /></ProtectedRoute>} />
+        <Route path="/about"     element={<ProtectedRoute><AboutPage /></ProtectedRoute>} />
+        <Route path="/faq"       element={<ProtectedRoute><FaqPage /></ProtectedRoute>} />
         <Route path="*"          element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -31,6 +31,12 @@ function sanitize(user: userService.User) {
   return safe;
 }
 
+// Mobile clients only persist the token pair (see customer-app/driver-app
+// authStore.ts) — profile data is fetched separately via GET /me and kept in
+// memory only, never written to disk. Login/refresh responses stay
+// token-only for that reason; register is the one exception (see its call
+// site) since the client genuinely has no other way to get the just-created
+// profile without an extra round trip.
 async function issueTokens(user: userService.User) {
   const claims = toClaims(user);
   const access_token = signAccessToken(claims);
@@ -41,7 +47,7 @@ async function issueTokens(user: userService.User) {
     refresh_token_expires_at: durationFromNow(config.jwtRefreshExpiresIn),
   }, user.id);
 
-  return { access_token, refresh_token, user: sanitize(user) };
+  return { access_token, refresh_token };
 }
 
 router.post('/register', async (req: Request, res: Response) => {
@@ -54,12 +60,12 @@ router.post('/register', async (req: Request, res: Response) => {
 
     if (role === 'admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required for admin' });
-      if (await userService.getByEmail(email)) return res.status(409).json({ detail: 'Email already registered' });
+      if (await userService.getByEmail(email, 'admin')) return res.status(409).json({ detail: 'Email already registered' });
       const password_hash = await bcrypt.hash(password, 10);
       const user = await userService.create({
         role, name, email, password_hash, permissions: DEFAULT_PERMISSIONS.admin,
       });
-      return res.status(201).json(await issueTokens(user));
+      return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
     }
 
     if (!phone) return res.status(400).json({ detail: 'phone is required' });
@@ -79,14 +85,14 @@ router.post('/register', async (req: Request, res: Response) => {
         name, email, password_hash,
         ...(role === 'driver' ? { vehicle_type, vehicle_plate, vehicle_name } : {}),
       }) as userService.User;
-      return res.status(201).json(await issueTokens(updated));
+      return res.status(201).json({ ...(await issueTokens(updated)), user: sanitize(updated) });
     }
 
     const user = await userService.create({
       role, name, phone, email, password_hash, permissions: DEFAULT_PERMISSIONS[role],
       ...(role === 'driver' ? { vehicle_type, vehicle_plate, vehicle_name } : {}),
     });
-    return res.status(201).json(await issueTokens(user));
+    return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }
@@ -101,7 +107,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     if (role === 'admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required' });
-      const user = await userService.getByEmail(email);
+      const user = await userService.getByEmail(email, 'admin');
       if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).json({ detail: 'Invalid credentials' });
       }
@@ -136,6 +142,10 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const user = await userService.getById(claims.sub);
     if (!user) return res.status(401).json({ detail: 'User no longer exists' });
 
+    // BUG-008 temp fix: an admin lock only takes effect once the current access
+    // token expires and the client comes here for a new one — there is no
+    // instant-logout path yet (needs a shared Redis flag checked per-request).
+    if (user.status === 'locked') return res.status(403).json({ detail: 'Account is locked' });
     // Reject if this refresh token was already rotated out or has expired server-side.
     if (
       user.refresh_token_hash !== hashToken(refresh_token) ||

@@ -2,6 +2,7 @@
 CustomerSupportToolsMixin — tools for the CUSTOMER-facing voice agent.
 
 Customers call in via the customer app to:
+  - Book a new trip
   - Check their trip status / ETA
   - Cancel a booked trip
   - Ask general questions about their ride
@@ -15,6 +16,39 @@ logger = logging.getLogger("voice-agent.tools.customer_support")
 
 
 class CustomerSupportToolsMixin:
+
+    @function_tool(
+        name="book_trip",
+        description=(
+            "Đặt một chuyến xe mới cho khách hàng. "
+            "Gọi khi khách nói muốn đặt xe, cần đi đâu đó, hoặc cần xe đón. "
+            "Trước khi gọi, PHẢI hỏi đủ 3 thông tin nếu chưa có: tên khách hàng, "
+            "điểm đón, điểm đến. Không tự bịa thông tin còn thiếu."
+        ),
+    )
+    async def book_trip(
+        self,
+        context: RunContext,
+        customer_name: str,
+        pickup_address: str,
+        dropoff_address: str,
+    ) -> str:
+        try:
+            trip = await backend_api.create_trip(
+                customer_name=customer_name,
+                customer_phone=self._customer_phone,
+                pickup_address=pickup_address,
+                dropoff_address=dropoff_address,
+            )
+        except Exception:
+            logger.error("book_trip failed", exc_info=True)
+            return "Không thể đặt xe lúc này. Vui lòng thử lại sau."
+
+        msg = f"Đã đặt xe thành công từ {pickup_address} đến {dropoff_address}."
+        eta = trip.get("eta_minutes")
+        if eta and int(eta) > 0:
+            msg += f" Tài xế dự kiến đến trong khoảng {eta} phút."
+        return msg
 
     @function_tool(
         name="get_my_trip",
@@ -32,7 +66,7 @@ class CustomerSupportToolsMixin:
 
         active = [
             t for t in trips
-            if t.get("status") not in ("completed", "rejected", "no_answer")
+            if t.get("status") not in ("completed", "rejected", "no_answer", "cancelled", "cancelled_by_driver")
         ]
         if not active:
             return "Bạn hiện không có chuyến đi nào đang hoạt động."
@@ -80,7 +114,7 @@ class CustomerSupportToolsMixin:
 
         trip = active[0]
         try:
-            await backend_api.update_trip_status(trip["trip_id"], "rejected")
+            await backend_api.update_trip_status(trip["trip_id"], "cancelled")
         except Exception:
             logger.error("cancel_my_trip — update failed", exc_info=True)
             return "Không thể hủy chuyến lúc này. Vui lòng thử lại."

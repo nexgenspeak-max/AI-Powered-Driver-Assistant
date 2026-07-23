@@ -16,3 +16,9 @@ export function formatRoute(etaMinutes?: number, distanceKm?: number): string {
 export function capitalizeStatus(status: string): string {
   return status.replace('_', ' ').replace(/^\w/, c => c.toUpperCase())
 }
+
+export function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
