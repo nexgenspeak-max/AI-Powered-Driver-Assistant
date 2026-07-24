@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { ScrollView } from 'react-native'
 import { YStack, Text, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
@@ -5,9 +6,11 @@ import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
 import { router, Link } from 'expo-router'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
+import { Button } from '../../../components/Button'
 import { Card } from '../../../components/Card'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
@@ -35,8 +38,14 @@ export function RegisterForm() {
     defaultValues: { name: '', phone: '', email: '', password: '', vehicle_type: '', vehicle_plate: '', vehicle_name: '' },
   })
 
-  const { mutate: register, isPending, isError } = useMutation({
-    mutationFn: (data: FormValues) => authService.register({ role: 'driver', ...data }),
+  const controllerRef = useRef<AbortController | null>(null)
+
+  const { mutate: register, isPending, isError, error, reset } = useMutation({
+    mutationFn: (data: FormValues) => {
+      const controller = new AbortController()
+      controllerRef.current = controller
+      return authService.register({ role: 'driver', ...data }, controller.signal)
+    },
     onSuccess: ({ access_token, refresh_token, user }) => {
       setTokens(access_token, refresh_token)
       // register is the one auth call that still returns the profile (see
@@ -60,6 +69,10 @@ export function RegisterForm() {
   })
 
   const onSubmit = (data: FormValues) => register(data)
+  const onCancel = () => {
+    controllerRef.current?.abort()
+    reset()
+  }
   const isLight = useThemeName() === 'light'
 
   return (
@@ -114,13 +127,14 @@ export function RegisterForm() {
               value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_name?.message} />
           )} />
 
-          {isError && (
+          {isError && !axios.isCancel(error) && (
             <Text color="$danger" fontSize="$1">
               Registration failed. Check your details.
             </Text>
           )}
 
           <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+          {isPending && <Button label="Hủy" variant="outline" onPress={onCancel} />}
 
           <Text textAlign="center" color="$textSecondary" fontSize="$3">
             Already have an account?{' '}

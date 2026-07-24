@@ -1,9 +1,36 @@
-import { useEffect, useRef } from 'react'
+import { Component, useEffect, useRef, type ReactNode } from 'react'
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl'
 import { Renderer } from 'expo-three'
 import * as THREE from 'three'
 import { View } from 'tamagui'
 import { useVoiceSessionStore, type VoiceSessionStatus } from '../stores/voiceSessionStore'
+
+// Fast Refresh can reset expo-gl's global.__EXGLContexts registry without the
+// native surface re-firing onSurfaceCreate, leaving GLView's context id
+// orphaned ("Cannot set property '__expoSetLogging' of undefined" thrown from
+// inside expo-gl itself, before our own onContextCreate ever runs). A plain
+// try/catch can't reach it — it's thrown from a native event dispatch, not
+// from code we call directly — so recovery has to happen via React's error
+// boundary + a full remount (changing `key` forces a fresh native GLView
+// instance, which fires a fresh onSurfaceCreate/context registration).
+class GLErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean; mountKey: number }> {
+  state = { crashed: false, mountKey: 0 }
+
+  static getDerivedStateFromError() {
+    return { crashed: true }
+  }
+
+  componentDidUpdate(_prevProps: { children: ReactNode }, prevState: { crashed: boolean }) {
+    if (this.state.crashed && !prevState.crashed) {
+      requestAnimationFrame(() => this.setState(s => ({ crashed: false, mountKey: s.mountKey + 1 })))
+    }
+  }
+
+  render() {
+    if (this.state.crashed) return null
+    return <View key={this.state.mountKey}>{this.props.children}</View>
+  }
+}
 
 const SIZE = 360
 const DOT_SIZE = 0.045
@@ -162,10 +189,12 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
       {/* TEMP DEBUG BORDER — shows whether the empty GLView box itself sits
           centered (RN layout is fine, the 3D content draws off-center inside
           it) or the box itself is mispositioned (a layout/flex problem). */}
-      <GLView
-        style={{ width: SIZE, height: SIZE, borderWidth: 2, borderColor: '#00ff00' }}
-        onContextCreate={onContextCreate}
-      />
+      <GLErrorBoundary>
+        <GLView
+          style={{ width: SIZE, height: SIZE, borderWidth: 2, borderColor: '#00ff00' }}
+          onContextCreate={onContextCreate}
+        />
+      </GLErrorBoundary>
     </View>
   )
 }

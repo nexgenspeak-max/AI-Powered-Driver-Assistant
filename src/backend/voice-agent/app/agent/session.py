@@ -313,13 +313,10 @@ async def entrypoint(ctx: JobContext) -> None:
 
             if not allowed:
                 logger.warning("speaker-verify: rejected | mode=%s phone=%s", mode, phone)
-                reject_msg = (
-                    "Xin lỗi, giọng nói không khớp với chủ tài khoản. Cuộc gọi sẽ kết thúc."
-                    if lang != "en" else
-                    "Sorry, this voice doesn't match the account owner. Ending this session."
-                )
-                await session.say(reject_msg, allow_interruptions=False)
-                await ctx.room.disconnect()
+                # Room/session stay connected — just stop listening and
+                # responding, no rejection message and no hangup.
+                session.input.set_audio_enabled(False)
+                session.output.set_audio_enabled(False)
                 return
 
         conv_service.attach(session)

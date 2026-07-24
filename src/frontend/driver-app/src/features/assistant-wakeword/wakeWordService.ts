@@ -15,6 +15,18 @@ const MODEL_NAME = 'model-vi-vn'
 // model's dictionary, so this uses plain Vietnamese words rather than a
 // made-up brand phrase. Re-tune after testing recognition on a real device.
 const WAKE_PHRASE = 'xin chào'
+
+// Grammar-constrained decoding forces every utterance onto the closest entry
+// in this list — with only WAKE_PHRASE and '[unk]' as options, any speech
+// that isn't near-silence gets force-matched to WAKE_PHRASE, since it's the
+// only real word available ('[unk]' only wins for actual noise/silence).
+// These common Vietnamese words/short phrases give the decoder real
+// alternatives to fall onto instead, so ordinary conversation stops getting
+// misheard as the wake phrase.
+const GRAMMAR_DECOY_WORDS = [
+  'vâng', 'dạ', 'không', 'có', 'được', 'ừ', 'ừm', 'à', 'ơi',
+  'cảm ơn', 'tạm biệt', 'alo', 'gì', 'sao', 'rồi', 'nhé', 'đi', 'này', 'chào',
+]
 // Buffer after the native recognizer confirms it's torn down (onFinalResult)
 // before starting a new session — starting again immediately, or based on
 // onResult/onTimeout alone, raced the native teardown and threw
@@ -187,7 +199,7 @@ async function startListening() {
     // emulators. Restart only happens now on a genuine recognized utterance
     // (onResult/onFinalResult) or an explicit stop (call start, toggle off),
     // both far less frequent than a fixed silence timer.
-    await Vosk.start({ grammar: [WAKE_PHRASE, '[unk]'] })
+    await Vosk.start({ grammar: [WAKE_PHRASE, ...GRAMMAR_DECOY_WORDS, '[unk]'] })
   } catch (err) {
     console.error('[wake-word] failed to start listening', err)
     sessionActive = false

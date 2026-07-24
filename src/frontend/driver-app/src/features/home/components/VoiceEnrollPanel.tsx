@@ -3,6 +3,7 @@ import { Text, YStack, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSurface } from '../../../components/GlassSurface'
 import { GlassButton } from '../../../components/GlassButton'
+import { Button } from '../../../components/Button'
 import { useVoiceSessionStore } from '../stores/voiceSessionStore'
 import { voiceService } from '../../../services/api/voice'
 
@@ -36,6 +37,7 @@ interface Props {
 export function VoiceEnrollPanel({ phone, accountId, onDone, sheet }: Props) {
   const status = useVoiceSessionStore(s => s.status)
   const enroll = useVoiceSessionStore(s => s.enroll)
+  const disconnect = useVoiceSessionStore(s => s.disconnect)
   const wasConnected = useRef(false)
   // $textPrimary is already near-black/near-white per theme, but this
   // title needs a firmer black in light mode specifically than the token
@@ -47,7 +49,11 @@ export function VoiceEnrollPanel({ phone, accountId, onDone, sheet }: Props) {
     if (status === 'connected') wasConnected.current = true
     if (status === 'idle' && wasConnected.current) {
       wasConnected.current = false
-      voiceService.checkVoiceprint(accountId).then(onDone)
+      // No .catch here previously meant a network hiccup on this one check
+      // left the panel stuck open forever even though the enroll session
+      // itself (and the backend's disconnect) had already completed —
+      // same fail-open fallback as AssistantChatPanel's own mount-time check.
+      voiceService.checkVoiceprint(accountId).then(onDone).catch(() => onDone(true))
     }
   }, [status, accountId, onDone])
 
@@ -74,6 +80,9 @@ export function VoiceEnrollPanel({ phone, accountId, onDone, sheet }: Props) {
           loading={status === 'connecting'}
           colors={CTA_GRADIENT}
         />
+        {(status === 'connected' || status === 'connecting') && (
+          <Button label="Hủy" variant="outline" onPress={disconnect} />
+        )}
       </YStack>
     </GlassSurface>
   )

@@ -41,7 +41,7 @@ export const authService = {
     vehicle_type: string
     vehicle_plate: string
     vehicle_name: string
-  }) => authClient.post<AuthRegisterResponse>('/auth/register', payload).then(r => r.data),
+  }, signal?: AbortSignal) => authClient.post<AuthRegisterResponse>('/auth/register', payload, { signal }).then(r => r.data),
 
   refresh: (refresh_token: string) =>
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),

@@ -22,6 +22,10 @@ const MIC_LABEL = {
   error: 'Kết nối lỗi, thử lại',
 }
 
+// TEMP: voice enrollment gate turned off while it's being reworked — flip
+// back to true to re-require enrollment before the first AI conversation.
+const VOICE_ENROLL_GATE_ENABLED = false
+
 export function AssistantChatPanel() {
   const { data: driver } = useCurrentUser()
   const themeMode = useThemeStore(s => s.mode)
@@ -94,7 +98,7 @@ export function AssistantChatPanel() {
     // user = black text on purple, in light mode specifically.
     <Theme name={themeMode}>
     <StatusBar style={isLight ? 'dark' : 'light'} />
-    {hasVoiceprint === false && driver ? (
+    {VOICE_ENROLL_GATE_ENABLED && hasVoiceprint === false && driver ? (
       // Mandatory first-time gate: no voiceprint enrolled yet -> the whole
       // chat UI is replaced by enrollment, not just blocked on mic-press —
       // the driver can't reach chat/text-only fallback until this passes.

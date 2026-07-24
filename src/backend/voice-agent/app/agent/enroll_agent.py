@@ -2,13 +2,15 @@
 EnrollAgent — records a driver's/customer's voiceprint for the wake-word
 speaker-verification gate. Fully scripted (no LLM turns): says each prompt,
 captures raw audio directly from the participant via speaker_verify.py, then
-disconnects. See app/voicebot/processors/speaker_verify.py for the actual
+ends the room. See app/voicebot/processors/speaker_verify.py for the actual
 capture/embedding/save logic.
 """
 import logging
 from livekit import rtc
 from livekit.agents import Agent
+from livekit.agents.job import get_job_context
 
+from app.services.session_control import end_room_session
 from app.voicebot.processors import speaker_verify
 
 logger = logging.getLogger("voice-agent.enroll-agent")
@@ -29,7 +31,11 @@ class EnrollAgent(Agent):
     async def on_enter(self) -> None:
         if not self._account_id:
             await self.session.say("Không tìm thấy tài khoản, vui lòng thử lại sau.", allow_interruptions=False)
-            await self._room.disconnect()
+            # self._room.disconnect() only drops the AGENT's own connection —
+            # the phone stays in the room and never sees RoomEvent.Disconnected,
+            # so its enroll screen hangs forever. end_room_session removes the
+            # remote participant via the LiveKit server API first.
+            await end_room_session(get_job_context(), reason="enroll: no account")
             return
 
         try:
@@ -38,4 +44,4 @@ class EnrollAgent(Agent):
             logger.exception("enrollment failed | identity=%s", self._identity)
             await self.session.say("Có lỗi xảy ra, vui lòng thử lại sau.", allow_interruptions=False)
         finally:
-            await self._room.disconnect()
+            await end_room_session(get_job_context(), reason="enroll: done")
