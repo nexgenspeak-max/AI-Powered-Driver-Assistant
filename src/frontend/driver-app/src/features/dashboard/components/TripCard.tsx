@@ -9,7 +9,7 @@ import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
 } from "../../../constants/status";
-import { formatCurrency } from "../../../utils/format";
+import { formatCurrency, formatDate } from "../../../utils/format";
 import type { Trip } from "../../../types";
 
 export function TripCard({
@@ -63,7 +63,7 @@ export function TripCard({
             </Text>
             {!!trip.pickup_time && (
               <Text color="$textSecondary" fontSize={12} numberOfLines={1}>
-                {trip.pickup_time}
+                {formatDate(trip.pickup_time)}
               </Text>
             )}
           </YStack>
@@ -84,6 +84,8 @@ export function TripCard({
         </XStack>
 
         <YStack gap="$2">
+          <InfoRow label="Ngày giờ đón" value={trip.pickup_time ? formatDate(trip.pickup_time) : "—"} />
+          <InfoRow label="SĐT khách" value={trip.customer_phone} />
           <InfoRow label="Pickup" value={trip.pickup_address} />
           <InfoRow label="Dropoff" value={trip.dropoff_address} />
         </YStack>

@@ -27,6 +27,7 @@ from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
 from app.voicebot.processors import speaker_verify
+from app.voicebot.processors.call_state import CallAwareUserData
 from app.voicebot.processors.sip_call_watch import (
     complete_isolated_call,
     register_customer_room_sip_watchers,
@@ -189,8 +190,11 @@ async def entrypoint(ctx: JobContext) -> None:
     settings = get_settings()
 
     try:
-        # Per-session state exposed to tools via context.userdata
-        session_userdata = {
+        # Per-session state exposed to tools via context.userdata — a
+        # CallAwareUserData (not a plain dict) so that any code path setting
+        # *_call_active below auto-publishes the change to the room's data
+        # channel; see call_state.py for why.
+        session_userdata = CallAwareUserData({
             "driver_phone":           phone if mode not in ("customer",) else "",
             "customer_phone":         phone if mode == "customer" else "",
             "trip":                   trip,
@@ -205,7 +209,7 @@ async def entrypoint(ctx: JobContext) -> None:
             "_job_ctx":               ctx,
             "_call_started_at":       time.time(),
             "_customer_spoke":        False,
-        }
+        })
 
         if mode == "custcall" and trip:
             meta = json.loads(ctx.room.metadata or "{}")

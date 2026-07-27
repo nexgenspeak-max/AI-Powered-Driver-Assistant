@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
+    "prestart": "kill-port 8083",
     "start": "expo start --port 8083",
+    "preandroid": "kill-port 8083",
     "android": "expo start --android --port 8083",
+    "preios": "kill-port 8083",
     "ios": "expo start --ios --port 8083",
+    "preweb": "kill-port 8083",
     "web": "expo start --web --port 8083",
     "postinstall": "patch-package"
   },
@@ -59,6 +63,7 @@
     "@types/react": "~19.1.0",
     "@types/three": "^0.185.1",
     "dotenv": "^16.4.7",
+    "kill-port": "^2.0.1",
     "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },

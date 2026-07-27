@@ -15,7 +15,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant."
+        "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
+        "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
+        "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order."
       },
       "bitcode": false
     },

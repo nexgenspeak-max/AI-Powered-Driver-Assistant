@@ -14,7 +14,7 @@ const MODEL_NAME = 'model-vi-vn'
 // Vosk's `grammar` option only matches reliably against words already in the
 // model's dictionary, so this uses plain Vietnamese words rather than a
 // made-up brand phrase. Re-tune after testing recognition on a real device.
-const WAKE_PHRASE = 'xin chào'
+const WAKE_PHRASE = 'chào bạn'
 
 // Grammar-constrained decoding forces every utterance onto the closest entry
 // in this list — with only WAKE_PHRASE and '[unk]' as options, any speech

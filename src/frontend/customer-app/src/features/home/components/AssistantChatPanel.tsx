@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
+import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native'
 import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSheen } from '../../../components/LiquidGlass'
@@ -77,6 +77,14 @@ export function AssistantChatPanel() {
 
   const handleMicPress = () => {
     if (voice.status === 'connected' || voice.status === 'connecting') {
+      // A real SIP-dialed call (bridge/agent-mediated/background) is in
+      // progress — the mic button must not be able to end the session while
+      // that's true; only the underlying phone call ending (backend then
+      // publishes isCallActive: false) may end it.
+      if (voice.isCallActive) {
+        Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
+        return
+      }
       voice.disconnect()
       return
     }
@@ -110,7 +118,9 @@ export function AssistantChatPanel() {
       <View width="100%" paddingTop={insets.top}>
         <AssistantAvatar status={voice.status} />
         <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2">
-          {MIC_LABEL[voice.status]}
+          {voice.status === 'connected' && voice.isCallActive
+            ? 'Đang trong cuộc gọi — không thể tắt'
+            : MIC_LABEL[voice.status]}
         </Text>
       </View>
 

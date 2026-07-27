@@ -6,7 +6,7 @@ import { Button } from "../../../components/Button";
 import { InfoRow } from "./InfoRow";
 import { TripProgressStepper } from "./TripProgressStepper";
 import { tripsService } from "../../../services/api/trips";
-import { formatCurrency } from "../../../utils/format";
+import { formatCurrency, formatDate } from "../../../utils/format";
 import type { Trip } from "../../../types";
 
 const NEXT_ACTION: Record<
@@ -95,7 +95,7 @@ export function ActiveTripCard({
             </Text>
             {!!trip.pickup_time && (
               <Text color="$textSecondary" fontSize={12} numberOfLines={1}>
-                {trip.pickup_time}
+                {formatDate(trip.pickup_time)}
               </Text>
             )}
           </YStack>
@@ -110,6 +110,8 @@ export function ActiveTripCard({
         <TripProgressStepper status={trip.status} />
 
         <YStack gap="$2">
+          <InfoRow label="Ngày giờ đón" value={trip.pickup_time ? formatDate(trip.pickup_time) : "—"} />
+          <InfoRow label="SĐT khách" value={trip.customer_phone} />
           <InfoRow label="Pickup" value={trip.pickup_address} />
           <InfoRow label="Dropoff" value={trip.dropoff_address} />
         </YStack>
