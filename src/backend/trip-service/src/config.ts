@@ -10,10 +10,13 @@ if (existsSync(envPath)) {
 export const config = {
   env,
   dynamodbTable: process.env.DYNAMODB_TABLE || 'local-driver-assistant-trips',
+  dynamodbDeliveryOrdersTable: process.env.DYNAMODB_DELIVERY_ORDERS_TABLE || 'local-driver-assistant-delivery-orders',
   awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
 
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me',
   authServiceUrl: process.env.AUTH_SERVICE_URL || 'http://localhost:8003',
+  // voice-agent's vision-api sidecar — reads delivery-order photos.
+  voiceAgentUrl: process.env.VOICE_AGENT_URL || 'http://localhost:8080',
 
   livekitUrl: process.env.LIVEKIT_URL || '',
   livekitApiKey: process.env.LIVEKIT_API_KEY || '',

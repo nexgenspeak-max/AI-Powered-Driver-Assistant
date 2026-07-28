@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     google_stt_model: str = "telephony"
     google_stt_location: str = ""     # auto: asia-southeast1 for chirp_3, global for latest_long
     google_tts_voice: str = "vi-VN-Neural2-A"
+    # Northern-Vietnamese-standard delivery: slightly slower for clear
+    # enunciation ("rõ chữ") and a touch lower-pitched for the gentle
+    # downward inflection ("hơi xuống") typical of Northern Vietnamese
+    # speech — Google's pitch range is roughly -20..+20 semitones, so -2 is
+    # a subtle shift, not a different-sounding voice.
+    google_tts_speaking_rate: float = 0.95
+    google_tts_pitch: float = -2.0
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────
     elevenlabs_api_key: str = ""

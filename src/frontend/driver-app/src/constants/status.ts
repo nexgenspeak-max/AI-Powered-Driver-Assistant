@@ -1,4 +1,4 @@
-import type { TripStatus } from '../types'
+import type { TripStatus, DeliveryOrderStatus } from '../types'
 
 export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   pending: 'Pending',
@@ -35,3 +35,21 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
 }
 
 export const PENDING_STATUSES: TripStatus[] = ['notified', 'calling']
+
+export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
+  pending: 'Chờ lấy hàng',
+  picked_up: 'Đã lấy hàng',
+  delivering: 'Đang giao hàng',
+  delivered: 'Giao thành công',
+  redelivery: 'Giao hàng lại',
+  returned: 'Đã trả hàng',
+}
+
+export const DELIVERY_ORDER_STATUS_COLORS: Record<DeliveryOrderStatus, { bg: string; text: string }> = {
+  pending: { bg: '$yellow4', text: '$yellow11' },
+  picked_up: { bg: '$blue4', text: '$blue11' },
+  delivering: { bg: '$purple4', text: '$purple11' },
+  delivered: { bg: '$green4', text: '$green11' },
+  redelivery: { bg: '$orange4', text: '$orange11' },
+  returned: { bg: '$gray4', text: '$gray11' },
+}

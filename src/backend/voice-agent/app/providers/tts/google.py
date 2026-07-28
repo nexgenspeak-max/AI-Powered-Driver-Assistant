@@ -14,6 +14,8 @@ class GoogleTTS(BaseTTS):
         kwargs: dict = {
             "language": "vi-VN",
             "voice_name": settings.tts_voice or settings.google_tts_voice,
+            "speaking_rate": settings.google_tts_speaking_rate,
+            "pitch": settings.google_tts_pitch,
         }
         apply_google_credentials(kwargs, settings)
         return google_plugin.TTS(**kwargs)

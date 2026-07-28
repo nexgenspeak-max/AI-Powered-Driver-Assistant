@@ -36,17 +36,17 @@ export default function DocumentsScreen() {
                 <TouchableOpacity
                   onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng tải lên giấy tờ sẽ sớm khả dụng.')}
                 >
-                  <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$2" paddingVertical="$3" marginVertical="$2">
-                    <XStack alignItems="center" gap="$3">
+                  <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingHorizontal="$2" paddingVertical="$3">
+                    <XStack alignItems="center" gap="$3" flex={1}>
                       <Ionicons name="document-attach-outline" size={20} color="#7C5B9C" />
-                      <Text color="$textPrimary" fontWeight="500">
+                      <Text color="$textPrimary" fontWeight="500" flexShrink={1} numberOfLines={1}>
                         {doc.label}
                       </Text>
                     </XStack>
                     <Badge label="Chưa tải lên" backgroundColor="$chip" color="$textSecondary" />
                   </XStack>
                 </TouchableOpacity>
-                {i < DOCUMENTS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={44} />}
+                {i < DOCUMENTS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={44} alignSelf="stretch" />}
               </View>
             ))}
           </YStack>

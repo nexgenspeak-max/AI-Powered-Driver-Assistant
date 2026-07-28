@@ -4,18 +4,9 @@ import { GlassSurface } from '../../../components/GlassSurface'
 import { formatCurrency } from '../../../utils/format'
 import type { EarningsSummary } from '../../../types'
 
-// Small "raised" shadow for the active tab pill only — distinct from (and
-// much lighter than) GlassSurface's own outer-card shadow, just enough to
-// read as a slightly popped-up segment inside the track well.
-function getActiveTabShadow(isLight: boolean) {
-  return {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: isLight ? 0.12 : 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  } as const
-}
+// Active tab pill's shadow removed — same real-device issue as GlassSurface's
+// and DashboardModeSwitch's shadows (renders as a hard gray outline on
+// Android instead of a soft raised look, see GlassSurface.tsx's note).
 
 const TRACK_RADIUS = 12
 
@@ -56,7 +47,6 @@ export function EarningsPeriodTabs({ period, onPeriodChange, summary, isLoading 
                 style={[
                   { flex: 1, paddingVertical: 8, borderRadius: TRACK_RADIUS - 2, alignItems: 'center' },
                   { backgroundColor: active ? activeTabBackground : 'transparent' },
-                  active ? getActiveTabShadow(isLight) : null,
                 ]}
               >
                 <Text color={active ? '$textPrimary' : '$textSecondary'} fontWeight={active ? '600' : '400'}>

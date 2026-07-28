@@ -55,6 +55,7 @@ PARAM_OVERRIDES=(Environment="$ENVIRONMENT" AppName="$APP_NAME" JwtSecret="$JWT_
 [[ -n "$LIVEKIT_API_SECRET" ]] && PARAM_OVERRIDES+=(LivekitApiSecret="$LIVEKIT_API_SECRET")
 [[ -n "$SIP_TRUNK_ID" ]] && PARAM_OVERRIDES+=(SipTrunkId="$SIP_TRUNK_ID")
 [[ -n "$GOOGLE_MAPS_API_KEY" ]] && PARAM_OVERRIDES+=(GoogleMapsApiKey="$GOOGLE_MAPS_API_KEY")
+[[ -n "$VOICE_AGENT_URL" ]] && PARAM_OVERRIDES+=(VoiceAgentUrl="$VOICE_AGENT_URL")
 
 sam deploy \
   --template-file "$SCRIPT_DIR/.aws-sam/build/template.yaml" \

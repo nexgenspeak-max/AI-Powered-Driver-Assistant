@@ -7,7 +7,7 @@ export function TodayEarningsCard({ earnings }: { earnings: TodayEarnings }) {
   return (
     <GlassSurface cornerRadius={18}>
       <YStack gap="$1" padding="$4">
-        <Text color="$textPrimary" fontSize="$1" textTransform="uppercase" letterSpacing={0.5} fontWeight="500">
+        <Text color="$textPrimary" fontSize="$1" textTransform="uppercase" letterSpacing={0.5} fontWeight="600">
           Today's earnings
         </Text>
         <Text color="$textPrimary" fontSize="$8" fontWeight="800">

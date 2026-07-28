@@ -44,6 +44,11 @@ Parameters:
     Type: String
     Description: Base URL of auth-service — driver profile/status now lives in its accounts table.
 
+  VoiceAgentUrl:
+    Type: String
+    Default: ""
+    Description: Public URL of voice-agent's vision-api sidecar (ALB) — used by POST /delivery-orders/scan.
+
 Globals:
   Function:
     Runtime: nodejs20.x
@@ -53,6 +58,7 @@ Globals:
       Variables:
         ENV: !Ref Environment
         DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-trips"
+        DYNAMODB_DELIVERY_ORDERS_TABLE: !Sub "${Environment}-${AppName}-delivery-orders"
         LIVEKIT_URL: !Ref LivekitUrl
         LIVEKIT_API_KEY: !Ref LivekitApiKey
         LIVEKIT_API_SECRET: !Ref LivekitApiSecret
@@ -60,6 +66,7 @@ Globals:
         GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
         JWT_SECRET: !Ref JwtSecret
         AUTH_SERVICE_URL: !Ref AuthServiceUrl
+        VOICE_AGENT_URL: !Ref VoiceAgentUrl
 
 Resources:
 
@@ -78,6 +85,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TripsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DeliveryOrdersTable
       Events:
         Health:
           Type: Api
@@ -221,6 +230,43 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/voice/customer-token
             Method: POST
+        # ── Delivery orders ──────────────────────────────────────────
+        ScanDeliveryPhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders/scan
+            Method: POST
+        CreateDeliveryOrder:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders
+            Method: POST
+        ListDeliveryOrders:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders
+            Method: GET
+        GetDeliveryOrder:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders/{order_id}
+            Method: GET
+        UpdateDeliveryOrderStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders/{order_id}
+            Method: PATCH
+        DeleteDeliveryOrder:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/delivery-orders/{order_id}
+            Method: DELETE
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -296,6 +342,33 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  DeliveryOrdersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-delivery-orders"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: order_id
+          AttributeType: S
+        - AttributeName: driver_phone
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: order_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: driver_phone-created_at-index
+          KeySchema:
+            - AttributeName: driver_phone
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
 Outputs:
   ApiUrl:
     Description: Trip Service API base URL — set as TRIP_SERVICE_URL in voice-agent
@@ -306,3 +379,6 @@ Outputs:
 
   TripsTableName:
     Value: !Ref TripsTable
+
+  DeliveryOrdersTableName:
+    Value: !Ref DeliveryOrdersTable

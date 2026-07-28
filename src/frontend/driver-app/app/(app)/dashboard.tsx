@@ -16,7 +16,7 @@ import { DeliveryOrderCard } from "../../src/features/delivery/components/Delive
 import { EmptyDeliveryState } from "../../src/features/delivery/components/EmptyDeliveryState";
 import { GlassButton } from "../../src/components/GlassButton";
 import { SearchInput } from "../../src/components/SearchInput";
-import { useDeliveryStore } from "../../src/stores/deliveryStore";
+import { useDeliveryOrders } from "../../src/features/delivery/hooks/useDeliveryOrders";
 import { driversService } from "../../src/services/api/drivers";
 import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
 import { PENDING_STATUSES } from "../../src/constants/status";
@@ -29,7 +29,7 @@ export default function DashboardScreen() {
   const [mode, setMode] = useState<DashboardMode>("trips");
   const [tripQuery, setTripQuery] = useState("");
   const [deliveryQuery, setDeliveryQuery] = useState("");
-  const deliveryOrders = useDeliveryStore((s) => s.orders);
+  const { data: deliveryOrders = [] } = useDeliveryOrders();
 
   const {
     data: context,
@@ -87,11 +87,10 @@ export default function DashboardScreen() {
     );
   });
 
-  const screenBackground = isLight ? "#F5F4F8" : theme.surface.val;
-  const headerBackground = isLight ? "#F8F8FB" : "#000000";
+  const headerBackground = isLight ? "#F8F8FB" : theme.surfaceElevated.val;
 
   return (
-    <View flex={1} backgroundColor={screenBackground}>
+    <View flex={1} backgroundColor="$surface">
       <View
         backgroundColor={headerBackground}
         paddingHorizontal="$5"
@@ -118,15 +117,15 @@ export default function DashboardScreen() {
             <Text
               fontSize="$1"
               fontWeight="500"
-              color={isOnline ? "#5CE77A" : theme.textMuted.val}
+              color={isOnline ? theme.success.val : theme.textMuted.val}
             >
               {isOnline ? "Online" : "Offline"}
             </Text>
             <Switch
               value={isOnline}
               onValueChange={toggleOnline}
-              trackColor={{ false: theme.borderStrong.val, true: "#5CE77A" }}
-              thumbColor={isOnline ? "#1AC94B" : theme.textMuted.val}
+              trackColor={{ false: theme.borderStrong.val, true: theme.success.val }}
+              thumbColor={isOnline ? theme.success.val : theme.textMuted.val}
             />
           </XStack>
         </XStack>
@@ -191,7 +190,7 @@ export default function DashboardScreen() {
             ) : (
               <YStack gap="$4">
                 {filteredDeliveryOrders.map((order) => (
-                  <DeliveryOrderCard key={order.id} order={order} />
+                  <DeliveryOrderCard key={order.order_id} order={order} />
                 ))}
               </YStack>
             )}

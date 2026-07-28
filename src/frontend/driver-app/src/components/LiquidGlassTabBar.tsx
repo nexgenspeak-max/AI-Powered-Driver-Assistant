@@ -112,12 +112,18 @@ function useLiquidGlass() {
 // =========================================================================
 // 2. PAGE BLUR OVERLAY — blurs whatever it wraps while a tab is long-pressed
 // =========================================================================
-const PAGE_BLUR_MAX = 18
+const PAGE_BLUR_MAX = 32
 
 export function PageBlurOverlay({ children }: { children: ReactNode }) {
   const { pageBlur } = useLiquidGlass()
+  const isLight = useThemeName() === 'light'
 
   const overlayOpacity = useDerivedValue(() => Math.min(pageBlur.value / PAGE_BLUR_MAX, 1))
+  // Same reasoning as GlassTabButton's isLight carve-out: a white wash reads
+  // as an invisible frosted layer on an already-light screen, so light mode
+  // gets a dark tint instead — both tuned stronger than the old fixed 0.08
+  // white, which was barely perceptible in either theme.
+  const overlayColor = isLight ? 'rgba(20,20,30,0.16)' : 'rgba(255,255,255,0.14)'
 
   return (
     <View style={{ flex: 1 }}>
@@ -132,7 +138,7 @@ export function PageBlurOverlay({ children }: { children: ReactNode }) {
             <Fill color="rgba(20,20,30,0.001)" />
           </BackdropBlur>
           <Group opacity={overlayOpacity}>
-            <Fill color="rgba(255,255,255,0.08)" />
+            <Fill color={overlayColor} />
           </Group>
         </Canvas>
       </View>
@@ -214,6 +220,13 @@ const IDLE_BLUR = 0.5
 const TAP_HOLD_AFTER_RELEASE = 1000 // ms — pill stays glassy after release
 const LONG_PRESS_DELAY = 350 // ms — threshold to count as a "hold"
 const DRAG_THRESHOLD = 10 // px — beyond this, it's a drag, not a held-still long-press
+
+// TEMP: page-blur-on-long-press disabled per request — flip back to true to
+// restore it. With this off, a held-still long-press just behaves like a
+// normal tap-and-hold (navigates on release, same glassy-pill hold), since
+// `isLongPress` never gets set — the "peek" gesture and drag-to-switch-tabs
+// behavior are both untouched.
+const PAGE_BLUR_ENABLED = false
 
 // Byte-for-byte the original bar's shadow (driver-app's `tabBarStyle`) —
 // not theme-dependent, unlike the GlassMaterial/Card shadow helpers.
@@ -339,11 +352,13 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     rimIntensity.value = withTiming(0.65, BLUR_IN)
 
     clearLongPressTimer()
-    longPressTimer.current = setTimeout(() => {
-      if (didDrag.current) return
-      isLongPress.current = true
-      pageBlur.value = withTiming(PAGE_BLUR_MAX, PAGE_BLUR_IN)
-    }, LONG_PRESS_DELAY)
+    if (PAGE_BLUR_ENABLED) {
+      longPressTimer.current = setTimeout(() => {
+        if (didDrag.current) return
+        isLongPress.current = true
+        pageBlur.value = withTiming(PAGE_BLUR_MAX, PAGE_BLUR_IN)
+      }, LONG_PRESS_DELAY)
+    }
   }
 
   // Finger moved: past DRAG_THRESHOLD, this is a drag, not a held-still

@@ -40,7 +40,7 @@ export default function EarningsScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
         <GlassSurface cornerRadius={SHEET_TOP_RADIUS} bottomCornerRadius={0} style={{ flex: 1, marginTop: insets.top + 12 }}>
           <YStack padding="$5" gap="$5">
-            <Text fontSize="$7" fontWeight="800" color="$textPrimary">
+            <Text fontSize="$6" fontWeight="800" color="$textPrimary">
               Earnings
             </Text>
 

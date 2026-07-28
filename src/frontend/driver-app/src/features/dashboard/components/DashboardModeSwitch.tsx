@@ -1,4 +1,4 @@
-import { TouchableOpacity, StyleSheet } from 'react-native'
+import { TouchableOpacity } from 'react-native'
 import { View, Text, useThemeName } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -13,15 +13,10 @@ interface Props {
   onChange: (mode: DashboardMode) => void
 }
 
-function getTrackShadow(isLight: boolean) {
-  return {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: isLight ? 8 : 4 },
-    shadowOpacity: isLight ? 0.12 : 0.25,
-    shadowRadius: isLight ? 16 : 10,
-    elevation: isLight ? 4 : 2,
-  } as const
-}
+// Track's drop shadow (shadowColor/shadowOpacity/shadowRadius) removed — on
+// real Android devices it rendered as a hard, visible gray outline around
+// the whole track instead of a soft blur, same issue as GlassSurface's own
+// outer shadow (see the `showShadow` note in GlassSurface.tsx).
 
 // Two-way "Chuyến đi / Giao hàng" segmented switch sitting above the
 // dashboard's scroll content. Each segment gets an explicit height (not a
@@ -84,7 +79,6 @@ export function DashboardModeSwitch({ mode, onChange }: Props) {
       gap="$2"
       borderRadius={16}
       backgroundColor={trackBackground}
-      style={StyleSheet.flatten([getTrackShadow(isLight)])}
     >
       {renderSegment('trips', 'car-sport', 'Chuyến đi')}
       {renderSegment('delivery', 'cube', 'Giao hàng')}

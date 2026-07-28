@@ -72,7 +72,7 @@
       [
         "react-native-vosk",
         {
-          "models": ["assets/model-vi-vn"]
+          "models": ["assets/model-en-us"]
         }
       ],
       "expo-secure-store"

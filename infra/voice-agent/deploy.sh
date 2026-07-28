@@ -76,14 +76,19 @@ docker build -t "$IMAGE_URI" "$SCRIPT_DIR/../../src/voice-agent/"
 echo "→ Pushing image to ECR..."
 docker push "$IMAGE_URI"
 
-# Step 3: Force ECS to redeploy with new image
-echo "→ Redeploying ECS service..."
+# Step 3: Force ECS to redeploy with new image — both services run the same
+# image (voice-agent worker + the vision-api service, see cfn.yaml), so both
+# need forcing or one keeps running the old image.
+echo "→ Redeploying ECS services..."
 CLUSTER=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
   --query "Stacks[0].Outputs[?OutputKey=='ECSClusterName'].OutputValue" --output text)
 SERVICE=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
   --query "Stacks[0].Outputs[?OutputKey=='ECSServiceName'].OutputValue" --output text)
+VISION_API_SERVICE=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
+  --query "Stacks[0].Outputs[?OutputKey=='VisionApiServiceName'].OutputValue" --output text)
 
 aws ecs update-service \
   --cluster "$CLUSTER" \
@@ -92,9 +97,23 @@ aws ecs update-service \
   --region "$REGION" \
   $PROFILE > /dev/null
 
+aws ecs update-service \
+  --cluster "$CLUSTER" \
+  --service "$VISION_API_SERVICE" \
+  --force-new-deployment \
+  --region "$REGION" \
+  $PROFILE > /dev/null
+
+VISION_API_URL=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
+  --query "Stacks[0].Outputs[?OutputKey=='VoiceAgentApiUrl'].OutputValue" --output text)
+
 echo ""
 echo "======================================"
 echo "✅ voice-agent deployed!"
 echo " Cluster : $CLUSTER"
 echo " Service : $SERVICE"
+echo ""
+echo "Copy into trip-service's env (VOICE_AGENT_URL):"
+echo "$VISION_API_URL"
 echo "======================================"

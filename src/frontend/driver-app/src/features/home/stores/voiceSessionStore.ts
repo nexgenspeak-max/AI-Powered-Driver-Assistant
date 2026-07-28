@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import ForegroundService from '@supersami/rn-foreground-service'
 import { Room, RoomEvent, Track, ConnectionState, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
 import { voiceService } from '../../../services/api/voice'
+import { useWakeWordSettingsStore } from '../../assistant-wakeword/wakeWordSettingsStore'
 
 const CALL_STATE_TOPIC = 'call_state'
 
@@ -35,6 +36,17 @@ async function startCallForegroundService() {
 
 function stopCallForegroundService() {
   if (Platform.OS !== 'android') return
+  // @supersami/rn-foreground-service tracks one Android service for the
+  // whole app, not one per feature — this same service is what wake-word
+  // listening runs under too (see wakeWordService.ts's
+  // ensureForegroundServiceForListening). Stopping it here whenever a call
+  // ends would also kill hands-free listening the instant "Trợ lý rảnh tay"
+  // is on, even though nothing asked for it to turn off — the toggle itself
+  // is meant to be the only thing that can do that. So skip the actual
+  // stop() while hands-free is enabled; wake-word's own resume logic reuses
+  // (and re-labels) the still-running service instead of it ever having
+  // stopped.
+  if (useWakeWordSettingsStore.getState().enabled) return
   ForegroundService.stop()
 }
 
@@ -50,6 +62,25 @@ const TRANSCRIPTION_TOPIC = 'lk.transcription'
 let room: Room | null = null
 const audioEls = new Set<HTMLAudioElement>()
 const messageListeners = new Set<VoiceMessageListener>()
+
+// Polls the room's own connection state while `status` claims 'connected',
+// as a fallback for cases where `RoomEvent.Disconnected` never fires at all
+// — e.g. a data channel (the "publisher data channel ... closed
+// unexpectedly" error some drivers see) dying without the underlying room
+// connection itself being torn down cleanly. Without this, `status` gets
+// stuck at 'connected' forever in that case: wake-word's own resume logic
+// only watches for `status === 'idle'`, so a disconnect that never properly
+// reports itself would permanently block hands-free listening from ever
+// restarting, even though the driver's toggle is still on.
+let watchdogTimer: ReturnType<typeof setInterval> | null = null
+const WATCHDOG_INTERVAL_MS = 4000
+
+function clearWatchdog() {
+  if (watchdogTimer) {
+    clearInterval(watchdogTimer)
+    watchdogTimer = null
+  }
+}
 
 interface VoiceSessionState {
   status: VoiceSessionStatus
@@ -71,6 +102,35 @@ interface VoiceSessionState {
 }
 
 export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
+  // Shared by the real RoomEvent.Disconnected listener and the watchdog
+  // below — both need to do the exact same teardown, the only difference is
+  // *how* they found out the room is gone (a clean event vs. polling
+  // discovering it's already dead). `guardRoom` is the specific `Room`
+  // instance that detected the problem — skipped if a *newer* room has
+  // since replaced the module-level `room` (a fresh connect() already
+  // superseded this one, so tearing down would clobber the new session).
+  const handleDisconnected = async (guardRoom: Room) => {
+    if (room !== guardRoom) {
+      console.log('[voice-session] handleDisconnected: skipped, room already replaced')
+      return
+    }
+    console.log('[voice-session] handleDisconnected: tearing down')
+    room = null
+    clearWatchdog()
+    audioEls.forEach(el => el.remove())
+    audioEls.clear()
+    // Awaited, not fire-and-forget — `status` used to flip to 'idle' before
+    // the mic was actually released, so wake-word's own resume logic (which
+    // watches for `status === 'idle'`) could only guess how long to wait
+    // before it was safe to grab the mic again. Now that `idle` only fires
+    // once LiveKit's audio session has genuinely torn down, that handoff is
+    // both faster and doesn't depend on the guess being long enough.
+    await stopAudioSession()
+    console.log('[voice-session] handleDisconnected: stopAudioSession done, setting idle')
+    stopCallForegroundService()
+    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false })
+  }
+
   const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
@@ -124,13 +184,9 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         }
       })
 
-      r.on(RoomEvent.Disconnected, () => {
-        room = null
-        audioEls.forEach(el => el.remove())
-        audioEls.clear()
-        stopAudioSession()
-        stopCallForegroundService()
-        set({ status: 'idle', agentAudioLevel: 0, isCallActive: false })
+      r.on(RoomEvent.Disconnected, reason => {
+        console.log('[voice-session] RoomEvent.Disconnected fired, reason:', reason)
+        handleDisconnected(r)
       })
 
       // Drives the assistant orb's shape from the AI's actual voice loudness
@@ -156,8 +212,24 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       await r.localParticipant.setMicrophoneEnabled(true)
       await startCallForegroundService()
       set({ status: 'connected' })
+
+      clearWatchdog()
+      watchdogTimer = setInterval(() => {
+        if (room !== r) {
+          clearWatchdog()
+          return
+        }
+        // `r.state` is the room's own live WebRTC connection state — checked
+        // directly rather than trusting `status` to already reflect it,
+        // since that's exactly what a partial failure (a data channel dying
+        // without RoomEvent.Disconnected ever firing) leaves stale.
+        if (r.state === ConnectionState.Disconnected) {
+          handleDisconnected(r)
+        }
+      }, WATCHDOG_INTERVAL_MS)
     } catch (err) {
       console.error('[voice-session] connect failed', err)
+      clearWatchdog()
       room?.disconnect()
       room = null
       stopAudioSession()

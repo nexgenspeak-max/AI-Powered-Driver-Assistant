@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { ProfileCard } from '../../src/features/profile/components/ProfileCard'
+import { SectionTitle } from '../../src/features/profile/components/SectionTitle'
 import { GlassSurface } from '../../src/components/GlassSurface'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
@@ -162,7 +163,7 @@ export default function ProfileScreen() {
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
             <Image
               source={isDark ? DARK_ICONS.voiceAssistant : ICONS.voiceAssistant}
-              style={{ width: isDark ? 23 : 28, height: isDark ? 23 : 28, tintColor: isDark ? '#ffffff' : undefined }}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
               resizeMode="contain"
             />
             <YStack flex={1}>
@@ -246,14 +247,6 @@ export default function ProfileScreen() {
   )
 }
 
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <Text color="$textSecondary" fontSize={12} fontWeight="700" paddingHorizontal="$4" paddingTop="$4" paddingBottom="$1">
-      {children}
-    </Text>
-  )
-}
-
 function MenuRow({
   icon,
   ionIcon,
@@ -274,13 +267,13 @@ function MenuRow({
 }) {
   const theme = useTheme()
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} >
       <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
-        <XStack alignItems="center" gap="$3">
+        <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
           {icon ? (
             <Image
               source={icon}
-              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined}}
               resizeMode="contain"
             />
           ) : (
@@ -288,7 +281,7 @@ function MenuRow({
               <Ionicons name={ionIcon} size={20} color={theme.textSecondary.val} />
             </View>
           )}
-          <Text color={labelColor} fontWeight="500">
+          <Text color={labelColor} fontWeight="500" flexShrink={1} numberOfLines={1}>
             {label}
           </Text>
         </XStack>

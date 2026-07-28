@@ -135,8 +135,9 @@ export function AssistantChatPanel() {
       >
         {chats.map((chat, i) =>
           chat.who === 'me' ? (
-            // User bubble: purple gradient, black text in light mode (white
-            // in dark, where black text on this same gradient reads poorly).
+            // User bubble: purple gradient, always white text regardless of
+            // theme — the gradient itself doesn't change with light/dark,
+            // so the text shouldn't need to either.
             <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
               <LinearGradient
                 colors={['#7C5B9C', '#A855F7']}
@@ -144,23 +145,26 @@ export function AssistantChatPanel() {
                 end={{ x: 1, y: 1 }}
                 style={{ paddingHorizontal: 16, paddingVertical: 10 }}
               >
-                <Text color={isLight ? '#000000' : '$textInverse'}>{chat.msg}</Text>
+                <Text color="#ffffff">{chat.msg}</Text>
               </LinearGradient>
             </View>
           ) : (
-            // AI bubble: fixed black background + white text in light mode
-            // (so it stays legible against the now-white screen background);
-            // dark mode keeps the theme-derived $accent/$textPrimary pair.
+            // AI bubble: light card + dark text in light mode, matching the
+            // rest of the light-mode UI (glass cards, dark $textPrimary) —
+            // was a hardcoded black bubble/white text even in light mode,
+            // which read as broken/out of place against an otherwise white
+            // screen. Dark mode keeps the theme-derived $accent/$textPrimary
+            // pair, unchanged.
             <View
               key={i}
               maxWidth="80%"
               alignSelf="flex-start"
-              backgroundColor={isLight ? '#000000' : '$accent'}
+              backgroundColor={isLight ? '$surfaceElevated' : '$accent'}
               borderRadius="$bubble"
               paddingHorizontal={16}
               paddingVertical={10}
             >
-              <Text color={isLight ? '#ffffff' : '$textPrimary'}>{chat.msg}</Text>
+              <Text color="$textPrimary">{chat.msg}</Text>
             </View>
           ),
         )}
@@ -211,14 +215,14 @@ export function AssistantChatPanel() {
           onChangeText={setMsg}
           onSubmitEditing={handleSend}
           placeholder="Nói gì đó..."
-          placeholderTextColor={isLight ? '#8b8792' : '#8f7fb0'}
+          placeholderTextColor={theme.textMuted.val}
           // Highlighted-text (select-all) color — was left at the OS
           // default (a generic blue), which clashed against this app's
           // purple-branded glass fields. Brighter in dark mode (#C084FC vs
           // #8B5CF6) since a highlight needs more contrast against a dark
           // field than a light one.
           selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
-          style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff' }}
+          style={{ flex: 1, color: theme.textPrimary.val }}
         />
         <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
           <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />

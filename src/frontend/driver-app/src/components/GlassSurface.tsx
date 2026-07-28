@@ -130,9 +130,15 @@ const BASE_LIGHT_SPECULAR_ANGLE_DEG = -19; // spec's -18..-20deg range
 
 const THEME_PARAMS = {
   dark: {
-    topColor: [1, 1, 1, 0.09] as [number, number, number, number],
-    bottomColor: [1, 1, 1, 0.05] as [number, number, number, number],
-    topShadowAlpha: 0.22,
+    // Flat/uniform instead of a top-to-bottom gradient — the gradient
+    // combined with the inner top shadow below used to concentrate both
+    // effects in the same region near the top edge (right where a card's
+    // leading icon usually sits), reading as an uneven "hazy" patch instead
+    // of one consistent glass tint. A single flat value gives every card an
+    // evenly balanced tint on all 4 sides.
+    topColor: [1, 1, 1, 0.07] as [number, number, number, number],
+    bottomColor: [1, 1, 1, 0.07] as [number, number, number, number],
+    topShadowAlpha: 0,
     bottomHighlightAlpha: 0,
     // Specular top-left glint removed per spec — the shader term is still
     // computed (harmless at 0) rather than deleted, so re-enabling it later
@@ -236,13 +242,12 @@ export function GlassSurface({
       height: e.nativeEvent.layout.height,
     });
 
-  // `outline` still skips the shadow entirely in dark mode (transparent
-  // interior + a 1px border was enough contrast against the dark background
-  // it was originally designed for) — but in light mode that same
-  // transparent card all but disappears against the light gradient screen
-  // backgrounds, so it gets the normal outer shadow too, same as every
-  // other surface.
-  const showShadow = !outline || isLight;
+  // TEMP: disabled per report — on real Android devices this drop shadow
+  // (shadowColor/shadowOpacity/shadowRadius) doesn't render as a soft blur
+  // like it does on iOS/simulators; it shows up as a hard, visible gray
+  // outline tracing the card's whole silhouette. Flip back to
+  // `!outline || isLight` to restore it once that's addressed.
+  const showShadow = false;
 
   // `outline` skips the wash/shader canvas entirely — no fill of any
   // opacity, matching the outline Button's genuinely transparent interior

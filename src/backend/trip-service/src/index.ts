@@ -7,6 +7,7 @@ import callsRouter from './routes/calls';
 import voiceRouter from './routes/voice';
 import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
+import deliveryOrdersRouter from './routes/deliveryOrders';
 import { authenticate } from './middleware/authenticate';
 
 const corsOptions = {
@@ -19,7 +20,9 @@ const corsOptions = {
 const app = express();
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json());
+// Delivery-order photos travel here as base64 JSON, well past Express's 100kb
+// default — raised to cover a compressed phone-camera photo with headroom.
+app.use(express.json({ limit: '15mb' }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1', authenticate);
@@ -29,5 +32,6 @@ app.use('/api/v1/calls', callsRouter);
 app.use('/api/v1/voice', voiceRouter);
 app.use('/api/v1/reminders', remindersRouter);
 app.use('/api/v1/customers', customersRouter);
+app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
 
 export const handler = serverless(app);
