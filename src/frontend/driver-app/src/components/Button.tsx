@@ -20,6 +20,47 @@ function getPrimaryOuterShadow(isLight: boolean) {
   } as const
 }
 
+// Light-mode-only shadow per variant, replacing the one-size-fits-all
+// `getGlassShadow` every non-primary variant used to share (a flat black
+// shadowColor/opacity 0.24/radius 20 regardless of the button's own fill).
+// That read badly on two fronts: `outline` is a transparent-fill pill with
+// only a 1px border for definition, so a big dark blob floating under it
+// looked like a rendering glitch rather than a shadow; and filled variants
+// (success/danger) sat under a shadow that didn't match their own color,
+// reading flat/muddy instead of a soft colored glow (the same trick
+// `getPrimaryOuterShadow` already uses — a purple shadow under the purple
+// gradient). Dark mode is untouched (still no shadow on non-primary at all).
+function getVariantShadow(variant: FrameProps['variant'], isLight: boolean) {
+  if (!isLight) return {}
+  switch (variant) {
+    // No fill to "lift" off the surface — the border alone carries the
+    // definition; keep this variant flat instead of faking depth under it.
+    case 'outline':
+      return {}
+    case 'success':
+      return {
+        shadowColor: '#16a34a',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.28,
+        shadowRadius: 14,
+        elevation: 5,
+      } as const
+    case 'danger':
+      return {
+        shadowColor: '#ef4444',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.28,
+        shadowRadius: 14,
+        elevation: 5,
+      } as const
+    // 'dark' is a plain `$surfaceElevated` (white in light mode) fill —
+    // the neutral glass shadow still fits since there's no brand color to
+    // tint it toward.
+    default:
+      return getGlassShadow(isLight)
+  }
+}
+
 const ButtonFrame = styled(View, {
   minHeight: 52,
   paddingVertical: '$3',
@@ -80,13 +121,9 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
 
   // Matches GlassButton's ("Bắt đầu" CTA) purple-tinted outer shadow exactly
   // — same recipe now backs every primary button, not just that one screen.
-  // Every other variant (outline/dark/danger/success) had no shadow at all —
-  // fine in dark mode where the border/fill already reads against the dark
-  // background, but in light mode an outline button all but disappears into
-  // a light screen (e.g. driver-app dashboard's "Picked Up Customer"/"Cancel
-  // Trip"). Light mode now gets the same soft glass shadow Card/Input use;
-  // dark mode is left exactly as it was.
-  const dynamicProps = variant === 'primary' ? getPrimaryOuterShadow(isLight) : isLight ? getGlassShadow(isLight) : {}
+  // Every other variant is handled by `getVariantShadow` above (color-matched
+  // per fill, flat for `outline`); dark mode is left exactly as it was.
+  const dynamicProps = variant === 'primary' ? getPrimaryOuterShadow(isLight) : getVariantShadow(variant, isLight)
   // Primary always renders white text now (like GlassButton) — the previous
   // light-mode black-text carve-out was tuned for the old lighter gradient
   // (#7C5B9C); the darker one below reads fine with white in both themes.

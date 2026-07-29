@@ -19,32 +19,51 @@ export const authGlassTheme = {
   linkColor: '#6c8aff',
 
   card: {
-    background: { dark: '#2A2438', light: 'rgba(255,255,255,0.7)' },
+    // Light-mode fill bumped from 0.7 -> 0.94 opacity — at 0.7 the card
+    // barely differs from the near-white screen bg (`screenBackground.light`
+    // = #F5F4F8) behind it, so its edge only read via the shadow's blur
+    // instead of the fill itself, making the card look like a soft, uneven
+    // halo instead of one solid block wrapping every field.
+    background: { dark: '#2A2438', light: 'rgba(255,255,255,0.94)' },
     maxWidth: 384,
     shadow: {
       color: '#000000',
-      offsetY: { dark: 16, light: 18 },
-      opacity: { dark: 0.55, light: 0.3 },
-      radius: { dark: 28, light: 30 },
-      elevation: { dark: 12, light: 14 },
+      offsetY: { dark: 16, light: 10 },
+      // Light-mode radius/opacity/elevation pulled way down (30/0.3/14 ->
+      // 14/0.14/6) — that combo painted a large, soft halo around the card
+      // (worse on Android, where `elevation` isn't clipped by the card's own
+      // `overflow: hidden`) that read as a blurry, ill-defined border rather
+      // than a crisp edge. Dark mode is untouched — same halo isn't visible
+      // against its own near-black screen bg.
+      opacity: { dark: 0.55, light: 0.14 },
+      radius: { dark: 28, light: 14 },
+      elevation: { dark: 12, light: 6 },
     },
   },
 
   field: {
     radius: 16,
     background: { dark: 'rgba(255,255,255,0.05)', light: 'rgba(255,255,255,0.55)' },
-    // Same "thin bright rim hugging the border" values as the customer-app
-    // booking form's GlassBookingInput shader (THEME_PARAMS.ringColor:
-    // [1,1,1,0.05] dark / [1,1,1,0.7] light) — drawn here as a plain RN
-    // border instead of a shader rim since this field has no Skia canvas,
-    // but the same rgba values so both forms' fields read as the same
-    // border treatment.
-    ring: { dark: 'rgba(255,255,255,0.05)', light: 'rgba(255,255,255,0.7)' },
+    // Dark mode keeps the customer-app booking form's shader rim value
+    // (THEME_PARAMS.ringColor [1,1,1,0.05]) — a near-invisible white line
+    // still reads against the dark card. Light mode's old match ([1,1,1,0.7],
+    // i.e. near-opaque white) was invisible here instead: an almost-white
+    // line on top of this field's own near-white fill and the near-white
+    // card behind it. Swapped for the app's actual `$border` gray token
+    // (tamagui.config.ts) so the field outline is visible on light mode.
+    ring: { dark: 'rgba(255,255,255,0.05)', light: '#D1D5DB' },
     // Outer shadow only — no inner concave shadow (unlike GlassBookingInput's
     // shader, which still carves a top lip in dark mode; on this screen's
     // much darker card that would read as mud, not glass).
+    // Shadow color is black in both themes now — light mode used to be a
+    // purple (#8B5CF6) tint, the only glass surface in the app whose shadow
+    // didn't match the neutral black every other one uses (card.shadow above,
+    // GlassSurface, GlassMaterial, the tab bar). Not the same thing as the
+    // purple CTA buttons' shadow (GlassButton/Button primary) — those
+    // deliberately match their own gradient fill, a different, separately
+    // documented exception; this field has no colored fill to match.
     shadow: {
-      color: { dark: '#000000', light: '#8B5CF6' },
+      color: { dark: '#000000', light: '#000000' },
       offsetY: { dark: 4, light: 6 },
       opacity: { dark: 0.3, light: 0.16 },
       radius: { dark: 10, light: 16 },

@@ -17,6 +17,9 @@ from app.voicebot.vn.tools.update_trip_status         import update_trip_status
 from app.voicebot.vn.tools.call_customer              import call_customer
 from app.voicebot.vn.tools.call_custom_number         import call_custom_number
 from app.voicebot.vn.tools.confirm_call_custom_number import confirm_call_custom_number
+from app.voicebot.vn.tools.find_contact               import find_contact
+from app.voicebot.vn.tools.select_contact_match       import select_contact_match
+from app.voicebot.vn.tools.confirm_contact_call       import confirm_contact_call
 from app.voicebot.vn.tools.get_customer_location      import get_customer_location
 from app.voicebot.vn.tools.confirm_trip_with_customer import confirm_trip_with_customer
 from app.voicebot.vn.tools.summarize_last_call        import summarize_last_call
@@ -71,6 +74,9 @@ _DRIVER_INBOUND_TOOLS = [
     call_customer,
     call_custom_number,
     confirm_call_custom_number,
+    find_contact,
+    select_contact_match,
+    confirm_contact_call,
     get_customer_location,
     confirm_trip_with_customer,
     summarize_last_call,

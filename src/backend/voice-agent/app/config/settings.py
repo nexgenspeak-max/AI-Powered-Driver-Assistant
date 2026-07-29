@@ -65,7 +65,15 @@ class Settings(BaseSettings):
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
 
     # ── Speaker verification (wake-word voiceprint gate) ─────────────────────
-    speaker_verify_enabled: bool = True
+    # Off by default — this gate silently records ~2.5s of the caller's mic
+    # audio (capture_clip in speaker_verify.py) and blocks the session on
+    # that finishing before responding to anything the driver actually said,
+    # right after the greeting plays. That's a real, unavoidable ~2.5s+ of
+    # dead air on every connect with no client-side indication it's
+    # happening, which read as "phải đợi khá lâu" (having to wait a long
+    # time) — opt back in per-environment (SPEAKER_VERIFY_ENABLED=true) only
+    # where that security trade-off is worth it.
+    speaker_verify_enabled: bool = False
     speaker_verify_threshold: float = 0.6
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────

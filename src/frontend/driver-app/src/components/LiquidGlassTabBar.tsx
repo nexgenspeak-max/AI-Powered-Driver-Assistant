@@ -9,8 +9,8 @@
  *
  *  A) SHORT TAP (touch down, release right away):
  *     - A glass pill (blur + bright rim) appears immediately at the pressed tab.
- *     - After release, the pill stays "glassy" for ~1000ms before fading out
- *       (withDelay + withTiming) — not an instant snap-off.
+ *     - On release the pill fades straight back to its idle look (no
+ *       lingering "stay glassy" hold) — see BLUR_OUT below.
  *
  *  B) LONG PRESS, held still (> ~350ms):
  *     - Instead of just the pill, the ENTIRE page content above the tab bar
@@ -22,10 +22,9 @@
  *     - Cancels the pending long-press/page-blur — a drag is not a hold.
  *     - The glass pill follows the finger live, snapping to whichever tab's
  *       column it's currently over (reuses the same spring-driven `moveTo`
- *       tap already used for the tap case).
- *     - Releasing navigates to whichever tab the finger ended up over —
- *       like iOS's drag-across-the-dock or a Control Center slider, not a
- *       release-only tap.
+ *       tap already used for the tap case) — and the page navigates the
+ *       instant the pill lands on a new tab, not just on release, so the
+ *       destination page is already showing while the finger is still down.
  *
  * All three are variations on one continuous touch (down → maybe-move →
  * up), so they're driven by a single `Gesture.Pan()` over the whole row
@@ -58,13 +57,14 @@
  * expo-linear-gradient (all already dependencies of this app).
  */
 
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { GLASS_BORDER_COLOR, GLASS_BORDER_TOP_COLOR } from './LiquidGlass'
 import {
   BackdropBlur,
   BackdropFilter,
@@ -81,7 +81,6 @@ import {
   runOnJS,
   useDerivedValue,
   useSharedValue,
-  withDelay,
   withSpring,
   withTiming,
   type SharedValue,
@@ -204,7 +203,12 @@ const CONTENT_HEIGHT = 76
 const BAR_RADIUS = 30
 const BAR_SIDE_MARGIN = 20
 const BAR_BOTTOM_MARGIN = 16
-const PILL_MARGIN = 6
+// Was 6 — with 4 equal-width tabs, the longest label ("Dashboard") could run
+// right up to (or past) the pill's edge on narrower screens, since a 6px
+// inset on each side ate into the already-tight column width. 3px still
+// keeps the pill visibly inset from the bar's own gaps between tabs, just
+// with less of it wasted.
+const PILL_MARGIN = 3
 
 const LEADING_SPRING = { damping: 14, stiffness: 220, mass: 0.6 }
 const TRAILING_SPRING = { damping: 18, stiffness: 120, mass: 0.9 }
@@ -217,7 +221,6 @@ const PAGE_BLUR_OUT = { duration: 260, easing: Easing.out(Easing.cubic) }
 const PRESSED_BLUR = 14
 const IDLE_BLUR = 0.5
 
-const TAP_HOLD_AFTER_RELEASE = 1000 // ms — pill stays glassy after release
 const LONG_PRESS_DELAY = 350 // ms — threshold to count as a "hold"
 const DRAG_THRESHOLD = 10 // px — beyond this, it's a drag, not a held-still long-press
 
@@ -260,6 +263,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   )
 
   const [barWidth, setBarWidth] = useState(0)
+  // The label color's own source of truth — deliberately NOT derived from
+  // `selectedIndex` (the router's `state.index`, passed down as a prop).
+  // That felt like the natural source, but it only updates once React
+  // Navigation's async state settles, which can lag behind (or occasionally
+  // land on a different tab than expected after a fast drag-across fires
+  // several `navigate()` calls in a row — see `onGestureUpdate`). Driving the
+  // color from this local state instead, updated in the SAME gesture
+  // callback that moves the pill, makes "which tab is purple" and "where the
+  // pill is" atomic — they're set together, from the same event, so they can
+  // never visibly disagree the way pill-vs-color did before.
+  const [visualIndex, setVisualIndex] = useState(() => selectedIndex)
   const tabLayouts = useRef<{ x: number; width: number }[]>([])
   const initialized = useRef(false)
   // Which tab the pill is currently tracking during a press/drag — kept as
@@ -310,6 +324,19 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     }
   }
 
+  // Reconciles the pill AND the label color to wherever the route ACTUALLY
+  // is, whenever `selectedIndex` (the router's own state) changes for a
+  // reason other than a press/drag on this bar — a deep link, programmatic
+  // navigation from some other screen, etc. Gesture-driven changes already
+  // update both `moveTo` and `visualIndex` together (see the handlers
+  // below); this is the fallback for every other path.
+  useEffect(() => {
+    if (!initialized.current) return
+    activeIndex.current = selectedIndex
+    setVisualIndex(selectedIndex)
+    moveTo(selectedIndex)
+  }, [selectedIndex, moveTo])
+
   // Maps a touch's X (row-local, same coordinate space `onTabLayout` reads
   // from) to whichever tab column it falls in — clamped to the first/last
   // tab if the finger drags past either end of the bar.
@@ -340,11 +367,21 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     }
   }
 
+  // Navigating from *this* effect (reacting to `visualIndex`) instead of
+  // directly inside the gesture callbacks caused the crash reported as
+  // "Maximum update depth exceeded": `navigateTo` → `navigation.navigate()`
+  // eventually changes `selectedIndex`, which the reconciliation effect
+  // above reacts to by calling `setVisualIndex`/`moveTo` again — two effects
+  // each capable of re-triggering the other. Navigation is called directly
+  // from the gesture handlers below instead (imperative event-handler calls
+  // aren't part of the effect-dependency graph, so they can't ping-pong).
+
   // Touch down: show the glass pill at whichever tab is under the finger,
   // and arm the long-press timer (fires unless the finger drags away first).
   const onGestureBegin = (x: number) => {
     const index = indexAtX(x)
     activeIndex.current = index
+    setVisualIndex(index)
     isLongPress.current = false
     didDrag.current = false
     moveTo(index)
@@ -377,25 +414,33 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     const index = indexAtX(x)
     if (index !== activeIndex.current) {
       activeIndex.current = index
+      // Set together with `moveTo` and `navigateTo` below — same event, same
+      // tick, so the pill, the purple label, and the actual page can never
+      // end up pointing at different tabs. Navigating here (not just on
+      // release) is what makes a drag across the bar switch pages live
+      // instead of only committing once the finger lifts.
+      setVisualIndex(index)
       moveTo(index)
+      navigateTo(index)
     }
   }
 
-  // Release: a held-still long-press just closes the page blur (no
-  // navigation — a "peek", not a selection); a tap or a drag-to-another-tab
-  // both navigate to wherever the pill ended up, with the same 1s glassy
-  // hold before fading.
+  // Release: a plain tap (no drag) never fires `onGestureUpdate` — there's
+  // no position change to react to — so this is what actually navigates for
+  // that case. A drag that already crossed into another tab already
+  // navigated there in `onGestureUpdate`; calling `navigateTo` again here is
+  // a harmless no-op then (it bails out once the route is already focused).
+  // A held-still long-press just closes the page blur (a "peek", not a
+  // selection) and skips navigating.
   const onGestureEnd = () => {
     clearLongPressTimer()
     if (isLongPress.current) {
       pageBlur.value = withTiming(0, PAGE_BLUR_OUT)
-      blurAmount.value = withTiming(IDLE_BLUR, BLUR_OUT)
-      rimIntensity.value = withTiming(0.15, BLUR_OUT)
     } else {
       navigateTo(activeIndex.current)
-      blurAmount.value = withDelay(TAP_HOLD_AFTER_RELEASE, withTiming(IDLE_BLUR, BLUR_OUT))
-      rimIntensity.value = withDelay(TAP_HOLD_AFTER_RELEASE, withTiming(0.15, BLUR_OUT))
     }
+    blurAmount.value = withTiming(IDLE_BLUR, BLUR_OUT)
+    rimIntensity.value = withTiming(0.15, BLUR_OUT)
     isLongPress.current = false
     didDrag.current = false
   }
@@ -427,27 +472,56 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
   const pillTop = useDerivedValue(() => (CONTENT_HEIGHT - pillHeight.value) / 2)
 
+  // `leftEdge`/`rightEdge` are spring-driven (see `moveTo`) and the two
+  // edges use different spring configs (LEADING_SPRING/TRAILING_SPRING) so
+  // the pill can squash/stretch while moving — but a spring with damping
+  // this low can overshoot past its own target. For every tab that isn't at
+  // an end, overshoot just eats into a neighboring tab's column, barely
+  // noticeable; for Home (the first tab) or Profile (the last), overshoot
+  // pushes the edge past the bar's own rounded corner entirely, reading as
+  // the pill spilling outside the control bar. Clamped here, at the last
+  // possible moment before anything is actually drawn — the underlying
+  // shared values themselves stay unclamped so the squash/stretch feel and
+  // spring physics are untouched, only what gets rendered is bounded to the
+  // bar's own layout (inset by PILL_MARGIN, same as every resting position).
+  const clampedLeftEdge = useDerivedValue(() => Math.max(PILL_MARGIN, leftEdge.value))
+  const clampedRightEdge = useDerivedValue(() =>
+    barWidth > 0 ? Math.min(barWidth - PILL_MARGIN, rightEdge.value) : rightEdge.value,
+  )
+
   const uniforms = useDerivedValue(() => ({
-    rectPos: [leftEdge.value, pillTop.value],
-    rectSize: [rightEdge.value - leftEdge.value, pillHeight.value],
+    rectPos: [clampedLeftEdge.value, pillTop.value],
+    rectSize: [clampedRightEdge.value - clampedLeftEdge.value, pillHeight.value],
     cornerRadius: pillHeight.value / 2,
     refractionStrength: 6,
     rimIntensity: rimIntensity.value,
     lightDir: [-0.5, -1.0],
   }))
 
-  const clipRect = useDerivedValue(() => ({
-    x: leftEdge.value,
-    y: pillTop.value,
-    width: rightEdge.value - leftEdge.value,
-    height: pillHeight.value,
-  }))
+  // A rounded clip, not a flat rect — `BackdropFilter` blurs/refracts
+  // whatever's behind it across this ENTIRE clipped region, then the
+  // (semi-transparent) `RoundedRect` below is drawn on top of that. A flat
+  // rectangular clip here still blurs the backdrop all the way into the
+  // pill's four corners even though the visible fill is rounded — since
+  // that fill's alpha never reaches 1.0, the blurred/refracted backdrop in
+  // those corner slivers stays visible, showing through as a square "ghost"
+  // boxing in the rounded pill. Most visible at the high pressed-state blur
+  // (barely perceptible at IDLE_BLUR), which is exactly the "square that
+  // appears on press and fades after release" — matching the clip to the
+  // same rounded shape as the fill removes the leak at its source.
+  const clipRect = useDerivedValue(() => {
+    const x = clampedLeftEdge.value
+    const y = pillTop.value
+    const width = clampedRightEdge.value - clampedLeftEdge.value
+    const height = pillHeight.value
+    const r = height / 2
+    return Skia.RRectXY(Skia.XYWHRect(x, y, width, height), r, r)
+  })
   // `RoundedRect`'s own `rect` prop wants a full `InputRRect` (a nested
   // `{ rect, rx, ry }` Skia RRect), not a flat `{x,y,width,height}` — pass
   // the flattened x/y/width/height/r props instead, which is the OTHER
-  // shape it accepts (`RRectCtor`). `clipRect` above stays flat since
-  // `BackdropFilter`'s `clip` prop takes that shape directly.
-  const pillWidth = useDerivedValue(() => rightEdge.value - leftEdge.value)
+  // shape it accepts (`RRectCtor`).
+  const pillWidth = useDerivedValue(() => clampedRightEdge.value - clampedLeftEdge.value)
   const rrCornerRadius = useDerivedValue(() => pillHeight.value / 2)
 
   // Purple-tinted glass pill (brand accent, #8B5CF6) — was plain white,
@@ -485,7 +559,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               shrink-wrap and center the tab row instead of letting it
               stretch full-width. Same visual result, just laid out by
               this component instead of delegated to it. */}
-          <BlurView tint={isLight ? 'light' : 'dark'} intensity={60} style={StyleSheet.absoluteFill} />
+          {/* `experimentalBlurMethod="dimezisBlurView"` — without it, Android
+              falls back to a plain semi-transparent tint (expo-blur's own
+              default/documented behavior there) instead of actually blurring
+              whatever's scrolling underneath the bar; iOS already blurs real
+              content natively and ignores this prop. */}
+          <BlurView
+            tint={isLight ? 'light' : 'dark'}
+            intensity={60}
+            experimentalBlurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
           <LinearGradient
             colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
             locations={[0, 0.35, 1]}
@@ -498,10 +582,14 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               StyleSheet.absoluteFill,
               {
                 borderRadius: BAR_RADIUS,
+                // Same 1px on all four sides, same color tokens every other
+                // glass surface uses (GLASS_BORDER_COLOR/GLASS_BORDER_TOP_COLOR
+                // in LiquidGlass/GlassMaterial.tsx) — was a hardcoded local
+                // copy of these values (and briefly a thicker 1.5px top edge)
+                // that could only stay in sync by coincidence.
                 borderWidth: 1,
-                borderColor: isLight ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)',
-                borderTopWidth: 1.5,
-                borderTopColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)',
+                borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
+                borderTopColor: isLight ? GLASS_BORDER_TOP_COLOR.light : GLASS_BORDER_TOP_COLOR.dark,
               },
             ]}
             pointerEvents="none"
@@ -517,7 +605,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               }
             >
               <RoundedRect
-                x={leftEdge}
+                x={clampedLeftEdge}
                 y={pillTop}
                 width={pillWidth}
                 height={pillHeight}
@@ -528,7 +616,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
             <Group>
               <RoundedRect
-                x={leftEdge}
+                x={clampedLeftEdge}
                 y={pillTop}
                 width={pillWidth}
                 height={pillHeight}
@@ -551,7 +639,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
               {visibleRoutes.map((route, index) => {
                 const { options } = descriptors[route.key]
-                const isFocused = selectedIndex === index
+                const isFocused = visualIndex === index
                 const label = options.title ?? route.name
                 const tintColor = isFocused
                   ? (options.tabBarActiveTintColor ?? '#8B5CF6')
@@ -561,7 +649,21 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                 return (
                   <View key={route.key} style={styles.tab} onLayout={onTabLayout(index)}>
                     {icon}
-                    <Text style={[styles.label, { color: tintColor }, isFocused && styles.labelActive]}>{label}</Text>
+                    {/* `adjustsFontSizeToFit` — the longest label ("Dashboard")
+                        could run past its own column's width (and so past the
+                        glass pill sized to that same column, see PILL_MARGIN)
+                        on narrower screens; this shrinks it down just enough
+                        to stay inside instead of overflowing past the pill's
+                        edge, rather than a fixed smaller font that's overkill
+                        on wider screens. */}
+                    <Text
+                      style={[styles.label, { color: tintColor }, isFocused && styles.labelActive]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
+                      {label}
+                    </Text>
                   </View>
                 )
               })}

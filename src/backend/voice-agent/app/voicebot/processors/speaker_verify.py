@@ -162,6 +162,13 @@ async def verify_speaker(session, room: rtc.Room, identity: str, account_id: str
     if stored is None:
         return True  # not enrolled — feature is opt-in
 
+    # This capture is a real, unavoidable ~2.5s of silence from the caller's
+    # side (capture_clip below has to wait for that much actual audio) with
+    # nothing else happening yet — said nothing here before, which read as
+    # the app hanging right after the greeting. A short heads-up line means
+    # there's at least audible confirmation something is happening during
+    # that wait, not dead air.
+    await session.say("Đợi một chút để tôi xác thực giọng nói nhé.", allow_interruptions=False)
     clip = await capture_clip(room, identity, seconds=2.5)
     if clip is None:
         logger.warning("speaker-verify: no audio captured for %s, failing open", identity)

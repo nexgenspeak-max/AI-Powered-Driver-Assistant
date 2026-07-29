@@ -175,7 +175,21 @@ export default function ProfileScreen() {
               </Text>
             </YStack>
           </XStack>
-          <Switch value={wakeWordEnabled} onValueChange={setWakeWordEnabled} />
+          <Switch
+            value={wakeWordEnabled}
+            onValueChange={setWakeWordEnabled}
+            // Default OS colors left this switch nearly invisible in light
+            // mode (a pale system gray track against the screen's own light
+            // gradient) — explicit brand colors here match the purple used
+            // everywhere else (ThemeToggle's gradient, Button's primary
+            // shadow) and a track dark enough to actually read against the
+            // light background. Dark mode already reads fine unstyled, but
+            // themed anyway so both states are visibly deliberate, not a
+            // sudden discontinuity.
+            trackColor={{ false: isLight ? '#B8BCC8' : theme.borderStrong.val, true: '#8B5CF6' }}
+            thumbColor="#ffffff"
+            ios_backgroundColor={isLight ? '#B8BCC8' : theme.borderStrong.val}
+          />
         </XStack>
         <View height={1} backgroundColor="$border" />
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">

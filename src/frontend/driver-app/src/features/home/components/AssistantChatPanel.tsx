@@ -6,6 +6,7 @@ import { GlassSheen } from '../../../components/LiquidGlass'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
+import * as Speech from 'expo-speech'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
@@ -56,6 +57,23 @@ export function AssistantChatPanel() {
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true })
   }, [chats])
+
+  // Local, on-device TTS (not the AI backend's voice — LiveKit hasn't
+  // connected yet at this point) so a driver who triggered this hands-free
+  // (wake-word, not looking at the screen) still gets some feedback that
+  // something is happening during the connect delay, instead of silence.
+  // Stops immediately on any other status so it can never talk over the
+  // AI's own voice once the real session starts, or linger after an error.
+  useEffect(() => {
+    if (voice.status === 'connecting') {
+      Speech.speak('Đang kết nối, xin chờ một chút', { language: 'vi-VN' })
+    } else {
+      Speech.stop()
+    }
+    return () => {
+      Speech.stop()
+    }
+  }, [voice.status])
 
   const handleSend = async () => {
     if (!msg.trim()) {

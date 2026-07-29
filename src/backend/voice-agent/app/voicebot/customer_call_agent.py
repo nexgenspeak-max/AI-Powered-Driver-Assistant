@@ -40,12 +40,14 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
         customer_name: str,
         driver_name: str = "",
         isolated: bool = False,
+        custom_message: str = "",
     ) -> None:
         self._lang = lang
         self._isolated = isolated
         self._trip = trip
         self._customer_name = customer_name
         self._driver_name = driver_name
+        self._custom_message = custom_message
         instructions = build_customer_call_prompt(
             lang=lang,
             customer_name=customer_name,
@@ -53,6 +55,7 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             pickup_address=trip.get("pickup_address", ""),
             trip_id=trip.get("trip_id", ""),
             isolated=isolated,
+            custom_message=custom_message,
         )
         super().__init__(instructions=instructions, tools=[end_customer_call])
 
@@ -65,7 +68,19 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             await self._run_isolated_answer_flow()
             return
 
-        if self._lang == "en":
+        if self._custom_message:
+            hint = (
+                f'The person is being dialed into this room. When they answer, greet them '
+                f'briefly, then deliver this message from the driver: "{self._custom_message}" '
+                "The driver can hear everything — stay brief."
+                if self._lang == "en"
+                else (
+                    f'Người nhận đang được kết nối vào cuộc gọi. Khi họ nghe máy, chào ngắn gọn '
+                    f'rồi truyền đạt đúng nội dung tài xế nhắn: "{self._custom_message}" '
+                    "Tài xế nghe trực tiếp — nói ngắn gọn."
+                )
+            )
+        elif self._lang == "en":
             hint = (
                 "The customer is being dialed into this room. "
                 "When they answer, greet them and explain the driver asked you to call. "

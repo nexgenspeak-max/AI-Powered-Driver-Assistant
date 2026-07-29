@@ -48,3 +48,5 @@ ERR_ETA_UNCONFIRMED    = "Tài xế chưa xác nhận chuyến. Vui lòng chờ 
 ERR_INVALID_CUSTOM_PHONE  = "Số điện thoại này nghe không hợp lệ. Anh/chị đọc lại giúp tôi số điện thoại Việt Nam cần gọi."
 ERR_CUSTOM_CALL_LIMIT     = "Anh/chị đã dùng hết số lần gọi số tự do cho phiên này. Vui lòng thử lại ở phiên sau."
 ERR_NO_PENDING_CUSTOM_CALL = "Không có số điện thoại nào đang chờ xác nhận. Anh/chị đọc số cần gọi trước nhé."
+ERR_CONTACT_RPC_FAILED     = "Không thể truy cập danh bạ trên điện thoại lúc này. Anh/chị thử lại sau nhé."
+ERR_NO_PENDING_CONTACT_CALL = "Không có yêu cầu gọi điện nào đang chờ xác nhận."

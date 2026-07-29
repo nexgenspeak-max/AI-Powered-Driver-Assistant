@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ScrollView } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { YStack, Text, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
@@ -78,70 +78,76 @@ export function RegisterForm() {
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
-      <ScrollView
-        style={{ flex: 1, backgroundColor: isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark }}
-        contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <YStack alignItems="center" gap="$2" marginTop="$10">
-          <Text color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark} fontSize="$7" fontWeight="800">
-            Become a Driver
-          </Text>
-          <Text color="$textSecondary" fontSize="$3">
-            Sign up to start earning with Czen
-          </Text>
-        </YStack>
-
-        <Card
-          width="100%"
-          maxWidth={authGlassTheme.card.maxWidth}
-          gap="$4"
-          shadowIntensity="strong"
-          borderRadius={28}
-          backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+        <ScrollView
+          style={{ flex: 1, backgroundColor: isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark }}
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Full name" placeholder="Nguyễn Văn A"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
-          )} />
-          <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
-          )} />
-          <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Email" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.email?.message} />
-          )} />
-          <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Password" secureTextEntry
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
-          )} />
-          <Controller name="vehicle_type" control={control} render={({ field: { onChange, value } }) => (
-            <VehicleTypeSelect value={value} onChange={onChange} error={errors.vehicle_type?.message} />
-          )} />
-          <Controller name="vehicle_plate" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Vehicle plate" placeholder="36C1-36363"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_plate?.message} />
-          )} />
-          <Controller name="vehicle_name" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Vehicle name" placeholder="Honda Wave"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_name?.message} />
-          )} />
-
-          {isError && !axios.isCancel(error) && (
-            <Text color="$danger" fontSize="$1">
-              Registration failed. Check your details.
+          <YStack alignItems="center" gap="$2">
+            <Text color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark} fontSize="$7" fontWeight="800">
+              Become a Driver
             </Text>
-          )}
+            <Text color="$textSecondary" fontSize="$3">
+              Sign up to start earning with Czen
+            </Text>
+          </YStack>
 
-          <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
-          {isPending && <Button label="Hủy" variant="outline" onPress={onCancel} />}
+          <Card
+            width="100%"
+            maxWidth={authGlassTheme.card.maxWidth}
+            gap="$4"
+            shadowIntensity="strong"
+            borderRadius={28}
+            backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+          >
+            <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Full name" placeholder="Nguyễn Văn A"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
+            )} />
+            <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
+            )} />
+            <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Email" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.email?.message} />
+            )} />
+            <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Password" secureTextEntry
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
+            )} />
+            <Controller name="vehicle_type" control={control} render={({ field: { onChange, value } }) => (
+              <VehicleTypeSelect value={value} onChange={onChange} error={errors.vehicle_type?.message} />
+            )} />
+            <Controller name="vehicle_plate" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Vehicle plate" placeholder="36C1-36363"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_plate?.message} />
+            )} />
+            <Controller name="vehicle_name" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Vehicle name" placeholder="Honda Wave"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_name?.message} />
+            )} />
 
-          <Text textAlign="center" color="$textSecondary" fontSize="$3">
-            Already have an account?{' '}
-            <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Log in</Link>
-          </Text>
-        </Card>
-      </ScrollView>
+            {isError && !axios.isCancel(error) && (
+              <Text color="$danger" fontSize="$1">
+                Registration failed. Check your details.
+              </Text>
+            )}
+
+            <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+            {isPending && <Button label="Hủy" variant="outline" onPress={onCancel} />}
+
+            <Text textAlign="center" color="$textSecondary" fontSize="$3">
+              Already have an account?{' '}
+              <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Log in</Link>
+            </Text>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </>
   )
 }

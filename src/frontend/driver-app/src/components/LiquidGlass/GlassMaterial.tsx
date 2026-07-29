@@ -42,6 +42,26 @@ export const GLASS_SHADOW = {
   elevation: 14,
 } as const;
 
+// Single source of truth for every "kính" (frosted glass) surface's border
+// color — Card/Badge/SearchInput/Input (via GlassSheen), Button's non-primary
+// variants and the tab bar (LiquidGlassTabBar, both platforms) all rendered
+// the exact same rgba values as separate hardcoded literals before, which
+// only stayed in sync by coincidence. Centralized here so they can't drift
+// apart again. Top edge stays a touch brighter (a "light reflection" cue),
+// but only in color — width is uniform 1px everywhere, see GlassGradientLayers
+// below. Deliberately NOT used by the purple/green/red CTA buttons
+// (GlassButton, Button's primary/success/danger) or GlassSurface's flat
+// `outline` mode — those are each a different, already-documented "shadow/
+// border matches this element's own fill color" language, not generic glass.
+export const GLASS_BORDER_COLOR = {
+  light: "rgba(255, 255, 255, 0.35)",
+  dark: "rgba(255, 255, 255, 0.1)",
+} as const;
+export const GLASS_BORDER_TOP_COLOR = {
+  light: "rgba(255, 255, 255, 0.55)",
+  dark: "rgba(255, 255, 255, 0.2)",
+} as const;
+
 // Apple-style concentric nesting: a rounded shape inset by `padding` inside
 // a container of `outerRadius` should itself use `outerRadius - padding` so
 // both curves share the same center — not a fixed/guessed constant, which
@@ -146,15 +166,13 @@ function GlassGradientLayers({
             StyleSheet.absoluteFill,
             {
               borderRadius,
+              // Same 1px on all four sides — was borderTopWidth: 1.5 (thicker
+              // than the other three), which read as a lopsided border
+              // instead of a clean thin outline. The top still gets a
+              // brighter "light reflection" tint via color alone.
               borderWidth: 1,
-              borderColor: isLight
-                ? "rgba(255, 255, 255, 0.35)"
-                : "rgba(255, 255, 255, 0.1)",
-              // Add a secondary inner ring to simulate depth (top reflection)
-              borderTopWidth: 1.5,
-              borderTopColor: isLight
-                ? "rgba(255, 255, 255, 0.55)"
-                : "rgba(255, 255, 255, 0.2)",
+              borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
+              borderTopColor: isLight ? GLASS_BORDER_TOP_COLOR.light : GLASS_BORDER_TOP_COLOR.dark,
             },
           ]}
           pointerEvents="none"
@@ -207,7 +225,17 @@ export function GlassMaterial({
       collapsable={false}
     >
       <View style={{ flex: 1, borderRadius, overflow: "hidden" }}>
-        <BlurView tint={resolvedTint} intensity={blurIntensity} style={fill} />
+        {/* `experimentalBlurMethod="dimezisBlurView"` — Android otherwise
+            falls back to a plain semi-transparent tint (expo-blur's own
+            documented default there) instead of actually blurring whatever's
+            behind this surface; iOS already blurs real content natively and
+            ignores this prop. */}
+        <BlurView
+          tint={resolvedTint}
+          intensity={blurIntensity}
+          experimentalBlurMethod="dimezisBlurView"
+          style={fill}
+        />
         <GlassGradientLayers borderRadius={borderRadius} />
         <View
           style={[

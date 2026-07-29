@@ -28,6 +28,7 @@ from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
 from app.voicebot.processors import speaker_verify
 from app.voicebot.processors.call_state import CallAwareUserData
+from app.voicebot.processors.agent_state import publish_agent_state
 from app.voicebot.processors.sip_call_watch import (
     complete_isolated_call,
     register_customer_room_sip_watchers,
@@ -298,6 +299,15 @@ async def entrypoint(ctx: JobContext) -> None:
                 sync_transcription=False,
             ),
         )
+
+        # ── Agent-state broadcast (assistant orb animation) ───────────────────
+        # Unconditional (not gated by settings.silence_tracker_enabled, unlike
+        # the separate agent_state_changed handler further below that drives
+        # the silence tracker) — the driver-app orb needs this on every
+        # session. See agent_state.py.
+        @session.on("agent_state_changed")
+        def _on_agent_state_broadcast(ev) -> None:
+            publish_agent_state(ev.new_state)
 
         # ── Wake-word voiceprint gate ──────────────────────────────────────────
         # Only for organically-triggered driver/customer sessions (wake-word or

@@ -17,7 +17,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
         "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
-        "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order."
+        "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order.",
+        "NSContactsUsageDescription": "Czen Driver needs contacts access so the AI assistant can call people from your phone by name."
       },
       "bitcode": false
     },
@@ -48,7 +49,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.BLUETOOTH",
+        "android.permission.READ_CONTACTS"
       ],
       "package": "com.anonymous.driverapp"
     },
@@ -75,7 +77,8 @@
           "models": ["assets/model-en-us"]
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-contacts"
     ]
   }
 }

@@ -48,6 +48,7 @@ Quản lý chuyến đi:
 
 Liên lạc khách hàng:
 - CALL_CUSTOMER            — gọi khách (xem quy trình trên)
+- CALL_CONTACT             — gọi người trong danh bạ điện thoại của tài xế (tìm tên → xác nhận → chọn chế độ)
 - SUMMARIZE_CALL           — đọc tóm tắt cuộc gọi vừa rồi
 - GET_CUSTOMER_LOCATION    — vị trí điểm đón
 - CONFIRM_WITH_CUSTOMER    — gửi SMS xác nhận cho khách

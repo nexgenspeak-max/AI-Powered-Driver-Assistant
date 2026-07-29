@@ -4,8 +4,10 @@ import ForegroundService from '@supersami/rn-foreground-service'
 import { Room, RoomEvent, Track, ConnectionState, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
 import { voiceService } from '../../../services/api/voice'
 import { useWakeWordSettingsStore } from '../../assistant-wakeword/wakeWordSettingsStore'
+import { searchContacts } from '../services/contactsSearch'
 
 const CALL_STATE_TOPIC = 'call_state'
+const AGENT_STATE_TOPIC = 'agent_state'
 
 // Must run once at module load (before the service is ever started), per the
 // package's own requirement — registers the headless task the service runs on.
@@ -87,6 +89,15 @@ interface VoiceSessionState {
   /** Smoothed 0..1 audio level of the AI agent's voice track, from LiveKit's ActiveSpeakersChanged — 0 when silent/not connected. */
   agentAudioLevel: number
   /**
+   * True while the backend's own agent_state_changed reports "speaking" or
+   * "thinking" — unlike agentAudioLevel, this stays true through a natural
+   * mid-sentence pause (no audio, but the AI hasn't finished replying yet),
+   * so the assistant orb can keep moving for the AI's whole turn instead of
+   * stalling every time its voice briefly drops out. See backend's
+   * agent_state.py.
+   */
+  agentSpeaking: boolean
+  /**
    * True while the voice-agent backend reports a real SIP-dialed phone call
    * in progress (bridge, agent-mediated, or background call — see backend's
    * call_state.py). The Home mic button must not be able to hang up while
@@ -128,7 +139,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     await stopAudioSession()
     console.log('[voice-session] handleDisconnected: stopAudioSession done, setting idle')
     stopCallForegroundService()
-    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false })
+    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
   }
 
   const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
@@ -142,7 +153,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
     }
 
-    set({ status: 'connecting', isCallActive: false })
+    set({ status: 'connecting', isCallActive: false, agentSpeaking: false })
     try {
       await startAudioSession()
       const { token, livekit_url } = await getToken()
@@ -154,12 +165,24 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       // UTF-8 JSON, not a text-stream, so it's decoded manually here rather
       // than via registerTextStreamHandler.
       r.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
-        if (topic !== CALL_STATE_TOPIC) return
-        try {
-          const msg = JSON.parse(new TextDecoder().decode(payload))
-          if (msg?.type === 'call_state') set({ isCallActive: !!msg.active })
-        } catch (err) {
-          console.error('[voice-session] failed to parse call_state payload', err)
+        if (topic === CALL_STATE_TOPIC) {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(payload))
+            if (msg?.type === 'call_state') set({ isCallActive: !!msg.active })
+          } catch (err) {
+            console.error('[voice-session] failed to parse call_state payload', err)
+          }
+          return
+        }
+        if (topic === AGENT_STATE_TOPIC) {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(payload))
+            if (msg?.type === 'agent_state') {
+              set({ agentSpeaking: msg.state === 'speaking' || msg.state === 'thinking' })
+            }
+          } catch (err) {
+            console.error('[voice-session] failed to parse agent_state payload', err)
+          }
         }
       })
 
@@ -208,6 +231,23 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       r.registerTextStreamHandler(TRANSCRIPTION_TOPIC, handleStream)
       r.registerTextStreamHandler(CHAT_TOPIC, handleStream)
 
+      // Lets the backend voice agent ask this device to search the driver's
+      // own phone contacts by name — contacts only exist on-device, the
+      // agent has no other way to reach them. See contactsSearch.ts and the
+      // backend's find_contact tool (app/voicebot/vn/tools/find_contact.py).
+      // Errors are caught and returned as a JSON `{error}` string rather than
+      // thrown — a thrown error only surfaces to the Python caller as an
+      // opaque generic "Application Error", losing the actual reason.
+      r.registerRpcMethod('search_contacts', async data => {
+        try {
+          const { query } = JSON.parse(data.payload)
+          const matches = await searchContacts(query)
+          return JSON.stringify({ matches })
+        } catch (err) {
+          return JSON.stringify({ error: err instanceof Error ? err.message : String(err) })
+        }
+      })
+
       await r.connect(livekit_url, token)
       await r.localParticipant.setMicrophoneEnabled(true)
       await startCallForegroundService()
@@ -234,7 +274,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
       stopAudioSession()
       stopCallForegroundService()
-      set({ status: 'error', agentAudioLevel: 0, isCallActive: false })
+      set({ status: 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
     }
   }
 
@@ -242,6 +282,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     status: 'idle',
     agentAudioLevel: 0,
     isCallActive: false,
+    agentSpeaking: false,
 
     connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
     enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'driver')),

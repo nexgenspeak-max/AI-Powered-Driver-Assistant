@@ -5,6 +5,8 @@ export {
   GlassMaterial,
   GlassSheen,
   GLASS_SHADOW,
+  GLASS_BORDER_COLOR,
+  GLASS_BORDER_TOP_COLOR,
   getGlassShadow,
   getConcentricRadius,
   type GlassMaterialProps,

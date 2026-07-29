@@ -61,6 +61,23 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
+## Tool: find_contact → (select_contact_match) → confirm_contact_call
+- Khi dùng: tài xế muốn gọi một người TRONG DANH BẠ ĐIỆN THOẠI CỦA TÀI XẾ qua tên
+  - "gọi cho Tuấn", "gọi giúp tôi anh Tuấn", "gọi cho vợ tôi" (nếu đã lưu tên trong danh bạ)
+- Khác call_custom_number: đây là TÊN trong danh bạ trên điện thoại, không phải SỐ tài xế tự đọc
+- LUÔN theo các bước:
+  1. find_contact(contact_name) → tool tự tra danh bạ, đọc lại tên tìm được để xác nhận,
+     hoặc hỏi chọn nếu có nhiều người trùng tên
+  2. Nếu nhiều kết quả và tài xế nói rõ hơn → select_contact_match(selection)
+  3. Tài xế xác nhận đúng người → HỎI CHẾ ĐỘ (giống call_customer):
+     "Anh/chị muốn tôi tự gọi rồi tóm tắt lại, hay kết nối để anh/chị nói chuyện trực tiếp?"
+     Nếu chọn AI tự gọi, hỏi thêm có muốn nhắn nội dung gì cụ thể không (điền vào message)
+  4. confirm_contact_call(mode, message?) → thực hiện cuộc gọi thật
+- Không tự đoán/tự gọi số khi chưa xác nhận đúng người qua tên
+- Sau mode="agent" xong (tài xế xác nhận đã gọi xong) → summarize_last_call
+
+---
+
 ## Tool: get_customer_location
 - Khi dùng: "khách đứng ở đâu", "điểm đón ở đâu", "địa chỉ đón", "khách ở chỗ nào"
 

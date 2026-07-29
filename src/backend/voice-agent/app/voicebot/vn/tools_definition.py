@@ -147,6 +147,75 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
+    "find_contact": {
+        "type": "function",
+        "name": "find_contact",
+        "description": (
+            "Bước 1: Tìm một người TRONG DANH BẠ ĐIỆN THOẠI CỦA TÀI XẾ theo tên (KHÔNG phải khách "
+            "hàng của chuyến — đây là danh bạ cá nhân trên điện thoại tài xế, vd 'gọi cho Tuấn', "
+            "'gọi giúp tôi anh Tuấn'). Tool tự tra danh bạ và đọc lại tên tìm được để tài xế xác nhận, "
+            "hoặc hỏi chọn nếu có nhiều người trùng tên (dùng select_contact_match). "
+            "Sau khi tài xế xác nhận đúng người, hỏi tài xế muốn chế độ gọi nào rồi mới gọi "
+            "confirm_contact_call. KHÔNG tự đoán số điện thoại — luôn dựa vào kết quả tra danh bạ."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "contact_name": {
+                    "type": "string",
+                    "description": "Tên người tài xế muốn gọi, đúng như tài xế đọc ra (vd: 'Tuấn', 'vợ tôi').",
+                },
+            },
+            "required": ["contact_name"],
+        },
+    },
+
+    "select_contact_match": {
+        "type": "function",
+        "name": "select_contact_match",
+        "description": (
+            "Chỉ dùng khi find_contact trả về NHIỀU người trùng tên và tài xế nói rõ hơn là ai "
+            "(vd: 'người đầu tiên', 'Tuấn kho', 'số 2'). Không dùng nếu find_contact chỉ trả về 1 người."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "selection": {
+                    "type": "string",
+                    "description": "Nội dung tài xế nói để chọn ai trong danh sách vừa đọc.",
+                },
+            },
+            "required": ["selection"],
+        },
+    },
+
+    "confirm_contact_call": {
+        "type": "function",
+        "name": "confirm_contact_call",
+        "description": (
+            "Bước cuối: thực hiện gọi thật tới người trong danh bạ đã được xác nhận qua find_contact "
+            "(hoặc select_contact_match). Chỉ gọi sau khi: (1) tài xế đã xác nhận ĐÚNG người, "
+            "(2) tài xế đã chọn chế độ — hỏi giống call_customer: 'muốn tôi tự gọi rồi tóm tắt lại, "
+            "hay kết nối để anh/chị nói chuyện trực tiếp?'. Nếu tài xế chọn AI tự gọi và có nhắn nội "
+            "dung gì cụ thể muốn truyền đạt, điền vào message."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["bridge", "agent"],
+                    "description": "'bridge' = kết nối trực tiếp cho tài xế tự nói; 'agent' = AI tự gọi và tóm tắt lại sau.",
+                },
+                "message": {
+                    "type": ["string", "null"],
+                    "description": "Nội dung tài xế muốn AI nhắn lại cho người này — chỉ dùng khi mode='agent'. Để trống/null nếu không có gì cụ thể để nhắn.",
+                },
+            },
+            "required": ["mode"],
+        },
+    },
+
     "get_customer_location": {
         "type": "function",
         "name": "get_customer_location",
