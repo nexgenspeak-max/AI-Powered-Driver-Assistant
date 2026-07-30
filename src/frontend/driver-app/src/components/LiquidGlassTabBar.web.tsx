@@ -36,7 +36,7 @@ import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { GLASS_BORDER_COLOR, GLASS_BORDER_TOP_COLOR } from './LiquidGlass'
+import { GLASS_BORDER_COLOR } from './LiquidGlass'
 import Animated, {
   Easing,
   runOnJS,
@@ -166,6 +166,15 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   // a plain ref (not state) since it only drives a worklet animation, never
   // a re-render.
   const activeIndex = useRef(0)
+  // The index we most recently asked React Navigation to go to, and are
+  // still waiting to see reflected in `selectedIndex` — see the identical
+  // ref in the native LiquidGlassTabBar.tsx for the full explanation.
+  const pendingTarget = useRef<number | null>(null)
+  // Safety valve for `pendingTarget` — see the identical ref in the native
+  // LiquidGlassTabBar.tsx for the full explanation (bounds how long a
+  // mismatched confirmation can block reconciliation, so it can't get stuck
+  // forever).
+  const pendingTargetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLongPress = useRef(false)
   // Set once a touch has moved past DRAG_THRESHOLD — cancels the pending
   // long-press timer and switches the release behavior from "reopen page
@@ -219,6 +228,16 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   // else ever corrected that mismatch).
   useEffect(() => {
     if (!initialized.current) return
+    // Ignore a stale confirmation of a tap we've since been superseded by —
+    // see the identical guard in the native LiquidGlassTabBar.tsx for the
+    // full explanation. Only reconcile once `selectedIndex` catches up to
+    // whatever we most recently asked for.
+    if (pendingTarget.current !== null && selectedIndex !== pendingTarget.current) return
+    if (pendingTargetTimer.current) {
+      clearTimeout(pendingTargetTimer.current)
+      pendingTargetTimer.current = null
+    }
+    pendingTarget.current = null
     activeIndex.current = selectedIndex
     setVisualIndex(selectedIndex)
     moveTo(selectedIndex)
@@ -250,7 +269,20 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     const isFocused = selectedIndex === index
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
     if (!isFocused && !event.defaultPrevented) {
+      // Recorded before the (async) navigate call — see the identical
+      // comment in the native LiquidGlassTabBar.tsx.
+      pendingTarget.current = index
+      if (pendingTargetTimer.current) clearTimeout(pendingTargetTimer.current)
+      pendingTargetTimer.current = setTimeout(() => {
+        pendingTarget.current = null
+      }, 500)
       navigation.navigate(route.name, route.params)
+    } else {
+      pendingTarget.current = null
+      if (pendingTargetTimer.current) {
+        clearTimeout(pendingTargetTimer.current)
+        pendingTargetTimer.current = null
+      }
     }
   }
 
@@ -387,48 +419,60 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     <View style={{ position: 'absolute', left: BAR_SIDE_MARGIN, right: BAR_SIDE_MARGIN, bottom: BAR_BOTTOM_MARGIN }}>
       <View style={[{ borderRadius: BAR_RADIUS }, getBarShadow()]}>
         <View
-          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS, overflow: 'hidden' }}
+          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS }}
           onLayout={e => setBarWidth(e.nativeEvent.layout.width)}
         >
-          {/* Real frosted background, the exact GlassMaterial recipe
-              (BlurView + a top-bright/bottom-dim wash + a brighter top
-              border) — not GlassMaterial itself, since its children slot
-              forces `alignItems/justifyContent: center`, which would
-              shrink-wrap and center the tab row instead of letting it
-              stretch full-width. Same visual result, just laid out by
-              this component instead of delegated to it. */}
-          <BlurView
-            tint={isLight ? 'light' : 'dark'}
-            intensity={60}
-            experimentalBlurMethod="dimezisBlurView"
-            style={StyleSheet.absoluteFill}
-          />
-          <LinearGradient
-            colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
-            locations={[0, 0.35, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: BAR_RADIUS,
-                // Same 1px, same shared color tokens as every other glass
-                // surface — see LiquidGlass/GlassMaterial.tsx and the native
-                // LiquidGlassTabBar.tsx for why this used to be a separate
-                // hardcoded (and briefly thicker-on-top) copy.
-                borderWidth: 1,
-                borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
-                borderTopColor: isLight ? GLASS_BORDER_TOP_COLOR.light : GLASS_BORDER_TOP_COLOR.dark,
-              },
-            ]}
-            pointerEvents="none"
-          />
+          {/* Visual-only layer, clipped to the rounded shape — split out
+              from the touch row below because `overflow:'hidden'` on a
+              shared ancestor clips pointer-event hit-testing on web too
+              (CSS `border-radius` + `overflow:hidden`), not just rendering
+              — see the identical fix/comment in the native
+              LiquidGlassTabBar.tsx for the full explanation (first/last
+              tab's outer edge, under the bar's own rounded corner, wasn't
+              registering taps). */}
+          <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, overflow: 'hidden' }]} pointerEvents="none">
+            {/* Real frosted background, the exact GlassMaterial recipe
+                (BlurView + a top-bright/bottom-dim wash + a brighter top
+                border) — not GlassMaterial itself, since its children slot
+                forces `alignItems/justifyContent: center`, which would
+                shrink-wrap and center the tab row instead of letting it
+                stretch full-width. Same visual result, just laid out by
+                this component instead of delegated to it. */}
+            <BlurView
+              tint={isLight ? 'light' : 'dark'}
+              intensity={60}
+              experimentalBlurMethod="dimezisBlurView"
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
+              locations={[0, 0.35, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderRadius: BAR_RADIUS,
+                  // Same 1px, same color, on all four sides — same shared
+                  // token every other glass surface uses (GLASS_BORDER_COLOR in
+                  // LiquidGlass/GlassMaterial.tsx) — was a hardcoded local copy
+                  // of these values (and briefly a thicker/brighter top edge)
+                  // that could only stay in sync by coincidence.
+                  borderWidth: 1,
+                  borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
+                },
+              ]}
+              pointerEvents="none"
+            />
 
-          <Animated.View style={[styles.pill, pillStyle]} pointerEvents="none" />
+            <Animated.View style={[styles.pill, pillStyle]} pointerEvents="none" />
+          </View>
 
+          {/* Deliberately NOT inside the clipped view above — see the
+              comment on that view for why. */}
           <GestureDetector gesture={panGesture}>
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
               {visibleRoutes.map((route, index) => {

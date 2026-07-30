@@ -61,6 +61,30 @@ def _dial_failed(lang: str) -> str:
     )
 
 
+def _pre_dial_announcement(name: str, lang: str) -> str:
+    return f"Đang kết nối {name}, xin đợi trong giây lát." if lang == "vn" else f"Connecting {name}, please hold on."
+
+
+async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:
+    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
+    is required here — a bare `session.say()` races with this same tool's own
+    queued reply (the handoff message returned below) and silently fails the
+    whole tool call (confirmed: no exception ever reached the try/except around
+    the dial, the tool just returned near-instantly with no call placed).
+    Best-effort: any failure here must never block the actual call, so it's
+    swallowed and logged rather than left to propagate.
+    """
+    logger.info("DIAL-TRACE custom_call: entering _announce_pre_dial for %r", name)
+    try:
+        async with context.foreground():
+            logger.info("DIAL-TRACE custom_call: inside foreground, about to say")
+            await context.session.say(_pre_dial_announcement(name, lang), allow_interruptions=False)
+            logger.info("DIAL-TRACE custom_call: say() returned")
+    except Exception:
+        logger.warning("DIAL-TRACE custom_call: pre-dial announcement failed — dialing anyway", exc_info=True)
+    logger.info("DIAL-TRACE custom_call: leaving _announce_pre_dial")
+
+
 async def start_bridge_call_to_number(
     context: RunContext,
     phone_number: str,
@@ -69,11 +93,21 @@ async def start_bridge_call_to_number(
     lang: str = "vn",
 ) -> tuple[Agent, str] | str:
     """Dial an arbitrary number via SIP and hand off to BridgeCallAgent (driver talks directly)."""
+    logger.info("DIAL-TRACE custom_call: start_bridge_call_to_number entered | phone=%s contact_name=%r", phone_number, contact_name)
     driver_phone = context.userdata.get("driver_phone", "")
     room_name = context.userdata.get("room_name", "")
     if not room_name:
+        logger.warning("DIAL-TRACE custom_call: room_name missing, bailing")
         return _room_missing(lang)
 
+    display_name = contact_name or ("số bạn yêu cầu" if lang == "vn" else "the number you requested")
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "connecting X" before the SIP INVITE (and its network/
+    # telecom latency) starts, instead of the phone connecting in silence.
+    await _announce_pre_dial(context, display_name, lang)
+
+    logger.info("DIAL-TRACE custom_call: calling backend_api.start_call now")
     try:
         result = await backend_api.start_call(
             driver_id=driver_phone,
@@ -85,8 +119,9 @@ async def start_bridge_call_to_number(
             lang=lang,
         )
     except Exception:
-        logger.error("custom number bridge call — start_call failed", exc_info=True)
+        logger.error("DIAL-TRACE custom_call: start_call failed", exc_info=True)
         return _dial_failed(lang)
+    logger.info("DIAL-TRACE custom_call: start_call returned result=%r", result)
 
     call_id = str(result.get("call_id") or "")
     context.userdata["customer_call"] = {
@@ -107,7 +142,6 @@ async def start_bridge_call_to_number(
     dialed = result.get("dialed_number", phone_number)
     note = result.get("override_note") or ""
     suffix = f" {note}" if note else ""
-    display_name = contact_name or ("số bạn yêu cầu" if lang == "vn" else "the number you requested")
 
     agent = BridgeCallAgent(lang=lang, customer_name=display_name)
 

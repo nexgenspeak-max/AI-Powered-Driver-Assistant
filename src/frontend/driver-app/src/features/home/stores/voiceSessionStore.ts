@@ -59,9 +59,26 @@ export type VoiceMessageListener = (text: string, from: VoiceMessageSource) => v
 const CHAT_TOPIC = 'lk.chat'
 const TRANSCRIPTION_TOPIC = 'lk.transcription'
 
+// The connecting-cue audio file's own length (~2.53s, AssistantChatPanel.tsx)
+// plus a short trailing pause — held here so connectWithToken can delay
+// starting the actual LiveKit connect until the cue has genuinely finished,
+// instead of letting the AI's first words race it. Update this if the cue
+// file is ever replaced with a different-length recording.
+const CONNECTING_CUE_DURATION_MS = 2800
+
 // Module-level (not React state) so the LiveKit session survives navigation
 // between tabs — only the store's `status` needs to be reactive.
 let room: Room | null = null
+// Set synchronously at the very top of connectWithToken(), before any
+// `await` — the `room`-based staleness check further down only protects
+// against a call landing *after* a previous one already assigned `room`;
+// two calls close enough together (e.g. wake-word's own retry firing while
+// the first attempt is still awaiting a token/room.disconnect()) can both
+// race past that check before either has set `room` yet, each creating its
+// own competing Room/RTCPeerConnection. Confirmed in production logs as
+// overlapping peer connections and a WebRTC "Local fingerprint does not
+// match identity" failure.
+let connecting = false
 const audioEls = new Set<HTMLAudioElement>()
 const messageListeners = new Set<VoiceMessageListener>()
 
@@ -143,18 +160,54 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
   }
 
   const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
+    // Synchronous re-entrancy guard — see `connecting`'s own comment for why
+    // the `room`-based staleness check below isn't enough on its own.
+    if (connecting) {
+      console.log('[voice-session] connectWithToken already in flight, ignoring re-entrant call')
+      return
+    }
+    connecting = true
+    try {
+      await connectWithTokenLocked(getToken)
+    } finally {
+      connecting = false
+    }
+  }
+
+  const connectWithTokenLocked = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
     // suspends WebRTC threads while the app isn't in the foreground) — treat
     // anything that isn't actively connected/connecting as dead and reconnect.
     if (room) {
       if (room.state === ConnectionState.Connected || room.state === ConnectionState.Connecting) return
-      room.disconnect()
+      // Awaited — `disconnect()` is async (tears down the underlying
+      // RTCPeerConnection/DTLS identity) and was previously fire-and-forget
+      // here. Creating the new Room() below before the old peer connection
+      // had actually finished disposing raced its teardown against the new
+      // one's handshake — confirmed in production logs as a WebRTC "Local
+      // fingerprint does not match identity" failure, and separately as
+      // several overlapping peer connections (rn-webrtc pc ids incrementing
+      // back-to-back within the same second) once rapid wake-word-triggered
+      // reconnects piled up.
+      await room.disconnect()
       room = null
     }
 
+    // `status` flips to 'connecting' first, immediately — the connecting-cue
+    // audio (AssistantChatPanel.tsx) reacts to that and starts playing right
+    // away.
     set({ status: 'connecting', isCallActive: false, agentSpeaking: false })
     try {
+      // Sequential, not overlapping: the actual LiveKit connect (and
+      // whatever the AI says the instant it joins the room) must not start
+      // until the cue has genuinely finished — the AI's voice arrives over
+      // its own audio track regardless of what this store's `status` says,
+      // so merely delaying when we *expose* 'connected' doesn't stop it
+      // from overlapping the cue. Actually holding off the connect itself
+      // is what does. `CONNECTING_CUE_DURATION_MS` must stay in sync with
+      // the cue file's real length (AssistantChatPanel.tsx).
+      await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATION_MS))
       await startAudioSession()
       const { token, livekit_url } = await getToken()
       const r = new Room()

@@ -41,6 +41,31 @@ def _dial_failed(name: str, lang: str) -> str:
     )
 
 
+def _pre_dial_announcement(name: str, lang: str, *, mode: str) -> str:
+    """`mode` picks the verb to match each mode's existing post-dial phrasing
+    ("Đang kết nối"/"Connecting" for bridge, "Đang gọi"/"Calling" otherwise)."""
+    if mode == "bridge":
+        return f"Đang kết nối {name}, xin đợi trong giây lát." if lang == "vn" else f"Connecting {name}, please hold on."
+    return f"Đang gọi {name}, xin đợi trong giây lát." if lang == "vn" else f"Calling {name}, please hold on."
+
+
+async def _announce_pre_dial(context: RunContext, name: str, lang: str, *, mode: str) -> None:
+    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
+    is required here — a bare `session.say()` races with this same tool's own
+    queued reply (the handoff message for agent/bridge mode, or this tool's own
+    return string for background mode) and silently fails the whole tool call
+    (confirmed: no exception ever reached the try/except around the dial, the
+    tool just returned near-instantly with no call placed). Best-effort: any
+    failure here must never block the actual call, so it's swallowed and
+    logged rather than left to propagate.
+    """
+    try:
+        async with context.foreground():
+            await context.session.say(_pre_dial_announcement(name, lang, mode=mode), allow_interruptions=False)
+    except Exception:
+        logger.warning("pre-dial announcement failed — dialing anyway", exc_info=True)
+
+
 def _save_call_context(
     context: RunContext,
     current: dict,
@@ -100,9 +125,15 @@ async def _dial_customer_in_room(
         return _room_missing(lang)
 
     phone = current.get("customer_phone", "")
+    name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
     if not phone:
-        name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
         return _phone_missing(name, lang)
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "calling/connecting X" before the SIP INVITE (and its
+    # network/telecom latency) starts, instead of the phone connecting in
+    # silence.
+    await _announce_pre_dial(context, name, lang, mode=mode)
 
     try:
         result = await backend_api.start_call(
@@ -115,7 +146,6 @@ async def _dial_customer_in_room(
         )
     except Exception:
         logger.error("in-room customer call — start_call failed | mode=%s", mode, exc_info=True)
-        name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
         return _dial_failed(name, lang)
 
     _save_call_context(context, current, result, mode=mode)
@@ -203,6 +233,11 @@ async def start_background_call(
     name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
     if not phone:
         return _phone_missing(name, lang)
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "calling X" before the SIP INVITE (and its network/
+    # telecom latency) starts, instead of the phone connecting in silence.
+    await _announce_pre_dial(context, name, lang, mode="background")
 
     try:
         result = await backend_api.start_call(

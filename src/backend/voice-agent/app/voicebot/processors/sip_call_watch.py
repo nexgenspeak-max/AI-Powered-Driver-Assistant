@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from livekit import api, rtc
 from livekit.agents import AgentSession
 from livekit.agents.job import get_job_context
+from livekit.agents.utils.participant import wait_for_participant_attribute
 
 from app.services import backend_api
 from app.voicebot.processors.handback import handback_to_customer, handback_to_driver
@@ -16,6 +17,61 @@ if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
 
 logger = logging.getLogger("voice-agent.processors.sip_call_watch")
+
+# Same attribute LiveKit's own AMD (Answering Machine Detection) feature uses
+# to tell a SIP leg has actually been picked up vs. still ringing (ringback/
+# early media) — see livekit.agents.voice.amd.detector._SIP_CALL_STATUS_ATTR.
+_SIP_CALL_STATUS_ATTR = "sip.callStatus"
+_SIP_CALL_STATUS_ACTIVE = "active"
+
+
+async def wait_for_sip_pickup(
+    userdata: dict,
+    *,
+    answer_timeout: float = 20.0,
+    post_answer_delay: float = 3.0,
+) -> None:
+    """Wait until the dialed party's SIP leg is actually answered before the
+    caller speaks — used by BridgeCallAgent/CustomerCallAgent's `on_enter()`.
+
+    Without this, the greeting/relayed message was spoken the instant the
+    agent joined the room, while the phone was often still just ringing
+    (ringback tone, no one listening yet), so the other person missed the
+    start of it. `post_answer_delay` gives them a beat after pickup to
+    actually get the phone to their ear before the agent starts talking.
+
+    Best-effort: if the SIP identity/room/answer signal aren't available for
+    any reason, this just returns (speak immediately, today's behavior) —
+    `answer_timeout` bounds the worst case the same way, so a plumbing issue
+    here can never silently mute the agent forever.
+    """
+    sip_identity = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    if not sip_identity:
+        return
+
+    try:
+        room = get_job_context().room
+    except RuntimeError:
+        return
+
+    try:
+        await asyncio.wait_for(
+            wait_for_participant_attribute(
+                room,
+                identity=sip_identity,
+                attribute=_SIP_CALL_STATUS_ATTR,
+                value=_SIP_CALL_STATUS_ACTIVE,
+            ),
+            timeout=answer_timeout,
+        )
+    except Exception:
+        logger.debug(
+            "wait_for_sip_pickup: answer wait failed/timed out — speaking anyway",
+            exc_info=True,
+        )
+        return
+
+    await asyncio.sleep(post_answer_delay)
 
 
 def _run_logged(coro, *, name: str) -> None:

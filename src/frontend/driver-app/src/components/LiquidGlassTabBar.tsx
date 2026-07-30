@@ -64,7 +64,7 @@ import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { GLASS_BORDER_COLOR, GLASS_BORDER_TOP_COLOR } from './LiquidGlass'
+import { GLASS_BORDER_COLOR } from './LiquidGlass'
 import {
   BackdropBlur,
   BackdropFilter,
@@ -280,6 +280,23 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   // a plain ref (not state) since it only drives a worklet animation, never
   // a re-render.
   const activeIndex = useRef(0)
+  // The index we most recently asked React Navigation to go to, and are
+  // still waiting to see reflected in `selectedIndex` — null once that's
+  // caught up (or once there's nothing to wait for). Lets the reconciliation
+  // effect below tell a genuine external nav apart from a stale confirmation
+  // of a tap we've since been superseded by a faster second tap.
+  const pendingTarget = useRef<number | null>(null)
+  // Safety valve for `pendingTarget`: a burst of jitter events near a column
+  // boundary can call `navigateTo` for several different indices within one
+  // continuous touch, each overwriting `pendingTarget`. If the router ends
+  // up confirming a *different* index than the very last one requested (its
+  // own internal ordering doesn't have to match ours), `selectedIndex` would
+  // never equal `pendingTarget.current` again — without this, the guard
+  // below would block reconciliation forever instead of just for the
+  // in-flight moment it's meant for. Cleared/reset on every `navigateTo`
+  // call; once it fires, `pendingTarget` is released and the next
+  // `selectedIndex` update reconciles unconditionally.
+  const pendingTargetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLongPress = useRef(false)
   // Set once a touch has moved past DRAG_THRESHOLD — cancels the pending
   // long-press timer and switches the release behavior from "reopen page
@@ -332,6 +349,19 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   // below); this is the fallback for every other path.
   useEffect(() => {
     if (!initialized.current) return
+    // A stale confirmation of a tap we've since been superseded by (two
+    // quick taps, A then B — React Navigation's async update for A can
+    // still land after the user already moved on to B) would otherwise snap
+    // the pill/label back to A even though B is what's on screen. Only
+    // reconcile once `selectedIndex` catches up to whatever we most
+    // recently asked for; a stale echo of an older request is ignored and
+    // superseded by the real confirmation once it arrives.
+    if (pendingTarget.current !== null && selectedIndex !== pendingTarget.current) return
+    if (pendingTargetTimer.current) {
+      clearTimeout(pendingTargetTimer.current)
+      pendingTargetTimer.current = null
+    }
+    pendingTarget.current = null
     activeIndex.current = selectedIndex
     setVisualIndex(selectedIndex)
     moveTo(selectedIndex)
@@ -363,7 +393,24 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     const isFocused = selectedIndex === index
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
     if (!isFocused && !event.defaultPrevented) {
+      // Recorded *before* the (async) navigate call so the reconciliation
+      // effect above knows this is the latest thing we asked for — a second,
+      // faster tap will overwrite this before the first tap's confirmation
+      // ever arrives.
+      pendingTarget.current = index
+      if (pendingTargetTimer.current) clearTimeout(pendingTargetTimer.current)
+      pendingTargetTimer.current = setTimeout(() => {
+        pendingTarget.current = null
+      }, 500)
       navigation.navigate(route.name, route.params)
+    } else {
+      // Already there, or a listener intercepted the tab press — no route
+      // change is coming, so there's nothing left to wait for.
+      pendingTarget.current = null
+      if (pendingTargetTimer.current) {
+        clearTimeout(pendingTargetTimer.current)
+        pendingTargetTimer.current = null
+      }
     }
   }
 
@@ -549,84 +596,98 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
           same outer-shadow/inner-clip split as GlassMaterial. */}
       <View style={[{ borderRadius: BAR_RADIUS }, getBarShadow()]}>
         <View
-          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS, overflow: 'hidden' }}
+          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS }}
           onLayout={e => setBarWidth(e.nativeEvent.layout.width)}
         >
-          {/* Real frosted background, the exact GlassMaterial recipe
-              (BlurView + a top-bright/bottom-dim wash + a brighter top
-              border) — not GlassMaterial itself, since its children slot
-              forces `alignItems/justifyContent: center`, which would
-              shrink-wrap and center the tab row instead of letting it
-              stretch full-width. Same visual result, just laid out by
-              this component instead of delegated to it. */}
-          {/* `experimentalBlurMethod="dimezisBlurView"` — without it, Android
-              falls back to a plain semi-transparent tint (expo-blur's own
-              default/documented behavior there) instead of actually blurring
-              whatever's scrolling underneath the bar; iOS already blurs real
-              content natively and ignores this prop. */}
-          <BlurView
-            tint={isLight ? 'light' : 'dark'}
-            intensity={60}
-            experimentalBlurMethod="dimezisBlurView"
-            style={StyleSheet.absoluteFill}
-          />
-          <LinearGradient
-            colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
-            locations={[0, 0.35, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: BAR_RADIUS,
-                // Same 1px on all four sides, same color tokens every other
-                // glass surface uses (GLASS_BORDER_COLOR/GLASS_BORDER_TOP_COLOR
-                // in LiquidGlass/GlassMaterial.tsx) — was a hardcoded local
-                // copy of these values (and briefly a thicker 1.5px top edge)
-                // that could only stay in sync by coincidence.
-                borderWidth: 1,
-                borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
-                borderTopColor: isLight ? GLASS_BORDER_TOP_COLOR.light : GLASS_BORDER_TOP_COLOR.dark,
-              },
-            ]}
-            pointerEvents="none"
-          />
+          {/* Visual-only layer, clipped to the rounded shape — split out
+              from the touch row below because `overflow:'hidden'` on a
+              shared ancestor was clipping GESTURE dispatch too, not just
+              rendering: any touch landing in the bit of the first/last
+              tab's outer edge that falls under the bar's own rounded corner
+              never reached the row's GestureDetector at all, even though
+              the pill still visually "arrived" there once a nearby touch
+              did register (the drag/jitter path from a slightly-inside
+              touch). Only dead-center taps on those two tabs worked. Giving
+              the touch row its own unclipped sibling (below) fixes that —
+              the row's actual icon/label content already sits well clear of
+              the corner curve, so nothing new becomes visible here, only
+              tappable. */}
+          <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, overflow: 'hidden' }]} pointerEvents="none">
+            {/* Real frosted background, the exact GlassMaterial recipe
+                (BlurView + a top-bright/bottom-dim wash + a brighter top
+                border) — not GlassMaterial itself, since its children slot
+                forces `alignItems/justifyContent: center`, which would
+                shrink-wrap and center the tab row instead of letting it
+                stretch full-width. Same visual result, just laid out by
+                this component instead of delegated to it. */}
+            {/* `experimentalBlurMethod="dimezisBlurView"` — without it, Android
+                falls back to a plain semi-transparent tint (expo-blur's own
+                default/documented behavior there) instead of actually blurring
+                whatever's scrolling underneath the bar; iOS already blurs real
+                content natively and ignores this prop. */}
+            <BlurView
+              tint={isLight ? 'light' : 'dark'}
+              intensity={60}
+              experimentalBlurMethod="dimezisBlurView"
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
+              locations={[0, 0.35, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderRadius: BAR_RADIUS,
+                  // Same 1px, same color, on all four sides — same shared
+                  // token every other glass surface uses (GLASS_BORDER_COLOR in
+                  // LiquidGlass/GlassMaterial.tsx) — was a hardcoded local copy
+                  // of these values (and briefly a thicker/brighter top edge)
+                  // that could only stay in sync by coincidence.
+                  borderWidth: 1,
+                  borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
+                },
+              ]}
+              pointerEvents="none"
+            />
 
-          <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-            <BackdropFilter
-              clip={clipRect}
-              filter={
-                <RuntimeShader source={source} uniforms={uniforms}>
-                  <Blur blur={blurDV} />
-                </RuntimeShader>
-              }
-            >
-              <RoundedRect
-                x={clampedLeftEdge}
-                y={pillTop}
-                width={pillWidth}
-                height={pillHeight}
-                r={rrCornerRadius}
-                color={pillFillColor}
-              />
-            </BackdropFilter>
+            <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+              <BackdropFilter
+                clip={clipRect}
+                filter={
+                  <RuntimeShader source={source} uniforms={uniforms}>
+                    <Blur blur={blurDV} />
+                  </RuntimeShader>
+                }
+              >
+                <RoundedRect
+                  x={clampedLeftEdge}
+                  y={pillTop}
+                  width={pillWidth}
+                  height={pillHeight}
+                  r={rrCornerRadius}
+                  color={pillFillColor}
+                />
+              </BackdropFilter>
 
-            <Group>
-              <RoundedRect
-                x={clampedLeftEdge}
-                y={pillTop}
-                width={pillWidth}
-                height={pillHeight}
-                r={rrCornerRadius}
-                style="stroke"
-                strokeWidth={1}
-                color="rgba(168,85,247,0.7)"
-              />
-            </Group>
-          </Canvas>
+              <Group>
+                <RoundedRect
+                  x={clampedLeftEdge}
+                  y={pillTop}
+                  width={pillWidth}
+                  height={pillHeight}
+                  r={rrCornerRadius}
+                  style="stroke"
+                  strokeWidth={1}
+                  color="rgba(168,85,247,0.7)"
+                />
+              </Group>
+            </Canvas>
+          </View>
 
           {/* Every tab gets an equal `flex: 1` column (so N tabs always
               split the bar exactly evenly regardless of icon/label width)
@@ -634,7 +695,9 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               padding — so the touchable/visual area is the whole cell, not
               a small icon floating in extra dead space. One `GestureDetector`
               over the whole row (not one `Pressable` per tab) is what makes
-              the drag-across-tabs gesture possible — see `panGesture` above. */}
+              the drag-across-tabs gesture possible — see `panGesture` above.
+              Deliberately NOT inside the clipped view above — see the
+              comment on that view for why. */}
           <GestureDetector gesture={panGesture}>
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
               {visibleRoutes.map((route, index) => {

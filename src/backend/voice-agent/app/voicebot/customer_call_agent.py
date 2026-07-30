@@ -68,6 +68,10 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             await self._run_isolated_answer_flow()
             return
 
+        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+
+        await wait_for_sip_pickup(self.session.userdata)
+
         if self._custom_message:
             hint = (
                 f'The person is being dialed into this room. When they answer, greet them '

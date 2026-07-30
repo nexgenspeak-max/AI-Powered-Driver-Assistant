@@ -71,7 +71,13 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
   2. Nếu nhiều kết quả và tài xế nói rõ hơn → select_contact_match(selection)
   3. Tài xế xác nhận đúng người → HỎI CHẾ ĐỘ (giống call_customer):
      "Anh/chị muốn tôi tự gọi rồi tóm tắt lại, hay kết nối để anh/chị nói chuyện trực tiếp?"
-     Nếu chọn AI tự gọi, hỏi thêm có muốn nhắn nội dung gì cụ thể không (điền vào message)
+     - Nếu ngay trong câu trả lời chế độ, tài xế ĐÃ nói luôn nội dung muốn nhắn
+       (vd: "gọi và bảo họ tôi đến trễ 10 phút", "bạn gọi rồi nói tôi bận không nghe máy được") →
+       đó là mode="agent", lấy ĐÚNG nguyên văn nội dung đó điền vào message — KHÔNG hỏi lại
+       thêm một câu riêng "anh/chị có muốn nhắn gì không".
+     - Nếu tài xế chỉ chọn chế độ mà không nhắc gì thêm → để message trống/null, KHÔNG ép
+       hỏi thêm một câu riêng về nội dung nhắn. Việc có nhắn gì hay không là tuỳ tài xế tự nói
+       ra, không phải câu hỏi bắt buộc của assistant.
   4. confirm_contact_call(mode, message?) → thực hiện cuộc gọi thật
 - Không tự đoán/tự gọi số khi chưa xác nhận đúng người qua tên
 - Sau mode="agent" xong (tài xế xác nhận đã gọi xong) → summarize_last_call

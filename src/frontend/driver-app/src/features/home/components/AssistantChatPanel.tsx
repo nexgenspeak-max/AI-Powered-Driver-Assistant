@@ -6,7 +6,7 @@ import { GlassSheen } from '../../../components/LiquidGlass'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
-import * as Speech from 'expo-speech'
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
@@ -22,6 +22,10 @@ const MIC_LABEL = {
   connected: 'Đang trong phiên thoại — bấm để ngắt',
   error: 'Kết nối lỗi, thử lại',
 }
+
+// Recorded audio cue (not device TTS) played on loop while connecting — see
+// the effect below for why.
+const connectingCueAsset = require('../../../../assets/audio/connecting-cue.mp3')
 
 // TEMP: voice enrollment gate turned off while it's being reworked — flip
 // back to true to re-require enrollment before the first AI conversation.
@@ -40,6 +44,14 @@ export function AssistantChatPanel() {
   const [hasVoiceprint, setHasVoiceprint] = useState<boolean | null>(null)
   const scrollRef = useRef<ScrollView>(null)
   const insets = useSafeAreaInsets()
+  const connectingCuePlayer = useAudioPlayer(connectingCueAsset)
+  const connectingCueStatus = useAudioPlayerStatus(connectingCuePlayer)
+
+  // TEMP DEBUG: prints whether the asset actually loaded and what the
+  // player thinks its own state is. Remove once resolved.
+  useEffect(() => {
+    console.log('[connecting-cue] status:', JSON.stringify(connectingCueStatus))
+  }, [connectingCueStatus])
 
   // Gate the very first AI conversation on voiceprint enrollment — checked once
   // per mount, not on every mic press, so an already-enrolled driver's tap
@@ -58,22 +70,92 @@ export function AssistantChatPanel() {
     scrollRef.current?.scrollToEnd({ animated: true })
   }, [chats])
 
-  // Local, on-device TTS (not the AI backend's voice — LiveKit hasn't
-  // connected yet at this point) so a driver who triggered this hands-free
-  // (wake-word, not looking at the screen) still gets some feedback that
-  // something is happening during the connect delay, instead of silence.
-  // Stops immediately on any other status so it can never talk over the
-  // AI's own voice once the real session starts, or linger after an error.
+  // Recorded audio cue (not device TTS — LiveKit hasn't connected yet at
+  // this point, and a spoken phrase doesn't cover a slow connect: token
+  // fetch + room connect + mic setup can run well past a single phrase's
+  // length, leaving silence again with no way to tell "still connecting"
+  // from "it froze") so a driver who triggered this hands-free (wake-word,
+  // not looking at the screen) keeps getting audible feedback for however
+  // long the connect actually takes. Looped while connecting, stopped
+  // immediately on any other status so it can never talk over the AI's own
+  // voice once the real session starts, or linger after an error.
   useEffect(() => {
-    if (voice.status === 'connecting') {
-      Speech.speak('Đang kết nối, xin chờ một chút', { language: 'vi-VN' })
-    } else {
-      Speech.stop()
+    // A fresh player (never played yet, still finishing its initial load)
+    // already sits at position 0 — calling seekTo(0) on it anyway lands
+    // right in the middle of that load/decode pipeline and is the likely
+    // cause of a reported first-play glitch (plays a word, then stalls).
+    // Once it's actually played through at least once, currentTime is
+    // nonzero and a real seek-back is needed. Guarding on currentTime skips
+    // the redundant/risky seek exactly for that first-ever play.
+    const resetToStart = () => {
+      if (connectingCuePlayer.currentTime !== 0) connectingCuePlayer.seekTo(0)
     }
+
+    console.log('[connecting-cue] voice.status changed to', voice.status)
+
+    // Only a genuine abort (error, or back to idle) cuts the cue off — a
+    // fast connect succeeding (status -> 'connected') lets it finish
+    // playing naturally instead. It's short (~2.5s) and single-play, so on
+    // a quick connect the only cost is a brief overlap with the AI's first
+    // words — the alternative (reported) was the cue getting chopped down
+    // to 1-2 words every time the connect happened to be fast.
+    if (voice.status === 'idle' || voice.status === 'error') {
+      connectingCuePlayer.pause()
+      resetToStart()
+      return
+    }
+    if (voice.status !== 'connecting') return
+    let cancelled = false
+    ;(async () => {
+      try {
+        // Drivers commonly keep the phone on silent/vibrate — without this
+        // the cue would be muted exactly when it matters most (a hands-free,
+        // wake-word-triggered connect where the driver isn't looking at the
+        // screen to notice anything went wrong). Awaited — calling play()
+        // before this actually resolves can start playback on whatever audio
+        // mode was still active beforehand, silencing it.
+        //
+        // interruptionMode: 'mixWithOthers' — confirmed via logging that the
+        // cue *was* actually playing (currentTime advancing) but got paused
+        // ~0.7s in, exactly when LiveKit's own `startAudioSession()` request
+        // its audio focus. expo-audio's default focus-loss handling pauses
+        // playback even on a transient/"may duck" loss; requesting no focus
+        // at all (Android-only effect per the docs) sidesteps that entirely
+        // — there's nothing for LiveKit's request to take away.
+        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' })
+        console.log('[connecting-cue] audio mode set, cancelled=', cancelled)
+        if (cancelled) return
+        connectingCuePlayer.loop = false
+        connectingCuePlayer.volume = 1.0
+        resetToStart()
+        connectingCuePlayer.play()
+        console.log('[connecting-cue] play() called | isLoaded=', connectingCuePlayer.isLoaded, 'duration=', connectingCuePlayer.duration)
+      } catch (err) {
+        console.error('[connecting-cue] failed to play', err)
+      }
+    })()
+    // No forced pause here — this cleanup fires on *any* status change away
+    // from 'connecting', including a successful 'connected', and pausing
+    // unconditionally is exactly what was cutting the cue down to 1-2 words
+    // on a fast connect. `cancelled` only stops a same-tick play() that
+    // hasn't fired yet; the idle/error branch above (next run of this same
+    // effect) is what actually stops sound for a real abort. True unmounts
+    // are handled by the separate effect below.
     return () => {
-      Speech.stop()
+      cancelled = true
     }
-  }, [voice.status])
+  }, [voice.status, connectingCuePlayer])
+
+  // Stops the cue if the screen itself unmounts while it's still
+  // playing/pending — the status-driven effect above intentionally no
+  // longer pauses on every cleanup (see its comment), so this is the only
+  // thing left to prevent an orphaned player still playing after the
+  // screen is gone.
+  useEffect(() => {
+    return () => {
+      connectingCuePlayer.pause()
+    }
+  }, [connectingCuePlayer])
 
   const handleSend = async () => {
     if (!msg.trim()) {

@@ -47,19 +47,16 @@ export const GLASS_SHADOW = {
 // variants and the tab bar (LiquidGlassTabBar, both platforms) all rendered
 // the exact same rgba values as separate hardcoded literals before, which
 // only stayed in sync by coincidence. Centralized here so they can't drift
-// apart again. Top edge stays a touch brighter (a "light reflection" cue),
-// but only in color — width is uniform 1px everywhere, see GlassGradientLayers
-// below. Deliberately NOT used by the purple/green/red CTA buttons
-// (GlassButton, Button's primary/success/danger) or GlassSurface's flat
-// `outline` mode — those are each a different, already-documented "shadow/
-// border matches this element's own fill color" language, not generic glass.
+// apart again. Uniform on all four sides — a brighter top edge was tried as
+// a "light reflection" cue but read as an unbalanced/lopsided border, so the
+// top-vs-rest split was removed. Deliberately NOT used by the purple/green/
+// red CTA buttons (GlassButton, Button's primary/success/danger) or
+// GlassSurface's flat `outline` mode — those are each a different, already-
+// documented "shadow/border matches this element's own fill color" language,
+// not generic glass.
 export const GLASS_BORDER_COLOR = {
   light: "rgba(255, 255, 255, 0.35)",
   dark: "rgba(255, 255, 255, 0.1)",
-} as const;
-export const GLASS_BORDER_TOP_COLOR = {
-  light: "rgba(255, 255, 255, 0.55)",
-  dark: "rgba(255, 255, 255, 0.2)",
 } as const;
 
 // Apple-style concentric nesting: a rounded shape inset by `padding` inside
@@ -166,13 +163,11 @@ function GlassGradientLayers({
             StyleSheet.absoluteFill,
             {
               borderRadius,
-              // Same 1px on all four sides — was borderTopWidth: 1.5 (thicker
-              // than the other three), which read as a lopsided border
-              // instead of a clean thin outline. The top still gets a
-              // brighter "light reflection" tint via color alone.
+              // Same 1px, same color, on all four sides — was borderTopWidth:
+              // 1.5 plus a brighter top-only color, both of which read as a
+              // lopsided/unbalanced border instead of a clean thin outline.
               borderWidth: 1,
               borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
-              borderTopColor: isLight ? GLASS_BORDER_TOP_COLOR.light : GLASS_BORDER_TOP_COLOR.dark,
             },
           ]}
           pointerEvents="none"

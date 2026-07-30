@@ -31,6 +31,26 @@ def _dial_failed(name: str, lang: str) -> str:
     )
 
 
+def _pre_dial_announcement(name: str, lang: str) -> str:
+    return f"Đang gọi {name}, xin đợi trong giây lát." if lang == "vn" else f"Calling {name}, please hold on."
+
+
+async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:
+    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
+    is required here — a bare `session.say()` races with this same tool's own
+    queued reply (the handoff message returned below) and silently fails the
+    whole tool call (confirmed: no exception ever reached the try/except around
+    the dial, the tool just returned near-instantly with no call placed).
+    Best-effort: any failure here must never block the actual call, so it's
+    swallowed and logged rather than left to propagate.
+    """
+    try:
+        async with context.foreground():
+            await context.session.say(_pre_dial_announcement(name, lang), allow_interruptions=False)
+    except Exception:
+        logger.warning("pre-dial announcement failed — dialing anyway", exc_info=True)
+
+
 async def start_agent_call_to_contact(
     context: RunContext,
     phone_number: str,
@@ -45,6 +65,11 @@ async def start_agent_call_to_contact(
     room_name = context.userdata.get("room_name", "")
     if not room_name:
         return _room_missing(lang)
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "calling X" before the SIP INVITE (and its network/
+    # telecom latency) starts, instead of the phone connecting in silence.
+    await _announce_pre_dial(context, contact_name, lang)
 
     try:
         result = await backend_api.start_call(

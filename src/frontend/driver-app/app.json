@@ -71,6 +71,7 @@
         }
       ],
       "./plugins/withForegroundService.js",
+      "./plugins/withGestureExclusion.js",
       [
         "react-native-vosk",
         {
@@ -78,7 +79,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-contacts"
+      "expo-contacts",
+      "expo-audio"
     ]
   }
 }

@@ -30,9 +30,12 @@ class BridgeCallAgent(SpeechTextFixMixin, Agent):
     async def on_enter(self) -> None:
         from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout
         from app.voicebot.processors.handback import enter_bridge_listen_mode
+        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+
+        logger.info("BridgeCallAgent active | customer=%s", self._customer_name)
+        await wait_for_sip_pickup(self.session.userdata)
 
         msg = bridge_greeting(self._lang, self._customer_name)
-        logger.info("BridgeCallAgent active | customer=%s", self._customer_name)
         await self.session.say(msg, allow_interruptions=False)
         enter_bridge_listen_mode(self.session)
         schedule_bridge_timeout(self.session, self.session.userdata)

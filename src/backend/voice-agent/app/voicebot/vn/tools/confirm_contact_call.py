@@ -12,7 +12,9 @@ logger = logging.getLogger("voice-agent.vn.tools.confirm_contact_call")
 @function_tool(raw_schema=raw_schema["confirm_contact_call"])
 async def confirm_contact_call(raw_arguments: dict, context: RunContext):
     pending = context.userdata.get("pending_contact_call")
+    logger.info("DIAL-TRACE confirm_contact_call: entered | pending=%r raw_arguments=%r", pending, raw_arguments)
     if not pending or not pending.get("phone_number"):
+        logger.warning("DIAL-TRACE confirm_contact_call: no pending_contact_call, bailing")
         return ERR_NO_PENDING_CONTACT_CALL
 
     context.userdata["pending_contact_call"] = None
@@ -21,12 +23,19 @@ async def confirm_contact_call(raw_arguments: dict, context: RunContext):
     name = pending.get("name", "")
     phone_number = pending["phone_number"]
 
-    if mode == "agent":
-        message = (raw_arguments.get("message") or "").strip()
-        return await contact_call.start_agent_call_to_contact(
-            context, phone_number, contact_name=name, custom_message=message, lang="vn",
-        )
+    try:
+        if mode == "agent":
+            message = (raw_arguments.get("message") or "").strip()
+            result = await contact_call.start_agent_call_to_contact(
+                context, phone_number, contact_name=name, custom_message=message, lang="vn",
+            )
+        else:
+            result = await custom_call.start_bridge_call_to_number(
+                context, phone_number, contact_name=name, lang="vn",
+            )
+    except Exception:
+        logger.exception("DIAL-TRACE confirm_contact_call: dispatch raised — mode=%s name=%r", mode, name)
+        raise
 
-    return await custom_call.start_bridge_call_to_number(
-        context, phone_number, contact_name=name, lang="vn",
-    )
+    logger.info("DIAL-TRACE confirm_contact_call: dispatch returned type=%s", type(result).__name__)
+    return result
