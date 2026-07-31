@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
 import { YStack, Text, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
+import { KeyboardSafeView } from '../../../components/KeyboardSafeView'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
@@ -44,10 +45,7 @@ export function LoginForm() {
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardSafeView>
         <ScrollView
           style={{ flex: 1, backgroundColor: isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark }}
           contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
@@ -93,7 +91,7 @@ export function LoginForm() {
             </Text>
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </>
   )
 }

@@ -29,6 +29,7 @@ from app.voicebot.processors import context_store
 from app.voicebot.processors import speaker_verify
 from app.voicebot.processors.call_state import CallAwareUserData
 from app.voicebot.processors.agent_state import publish_agent_state
+from app.voicebot.processors.handback import BACKGROUND_CALL_SUMMARY_TOPIC
 from app.voicebot.processors.sip_call_watch import (
     complete_isolated_call,
     register_customer_room_sip_watchers,
@@ -210,17 +211,31 @@ async def entrypoint(ctx: JobContext) -> None:
             "_job_ctx":               ctx,
             "_call_started_at":       time.time(),
             "_customer_spoke":        False,
+            # Isolated (custcall) calls only — set True once genuine SIP
+            # pickup is confirmed (see wait_for_sip_pickup in
+            # CustomerCallAgent._run_isolated_answer_flow). Gates the generic
+            # agent_state_changed "idle/listening -> resume" handler below so
+            # it can't resume the silence tracker during ring time.
+            "_isolated_call_answered": False,
         })
 
         if mode == "custcall" and trip:
             meta = json.loads(ctx.room.metadata or "{}")
             session_userdata["customer_call"] = {
-                "call_id":        meta.get("call_id", ""),
-                "trip_id":        trip.get("trip_id", ""),
-                "customer_phone": trip.get("customer_phone", ""),
-                "sip_identity":   meta.get("sip_identity", ""),
-                "room_name":      room_name,
-                "mode":           "background",
+                "call_id":          meta.get("call_id", ""),
+                "trip_id":          trip.get("trip_id", ""),
+                "customer_phone":   trip.get("customer_phone", ""),
+                "sip_identity":     meta.get("sip_identity", ""),
+                "room_name":        room_name,
+                "mode":             "background",
+                # The driver's own room — see callService.ts's
+                # startCustomerCall (background branch) and
+                # customer_call.py::start_background_call. Used to push a
+                # "background_call_summary" data message back into it once
+                # this call ends (sip_call_watch.py::complete_isolated_call,
+                # customer_call_tools.py::_finish_isolated_call), so the
+                # driver's own agent can announce the result proactively.
+                "driver_room_name": meta.get("driver_room_name", ""),
             }
 
         # MultilingualModel's turn detector doesn't support Vietnamese — logs
@@ -254,16 +269,23 @@ async def entrypoint(ctx: JobContext) -> None:
                 customer_name=(trip or {}).get("customer_name", "khách"),
                 isolated=True,
             )
-            # The isolated job starts dialing+dispatching in parallel (see
-            # trip-service callService.ts startCustomerCall), so this clock is
-            # already running while the phone is still ringing. LiveKit has no
-            # reliable "answered" signal exposed to the agent job here (the SIP
-            # participant joins — and can subscribe a track — while still
-            # ringing, per livekit.SIPCallStatus.SCS_PARTICIPANT_JOINED), so we
-            # give ring time generous headroom instead of guessing an answer
-            # signal. Real answers are almost always well under this.
-            silence_seconds = 35.0
-            max_silences_default = 3
+            # This is now the ONE rule that ends an isolated call on silence —
+            # 5 real seconds of neither the AI nor the customer saying
+            # anything. It must NOT start counting from here, though: the
+            # isolated job starts dialing+dispatching in parallel (see
+            # trip-service callService.ts startCustomerCall), so this clock
+            # would otherwise already be running while the phone is still
+            # just ringing (LiveKit has no reliable "answered" signal exposed
+            # to the agent job here — the SIP participant joins, and can even
+            # subscribe a track, while still ringing, per
+            # livekit.SIPCallStatus.SCS_PARTICIPANT_JOINED). The tracker is
+            # explicitly paused right after being started below and only
+            # resumed once CustomerCallAgent's isolated flow confirms actual
+            # pickup (see wait_for_sip_pickup in _run_isolated_answer_flow) —
+            # so these 5s only ever measure silence in a call that's actually
+            # connected, never ring time.
+            silence_seconds = 5.0
+            max_silences_default = 1
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 20.0   # customers may pause longer
@@ -336,20 +358,44 @@ async def entrypoint(ctx: JobContext) -> None:
         conv_service.attach(session)
 
         # ── Silence tracker ───────────────────────────────────────────────────
-        threshold = (
-            settings.silence_threshold_seconds
-            if settings.silence_threshold_seconds > 0
-            else silence_seconds
-        )
-        max_silences = (
-            settings.silence_max_consecutive
-            if settings.silence_max_consecutive > 0
-            else max_silences_default
-        )
-        # Local dev / simulator: do not kick participants when there is no mic input.
-        end_on_timeout = settings.silence_end_session
-        if settings.env in ("local", "dev"):
-            end_on_timeout = False
+        if mode == "custcall":
+            # Isolated calls are deliberately NOT subject to the global
+            # SILENCE_THRESHOLD_SECONDS/SILENCE_MAX_CONSECUTIVE/SILENCE_END_SESSION
+            # overrides (or the local/dev end_on_timeout=False dev-convenience
+            # override) below, unlike every other mode. Those env vars exist
+            # to tune how forgiving the DRIVER's own conversation is (and to
+            # stop the simulator from kicking a driver mid-test) — applying
+            # them here too silently broke this call's only hang-up backstop:
+            # with SILENCE_MAX_CONSECUTIVE=3 the isolated 5s/1-strike default
+            # got stretched to 3 rounds (~15s+, with the AI asking "are you
+            # there?" into what could already be an empty line), and in
+            # local/dev SILENCE_END_SESSION=false / env-based override meant
+            # this tracker never actually ended the call on silence at all —
+            # so if the customer hung up and the room-level
+            # `participant_disconnected` event was ever missed/delayed (SIP
+            # trunks don't always propagate BYE as a prompt room leave), the
+            # AI had no way left to ever learn the call was over. This is the
+            # one place silence detection doubles as hang-up detection (any
+            # hang-up necessarily stops producing audio), so it must always
+            # actually fire, everywhere.
+            threshold = silence_seconds
+            max_silences = max_silences_default
+            end_on_timeout = True
+        else:
+            threshold = (
+                settings.silence_threshold_seconds
+                if settings.silence_threshold_seconds > 0
+                else silence_seconds
+            )
+            max_silences = (
+                settings.silence_max_consecutive
+                if settings.silence_max_consecutive > 0
+                else max_silences_default
+            )
+            # Local dev / simulator: do not kick participants when there is no mic input.
+            end_on_timeout = settings.silence_end_session
+            if settings.env in ("local", "dev"):
+                end_on_timeout = False
 
         if settings.silence_tracker_enabled:
             async def _on_isolated_silence_timeout() -> None:
@@ -359,11 +405,36 @@ async def entrypoint(ctx: JobContext) -> None:
                 # never gets stuck on status=in_progress (previously this path
                 # just force-removed participants and shut the job down with no
                 # backend call at all).
-                summary = (
-                    "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
-                    if lang != "en" else
-                    "Could not reach the customer (no answer or prolonged silence)."
-                )
+                #
+                # This fires on ANY 5s mutual silence, including right at the
+                # natural end of a call that actually happened in full (both
+                # sides just went quiet, or the LLM was simply slow to call
+                # end_customer_call itself) — using the generic "couldn't
+                # reach the customer" message unconditionally here was
+                # actively wrong in that case: the driver got told the
+                # customer never answered/said anything, even when they'd
+                # already answered every question and the AI had confirmed
+                # their details. Branch on whether the customer actually
+                # spoke (_customer_spoke) and, if so, use the real
+                # transcript-based summary (conv_service already buffered
+                # every turn) instead of the canned no-contact message.
+                if session_userdata.get("_customer_spoke"):
+                    try:
+                        summary = await conv_service.generate_summary()
+                    except Exception:
+                        summary = ""
+                    if not summary:
+                        summary = (
+                            "Cuộc gọi với khách đã kết thúc (im lặng kéo dài cuối cuộc gọi)."
+                            if lang != "en" else
+                            "The call with the customer ended (prolonged silence at the end)."
+                        )
+                else:
+                    summary = (
+                        "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
+                        if lang != "en" else
+                        "Could not reach the customer (no answer or prolonged silence)."
+                    )
                 await complete_isolated_call(session, session_userdata, summary)
 
             silence_tracker = SilenceTracker(
@@ -395,10 +466,23 @@ async def entrypoint(ctx: JobContext) -> None:
                     silence_tracker.pause()
                 elif ev.new_state in ("listening", "idle"):
                     ud = session.userdata
+                    if ud.get("isolated_call") and not ud.get("_isolated_call_answered"):
+                        # Still just ringing (or dialing) — the agent settling
+                        # into "listening/idle" here is not the customer
+                        # actually being reachable yet, so this generic
+                        # auto-resume must not start the 5s silence clock
+                        # this early (see the custcall silence_seconds
+                        # comment above). wait_for_sip_pickup resumes it
+                        # explicitly once pickup is confirmed.
+                        return
                     if not ud.get("customer_call_active") and not ud.get("bridge_call_active"):
                         silence_tracker.resume()
 
             await silence_tracker.start()
+            if mode == "custcall":
+                # Freeze immediately — see the custcall silence_seconds
+                # comment above and the agent_state_changed guard just above.
+                silence_tracker.pause()
 
         session_userdata["_silence_tracker"] = silence_tracker
 
@@ -414,6 +498,34 @@ async def entrypoint(ctx: JobContext) -> None:
                 session,
                 silence_tracker=silence_tracker,
             )
+
+        if mode in ("driver", "outbound"):
+            # Proactive background-call summary announcement — pushed here by
+            # a DIFFERENT job (the isolated custcall room, once that call
+            # ends) via LiveKit's server-side send_data; see
+            # handback.py::notify_driver_of_background_call_result. Lets the
+            # driver find out the result the moment it's ready instead of
+            # only on request ("tóm tắt cuộc gọi").
+            @ctx.room.on("data_received")
+            def _on_background_call_summary(packet) -> None:
+                if packet.topic != BACKGROUND_CALL_SUMMARY_TOPIC:
+                    return
+                try:
+                    payload = json.loads(packet.data.decode("utf-8"))
+                except Exception:
+                    logger.warning("background_call_summary: bad payload", exc_info=True)
+                    return
+                summary = payload.get("summary", "")
+                prefix = (
+                    "The background call with the customer has ended."
+                    if lang == "en"
+                    else "Cuộc gọi nền với khách đã kết thúc."
+                )
+                text = f"{prefix} {summary}".strip()
+                asyncio.create_task(
+                    session.say(text, allow_interruptions=True),
+                    name="announce_background_call_summary",
+                )
 
         logger.info(
             "session started | mode=%s phone=%s trip=%s",

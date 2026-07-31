@@ -16,10 +16,11 @@ class ElevenLabsTTS(BaseTTS):
             # unset falls back to the voice's stored ElevenLabs dashboard
             # settings, which can drift (sound like a different voice) across
             # turns on expressive models like eleven_flash_v2_5. stability
-            # nudged up further (0.7 -> 0.8, was 0.5 originally) and speed
-            # slowed again (0.9 -> 0.85) for clearer, steadier enunciation —
-            # dense, number-heavy turns (trip lists, phone number
-            # confirmations) were still reading a bit fast/variable in tone.
+            # nudged up (0.5 -> 0.8) for steadier tone. speed reset to 1.0
+            # (ElevenLabs' normal pace) — the earlier 0.85 (slowed for
+            # clearer enunciation on dense/number-heavy turns) read as
+            # noticeably too slow/unnatural overall; revisit a smaller nudge
+            # down only if enunciation complaints come back.
             # Note this only tunes pacing/steadiness, not accent: "Adam" is a
             # Western multilingual voice reading Vietnamese text, not a
             # native Vietnamese voice, so it can't be made to sound
@@ -30,6 +31,6 @@ class ElevenLabsTTS(BaseTTS):
             voice_settings=elevenlabs_plugin.VoiceSettings(
                 stability=0.8,
                 similarity_boost=0.75,
-                speed=0.85,
+                speed=1.0,
             ),
         )

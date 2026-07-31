@@ -10,20 +10,26 @@ from app.voicebot.tools.customer_call_tools import end_customer_call
 
 logger = logging.getLogger("voice-agent.customer_call_agent")
 
-# Isolated (background) call answer flow — deterministic, timer-driven so it
-# can't be short-circuited by the LLM mis-hearing a hallucinated STT
-# transcript and hanging up right after the customer says a single word
-# (e.g. just "Alô"). Three fixed waits, each one only proceeds if the
-# customer still hasn't said anything real (see _customer_spoke in
-# session.py's user_input_transcribed/conversation_item_added handlers):
-#   1. Up to INITIAL_WAIT_SECONDS for the customer to speak after answering.
-#   2. If still silent, state the call's purpose out loud, then wait
-#      FOLLOWUP_WAIT_SECONDS for a response.
-#   3. If still silent, warn that the call will end, then a final
-#      FINAL_WAIT_SECONDS grace period before actually hanging up.
-_INITIAL_WAIT_SECONDS = 5.0
-_FOLLOWUP_WAIT_SECONDS = 10.0
-_FINAL_WAIT_SECONDS = 5.0
+# Isolated (background) call answer flow — the ONLY deterministic, timer-
+# driven piece left here is stating the call's purpose if the customer hasn't
+# said anything yet (see _customer_spoke, set from session.py's
+# user_input_transcribed/conversation_item_added handlers) — this can't be
+# left to the LLM alone (it doesn't reliably decide to speak up on its own
+# this early). Ending the call on silence is no longer handled here at all:
+# a single generic rule now owns that for the whole call, from this point
+# forward — the SilenceTracker configured for "custcall" rooms in
+# app/agent/session.py, tuned to end the call after one plain silence gap
+# (session.py's `silence_seconds`/`max_silences_default` for mode=="custcall")
+# with neither the AI nor the customer saying anything. That one rule replaces
+# what used to be three separate, overlapping hand-rolled timers here.
+#
+# Kept shorter than the SilenceTracker's own threshold (not equal to it) on
+# purpose: SilenceTracker.start() runs earlier, during session setup, before
+# on_enter() ever gets here — if both waits were the same length, whichever
+# fires first would be a race (the tracker could end the call before the
+# purpose is ever spoken). This margin guarantees the purpose is always
+# spoken first, which also pauses/resets the tracker's own clock.
+_INITIAL_WAIT_SECONDS = 3.0
 
 
 class CustomerCallAgent(SpeechTextFixMixin, Agent):
@@ -102,8 +108,24 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
         return bool(self.session.userdata.get("_customer_spoke"))
 
     async def _run_isolated_answer_flow(self) -> None:
-        """Deterministic answer-detection sequence for a background call —
-        see the module-level constants' docstring for the exact spec."""
+        """States the call's purpose once, if the customer hasn't spoken yet
+        — see the module-level constant's docstring for why this alone is
+        still hand-timed while everything past it is now the SilenceTracker's
+        job."""
+        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+
+        # Wait for genuine pickup (sip.callStatus == active) before letting
+        # the SilenceTracker's 5s clock run at all — it was started paused
+        # for this exact reason (see session.py's custcall silence_seconds
+        # comment). Best-effort like every other use of wait_for_sip_pickup:
+        # if the signal is unavailable or times out, this still proceeds
+        # (speak/resume anyway) rather than silently stalling the call.
+        await wait_for_sip_pickup(self.session.userdata)
+        self.session.userdata["_isolated_call_answered"] = True
+        tracker = self.session.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.resume()
+
         await asyncio.sleep(_INITIAL_WAIT_SECONDS)
         if self._customer_spoke():
             return  # customer already talking — normal LLM turn-taking takes it from here
@@ -123,37 +145,6 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             )
         logger.info("isolated call | %.0fs silence — stating purpose", _INITIAL_WAIT_SECONDS)
         await self.session.say(purpose, allow_interruptions=True)
-
-        await asyncio.sleep(_FOLLOWUP_WAIT_SECONDS)
-        if self._customer_spoke():
-            return
-
-        warning = (
-            "If there's no response, I'll end this call."
-            if self._lang == "en"
-            else "Nếu không có phản hồi, tôi sẽ kết thúc cuộc gọi."
-        )
-        logger.info(
-            "isolated call | %.0fs total silence — warning before hangup",
-            _INITIAL_WAIT_SECONDS + _FOLLOWUP_WAIT_SECONDS,
-        )
-        await self.session.say(warning, allow_interruptions=True)
-
-        await asyncio.sleep(_FINAL_WAIT_SECONDS)
-        if self._customer_spoke():
-            return
-
-        # Still silent after the warning — end the call for real and notify
-        # the driver, same teardown path as every other isolated-call ending
-        # (SIP disconnect, silence-tracker safety net) so the driver's "tóm
-        # tắt cuộc gọi" query never gets stuck on status=in_progress.
-        from app.voicebot.processors.sip_call_watch import complete_isolated_call
-
-        summary = (
-            f"Đã gọi khách {self._customer_name} nhưng không có phản hồi sau khi được thông báo."
-            if self._lang != "en"
-            else f"Called {self._customer_name} but got no response after the notice."
-        )
-        total = _INITIAL_WAIT_SECONDS + _FOLLOWUP_WAIT_SECONDS + _FINAL_WAIT_SECONDS
-        logger.info("isolated call | %.0fs total silence — ending call | summary=%s", total, summary)
-        await complete_isolated_call(self.session, self.session.userdata, summary)
+        # From here on, ending the call on silence (customer never responds,
+        # or the conversation just trails off later) is entirely the
+        # SilenceTracker's job — see this method's docstring.

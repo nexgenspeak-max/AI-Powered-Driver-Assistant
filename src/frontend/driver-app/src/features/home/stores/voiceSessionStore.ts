@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { Platform } from 'react-native'
 import ForegroundService from '@supersami/rn-foreground-service'
-import { Room, RoomEvent, Track, ConnectionState, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
+import { Room, RoomEvent, Track, ConnectionState, ConnectionError, ConnectionErrorReason, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
 import { voiceService } from '../../../services/api/voice'
 import { useWakeWordSettingsStore } from '../../assistant-wakeword/wakeWordSettingsStore'
 import { searchContacts } from '../services/contactsSearch'
@@ -321,13 +321,32 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         }
       }, WATCHDOG_INTERVAL_MS)
     } catch (err) {
-      console.error('[voice-session] connect failed', err)
+      // The driver cancelling mid-connect (disconnect() called while r.connect()
+      // was still in flight — see the store's own `disconnect`) surfaces here
+      // as this specific, expected rejection, not as a real connection
+      // failure. Treating it as one used to flip `status` to 'error', which
+      // (a) reads as a broken connection to the driver even though they just
+      // cancelled on purpose, and (b) left this catch's cleanup racing the
+      // *next* connect attempt: `stopAudioSession()`/`room.disconnect()`
+      // below were fire-and-forget, so a fast reconnect (wake-word retrying,
+      // or the driver tapping the orb again) could call `startAudioSession()`
+      // /create a new Room before the cancelled attempt's teardown had
+      // actually finished — this is what produced the observed "connects
+      // this session, but the previous one turns on instead" symptom and the
+      // cascading WebRTC errors (negotiation timeout, "Cannot read property
+      // 'client' of undefined") on the next attempt.
+      const cancelled = err instanceof ConnectionError && err.reason === ConnectionErrorReason.Cancelled
+      if (cancelled) {
+        console.log('[voice-session] connect cancelled by disconnect()')
+      } else {
+        console.error('[voice-session] connect failed', err)
+      }
       clearWatchdog()
-      room?.disconnect()
+      await room?.disconnect()
       room = null
-      stopAudioSession()
+      await stopAudioSession()
       stopCallForegroundService()
-      set({ status: 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
+      set({ status: cancelled ? 'idle' : 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
     }
   }
 
@@ -340,8 +359,8 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
     enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'driver')),
 
-    // The mic button on Home must gate its own hangup on `isCallActive`
-    // before calling this — see AssistantChatPanel.tsx's handleMicPress.
+    // The AI orb on Home must gate its own hangup on `isCallActive`
+    // before calling this — see AssistantChatPanel.tsx's handleOrbPress.
     // `disconnect()` itself stays unconditional (also used for cleanup paths
     // like unmount/logout that must always be able to tear the room down).
     disconnect: () => {

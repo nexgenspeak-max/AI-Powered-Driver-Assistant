@@ -4,7 +4,7 @@ import { registerGlobals, AudioSession, AndroidAudioTypePresets } from '@livekit
 // (RTCPeerConnection, MediaStream, ...) that livekit-client expects.
 registerGlobals()
 
-export { Room, RoomEvent, Track, ConnectionState } from 'livekit-client'
+export { Room, RoomEvent, Track, ConnectionState, ConnectionError, ConnectionErrorReason } from 'livekit-client'
 
 export async function startAudioSession() {
   // Force speaker output on both platforms — this is a hands-free driving

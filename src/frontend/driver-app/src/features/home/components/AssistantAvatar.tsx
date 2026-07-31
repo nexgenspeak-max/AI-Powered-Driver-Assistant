@@ -3,7 +3,7 @@ import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl'
 import { Renderer } from 'expo-three'
 import * as THREE from 'three'
 import { View } from 'tamagui'
-import { useVoiceSessionStore, type VoiceSessionStatus } from '../stores/voiceSessionStore'
+import { type VoiceSessionStatus } from '../stores/voiceSessionStore'
 import { useThemeStore } from '../../../stores/themeStore'
 
 // Fast Refresh can reset expo-gl's global.__EXGLContexts registry without the
@@ -36,57 +36,29 @@ class GLErrorBoundary extends Component<{ children: ReactNode }, { crashed: bool
 const SIZE = 360
 const DOT_SIZE = 0.038
 const NOISE_AMOUNT = 0.42
-// Exponential smoothing rates (1/seconds) for the audio-energy signal driving
-// the shape/rotation/glow — see the render loop below for why this needs to
-// be slow enough to absorb LiveKit's ~200ms-interval level updates into one
-// continuous curve.
-// Rising (energy catching up to louder audio) always uses this — fast/
-// responsive, ~1/2.8 ≈ 350ms time constant.
+// Exponential smoothing rates (1/seconds) for the energy signal driving the
+// shape/rotation/glow — see the render loop below. The orb no longer reacts
+// to the AI's actual audio level/speaking state at all: it just eases toward
+// a constant target while connected (CONNECTED_ENERGY) and back to 0 once
+// disconnected, so it animates continuously for the whole call regardless of
+// whether the AI happens to be making sound at that instant.
+// Rising (on connect) always uses this — fast/responsive, ~1/2.8 ≈ 350ms
+// time constant.
 const ENERGY_ATTACK_RATE = 2.8
-// Falling while the backend still reports the AI speaking/thinking (see
-// agentSpeaking below) uses this much slower rate instead — a natural
-// mid-sentence breath pause otherwise reads as audioEnergy hitting 0 every
-// time, which visibly dipped the wave in and out between phrases instead of
-// it reading as one unbroken motion for the whole reply. ~1/0.22 ≈ 4.5s time
-// constant — gentle enough that a typical <1s pause barely registers as a
-// dip at all; the wave keeps rolling continuously until the AI is actually
-// done, then picks back up the instant speech resumes (attack is unaffected).
-const ENERGY_RELEASE_RATE_TALKING = 0.22
-// Falling once the AI has genuinely finished (agentSpeaking false) — eases
-// the rest of the way to a perfect sphere. Deliberately kept close to
-// ENERGY_RELEASE_RATE_TALKING, not near ENERGY_ATTACK_RATE — a big jump
-// between the two release rates is exactly what read as "dừng đột ngột"
-// (abrupt stop) the moment agentSpeaking flips false (e.g. the driver
-// interrupting the AI mid-reply): the decay suddenly speeding up stood out
-// against the gentle fade playing a moment before. Only mildly faster than
-// the talking rate, so "genuinely done" still reads as one continuous
-// wind-down, never a snap.
-const ENERGY_RELEASE_RATE_DONE = 0.4
-// Baseline amplitude held for as long as agentSpeaking is true, regardless
-// of momentary audioLevel — tuning the release rate down (see above) still
-// let the target itself drop toward 0 on every quiet instant, so the wave
-// kept visibly dipping between phrases no matter how gently it eased. This
-// is a floor on the TARGET, not a clamp applied after the fact: while
-// speaking, target never goes below this, so there is nothing for the decay
-// to even ease down towards until the AI is genuinely done — the orb simply
-// keeps running continuously for the whole reply, exactly as asked.
-const SUSTAIN_ENERGY = 0.55
-// How long agentSpeaking must actually stay false before it's treated as
-// false — the driver kept seeing the orb "standing still" (đứng yên) mid-
-// reply even with the sustain floor above, which only makes sense if
-// agentSpeaking itself was flickering false-then-true-again faster than a
-// render could react to it (e.g. a brief per-sentence state hop, or a data-
-// channel message arriving a beat late). This absorbs any such blip
-// entirely — the floor only ever lifts once "not speaking" has actually
-// held for this long, which no genuine mid-reply hiccup should reach.
-const SPEAKING_OFF_DEBOUNCE_MS = 600
-// Holding the target near-constant while speaking (SUSTAIN_ENERGY, above)
-// fixed the orb ever going still, but a fixed amplitude just deforms the
-// same "amount" every frame — no rise and fall, so it read as a static bumpy
-// blob instead of an actual undulating wave. This gently swells/recedes the
-// *displayed* amplitude (never the underlying energyRef the attack/release
-// smoothing works on) on a slow sine, independent of audio — a real ocean
-// swell rhythm, always running, immune to any audio/network hiccup.
+// Falling (on disconnect) — eases the rest of the way to a perfect sphere.
+// Slow and deliberate so the shrink reads as a gradual wind-down, never a
+// snap.
+const ENERGY_RELEASE_RATE = 0.4
+// Constant target energy held for the entire duration of a connected call —
+// see comment above.
+const CONNECTED_ENERGY = 0.55
+// Holding the target near-constant while connected (CONNECTED_ENERGY, above)
+// keeps the orb from ever going still, but a fixed amplitude alone just
+// deforms the same "amount" every frame — no rise and fall, so it reads as a
+// static bumpy blob instead of an actual undulating wave. This gently
+// swells/recedes the *displayed* amplitude (never the underlying energyRef
+// the attack/release smoothing works on) on a slow sine, independent of
+// audio — a real ocean swell rhythm, always running for the whole call.
 const BREATHE_DEPTH = 0.3
 const BREATHE_RATE = 1.1 // rad/s — ~5.7s per full swell cycle
 // Shrinks the whole orb (points + glow together, see `group.scale` below) —
@@ -200,20 +172,11 @@ function fibonacciSpherePositions(n: number) {
 }
 
 export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
-  // Shape is driven by the AI's actual voice loudness (agentAudioLevel, 0..1
-  // from LiveKit's ActiveSpeakersChanged), not a fixed animation — silent =
-  // perfect sphere, louder speech = more deformed. Read/written straight from
-  // the render loop (imperative three.js), not React state — a re-render per
-  // animation frame would be far too slow.
-  const audioLevel = useVoiceSessionStore(s => s.agentAudioLevel)
-  // The real "is the AI still replying" signal (backend agent_state_changed,
-  // not raw audio) — while true, the target energy is floored at
-  // SUSTAIN_ENERGY (see below) so the wave never dips just because the AI
-  // paused mid-sentence; it also picks which release rate applies once this
-  // goes false (see ENERGY_RELEASE_RATE_*). Debounced (see
-  // SPEAKING_OFF_DEBOUNCE_MS) — the render loop reads debouncedSpeakingRef,
-  // not this raw value, directly.
-  const agentSpeaking = useVoiceSessionStore(s => s.agentSpeaking)
+  // Shape/motion no longer reacts to the AI's actual audio at all — it just
+  // eases to a constant animated target for as long as `status` is
+  // 'connected' (see CONNECTED_ENERGY) and back to a still sphere once it
+  // isn't, so the orb keeps moving continuously for the whole call
+  // regardless of whether the AI happens to be making sound at any instant.
   // White-topped dots use additive blending, which washes out to near-
   // invisible against a light-mode screen (the same contrast problem the
   // AI chat bubble had) — light mode swaps to a dark purple/near-black
@@ -221,40 +184,13 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
   const isLight = useThemeStore(s => s.mode) === 'light'
   const targetEnergyRef = useRef(0)
   const energyRef = useRef(0)
-  const debouncedSpeakingRef = useRef(false)
-  const speakingOffTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const audioLevelRef = useRef(0)
   const statusRef = useRef(status)
   const mountedRef = useRef(true)
   const rafRef = useRef(0)
 
   useEffect(() => {
-    audioLevelRef.current = audioLevel
     statusRef.current = status
-  }, [audioLevel, status])
-
-  useEffect(() => {
-    if (agentSpeaking) {
-      if (speakingOffTimer.current) {
-        clearTimeout(speakingOffTimer.current)
-        speakingOffTimer.current = null
-      }
-      debouncedSpeakingRef.current = true
-      return
-    }
-    // Don't drop the floor the instant agentSpeaking reports false — wait to
-    // see if it actually stays false (see SPEAKING_OFF_DEBOUNCE_MS above).
-    speakingOffTimer.current = setTimeout(() => {
-      debouncedSpeakingRef.current = false
-      speakingOffTimer.current = null
-    }, SPEAKING_OFF_DEBOUNCE_MS)
-    return () => {
-      if (speakingOffTimer.current) {
-        clearTimeout(speakingOffTimer.current)
-        speakingOffTimer.current = null
-      }
-    }
-  }, [agentSpeaking])
+  }, [status])
 
   useEffect(() => {
     mountedRef.current = true
@@ -363,42 +299,19 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
       const dtSec = Math.min(0.1, Math.max(0, (now - lastFrameMs) / 1000))
       lastFrameMs = now
 
-      // Recomputed every frame straight from refs (not from a `useEffect`
-      // reacting to prop/state changes) — the debounce timer above flips
-      // debouncedSpeakingRef asynchronously, on its own schedule, so this
-      // has to read it live each frame rather than only whenever some other
-      // dependency happens to re-render.
-      const speaking = debouncedSpeakingRef.current
-      const audioEnergy = statusRef.current === 'connected'
-        ? Math.pow(Math.min(1, audioLevelRef.current * 2.4), 0.6)
-        : 0
-      // While the AI is genuinely still speaking/thinking, the target is
-      // just the flat sustain floor — no audio-driven lift anymore. Riding
-      // raw audioLevel (even just as a small addition) still meant re-aiming
-      // toward a new step every ~200ms, which read as a jitter layered on
-      // top of the breathing wave below instead of one clean, predictable
-      // motion. The wave itself (BREATHE_DEPTH/BREATHE_RATE) is now the only
-      // thing giving the orb life while speaking — audioEnergy only matters
-      // once the AI is actually done, easing the wave back to a sphere.
-      targetEnergyRef.current = speaking ? SUSTAIN_ENERGY : audioEnergy
+      // Constant target for the whole call — no audio/speaking signal
+      // involved at all, so the orb animates the same continuous way
+      // regardless of whether the AI is actually making sound right now.
+      // Recomputed every frame straight from the ref (not a `useEffect`
+      // reacting to prop changes) since `status` can flip between renders.
+      targetEnergyRef.current = statusRef.current === 'connected' ? CONNECTED_ENERGY : 0
 
-      // `agentAudioLevel` (the target this eases toward) only updates
-      // ~every 200ms from LiveKit's ActiveSpeakersChanged (see
-      // voiceSessionStore.ts) — it's a staircase, not a continuous signal.
       // Frame-rate-independent exponential smoothing (stable even if frames
-      // drop, unlike a fixed per-frame multiply) blends consecutive steps
-      // into one flowing curve instead of visibly re-aiming every step.
-      // Attack (energy rising) always uses the fast rate. Release (energy
-      // falling) uses the slow ENERGY_RELEASE_RATE_TALKING rate for as long
-      // as the AI is still speaking/thinking — this is what keeps a natural
-      // mid-sentence pause from either stopping the orb dead or (an earlier,
-      // rejected attempt) snapping onto a hard floor: one continuous decay
-      // curve just eases partway down and keeps flowing. Only once
-      // agentSpeaking goes (debounced) false does release speed up to
-      // actually settle on a sphere.
+      // drop, unlike a fixed per-frame multiply) — fast attack on connect,
+      // slow release on disconnect so the shrink back to a sphere reads as a
+      // gradual wind-down, never a snap.
       const rising = targetEnergyRef.current > energyRef.current
-      const releaseRate = speaking ? ENERGY_RELEASE_RATE_TALKING : ENERGY_RELEASE_RATE_DONE
-      const rate = rising ? ENERGY_ATTACK_RATE : releaseRate
+      const rate = rising ? ENERGY_ATTACK_RATE : ENERGY_RELEASE_RATE
       const smoothing = 1 - Math.exp(-rate * dtSec)
       energyRef.current += (targetEnergyRef.current - energyRef.current) * smoothing
 
@@ -412,18 +325,17 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
       material.uniforms.uTime.value = t
       material.uniforms.uEnergy.value = displayEnergy
 
-      // Spins up while speaking — reinforces the deforming shape as an
-      // "energy" cue instead of it being the only signal, and gives the orb
-      // a livelier feel than a fixed idle spin. Accumulated incrementally
-      // (rotationY += rate * dt) instead of the old `t * rate`: with a
-      // rate that depends on energyRef (which jumps whenever AI speech
-      // starts/stops), recomputing straight from elapsed time `t` made the
-      // orb's orientation SNAP the instant energy changed — after minutes
-      // in a call, `t` is large, so even a small rate change multiplied
-      // across all of `t` was a big instantaneous jump, which is what read
-      // as the sphere "changing shape" at every pause/resume. Accumulating
-      // means only the *time since the last frame* (a tiny dt) gets the new
-      // rate, so a rate change is smooth and continuous, never a jump.
+      // Spins up while connected — reinforces the deforming shape as an
+      // "energy" cue, and gives the orb a livelier feel than a fixed idle
+      // spin. Accumulated incrementally (rotationY += rate * dt) instead of
+      // `t * rate`: with a rate that depends on energyRef (which jumps on
+      // connect/disconnect), recomputing straight from elapsed time `t`
+      // would make the orb's orientation SNAP the instant energy changed —
+      // after minutes in a call, `t` is large, so even a small rate change
+      // multiplied across all of `t` is a big instantaneous jump.
+      // Accumulating means only the *time since the last frame* (a tiny dt)
+      // gets the new rate, so a rate change is smooth and continuous, never
+      // a jump.
       rotationY += (0.15 + energyRef.current * 0.25) * dtSec
       points.rotation.y = rotationY
       points.rotation.x = Math.sin(t * 0.1) * 0.08

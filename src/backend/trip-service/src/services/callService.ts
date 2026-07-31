@@ -139,6 +139,12 @@ export async function startCustomerCall(opts: {
       pickup_address: opts.pickupAddress ?? '',
       lang: opts.lang ?? 'vn',
       mode: 'background',
+      // The driver's OWN room (not dialed into — background calls always get
+      // their own separate room) — the voice-agent job for this background
+      // room reads this back to push a summary notification into the
+      // driver's room once the call ends, so the driver's own agent can
+      // announce it proactively instead of only on request.
+      driver_room_name: opts.roomName ?? '',
     };
 
     const bgRoom = await createBackgroundCallRoom(baseMeta);

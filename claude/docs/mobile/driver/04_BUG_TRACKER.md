@@ -15,6 +15,7 @@
 | BUG-M006 | `borderRadius={999}` (mẹo "auto pill") không đáng tin cậy khi đi qua `MaskedView` | 🟡 | ✅ | [BUG-M006](tickets/BUG-M006.md) | |
 | BUG-M007 | Nút "Accept" tràn ra ngoài card trong hàng Reject/Accept (prop `full` không lan tới view bọc `GestureDetector`) | 🔴 | ✅ | [BUG-M007](tickets/BUG-M007.md) | |
 | BUG-M008 | Quả cầu 3D (`AssistantAvatar`) không đổi kích thước sau khi sửa `SIZE` — chỉ đẩy layout xuống | 🟡 | ✅ (giải thích) | [BUG-M008](tickets/BUG-M008.md) | Do Fast Refresh giữ context WebGL cũ, không phải lỗi code |
+| BUG-M010 | Gọi khách hàng/danh bạ (voice-agent): cả 3 chế độ AI trả lời tốt, nhưng tóm tắt/trạng thái sau cuộc gọi báo sai (báo "đang gọi"/"không liên lạc được" dù cuộc gọi đã xong và khách đã nói chuyện đầy đủ), LiveKit vẫn hiện ACTIVE dù đã báo kết thúc | 🔴 | ✅ | [BUG-M010](tickets/BUG-M010.md) | 4 nguyên nhân độc lập cộng dồn — xem ticket. Kèm thêm tính năng mới: tự động tóm tắt khi cuộc gọi nền kết thúc, không cần tài xế hỏi |
 
 ## Cách mở rộng file này
 

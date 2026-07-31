@@ -15,6 +15,7 @@ from livekit.agents import Agent, RunContext
 
 from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
+from app.voicebot.prompts.bridge_call import bridge_greeting
 
 logger = logging.getLogger("voice-agent.processors.custom_call")
 
@@ -62,7 +63,13 @@ def _dial_failed(lang: str) -> str:
 
 
 def _pre_dial_announcement(name: str, lang: str) -> str:
-    return f"Đang kết nối {name}, xin đợi trong giây lát." if lang == "vn" else f"Connecting {name}, please hold on."
+    # Always bridge mode here (see module docstring) — say the FULL
+    # bridge_greeting (connecting + "talk directly, I'll stay silent, say the
+    # wake phrase or wait for hangup when done") before dialing, not after
+    # pickup, so the AI has nothing left to say once the call actually
+    # connects. See BridgeCallAgent.on_enter(), which no longer speaks a
+    # greeting.
+    return bridge_greeting(lang, name)
 
 
 async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:

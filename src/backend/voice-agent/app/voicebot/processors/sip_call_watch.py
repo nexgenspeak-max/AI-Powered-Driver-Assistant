@@ -11,7 +11,12 @@ from livekit.agents.job import get_job_context
 from livekit.agents.utils.participant import wait_for_participant_attribute
 
 from app.services import backend_api
-from app.voicebot.processors.handback import handback_to_customer, handback_to_driver
+from app.voicebot.processors.handback import (
+    disconnect_sip_participant,
+    handback_to_customer,
+    handback_to_driver,
+    notify_driver_of_background_call_result,
+)
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
@@ -139,6 +144,19 @@ async def complete_isolated_call(session: AgentSession, userdata: dict, summary:
         driver_phone = userdata.get("driver_phone", "")
         call_id = (userdata.get("customer_call") or {}).get("call_id", "")
         await backend_api.complete_background_call(driver_phone, call_id, summary)
+        # Proactively tell the driver's own room the result, right after
+        # marking it complete — the driver doesn't have to ask "tóm tắt cuộc
+        # gọi" first.
+        await notify_driver_of_background_call_result(userdata, summary)
+        # Explicitly hang up the SIP leg — delete_room alone was relied on to
+        # tear this down, but LiveKit's telephony dashboard has shown the SIP
+        # call session still ACTIVE after this ran (room gone, backend
+        # marked completed, driver already told "cuộc gọi đã kết thúc", but
+        # the actual phone call kept going). remove_participant targets the
+        # SIP leg directly instead of hoping room deletion cascades to it;
+        # harmless if the participant is already gone (e.g. this ran from the
+        # participant_disconnected watcher itself).
+        await disconnect_sip_participant(userdata)
         try:
             job_ctx = get_job_context()
             await job_ctx.api.room.delete_room(

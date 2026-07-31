@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native'
+import { ScrollView, TextInput, TouchableOpacity, Alert, Keyboard } from 'react-native'
 import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSheen } from '../../../components/LiquidGlass'
+import { KeyboardSafeView } from '../../../components/KeyboardSafeView'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -17,9 +18,9 @@ import { AssistantAvatar } from './AssistantAvatar'
 import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
-  idle: 'Bấm để nói chuyện với AI',
+  idle: 'Chạm vào quả cầu để nói chuyện với AI',
   connecting: 'Đang kết nối...',
-  connected: 'Đang trong phiên thoại — bấm để ngắt',
+  connected: 'Đang trong phiên thoại — chạm vào quả cầu để ngắt',
   error: 'Kết nối lỗi, thử lại',
 }
 
@@ -158,6 +159,7 @@ export function AssistantChatPanel() {
   }, [connectingCuePlayer])
 
   const handleSend = async () => {
+    Keyboard.dismiss()
     if (!msg.trim()) {
       setError('Bạn chưa nhập nội dung.')
       return
@@ -179,10 +181,17 @@ export function AssistantChatPanel() {
     }
   }
 
-  const handleMicPress = () => {
-    if (voice.status === 'connected' || voice.status === 'connecting') {
+  const handleOrbPress = () => {
+    // Mid-connect (LiveKit room.connect() still in flight) can't be
+    // cancelled — disconnect()ing a room while it's still connecting aborts
+    // that connect attempt, and cleaning that up races the very next connect
+    // attempt (see voiceSessionStore's connectWithTokenLocked catch block).
+    // The driver has to wait for it to actually finish (or fail on its own)
+    // before the orb does anything again.
+    if (voice.status === 'connecting') return
+    if (voice.status === 'connected') {
       // A real SIP-dialed call (bridge/agent-mediated/background) is in
-      // progress — the mic button must not be able to end the session while
+      // progress — the orb must not be able to end the session while
       // that's true; only the underlying phone call ending (backend then
       // publishes isCallActive: false) may end it.
       if (voice.isCallActive) {
@@ -214,13 +223,26 @@ export function AssistantChatPanel() {
         <VoiceEnrollPanel phone={driver.phone} accountId={driver.id} onDone={setHasVoiceprint} />
       </View>
     ) : (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.surface.val }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <KeyboardSafeView
+      style={{ backgroundColor: theme.surface.val }}
       keyboardVerticalOffset={60}
     >
       <View width="100%" paddingTop={insets.top}>
-        <AssistantAvatar status={voice.status} />
+        {/* Orb renders at its own natural 360x360 size, unchanged — this
+            container isn't resized, so it doesn't push the label/messages
+            below it out of place the way shrinking the flex box did. The
+            tap target is a separate, absolutely-positioned overlay sized to
+            just the visible sphere, centered on top via the same
+            alignItems/justifyContent as the orb itself, so only the orb's
+            own footprint is tappable — not the empty space around it. */}
+        <View alignItems="center" justifyContent="center">
+          <AssistantAvatar status={voice.status} />
+          <TouchableOpacity
+            onPress={handleOrbPress}
+            activeOpacity={0.8}
+            style={{ position: 'absolute', width: 170, height: 170, borderRadius: 90, marginTop: 8 }}
+          />
+        </View>
         <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2">
           {voice.status === 'connected' && voice.isCallActive
             ? 'Đang trong cuộc gọi — không thể tắt'
@@ -295,21 +317,6 @@ export function AssistantChatPanel() {
         shadowRadius={18}
       >
         <GlassSheen borderRadius={24} />
-        <TouchableOpacity onPress={handleMicPress} style={{ padding: 8 }}>
-          <Ionicons
-            name="mic"
-            size={20}
-            color={
-              voice.status === 'connected'
-                ? '#35a4f3'
-                : voice.status === 'connecting'
-                  ? '#f5a623'
-                  : voice.status === 'error'
-                    ? '#e05252'
-                    : isLight ? '#1a1a1a' : '#fff'
-            }
-          />
-        </TouchableOpacity>
         <TextInput
           value={msg}
           onChangeText={setMsg}
@@ -322,13 +329,13 @@ export function AssistantChatPanel() {
           // #8B5CF6) since a highlight needs more contrast against a dark
           // field than a light one.
           selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
-          style={{ flex: 1, color: theme.textPrimary.val }}
+          style={{ flex: 1, color: theme.textPrimary.val, paddingLeft: 8 }}
         />
-        <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={handleSend} style={{ padding:8 }}>
           <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />
         </TouchableOpacity>
       </XStack>
-    </KeyboardAvoidingView>
+    </KeyboardSafeView>
     )}
     </Theme>
   )

@@ -265,6 +265,36 @@ ENV=local python -m app.main dev
 
 ---
 
+### BUG-12: Cancelling mid-connect crashed into an error/reconnect loop (FIXED) + one-session-per-account still PENDING
+
+Two related asks from the same conversation — the orb's connect/cancel logic:
+
+**1. Cancel mid-connect — FIXED.**
+
+| | |
+|---|---|
+| **Symptom** | Tapping the orb to cancel while `status === 'connecting'` surfaced `ConnectionError: Client initiated disconnect`, flipped `status` to `'error'`, and the *next* connect attempt often failed too (negotiation timeout, `Cannot read property 'client' of undefined`) or the previous (cancelled) session's audio came through instead of the new one. |
+| **Root cause** | `room.disconnect()` called while `room.connect()` was still in flight aborts that connect — LiveKit rejects with `ConnectionError(reason: Cancelled)`. The catch block in `connectWithTokenLocked` (`driver-app/src/features/home/stores/voiceSessionStore.ts`) treated this the same as a real failure (`status: 'error'`), and its cleanup (`room.disconnect()`, `stopAudioSession()`) was fire-and-forget, not awaited — a fast next attempt could start before the cancelled one's teardown actually finished. |
+| **Fix** | `voiceSessionStore.ts`: catch block now detects `err.reason === ConnectionErrorReason.Cancelled` (from `livekit-server-sdk`... actually `livekit-client`, re-exported via `lib/livekitRuntime.{native,web}.ts`) and sets `status: 'idle'` instead of `'error'`; `room.disconnect()`/`stopAudioSession()` are now `await`ed before the catch returns. |
+| **Also changed** | Product decision (not just a bug fix): the orb's `handleOrbPress` (`AssistantChatPanel.tsx`) now **no-ops entirely while `status === 'connecting'`** — cancelling mid-connect is disallowed by design, the driver has to wait for connect to finish (or fail on its own) before the orb responds again. The store-level fix above is kept anyway as defense-in-depth for any other caller of `disconnect()`. |
+
+**2. One AI session per account (anti-spam) — NOT implemented, paused pending an infra decision.**
+
+Requirement: a given driver account should only ever have one *active* AI voice session (LiveKit room) at a time — reject a new `/voice/token` request if one is already live, to prevent spamming multiple concurrent sessions.
+
+Where this has to live: `src/backend/trip-service/src/routes/voice.ts` (`POST /token`) needs a distributed lock keyed by driver phone, set on token issue and released when the room actually ends (LiveKit webhook, `room_finished` event — needs a new raw-body route mounted *before* `express.json()` and outside `/api/v1` so it isn't hit by `authenticate`, plus a `sam.yaml` `Events:` entry and registering the webhook URL in the LiveKit Cloud dashboard once deployed).
+
+**Blocker:** trip-service runs on Lambda; `infra/trip-service/sam.yaml` does not provision/configure `REDIS_URL` for the Lambda, so the existing cache module (`src/cache/redis.ts`) always falls back to in-memory — which is *not* shared across concurrent Lambda instances, so it can't be a fully correct distributed lock as-is.
+
+Options discussed, not yet decided:
+
+- Use the existing in-memory-fallback cache anyway — catches the overwhelming majority of real spam (repeated taps, wake-word retries) since those requests tend to land on the same warm Lambda instance, but has a narrow gap if two requests land on different cold-started instances at the same moment. Auto-upgrades to a real distributed lock for free if `REDIS_URL` is ever actually provisioned later — no code change needed.
+- **(Leaning towards this)** DynamoDB conditional write (`ConditionExpression: attribute_not_exists(...)`) as the lock instead — trip-service already has DynamoDB provisioned and IAM-wired (no new infra/cost of note), and it's a correct distributed lock across every Lambda instance, unlike the Redis-less cache.
+
+Next step whenever this is picked back up: decide the lock backend (DynamoDB recommended), then implement lock-acquire in `/token`, the `room_finished` webhook + release logic, and the `sam.yaml` webhook route + LiveKit Cloud dashboard webhook registration (manual, post-deploy).
+
+---
+
 ## iOS Version Notes
 
 | Item | Value |

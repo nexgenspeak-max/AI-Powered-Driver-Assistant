@@ -26,8 +26,32 @@ class ConversationService:
 
         m = _ROOM_RE.match(ctx.room.name)
         self.caller = m.group(1) if m else ctx.room.name.split("-")[1] if "-" in ctx.room.name else "unknown"
+        # Overridden in attach() for isolated (custcall) rooms — see there for
+        # why the driver-room-shaped defaults above don't apply to those.
+        self._call_id = ctx.room.name
+        self._is_customer_call = False
 
     def attach(self, session: AgentSession) -> None:
+        userdata = session.userdata
+        if userdata.get("isolated_call"):
+            # custcall-* rooms: _ROOM_RE never matches (that regex is
+            # driver-<phone>-<ts> only), so `caller` fell back to a
+            # meaningless trip-id fragment (custcall.split("-")[1]), and the
+            # record was POSTed under call_id=ctx.room.name — a DIFFERENT
+            # value than trip-service's own call_id
+            # ("{room_name}-{sip_identity}", see callService.ts), which is
+            # what the driver-facing "tóm tắt cuộc gọi" lookup actually
+            # queries by. That mismatch meant this transcript-based record
+            # was orphaned: saved, but unreachable by anything that later
+            # asks for it. session.userdata["customer_call"] (populated from
+            # room metadata in session.py) has the real values.
+            call_meta = userdata.get("customer_call") or {}
+            self._call_id = call_meta.get("call_id") or self.ctx.room.name
+            customer_phone = call_meta.get("customer_phone", "")
+            if customer_phone:
+                self.caller = customer_phone
+            self._is_customer_call = True
+
         logger.info("── call started ── caller=%s room=%s", self.caller, self.ctx.room.name)
 
         @session.on("conversation_item_added")
@@ -55,7 +79,7 @@ class ConversationService:
         ended_ts    = datetime.fromisoformat(ended_at.replace("Z", "+00:00")).timestamp()
 
         record = {
-            "call_id":          self.ctx.room.name,
+            "call_id":          self._call_id,
             "caller":           self.caller,
             "started_at":       self.started_at,
             "ended_at":         ended_at,
@@ -100,15 +124,42 @@ class ConversationService:
         except Exception:
             logger.error("failed to save call record", exc_info=True)
 
+    async def generate_summary(self) -> str:
+        """Public entry point — also used mid-call by session.py's isolated
+        (custcall) silence-timeout handler, to produce an honest,
+        transcript-based summary instead of a generic "couldn't reach the
+        customer" message when a real conversation actually happened before
+        the call went silent."""
+        return await self._generate_summary()
+
     async def _generate_summary(self) -> str:
         if not self.turns:
             return "Không có nội dung hội thoại."
 
         s = get_settings()
+        # Isolated (custcall) rooms: the "user" role here is the CUSTOMER
+        # talking to the AI on the driver's behalf, not the driver — using
+        # "Tài xế" as the label (and describing the conversation as
+        # driver<->AI in the prompt below) was actively wrong for these,
+        # producing summaries that misattributed or confused who said what.
+        other_label = "Khách" if self._is_customer_call else "Tài xế"
         transcript = "\n".join(
-            f"{'Tài xế' if t['role'] == 'user' else 'Bot'}: {t['text']}"
+            f"{other_label if t['role'] == 'user' else 'Bot'}: {t['text']}"
             for t in self.turns
         )
+
+        if self._is_customer_call:
+            system_prompt = (
+                "Tóm tắt cuộc gọi sau giữa trợ lý AI (gọi thay mặt tài xế) và khách hàng, "
+                "bằng tiếng Việt. Nêu rõ: chủ đề chính, khách đã trả lời/xác nhận gì, kết quả "
+                "cuộc gọi. Tối đa 3 câu ngắn gọn."
+            )
+        else:
+            system_prompt = (
+                "Tóm tắt cuộc hội thoại sau giữa tài xế và trợ lý AI bằng tiếng Việt. "
+                "Nêu rõ: chủ đề chính, yêu cầu của tài xế, kết quả thực hiện. "
+                "Tối đa 3 câu ngắn gọn."
+            )
 
         try:
             from openai import AsyncOpenAI
@@ -116,14 +167,7 @@ class ConversationService:
             resp = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Tóm tắt cuộc hội thoại sau giữa tài xế và trợ lý AI bằng tiếng Việt. "
-                            "Nêu rõ: chủ đề chính, yêu cầu của tài xế, kết quả thực hiện. "
-                            "Tối đa 3 câu ngắn gọn."
-                        ),
-                    },
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": transcript},
                 ],
                 max_tokens=200,

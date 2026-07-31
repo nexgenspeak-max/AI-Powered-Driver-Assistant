@@ -33,7 +33,7 @@ async def end_customer_bridge_call(context: RunContext, summary: str = "") -> tu
 
     try:
         cancel_customer_bridge_timeout(context.userdata)
-        store_call_summary(context.userdata, final_summary, mode="bridge")
+        await store_call_summary(context.userdata, final_summary, mode="bridge")
         context.userdata["bridge_call_active"] = False
         context.userdata["driver_call_active"] = False
         restore_session_audio(context.session)

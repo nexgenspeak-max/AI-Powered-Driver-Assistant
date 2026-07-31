@@ -1,12 +1,8 @@
 """Vietnamese-specific strings: greetings, labels, error messages."""
 
-GREETING_INBOUND = "Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp gì cho bạn?"
-GREETING_OUTBOUND_PREFIX = "Xin chào! Hệ thống trợ lý tài xế."
-GREETING_CUSTOMER = (
-    "Xin chào! Tôi là trợ lý AI hỗ trợ khách hàng. "
-    "Tôi có thể giúp bạn đặt xe, kiểm tra chuyến đi hoặc các vấn đề liên quan. "
-    "Bạn cần hỗ trợ gì ạ?"
-)
+GREETING_INBOUND = "Chào anh/chị, tôi giúp được gì cho anh/chị đây ạ?"
+GREETING_OUTBOUND_PREFIX = "Alô, xin chào anh/chị."
+GREETING_CUSTOMER = "Chào bạn, mình cần hỗ trợ gì ạ? Đặt xe, hỏi về chuyến đi, hay việc gì khác đều được nhé."
 
 TRIP_CONFIRMED    = "Đã xác nhận chuyến đi. Chúc anh/chị lái xe an toàn!"
 TRIP_REJECTED     = "Đã ghi nhận. Cảm ơn anh/chị!"

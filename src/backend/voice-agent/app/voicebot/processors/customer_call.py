@@ -10,6 +10,7 @@ from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.prompts.bridge_call import bridge_greeting
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
@@ -42,10 +43,15 @@ def _dial_failed(name: str, lang: str) -> str:
 
 
 def _pre_dial_announcement(name: str, lang: str, *, mode: str) -> str:
-    """`mode` picks the verb to match each mode's existing post-dial phrasing
-    ("Đang kết nối"/"Connecting" for bridge, "Đang gọi"/"Calling" otherwise)."""
+    """`mode` picks the phrasing. Bridge mode says the FULL bridge_greeting
+    (connecting + "talk directly, I'll stay silent, say the wake phrase or
+    wait for hangup when done") here, before dialing — not after pickup —
+    since that's everything the driver needs to know, and it means the AI
+    has nothing left to say once the call actually connects: no risk of it
+    barging in on a conversation that started the moment the callee picked
+    up. See BridgeCallAgent.on_enter(), which no longer speaks a greeting."""
     if mode == "bridge":
-        return f"Đang kết nối {name}, xin đợi trong giây lát." if lang == "vn" else f"Connecting {name}, please hold on."
+        return bridge_greeting(lang, name)
     return f"Đang gọi {name}, xin đợi trong giây lát." if lang == "vn" else f"Calling {name}, please hold on."
 
 
@@ -246,6 +252,14 @@ async def start_background_call(
             trip_id=current.get("trip_id", ""),
             phone_number=phone,
             mode="background",
+            # Not "the room to dial into" here (background calls always get
+            # their own separate custcall-* room) — this is the driver's OWN
+            # room, threaded through so the isolated call can push a data
+            # message back into it once it ends, letting the driver's own
+            # DriverAgent proactively announce the summary the moment it's
+            # ready instead of only on request (see session.py's
+            # "background_call_summary" data handler).
+            room_name=context.userdata.get("room_name", ""),
             lang=lang,
             customer_name=name,
             pickup_address=current.get("pickup_address", ""),
