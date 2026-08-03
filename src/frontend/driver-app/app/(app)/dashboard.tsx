@@ -5,6 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useDriverContext } from "../../src/features/dashboard/hooks/useDriverContext";
+import { useProximityTracking } from "../../src/features/dashboard/hooks/useProximityTracking";
+import { useIdleLocationTracking } from "../../src/features/dashboard/hooks/useIdleLocationTracking";
+import { useDispatchSocket } from "../../src/features/dashboard/hooks/useDispatchSocket";
 import { TripSection } from "../../src/features/dashboard/components/TripSection";
 import { ActiveTripCard } from "../../src/features/dashboard/components/ActiveTripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
@@ -54,18 +57,23 @@ export default function DashboardScreen() {
     },
   });
 
-  if (!driver) return null;
-
-  const isOnline = driver.status === "online";
-  const pending =
-    context?.upcoming_trips.filter((t) =>
-      PENDING_STATUSES.includes(t.status),
-    ) ?? [];
   // A driver can hold more than one active trip at once (e.g. wrapping up a
   // current ride while already confirmed for the next pickup) — active_trips
   // covers every confirmed/arrived_pickup/picked_up trip, unlike current_trip
   // which only ever surfaces a single one.
   const active = context?.active_trips ?? [];
+  const isOnline = driver?.status === "online";
+  // Called unconditionally, above the `!driver` early return below — hooks
+  // can't be called after a conditional return (Rules of Hooks).
+  useProximityTracking(active);
+  useIdleLocationTracking(isOnline);
+  useDispatchSocket(isOnline, driver?.phone);
+
+  if (!driver) return null;
+  const pending =
+    context?.upcoming_trips.filter((t) =>
+      PENDING_STATUSES.includes(t.status),
+    ) ?? [];
 
   const matchesTripQuery = (t: { customer_name: string; customer_phone: string }) => {
     const q = tripQuery.trim().toLowerCase();

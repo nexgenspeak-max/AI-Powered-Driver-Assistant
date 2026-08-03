@@ -27,4 +27,9 @@ export const tripsService = {
   // see backend trips.ts's ALLOWED_STATUSES/CANCELLED_STATUSES.
   cancel: (tripId: string) =>
     apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'cancelled_by_driver' }).then(r => r.data),
+
+  // Fire-and-forget GPS ping from locationTracking.ts — errors are handled
+  // by the caller (network hiccups shouldn't kill the tracking loop).
+  updateLocation: (tripId: string, lat: number, lng: number) =>
+    apiClient.post(`/trips/${tripId}/location`, { lat, lng }).then(r => r.data),
 }

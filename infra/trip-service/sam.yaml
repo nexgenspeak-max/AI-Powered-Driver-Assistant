@@ -49,6 +49,32 @@ Parameters:
     Default: ""
     Description: Public URL of voice-agent's vision-api sidecar (ALB) — used by POST /delivery-orders/scan.
 
+  RedisUrl:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: >
+      Required for the driver auto-match feature (POST /trips/auto-match) to work
+      correctly under Lambda — driver GPS positions (Redis Geo) must be shared
+      across invocations, unlike the in-memory fallback used when this is unset
+      (fine for `local.ts`, useless across separate Lambda instances). Point this
+      at a real reachable Redis (e.g. a serverless provider like Upstash needs no
+      VPC; ElastiCache would additionally require VPC config on this function,
+      not set up here).
+
+  MapsProvider:
+    Type: String
+    Default: google
+    AllowedValues: [google, goong]
+
+  MapsApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: >
+      Falls back to GoogleMapsApiKey below when unset (see trip-service's
+      config.ts) — set this instead when MapsProvider=goong.
+
 Globals:
   Function:
     Runtime: nodejs20.x
@@ -64,9 +90,20 @@ Globals:
         LIVEKIT_API_SECRET: !Ref LivekitApiSecret
         SIP_TRUNK_ID: !Ref SipTrunkId
         GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
+        MAPS_PROVIDER: !Ref MapsProvider
+        MAPS_API_KEY: !Ref MapsApiKey
         JWT_SECRET: !Ref JwtSecret
         AUTH_SERVICE_URL: !Ref AuthServiceUrl
         VOICE_AGENT_URL: !Ref VoiceAgentUrl
+        REDIS_URL: !Ref RedisUrl
+        CONNECTIONS_TABLE: !Ref ConnectionsTable
+        DISPATCH_TIMEOUT_QUEUE_URL: !Ref DispatchTimeoutQueue
+        # WEBSOCKET_API_ENDPOINT deliberately NOT set here — it references
+        # DispatchWebSocketApi (below), and ConnectFunction/DisconnectFunction
+        # (which also inherit Globals) are themselves wired INTO that API's
+        # routes, which would create a circular resource dependency. Set
+        # explicitly instead on just the two functions that actually call
+        # postToConnection (TripServiceFunction, DispatchTimeoutConsumerFunction).
 
 Resources:
 
@@ -87,6 +124,20 @@ Resources:
             TableName: !Ref TripsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref DeliveryOrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConnectionsTable
+        # Sends the first auto-match offer's notify() + schedules its 15s
+        # timeout synchronously inside POST /trips/auto-match — needs the
+        # same two permissions as DispatchTimeoutConsumerFunction below.
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt DispatchTimeoutQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action: execute-api:ManageConnections
+              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/${Environment}/POST/@connections/*"
+      Environment:
+        Variables:
+          WEBSOCKET_API_ENDPOINT: !Sub "https://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
       Events:
         Health:
           Type: Api
@@ -100,6 +151,16 @@ Resources:
           Properties:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/trips
+            Method: POST
+        # Separate booking flow from CreateTrip above (POST /api/v1/trips) —
+        # that one takes a specific driver_phone and assigns it directly,
+        # unchanged. This one auto-matches the nearest idle/ride-pool driver
+        # — see routes/trips.ts's POST /auto-match + dispatchOrchestrator.ts.
+        AutoMatchTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/auto-match
             Method: POST
         ListTrips:
           Type: Api
@@ -119,6 +180,18 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/trips/{trip_id}
             Method: PATCH
+        GetTripLocation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}/location
+            Method: GET
+        UpdateTripLocation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/trips/{trip_id}/location
+            Method: POST
         DispatchTrip:
           Type: Api
           Properties:
@@ -156,6 +229,15 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/drivers/me/trips/current
             Method: GET
+        # Idle GPS ping (driver online, no trip yet) — feeds the same
+        # `drivers:geo` Redis set as UpdateTripLocation above, so
+        # matchDriverService can find both idle and busy drivers.
+        DriverMeLocation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TripServiceApi
+            Path: /api/v1/drivers/me/location
+            Method: POST
         DriverMeContext:
           Type: Api
           Properties:
@@ -369,6 +451,165 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  # ── Driver auto-match: real-time notify + 15s offer-timeout infra ──────
+  # (POST /trips/auto-match — see matchDriverService.ts / dispatchOrchestrator.ts.
+  # The plain driver_phone-based POST /trips flow above doesn't use any of this.)
+
+  ConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-ws-connections"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+        - AttributeName: role_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        # Looked up by notify/lambda.ts as `${role}#${id}` (e.g. "driver#0912345678")
+        # to find which connection(s) to push a trip_offer/no_driver_found event to.
+        - IndexName: role_id-index
+          KeySchema:
+            - AttributeName: role_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  DispatchTimeoutQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${Environment}-${AppName}-dispatch-timeout"
+      # Must exceed DispatchTimeoutConsumerFunction's Timeout below so a
+      # message can't become visible again (and get double-processed) while
+      # still being handled.
+      VisibilityTimeout: 60
+
+  DispatchWebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-dispatch-ws"
+      ProtocolType: WEBSOCKET
+      # Unused in practice — this deployment only ever needs $connect/
+      # $disconnect (client identifies itself via query string on connect,
+      # see websocketConnect.ts; nothing sends messages after that), but
+      # ApiGatewayV2 WebSocket APIs require a RouteSelectionExpression.
+      RouteSelectionExpression: "$request.body.action"
+
+  ConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-ws-connect"
+      CodeUri: ../../src/backend/trip-service/
+      Handler: src/handlers/websocketConnect.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConnectionsTable
+
+  DisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-ws-disconnect"
+      CodeUri: ../../src/backend/trip-service/
+      Handler: src/handlers/websocketDisconnect.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConnectionsTable
+
+  ConnectFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ConnectFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/*"
+
+  DisconnectFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DisconnectFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/*"
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ConnectFunction.Arn}/invocations"
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+      RouteKey: $connect
+      Target: !Sub "integrations/${ConnectIntegration}"
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DisconnectFunction.Arn}/invocations"
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+      RouteKey: $disconnect
+      Target: !Sub "integrations/${DisconnectIntegration}"
+
+  DispatchWebSocketDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - ConnectRoute
+      - DisconnectRoute
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+
+  DispatchWebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref DispatchWebSocketApi
+      DeploymentId: !Ref DispatchWebSocketDeployment
+      StageName: !Ref Environment
+
+  DispatchTimeoutConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-dispatch-timeout-consumer"
+      CodeUri: ../../src/backend/trip-service/
+      Handler: src/handlers/dispatchTimeoutConsumer.handler
+      Timeout: 30
+      Environment:
+        Variables:
+          WEBSOCKET_API_ENDPOINT: !Sub "https://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TripsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConnectionsTable
+        # Re-enqueues its own delayed message when advancing to the next
+        # candidate (see dispatchOrchestrator.offerNextCandidate ->
+        # dispatchTimer.scheduleOfferTimeout).
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt DispatchTimeoutQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action: execute-api:ManageConnections
+              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/${Environment}/POST/@connections/*"
+      Events:
+        DispatchTimeoutQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt DispatchTimeoutQueue.Arn
+            BatchSize: 1
+
 Outputs:
   ApiUrl:
     Description: Trip Service API base URL — set as TRIP_SERVICE_URL in voice-agent
@@ -382,3 +623,10 @@ Outputs:
 
   DeliveryOrdersTableName:
     Value: !Ref DeliveryOrdersTable
+
+  DispatchWebSocketUrl:
+    Description: >
+      wss:// URL driver-app/customer-app connect to for real-time dispatch
+      push — append ?role=driver&id=<phone> (or role=customer). See
+      notify/local.ts for the identical local-dev protocol.
+    Value: !Sub "wss://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"

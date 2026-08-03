@@ -167,6 +167,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 "customer_name":   meta.get("customer_name", ""),
                 "pickup_address":  meta.get("pickup_address", ""),
                 "customer_phone":  meta.get("customer_phone", ""),
+                "custom_message":  meta.get("custom_message", ""),
             }
             phone = meta.get("driver_phone", "").replace("+", "").replace(" ", "")
             logger.info("custcall room | trip_id=%s driver=%s", trip.get("trip_id"), phone)
@@ -203,6 +204,12 @@ async def entrypoint(ctx: JobContext) -> None:
             "pending_cancel_trip_id": None,
             "room_name":              room_name,
             "lang":                   lang,
+            # Lets in-room agent/bridge sub-calls (customer_call.py,
+            # contact_call.py, custom_call.py) persist their own transcript
+            # to call-logger via ConversationService.save_subcall() when
+            # they end — see handback.py::store_call_summary, the one point
+            # common to every "call ended" path for those modes.
+            "_conv_service":          conv_service,
             "customer_call_active":   False,
             "bridge_call_active":     False,
             "background_call_active": False,
@@ -267,6 +274,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 lang=lang,
                 trip=trip or {},
                 customer_name=(trip or {}).get("customer_name", "khách"),
+                custom_message=(trip or {}).get("custom_message", ""),
                 isolated=True,
             )
             # This is now the ONE rule that ends an isolated call on silence —
@@ -544,5 +552,13 @@ async def entrypoint(ctx: JobContext) -> None:
         logger.error("session crashed:\n%s", traceback.format_exc())
     finally:
         if silence_tracker:
-            await silence_tracker.stop()
+            # Must never block conv_service.finish() below — a crash here
+            # (e.g. the self-referential await when a silence timeout's own
+            # _end_session() already called stop() from inside the very task
+            # being awaited) previously skipped the DynamoDB save entirely
+            # for the whole call.
+            try:
+                await silence_tracker.stop()
+            except Exception:
+                logger.error("silence_tracker.stop() failed", exc_info=True)
         await conv_service.finish()

@@ -131,12 +131,17 @@ async def start_bridge_call_to_number(
     logger.info("DIAL-TRACE custom_call: start_call returned result=%r", result)
 
     call_id = str(result.get("call_id") or "")
+    conv_service = context.userdata.get("_conv_service")
     context.userdata["customer_call"] = {
         "call_id": call_id,
         "trip_id": "",
+        "customer_phone": phone_number,
         "sip_identity": result.get("sip_identity", ""),
         "room_name": room_name,
         "mode": "bridge",
+        # Checkpoint into conv_service.turns — see
+        # customer_call.py::_save_call_context for why this is needed.
+        "turns_from": len(conv_service.turns) if conv_service else 0,
     }
     context.userdata["bridge_call_active"] = True
     context.userdata["customer_call_active"] = False

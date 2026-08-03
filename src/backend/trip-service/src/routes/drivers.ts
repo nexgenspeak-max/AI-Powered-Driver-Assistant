@@ -4,6 +4,7 @@ import * as tripService from '../services/tripService';
 import * as earningsService from '../services/earningsService';
 import * as driverContextService from '../services/driverContextService';
 import { phoneVariants } from '../utils/phone';
+import { geoAddDriver } from '../cache/redis';
 
 const router = Router();
 
@@ -47,6 +48,28 @@ router.get('/me/trips/upcoming', async (req: Request, res: Response) => {
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
     const trips = (await tripsForDriver(driverPhone)).filter(t => UPCOMING_STATUSES.has(t.status));
     return res.json(trips);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Idle GPS ping — driver is `online` but has no active trip yet. Feeds the
+// same `drivers:geo` set that trip-scoped location pings (routes/trips.ts's
+// POST /:tripId/location) write into, so matchDriverService can find both
+// idle and busy drivers with one GEOSEARCH.
+router.post('/me/location', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+
+    const lat = Number(req.body.lat);
+    const lng = Number(req.body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ detail: 'lat and lng must be numbers' });
+    }
+
+    await geoAddDriver(driverPhone, lat, lng);
+    return res.json({ status: 'ok' });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

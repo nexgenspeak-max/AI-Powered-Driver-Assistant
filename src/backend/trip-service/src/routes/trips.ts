@@ -6,12 +6,21 @@ import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
+import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey, geoAddDriver } from '../cache/redis';
+import { distanceMeters } from '../utils/geo';
+import * as callService from '../services/callService';
+import * as dispatchOrchestrator from '../services/dispatchOrchestrator';
 
 const router = Router();
 
 const ALLOWED_STATUSES = new Set([
   'pending', 'notified', 'calling', 'confirmed', 'rejected', 'no_answer', 'completed',
   'cancelled', 'cancelled_by_driver', 'no_show', 'arrived_pickup', 'picked_up',
+  // Auto-match only (POST /trips/auto-match) — every idle/ride-pool candidate
+  // within radius was tried and none accepted. Distinct from `no_answer`
+  // (a single candidate's own timeout) so customer-app can tell "still
+  // retrying" apart from "search exhausted, nothing left to try".
+  'no_driver_found',
 ]);
 
 // Once a trip lands in one of these, it's done — no more status changes.
@@ -85,7 +94,7 @@ function isTripOwner(req: Request, trip: tripService.Trip): boolean {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
-    const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address, config.googleMapsApiKey);
+    const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address);
     const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
     const trip = await tripService.create({
       ...body,
@@ -95,11 +104,50 @@ router.post('/', async (req: Request, res: Response) => {
       eta_minutes: route.eta_minutes ?? 0,
       traffic_note: route.traffic_note ?? '',
       route_summary: route.summary ?? '',
+      pickup_lat: route.pickup_lat,
+      pickup_lng: route.pickup_lng,
+      dropoff_lat: route.dropoff_lat,
+      dropoff_lng: route.dropoff_lng,
     });
     // Mark it 'notified' right away so it shows up on the assigned driver's dashboard.
     const notified = await tripService.updateStatus(trip.trip_id, 'notified');
     await driverContextService.invalidateTripParties(notified ?? trip);
     return res.status(201).json(notified ?? trip);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Separate booking flow from POST / above — that one takes a specific
+// driver_phone and assigns it directly (unchanged, still used e.g. when the
+// caller already knows which driver). This one has no driver_phone at all:
+// it searches nearby drivers (idle first, then same-direction ride-pool)
+// and offers the trip to the best candidate, cascading to the next on a
+// 15s timeout — see dispatchOrchestrator.ts.
+router.post('/auto-match', async (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+    const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address);
+    if (typeof route.pickup_lat !== 'number' || typeof route.pickup_lng !== 'number') {
+      return res.status(422).json({ detail: 'Could not resolve pickup coordinates for this address' });
+    }
+
+    const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
+    const trip = await tripService.create({
+      ...body,
+      ...(idAccount ? { id_account: idAccount } : {}),
+      distance_km: route.distance_km ?? 0,
+      eta_minutes: route.eta_minutes ?? 0,
+      traffic_note: route.traffic_note ?? '',
+      route_summary: route.summary ?? '',
+      pickup_lat: route.pickup_lat,
+      pickup_lng: route.pickup_lng,
+      dropoff_lat: route.dropoff_lat,
+      dropoff_lng: route.dropoff_lng,
+    });
+
+    const dispatched = await dispatchOrchestrator.startAutoMatch(trip);
+    return res.status(201).json(dispatched);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }
@@ -168,6 +216,10 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     }
     const updated = await tripService.updateStatus(req.params.tripId, status);
     await driverContextService.invalidateTripParties(updated);
+    // Harmless no-op for trips from the plain POST / flow (nothing was ever
+    // tracked for them) — only actually clears bookkeeping for auto-match
+    // trips once a driver accepts, so a later stray timeout can't re-offer.
+    if (status === 'confirmed') dispatchOrchestrator.cancelPendingOffer(req.params.tripId);
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -190,6 +242,69 @@ router.get('/:tripId/location', async (req: Request, res: Response) => {
     return res.status(500).json({ error: String(err) });
   }
 });
+
+// Driver's live GPS ping while en route to pickup — separate from the
+// static GET /:tripId/location above (which only returns stored trip
+// fields). Stored in Redis only (short TTL) since it's high-frequency,
+// ephemeral state, not part of the durable trip record.
+router.post('/:tripId/location', async (req: Request, res: Response) => {
+  try {
+    const lat = Number(req.body.lat);
+    const lng = Number(req.body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ detail: 'lat and lng must be numbers' });
+    }
+
+    const trip = await tripService.get(req.params.tripId);
+    if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (!isTripOwner(req, trip)) {
+      return res.status(403).json({ detail: 'Not authorized to update this trip' });
+    }
+
+    await cacheSet(driverLocationKey(trip.trip_id), { lat, lng, updated_at: new Date().toISOString() }, 120);
+    if (trip.driver_phone) await geoAddDriver(trip.driver_phone, lat, lng);
+
+    await maybeNotifyCustomerOfProximity(trip, { lat, lng });
+
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Fires the "driver is close to pickup" call at most once per trip — the
+// dedupe flag is what makes this safe to call on every single GPS ping
+// without spamming the customer.
+async function maybeNotifyCustomerOfProximity(
+  trip: tripService.Trip,
+  driverCoords: { lat: number; lng: number },
+): Promise<void> {
+  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
+  if (!trip.driver_phone || !trip.customer_phone) return;
+
+  const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
+  if (distance > config.proximityAlertMeters) return;
+
+  const notifiedKey = tripProximityNotifiedKey(trip.trip_id);
+  if (await cacheGet(notifiedKey)) return;
+  // Set the flag before dialing (not after) so two near-simultaneous pings
+  // can't both pass the cacheGet check above and double-dial.
+  await cacheSet(notifiedKey, true, 3600);
+
+  try {
+    await callService.startCustomerCall({
+      driverPhone: trip.driver_phone,
+      customerPhone: trip.customer_phone,
+      tripId: trip.trip_id,
+      mode: 'background',
+      customerName: trip.customer_name,
+      pickupAddress: trip.pickup_address,
+      customMessage: 'Tài xế sắp đến điểm đón, vui lòng ra cổng hoặc đường lớn để tài xế dễ đón bạn nhé.',
+    });
+  } catch (err) {
+    console.warn(`[trips] proximity call failed for trip=${trip.trip_id}:`, err);
+  }
+}
 
 router.post('/:tripId/confirm-with-customer', async (req: Request, res: Response) => {
   try {

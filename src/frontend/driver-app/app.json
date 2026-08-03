@@ -80,7 +80,17 @@
       ],
       "expo-secure-store",
       "expo-contacts",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Czen Driver needs your location to track the trip while you're driving.",
+          "locationAlwaysAndWhenInUsePermission": "Czen Driver needs your location in the background so it can notify the customer when you're close to the pickup point, even while you're using another navigation app.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ]
   }
 }

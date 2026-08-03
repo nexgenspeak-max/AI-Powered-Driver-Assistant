@@ -34,7 +34,11 @@ class GLErrorBoundary extends Component<{ children: ReactNode }, { crashed: bool
 }
 
 const SIZE = 360
-const DOT_SIZE = 0.038
+// Shrunk slightly from 0.038 alongside the higher POINT_COUNT below — same
+// dot count increase without a corresponding size trim would overlap into a
+// blown-out glare under additive blending instead of reading as more
+// individual "chấm" detail.
+const DOT_SIZE = 0.032
 const NOISE_AMOUNT = 0.42
 // Exponential smoothing rates (1/seconds) for the energy signal driving the
 // shape/rotation/glow — see the render loop below. The orb no longer reacts
@@ -60,14 +64,15 @@ const CONNECTED_ENERGY = 0.55
 // the attack/release smoothing works on) on a slow sine, independent of
 // audio — a real ocean swell rhythm, always running for the whole call.
 const BREATHE_DEPTH = 0.3
-const BREATHE_RATE = 1.1 // rad/s — ~5.7s per full swell cycle
+const BREATHE_RATE = 0.45 // rad/s — ~14s per full swell cycle (was 0.7/~9s — slowed further for a calmer feel)
 // Shrinks the whole orb (points + glow together, see `group.scale` below) —
 // a size tweak, so it lives here rather than touching camera/geometry math.
 const ORB_SCALE = 0.72
-// Dense enough to read as a fine speckled sphere. Cheap even at this count
-// since the per-frame deformation runs in the vertex shader (GPU), not a JS
-// loop — see the shader source below.
-const POINT_COUNT = 7000
+// Raised from 7000 for a finer, more detailed speckled sphere (see
+// DOT_SIZE's own shrink above, which offsets the density increase). Still
+// cheap at this count since the per-frame deformation runs in the vertex
+// shader (GPU), not a JS loop — see the shader source below.
+const POINT_COUNT = 11000
 
 // Three traveling plane waves, each along its own direction/frequency/speed
 // and summed — this is what actually reads as "liquid 3D undulation" instead
@@ -75,11 +80,15 @@ const POINT_COUNT = 7000
 // the "tù"/blunt look): with several oscillations crossing the sphere at
 // once, at different angles and speeds, no two points move exactly in sync,
 // so the surface visibly ripples/flows rather than just breathing in place.
+// Time multipliers slowed further, to ~60% of the already-slowed pass (was
+// 1.0/0.7/1.2, themselves ~60% of the original 1.6/1.1/2.0) for an even
+// calmer ripple that reads as ambient rather than agitated — same
+// three-wave composition, just unhurried.
 const NOISE_GLSL = `
   float fieldNoise(vec3 p, float t) {
-    float w1 = sin(dot(p, vec3(1.0, 0.6, 0.3)) * 3.1 - t * 1.6);
-    float w2 = sin(dot(p, vec3(-0.4, 1.0, 0.7)) * 4.3 + t * 1.1);
-    float w3 = sin(dot(p, vec3(0.8, -0.5, 1.0)) * 5.6 - t * 2.0);
+    float w1 = sin(dot(p, vec3(1.0, 0.6, 0.3)) * 3.1 - t * 0.6);
+    float w2 = sin(dot(p, vec3(-0.4, 1.0, 0.7)) * 4.3 + t * 0.42);
+    float w3 = sin(dot(p, vec3(0.8, -0.5, 1.0)) * 5.6 - t * 0.72);
     return w1 * 0.5 + w2 * 0.32 + w3 * 0.18;
   }
 `
@@ -221,13 +230,20 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(basePositions, 3))
 
-    // Dark mode: white -> pink -> muted purple, bright against the dark
-    // screen behind it. Light mode: deep purple -> vivid purple -> near-
-    // black purple — same brand hues, inverted toward dark so the orb
-    // still reads clearly against a light screen instead of blowing out.
-    const colorTop = new THREE.Color(isLight ? '#4c1d95' : '#ffffff')
-    const colorMid = new THREE.Color(isLight ? '#a855f7' : '#e879f9')
-    const colorBottom = new THREE.Color(isLight ? '#1e1033' : '#7C5B9C')
+    // Dark mode: brighter and much more even top-to-bottom (was '#b794f6' ->
+    // '#9333ea' -> '#3b0764', which fell off to a near-black base) — the
+    // three stops now sit close together in the same bright purple range
+    // instead of a light top fading into a dark bottom, so the whole sphere
+    // reads as one uniformly bright color rather than top-lit/bottom-
+    // shadowed.
+    // Light mode: pushed much darker/richer than before (was '#3b0764' ->
+    // '#9333ea' -> '#150a26', which still had a fairly bright, saturated
+    // middle) — all three stops deepened toward a dark, dense purple-black
+    // so it reads as bold and dark against a light screen instead of
+    // washing out toward brighter purple in the middle band.
+    const colorTop = new THREE.Color(isLight ? '#2e1065' : '#e9d5ff')
+    const colorMid = new THREE.Color(isLight ? '#5b21b6' : '#c084fc')
+    const colorBottom = new THREE.Color(isLight ? '#0f0720' : '#a855f7')
     const colors = new Float32Array(POINT_COUNT * 3)
     for (let i = 0; i < POINT_COUNT; i++) {
       const y = basePositions[i * 3 + 1]
@@ -336,7 +352,10 @@ export function AssistantAvatar({ status }: { status: VoiceSessionStatus }) {
       // Accumulating means only the *time since the last frame* (a tiny dt)
       // gets the new rate, so a rate change is smooth and continuous, never
       // a jump.
-      rotationY += (0.15 + energyRef.current * 0.25) * dtSec
+      // Rates slowed further, to ~60% of the already-slowed pass (was 0.09
+      // base / 0.15 energy-driven, themselves ~60% of the original 0.15 /
+      // 0.25) — same idea, even calmer pace.
+      rotationY += (0.055 + energyRef.current * 0.09) * dtSec
       points.rotation.y = rotationY
       points.rotation.x = Math.sin(t * 0.1) * 0.08
 

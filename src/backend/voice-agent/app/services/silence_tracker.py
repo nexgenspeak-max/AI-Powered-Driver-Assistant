@@ -64,10 +64,18 @@ class SilenceTracker:
 
     async def stop(self) -> None:
         self._is_active = False
-        if self._silence_task and not self._silence_task.done():
-            self._silence_task.cancel()
+        task = self._silence_task
+        # _end_session() calls stop() from inside _check_silence itself (the
+        # timeout branch), i.e. from the very task held in self._silence_task —
+        # cancelling and then awaiting that task from within itself is a
+        # self-await, which asyncio rejects ("await wasn't used with future").
+        # That exception used to propagate out of session.py's finally block
+        # and skip the conv_service.finish() call right after it, silently
+        # losing the whole call's DynamoDB record.
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
             try:
-                await self._silence_task
+                await task
             except asyncio.CancelledError:
                 pass
         logger.info("SilenceTracker stopped")

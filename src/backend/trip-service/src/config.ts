@@ -24,7 +24,21 @@ export const config = {
   livekitAgentName: process.env.LIVEKIT_AGENT_NAME || 'driver-assistant',
   sipTrunkId: process.env.SIP_TRUNK_ID || '',
 
-  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+  mapsProvider: process.env.MAPS_PROVIDER || 'google',
+  mapsApiKey: process.env.MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',
+  proximityAlertMeters: Number(process.env.PROXIMITY_ALERT_METERS || 1000),
+
+  // Auto-match dispatch (POST /trips/auto-match) — separate from the
+  // existing driver_phone-based POST /trips flow.
+  dispatchRadiusMeters: Number(process.env.DISPATCH_RADIUS_METERS || 5000),
+  dispatchOfferTimeoutSeconds: Number(process.env.DISPATCH_OFFER_TIMEOUT_SECONDS || 15),
+  ridePoolBearingDegrees: Number(process.env.RIDE_POOL_BEARING_DEGREES || 40),
+
+  // Deployed (Lambda) real-time/delay infra — unused when env === 'local'
+  // (notify/dispatchTimer pick the `ws`/setTimeout implementation instead).
+  connectionsTable: process.env.CONNECTIONS_TABLE || '',
+  websocketApiEndpoint: process.env.WEBSOCKET_API_ENDPOINT || '',
+  dispatchTimeoutQueueUrl: process.env.DISPATCH_TIMEOUT_QUEUE_URL || '',
 
   callCenterUrl: process.env.CALL_CENTER_URL || 'http://localhost:8000',
   callLoggerUrl: process.env.CALL_LOGGER_URL || 'http://localhost:8001',

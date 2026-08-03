@@ -7,7 +7,9 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.1101.0",
     "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-sqs": "^3.1101.0",
     "@aws-sdk/lib-dynamodb": "^3.600.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -15,13 +17,16 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.6.0",
-    "serverless-http": "^3.2.0"
+    "serverless-http": "^3.2.0",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.162",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.0",
+    "@types/ws": "^8.18.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   }

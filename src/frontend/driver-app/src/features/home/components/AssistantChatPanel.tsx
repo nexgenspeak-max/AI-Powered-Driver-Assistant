@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, TextInput, TouchableOpacity, Alert, Keyboard } from 'react-native'
+import { ScrollView, TextInput, TouchableOpacity, Keyboard } from 'react-native'
 import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSheen } from '../../../components/LiquidGlass'
@@ -14,7 +14,6 @@ import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
 import { voiceService } from '../../../services/api/voice'
-import { AssistantAvatar } from './AssistantAvatar'
 import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
@@ -181,33 +180,6 @@ export function AssistantChatPanel() {
     }
   }
 
-  const handleOrbPress = () => {
-    // Mid-connect (LiveKit room.connect() still in flight) can't be
-    // cancelled — disconnect()ing a room while it's still connecting aborts
-    // that connect attempt, and cleaning that up races the very next connect
-    // attempt (see voiceSessionStore's connectWithTokenLocked catch block).
-    // The driver has to wait for it to actually finish (or fail on its own)
-    // before the orb does anything again.
-    if (voice.status === 'connecting') return
-    if (voice.status === 'connected') {
-      // A real SIP-dialed call (bridge/agent-mediated/background) is in
-      // progress — the orb must not be able to end the session while
-      // that's true; only the underlying phone call ending (backend then
-      // publishes isCallActive: false) may end it.
-      if (voice.isCallActive) {
-        Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
-        return
-      }
-      voice.disconnect()
-      return
-    }
-    if (!driver?.phone) {
-      setError('Không tìm thấy số điện thoại tài xế.')
-      return
-    }
-    voice.connect(driver.phone)
-  }
-
   return (
     // Follows the app-wide light/dark toggle now (previously always forced
     // dark, regardless of the user's setting). Chat bubble colors below are
@@ -228,22 +200,12 @@ export function AssistantChatPanel() {
       keyboardVerticalOffset={60}
     >
       <View width="100%" paddingTop={insets.top}>
-        {/* Orb renders at its own natural 360x360 size, unchanged — this
-            container isn't resized, so it doesn't push the label/messages
-            below it out of place the way shrinking the flex box did. The
-            tap target is a separate, absolutely-positioned overlay sized to
-            just the visible sphere, centered on top via the same
-            alignItems/justifyContent as the orb itself, so only the orb's
-            own footprint is tappable — not the empty space around it. */}
-        <View alignItems="center" justifyContent="center">
-          <AssistantAvatar status={voice.status} />
-          <TouchableOpacity
-            onPress={handleOrbPress}
-            activeOpacity={0.8}
-            style={{ position: 'absolute', width: 170, height: 170, borderRadius: 90, marginTop: 8 }}
-          />
-        </View>
-        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2">
+        {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
+            the (app) layout level as a small draggable bubble on every tab
+            (Home included) — no more full-size 360px canvas reserved here,
+            so the chat list below gets the full screen instead of being
+            pushed down/covered by it. */}
+        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2" paddingTop="$2">
           {voice.status === 'connected' && voice.isCallActive
             ? 'Đang trong cuộc gọi — không thể tắt'
             : MIC_LABEL[voice.status]}

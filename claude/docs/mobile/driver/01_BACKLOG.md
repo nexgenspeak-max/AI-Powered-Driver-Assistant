@@ -11,6 +11,8 @@
 | FEAT-M002 | Nối LLM thật cho khung chat text trong `AssistantChatPanel` (hiện gọi `getAssistantReply`, cần xác nhận đã nối thật hay còn stub) | 🟡 Trung bình | ⬜ | — |
 | FEAT-M003 | Xác thực giọng nói "chủ nhân" cho wake-word (voiceprint) — chỉ đúng giọng chủ tài khoản mới dùng được trợ lý AI | 🟡 Trung bình | 🔨 Đã code, chưa test thiết bị thật | [FEAT-M003](tickets/FEAT-M003.md) |
 | FEAT-005 | Chốt quan hệ giữa `driver-app` và `driver-web` (mục chung, xem [`../../web/driver/01_BACKLOG.md`](../../web/driver/01_BACKLOG.md)) | 🟡 Trung bình | ⬜ | — |
+| FEAT-M004 | Tự động gọi khách hàng khi tài xế GPS còn ~1km tới điểm đón (background location tracking + proximity call) | 🟡 Trung bình | 🔨 Code xong (FE+BE+voice-agent), BE/voice-agent test thật rồi, FE chờ test thiết bị thật | [FEAT-M004](tickets/FEAT-M004.md) |
+| FEAT-M005 | Tự động tìm & gán tài xế theo vị trí — rảnh gần nhất trước, ghép tuyến sau (SĐT cụ thể `POST /trips` giữ nguyên, tách riêng `POST /trips/auto-match`) | 🟡 Trung bình | 🔨 Code + test local (HTTP+WS+timeout) xong, `sam.yaml` validate OK nhưng chưa deploy AWS thật | [FEAT-M005](tickets/FEAT-M005.md) |
 
 ## Đã hoàn thành
 

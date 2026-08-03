@@ -136,6 +136,27 @@ async def store_call_summary(userdata: dict, summary: str, mode: str) -> None:
             summary=summary,
         )
 
+    # Agent/bridge sub-calls (customer, contact, or custom-number — see
+    # customer_call.py/contact_call.py/custom_call.py) are dialed straight
+    # into the driver's own room and have no room/job of their own to save a
+    # call-logger record from when they end, unlike background calls. This
+    # is the one point common to every one of those "call ended" paths, so
+    # persist the sub-call's own transcript+summary here — reusing the
+    # summary already computed above instead of asking the LLM again.
+    conv_service = userdata.get("_conv_service")
+    turns_from = call_meta.get("turns_from")
+    if conv_service is not None and turns_from is not None:
+        try:
+            await conv_service.save_subcall(
+                call_id=str(call_id),
+                caller=call_meta.get("customer_phone", ""),
+                mode=mode,
+                turns_from=turns_from,
+                summary=summary,
+            )
+        except Exception:
+            logger.error("failed to save sub-call record | call_id=%s", call_id, exc_info=True)
+
     # Also mark trip-service's shared "last call" record (driverLastCallKey)
     # as completed. Background-mode calls already did this on their own
     # completion paths (customer_call_tools.py::_finish_isolated_call,

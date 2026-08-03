@@ -8,6 +8,7 @@ import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
 import deliveryOrdersRouter from './routes/deliveryOrders';
 import { authenticate } from './middleware/authenticate';
+import { attachLocalWebSocketServer } from './services/notify';
 
 const corsOptions = {
   origin: true,
@@ -32,4 +33,5 @@ app.use('/api/v1/customers', customersRouter);
 app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
 
 const PORT = process.env.PORT || 8002;
-app.listen(PORT, () => console.log(`trip-service running on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`trip-service running on :${PORT}`));
+attachLocalWebSocketServer(server);

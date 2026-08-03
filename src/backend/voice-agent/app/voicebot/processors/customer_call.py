@@ -81,6 +81,7 @@ def _save_call_context(
 ) -> None:
     call_id = str(result.get("call_id") or result.get("call_sid") or "")
     room_name = context.userdata.get("room_name", "")
+    conv_service = context.userdata.get("_conv_service")
     context.userdata["customer_call"] = {
         "call_id": call_id,
         "trip_id": current.get("trip_id", ""),
@@ -88,6 +89,13 @@ def _save_call_context(
         "sip_identity": result.get("sip_identity", ""),
         "room_name": room_name,
         "mode": mode,
+        # Checkpoint into conv_service.turns — agent/bridge mode dials the
+        # SIP leg straight into the driver's own room, so without this
+        # marker there'd be no way to tell which turns belong to THIS
+        # sub-call when it ends (see ConversationService.save_subcall).
+        # Not used for background mode (that gets its own isolated room and
+        # persists independently), but harmless to set either way.
+        "turns_from": len(conv_service.turns) if conv_service else 0,
     }
     if mode == "bridge":
         context.userdata["bridge_call_active"] = True
