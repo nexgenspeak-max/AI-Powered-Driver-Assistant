@@ -27,18 +27,18 @@ export const config = {
   mapsProvider: process.env.MAPS_PROVIDER || 'google',
   mapsApiKey: process.env.MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',
   proximityAlertMeters: Number(process.env.PROXIMITY_ALERT_METERS || 1000),
+  // How close (meters) the driver's reported GPS must be to the pickup/
+  // dropoff point before arrived_pickup/picked_up/completed is accepted —
+  // separate knob from proximityAlertMeters (the auto-call trigger) even
+  // though they default to the same distance.
+  arrivalRadiusMeters: Number(process.env.ARRIVAL_RADIUS_METERS || 1000),
 
-  // Auto-match dispatch (POST /trips/auto-match) — separate from the
-  // existing driver_phone-based POST /trips flow.
-  dispatchRadiusMeters: Number(process.env.DISPATCH_RADIUS_METERS || 5000),
-  dispatchOfferTimeoutSeconds: Number(process.env.DISPATCH_OFFER_TIMEOUT_SECONDS || 15),
-  ridePoolBearingDegrees: Number(process.env.RIDE_POOL_BEARING_DEGREES || 40),
-
-  // Deployed (Lambda) real-time/delay infra — unused when env === 'local'
-  // (notify/dispatchTimer pick the `ws`/setTimeout implementation instead).
+  // Deployed (Lambda) WebSocket push — unused when env === 'local' (notify/
+  // picks the `ws` implementation instead). Still used for trip_offer/
+  // trip_confirmed/trip_rejected pushes on the driver_phone-based POST
+  // /trips + PATCH /:tripId flow.
   connectionsTable: process.env.CONNECTIONS_TABLE || '',
   websocketApiEndpoint: process.env.WEBSOCKET_API_ENDPOINT || '',
-  dispatchTimeoutQueueUrl: process.env.DISPATCH_TIMEOUT_QUEUE_URL || '',
 
   callCenterUrl: process.env.CALL_CENTER_URL || 'http://localhost:8000',
   callLoggerUrl: process.env.CALL_LOGGER_URL || 'http://localhost:8001',
@@ -47,5 +47,10 @@ export const config = {
 
   redisUrl: process.env.REDIS_URL || '',
   cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 120),
-  phoneDriver: process.env.DEFAULT_DRIVER_PHONE,
+  // TEMP fallback (hardcoded, not just env-configured) — used by POST /trips
+  // when the caller doesn't pick a driver (currently just voice-agent's
+  // phone-in booking, backend_api.py::create_trip — customer-app always
+  // sends an explicit driver_phone via its DriverPicker). Remove once
+  // voice-agent has its own driver selection.
+  phoneDriver: process.env.DEFAULT_DRIVER_PHONE || '0382759152',
 };

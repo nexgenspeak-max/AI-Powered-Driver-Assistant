@@ -19,4 +19,9 @@ export const tripsService = {
   // ownership server-side regardless of what the UI gates on.
   cancel: (tripId: string) =>
     apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'cancelled' }).then(r => r.data),
+
+  // "Đặt lại chuyến" after a driver rejects — updates this same trip's
+  // driver_phone and re-notifies, only valid while status is 'rejected'.
+  reassignDriver: (tripId: string, driverPhone: string) =>
+    apiClient.post<Trip>(`/trips/${tripId}/reassign-driver`, { driver_phone: driverPhone }).then(r => r.data),
 }

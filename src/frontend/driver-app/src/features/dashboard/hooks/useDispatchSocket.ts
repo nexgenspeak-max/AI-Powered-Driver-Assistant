@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTripOfferStore } from '../../../stores/tripOfferStore'
 
 // Same wss://.../ws?role=driver&id=<phone> protocol on both environments —
 // see trip-service's notify/local.ts (dev, plain `ws`) and
@@ -36,8 +37,14 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string)
-          if (msg.event === 'trip_offer' || msg.event === 'no_driver_found') {
+          if (msg.event === 'trip_offer') {
             qc.invalidateQueries({ queryKey: ['driverContext'] })
+            // Surfaces the floating accept/reject banner (TripOfferBanner.tsx)
+            // immediately, regardless of which tab the driver is currently on
+            // — the dashboard's own TripCard list is still the fallback
+            // (visible once they open Dashboard), this just makes it
+            // impossible to miss.
+            if (msg.data?.trip_id) useTripOfferStore.getState().show(msg.data.trip_id)
           }
         } catch {
           // Malformed message — ignore, don't drop the connection over it.

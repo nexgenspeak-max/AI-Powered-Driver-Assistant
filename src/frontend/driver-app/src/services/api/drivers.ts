@@ -19,10 +19,4 @@ export const driversService = {
 
   getBonuses: () =>
     apiClient.get<Bonus[]>('/drivers/me/bonuses').then(r => r.data),
-
-  // Idle GPS ping (driver `online`, no trip yet) — distinct from
-  // tripsService.updateLocation, which is trip-scoped. Both feed the same
-  // `drivers:geo` Redis set backend-side.
-  updateLocation: (lat: number, lng: number) =>
-    apiClient.post('/drivers/me/location', { lat, lng }).then(r => r.data),
 }

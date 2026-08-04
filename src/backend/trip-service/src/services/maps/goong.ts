@@ -1,4 +1,5 @@
 import type { RouteInfo } from './types';
+import type { LatLng } from '../../utils/geo';
 
 const GEOCODE_URL = 'https://rsapi.goong.io/geocode';
 const DIRECTION_URL = 'https://rsapi.goong.io/Direction';
@@ -16,12 +17,22 @@ async function geocode(address: string, apiKey: string): Promise<string | null> 
 }
 
 // Goong Direction requires lat,lng — unlike Google it does not accept free-text addresses,
-// so this geocodes both ends first.
-export async function getRoute(pickup: string, dropoff: string, apiKey: string): Promise<Partial<RouteInfo>> {
+// so this geocodes both ends first, unless the caller already resolved
+// precise coordinates (see RouteProvider's comment in ./types.ts).
+export async function getRoute(
+  pickup: string,
+  dropoff: string,
+  apiKey: string,
+  pickupCoords?: LatLng,
+  dropoffCoords?: LatLng,
+): Promise<Partial<RouteInfo>> {
   if (!apiKey) return {};
 
   try {
-    const [origin, destination] = await Promise.all([geocode(pickup, apiKey), geocode(dropoff, apiKey)]);
+    const [origin, destination] = await Promise.all([
+      pickupCoords ? `${pickupCoords.lat},${pickupCoords.lng}` : geocode(pickup, apiKey),
+      dropoffCoords ? `${dropoffCoords.lat},${dropoffCoords.lng}` : geocode(dropoff, apiKey),
+    ]);
     if (!origin || !destination) return {};
 
     const params = new URLSearchParams({ origin, destination, vehicle: 'car', api_key: apiKey });

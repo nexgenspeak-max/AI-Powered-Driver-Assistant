@@ -17,7 +17,7 @@ import { voiceService } from '../../../services/api/voice'
 import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
-  idle: 'Chạm vào quả cầu để nói chuyện với AI',
+  idle: 'Chạm vào quả cầu để kết nối với trợ lý',
   connecting: 'Đang kết nối...',
   connected: 'Đang trong phiên thoại — chạm vào quả cầu để ngắt',
   error: 'Kết nối lỗi, thử lại',

@@ -9,10 +9,12 @@ import tamaguiConfig from '../tamagui.config'
 import { QueryProvider } from '../src/providers/QueryProvider'
 import { useAuthStore } from '../src/stores/authStore'
 import { useThemeStore } from '../src/stores/themeStore'
-import { useWakeWordSettingsStore } from '../src/features/assistant-wakeword/wakeWordSettingsStore'
+import { useWakeWordSettingsStore, WAKE_WORD_FEATURE_ENABLED } from '../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { enableWakeWord, disableWakeWord } from '../src/features/assistant-wakeword/wakeWordService'
 import { useCurrentUser } from '../src/features/auth/hooks/useCurrentUser'
 import { authService } from '../src/services/api/auth'
+import { useCustomerDispatchSocket } from '../src/features/trips/hooks/useCustomerDispatchSocket'
+import { TripNotificationBanner } from '../src/features/trips/components/TripNotificationBanner'
 
 function AppShell() {
   const accessToken = useAuthStore(s => s.accessToken)
@@ -20,7 +22,7 @@ function AppShell() {
   const { data: customer } = useCurrentUser()
 
   useEffect(() => {
-    if (accessToken && wakeWordEnabled) {
+    if (WAKE_WORD_FEATURE_ENABLED && accessToken && wakeWordEnabled) {
       enableWakeWord()
     } else {
       disableWakeWord()
@@ -38,15 +40,22 @@ function AppShell() {
     authService.setStatus(customer.id, 'online').catch(() => {})
   }, [customer])
 
+  // Lives here (not the trip status screen) so the "driver answered" banner
+  // can show up regardless of which screen the customer is currently on.
+  useCustomerDispatchSocket(customer?.id)
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!!accessToken}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!accessToken}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <View flex={1}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={!!accessToken}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!accessToken}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+      <TripNotificationBanner />
+    </View>
   )
 }
 

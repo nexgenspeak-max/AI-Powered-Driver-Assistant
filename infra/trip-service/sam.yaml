@@ -54,13 +54,12 @@ Parameters:
     NoEcho: true
     Default: ""
     Description: >
-      Required for the driver auto-match feature (POST /trips/auto-match) to work
-      correctly under Lambda — driver GPS positions (Redis Geo) must be shared
-      across invocations, unlike the in-memory fallback used when this is unset
-      (fine for `local.ts`, useless across separate Lambda instances). Point this
-      at a real reachable Redis (e.g. a serverless provider like Upstash needs no
-      VPC; ElastiCache would additionally require VPC config on this function,
-      not set up here).
+      Shared cache (driver/customer context, proximity-call dedupe) — must be a
+      real reachable Redis under Lambda, unlike the in-memory fallback used when
+      this is unset (fine for `local.ts`, useless across separate Lambda
+      instances since each invocation is its own process). E.g. a serverless
+      provider like Upstash needs no VPC; ElastiCache would additionally require
+      VPC config on this function, not set up here.
 
   MapsProvider:
     Type: String
@@ -97,13 +96,12 @@ Globals:
         VOICE_AGENT_URL: !Ref VoiceAgentUrl
         REDIS_URL: !Ref RedisUrl
         CONNECTIONS_TABLE: !Ref ConnectionsTable
-        DISPATCH_TIMEOUT_QUEUE_URL: !Ref DispatchTimeoutQueue
         # WEBSOCKET_API_ENDPOINT deliberately NOT set here — it references
         # DispatchWebSocketApi (below), and ConnectFunction/DisconnectFunction
         # (which also inherit Globals) are themselves wired INTO that API's
         # routes, which would create a circular resource dependency. Set
-        # explicitly instead on just the two functions that actually call
-        # postToConnection (TripServiceFunction, DispatchTimeoutConsumerFunction).
+        # explicitly instead on just TripServiceFunction, the only function
+        # that actually calls postToConnection.
 
 Resources:
 
@@ -126,11 +124,6 @@ Resources:
             TableName: !Ref DeliveryOrdersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ConnectionsTable
-        # Sends the first auto-match offer's notify() + schedules its 15s
-        # timeout synchronously inside POST /trips/auto-match — needs the
-        # same two permissions as DispatchTimeoutConsumerFunction below.
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt DispatchTimeoutQueue.QueueName
         - Statement:
             - Effect: Allow
               Action: execute-api:ManageConnections
@@ -151,16 +144,6 @@ Resources:
           Properties:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/trips
-            Method: POST
-        # Separate booking flow from CreateTrip above (POST /api/v1/trips) —
-        # that one takes a specific driver_phone and assigns it directly,
-        # unchanged. This one auto-matches the nearest idle/ride-pool driver
-        # — see routes/trips.ts's POST /auto-match + dispatchOrchestrator.ts.
-        AutoMatchTrip:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/auto-match
             Method: POST
         ListTrips:
           Type: Api
@@ -229,15 +212,6 @@ Resources:
             RestApiId: !Ref TripServiceApi
             Path: /api/v1/drivers/me/trips/current
             Method: GET
-        # Idle GPS ping (driver online, no trip yet) — feeds the same
-        # `drivers:geo` Redis set as UpdateTripLocation above, so
-        # matchDriverService can find both idle and busy drivers.
-        DriverMeLocation:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/location
-            Method: POST
         DriverMeContext:
           Type: Api
           Properties:
@@ -451,9 +425,8 @@ Resources:
           Projection:
             ProjectionType: ALL
 
-  # ── Driver auto-match: real-time notify + 15s offer-timeout infra ──────
-  # (POST /trips/auto-match — see matchDriverService.ts / dispatchOrchestrator.ts.
-  # The plain driver_phone-based POST /trips flow above doesn't use any of this.)
+  # ── Real-time WebSocket push (trip_offer / trip_confirmed / trip_rejected) ──
+  # See services/notify/lambda.ts — used by POST /trips and PATCH /:tripId.
 
   ConnectionsTable:
     Type: AWS::DynamoDB::Table
@@ -472,22 +445,14 @@ Resources:
           KeyType: HASH
       GlobalSecondaryIndexes:
         # Looked up by notify/lambda.ts as `${role}#${id}` (e.g. "driver#0912345678")
-        # to find which connection(s) to push a trip_offer/no_driver_found event to.
+        # to find which connection(s) to push a trip_offer/trip_confirmed/
+        # trip_rejected event to.
         - IndexName: role_id-index
           KeySchema:
             - AttributeName: role_id
               KeyType: HASH
           Projection:
             ProjectionType: ALL
-
-  DispatchTimeoutQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "${Environment}-${AppName}-dispatch-timeout"
-      # Must exceed DispatchTimeoutConsumerFunction's Timeout below so a
-      # message can't become visible again (and get double-processed) while
-      # still being handled.
-      VisibilityTimeout: 60
 
   DispatchWebSocketApi:
     Type: AWS::ApiGatewayV2::Api
@@ -579,37 +544,6 @@ Resources:
       DeploymentId: !Ref DispatchWebSocketDeployment
       StageName: !Ref Environment
 
-  DispatchTimeoutConsumerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-dispatch-timeout-consumer"
-      CodeUri: ../../src/backend/trip-service/
-      Handler: src/handlers/dispatchTimeoutConsumer.handler
-      Timeout: 30
-      Environment:
-        Variables:
-          WEBSOCKET_API_ENDPOINT: !Sub "https://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TripsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref ConnectionsTable
-        # Re-enqueues its own delayed message when advancing to the next
-        # candidate (see dispatchOrchestrator.offerNextCandidate ->
-        # dispatchTimer.scheduleOfferTimeout).
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt DispatchTimeoutQueue.QueueName
-        - Statement:
-            - Effect: Allow
-              Action: execute-api:ManageConnections
-              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/${Environment}/POST/@connections/*"
-      Events:
-        DispatchTimeoutQueueEvent:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt DispatchTimeoutQueue.Arn
-            BatchSize: 1
-
 Outputs:
   ApiUrl:
     Description: Trip Service API base URL — set as TRIP_SERVICE_URL in voice-agent
@@ -626,7 +560,7 @@ Outputs:
 
   DispatchWebSocketUrl:
     Description: >
-      wss:// URL driver-app/customer-app connect to for real-time dispatch
-      push — append ?role=driver&id=<phone> (or role=customer). See
-      notify/local.ts for the identical local-dev protocol.
+      wss:// URL driver-app/customer-app connect to for real-time trip_offer/
+      trip_confirmed/trip_rejected push — append ?role=driver&id=<phone> (or
+      role=customer). See notify/local.ts for the identical local-dev protocol.
     Value: !Sub "wss://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"

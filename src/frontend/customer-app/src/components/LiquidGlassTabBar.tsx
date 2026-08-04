@@ -197,7 +197,15 @@ const source = Skia.RuntimeEffect.Make(`
 const CONTENT_HEIGHT = 76
 const BAR_RADIUS = 30
 const BAR_SIDE_MARGIN = 20
-const BAR_BOTTOM_MARGIN = 16
+// 32, not the original 16 — on gesture-nav Android, the bottom ~16-24dp of
+// the screen is a swipe-up-to-home hot zone that apps can NEVER exclude
+// (unlike the left/right back-gesture zone, see withGestureExclusion.js).
+// At 16dp the bar's own buttons sat inside that zone, so taps there were
+// read as "swipe home" instead of a press — reproduced on a Honor device via
+// adb logcat (SwipeUpResponseDetector engaging on this app's package right
+// before it got backgrounded and killed). Keep in sync with
+// barBottomMarginPx in plugins/withGestureExclusion.js.
+const BAR_BOTTOM_MARGIN = 32
 const PILL_MARGIN = 6
 
 const LEADING_SPRING = { damping: 14, stiffness: 220, mass: 0.6 }

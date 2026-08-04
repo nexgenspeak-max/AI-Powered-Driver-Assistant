@@ -8,6 +8,7 @@ import voiceRouter from './routes/voice';
 import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
 import deliveryOrdersRouter from './routes/deliveryOrders';
+import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
 
 const corsOptions = {
@@ -33,5 +34,6 @@ app.use('/api/v1/voice', voiceRouter);
 app.use('/api/v1/reminders', remindersRouter);
 app.use('/api/v1/customers', customersRouter);
 app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
+app.use('/api/v1/places', placesRouter);
 
 export const handler = serverless(app);

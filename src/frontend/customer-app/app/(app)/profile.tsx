@@ -11,7 +11,7 @@ import { GlassSurface } from '../../src/components/GlassSurface'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
-import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
+import { useWakeWordSettingsStore, WAKE_WORD_FEATURE_ENABLED } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 import { VoiceEnrollPanel } from '../../src/features/home/components/VoiceEnrollPanel'
 
@@ -178,11 +178,17 @@ export default function ProfileScreen() {
                 Trợ lý rảnh tay
               </Text>
               <Text color="$textSecondary" fontSize={11} marginTop="$1">
-                Nghe từ khoá đánh thức ở chế độ nền, kể cả khi đang dùng app khác
+                {WAKE_WORD_FEATURE_ENABLED
+                  ? 'Nghe từ khoá đánh thức ở chế độ nền, kể cả khi đang dùng app khác'
+                  : 'Tạm thời chưa khả dụng'}
               </Text>
             </YStack>
           </XStack>
-          <Switch value={wakeWordEnabled} onValueChange={setWakeWordEnabled} />
+          <Switch
+            value={WAKE_WORD_FEATURE_ENABLED && wakeWordEnabled}
+            onValueChange={setWakeWordEnabled}
+            disabled={!WAKE_WORD_FEATURE_ENABLED}
+          />
         </XStack>
         <View height={1} backgroundColor="$border" />
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">

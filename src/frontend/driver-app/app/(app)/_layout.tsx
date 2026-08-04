@@ -4,6 +4,9 @@ import { useTheme } from 'tamagui'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
 import { GlobalAssistantOrb } from '../../src/features/home/components/GlobalAssistantOrb'
+import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
+import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
+import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 
 // Light mode: flat, full-color icon set (assets/icons/light/) — fixed
 // palette raster images, not tintable, so active/inactive is opacity there.
@@ -57,6 +60,12 @@ export default function AppLayout() {
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode !== 'dark'
   const isDark = !isLight
+
+  // Lives here (not dashboard.tsx) so the socket connects — and the
+  // trip-offer banner below can appear — regardless of which tab the driver
+  // currently has open, not just while Dashboard is mounted.
+  const { data: driver } = useCurrentUser()
+  useDispatchSocket(driver?.status === 'online', driver?.phone)
 
   return (
     // Shares the `pageBlur` shared value between the tab bar (writer, on
@@ -128,6 +137,7 @@ export default function AppLayout() {
           <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
         </Tabs>
         <GlobalAssistantOrb />
+        <TripOfferBanner />
       </View>
     </LiquidGlassProvider>
   )

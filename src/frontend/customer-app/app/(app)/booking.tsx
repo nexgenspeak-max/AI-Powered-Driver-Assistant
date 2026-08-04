@@ -1,5 +1,5 @@
-import { BookingForm } from '../../src/features/booking/components/BookingForm'
+import { BookingLanding } from '../../src/features/booking/components/BookingLanding'
 
 export default function BookingScreen() {
-  return <BookingForm />
+  return <BookingLanding />
 }

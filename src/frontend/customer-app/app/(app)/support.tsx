@@ -1,5 +1,5 @@
 import { ScrollView, Linking, TouchableOpacity } from 'react-native'
-import { View, YStack, XStack, Text } from 'tamagui'
+import { View, YStack, XStack, Text, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,6 +11,7 @@ const SUPPORT_EMAIL = 'support@czen.vn'
 
 export default function SupportScreen() {
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
 
   return (
     <View flex={1} backgroundColor="$surface">
@@ -30,7 +31,7 @@ export default function SupportScreen() {
           <YStack padding="$4" gap="$1">
             <Row
               iconName="call"
-              iconColor="#34d399"
+              iconColor={theme.success.val}
               label="Hotline hỗ trợ"
               value={SUPPORT_PHONE}
               onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`)}
@@ -46,7 +47,7 @@ export default function SupportScreen() {
             <View height={1} backgroundColor="$border" />
             <Row
               iconName="help-circle"
-              iconColor="#f59e0b"
+              iconColor={theme.warning.val}
               label="Câu hỏi thường gặp"
               value=""
               onPress={() => router.push('/faq')}

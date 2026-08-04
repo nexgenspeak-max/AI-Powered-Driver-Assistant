@@ -1,13 +1,23 @@
 import type { RouteInfo } from './types';
+import type { LatLng } from '../../utils/geo';
 
 const DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
 
-export async function getRoute(pickup: string, dropoff: string, apiKey: string): Promise<Partial<RouteInfo>> {
+export async function getRoute(
+  pickup: string,
+  dropoff: string,
+  apiKey: string,
+  pickupCoords?: LatLng,
+  dropoffCoords?: LatLng,
+): Promise<Partial<RouteInfo>> {
   if (!apiKey) return {};
 
+  // Directions API accepts "lat,lng" directly for origin/destination —
+  // unlike Goong there's no separate geocode step either way, so precise
+  // coordinates (when the caller has them) just replace the address string.
   const params = new URLSearchParams({
-    origin: pickup,
-    destination: dropoff,
+    origin: pickupCoords ? `${pickupCoords.lat},${pickupCoords.lng}` : pickup,
+    destination: dropoffCoords ? `${dropoffCoords.lat},${dropoffCoords.lng}` : dropoff,
     language: 'vi',
     region: 'vn',
     departure_time: 'now',

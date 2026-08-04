@@ -34,6 +34,7 @@ export interface Trip {
   distance_km: number;
   eta_minutes: number;
   traffic_note: string;
+  note: string;
   route_summary: string;
   room_name: string;
   driver_phone?: string;
@@ -58,6 +59,7 @@ export async function create(data: Record<string, unknown>): Promise<Trip> {
     distance_km: (data.distance_km as number) || 0,
     eta_minutes: (data.eta_minutes as number) || 0,
     traffic_note: (data.traffic_note as string) || '',
+    note: (data.note as string) || '',
     route_summary: (data.route_summary as string) || '',
     room_name: '',
     created_at: now(),

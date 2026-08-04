@@ -15,8 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.customerapp",
+      "bitcode": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Czen needs microphone access so you can talk to the AI assistant."
+        "NSMicrophoneUsageDescription": "Czen needs microphone access so you can talk to the AI assistant.",
+        "NSLocationWhenInUseUsageDescription": "Czen needs your location to suggest your pickup point when booking a ride."
       }
     },
     "android": {
@@ -27,6 +29,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS"
@@ -46,13 +49,21 @@
         }
       ],
       "./plugins/withForegroundService.js",
+      "./plugins/withGestureExclusion.js",
       [
         "react-native-vosk",
         {
           "models": ["assets/model-vi-vn"]
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Czen needs your location to suggest your pickup point when booking a ride."
+        }
+      ]
     ],
     "scheme": "customer-app"
   }

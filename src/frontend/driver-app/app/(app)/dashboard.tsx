@@ -6,8 +6,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useDriverContext } from "../../src/features/dashboard/hooks/useDriverContext";
 import { useProximityTracking } from "../../src/features/dashboard/hooks/useProximityTracking";
-import { useIdleLocationTracking } from "../../src/features/dashboard/hooks/useIdleLocationTracking";
-import { useDispatchSocket } from "../../src/features/dashboard/hooks/useDispatchSocket";
 import { TripSection } from "../../src/features/dashboard/components/TripSection";
 import { ActiveTripCard } from "../../src/features/dashboard/components/ActiveTripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
@@ -66,8 +64,6 @@ export default function DashboardScreen() {
   // Called unconditionally, above the `!driver` early return below — hooks
   // can't be called after a conditional return (Rules of Hooks).
   useProximityTracking(active);
-  useIdleLocationTracking(isOnline);
-  useDispatchSocket(isOnline, driver?.phone);
 
   if (!driver) return null;
   const pending =

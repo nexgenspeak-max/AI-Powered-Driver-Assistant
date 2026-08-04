@@ -12,7 +12,10 @@ export default function TripStatusScreen() {
   const isLight = themeName === "light";
 
   return (
-    <View flex={1} backgroundColor={isLight ? "#F5F4F8" : "$surface"}>
+    // Matches TripStatusCard's own screen background exactly (its styles.screen
+    // + ScrollView background) — this outer View is only actually visible
+    // during the loading/error states below, before that component mounts.
+    <View flex={1} backgroundColor={isLight ? "#F5F4F8" : "#110D1B"}>
       {/* `router.back()` doesn't work here either — see BackButton.tsx's
           comment: hidden tabs inside the same Tabs navigator have no real
           push/pop history to pop, so it fell back to Home. This screen is
@@ -22,12 +25,12 @@ export default function TripStatusScreen() {
       <BackButton onPress={() => router.replace("/trips")} />
       {isLoading ? (
         <View flex={1} alignItems="center" justifyContent="center">
-          <ActivityIndicator size="large" color="#6c8aff" />
+          <ActivityIndicator size="large" color="#8B5CF6" />
         </View>
       ) : isError || !trip ? (
         <View flex={1} alignItems="center" justifyContent="center" padding="$6">
           <Text color="$danger" fontSize="$4" fontWeight="500">
-            Trip not found.
+            Không tìm thấy chuyến đi.
           </Text>
         </View>
       ) : (

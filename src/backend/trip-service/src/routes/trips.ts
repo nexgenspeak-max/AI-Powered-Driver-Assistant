@@ -6,21 +6,28 @@ import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
-import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey, geoAddDriver } from '../cache/redis';
-import { distanceMeters } from '../utils/geo';
+import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey } from '../cache/redis';
+import { distanceMeters, type LatLng } from '../utils/geo';
 import * as callService from '../services/callService';
-import * as dispatchOrchestrator from '../services/dispatchOrchestrator';
+import { notifyDriver, notifyCustomer } from '../services/notify';
 
 const router = Router();
+
+// Precise coordinates the client already resolved (Goong Place Detail after
+// an autocomplete pick, or the customer's own GPS fix) — when present,
+// mapsService.getRoute uses these directly instead of re-geocoding the
+// address text, which is both more accurate and skips a network round-trip.
+// Callers that only ever send address text (voice-agent, admin) get
+// `undefined` here and fall back to the original geocode-by-text behavior.
+function coordsFromBody(body: Record<string, unknown>, latKey: string, lngKey: string): LatLng | undefined {
+  const lat = body[latKey];
+  const lng = body[lngKey];
+  return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : undefined;
+}
 
 const ALLOWED_STATUSES = new Set([
   'pending', 'notified', 'calling', 'confirmed', 'rejected', 'no_answer', 'completed',
   'cancelled', 'cancelled_by_driver', 'no_show', 'arrived_pickup', 'picked_up',
-  // Auto-match only (POST /trips/auto-match) — every idle/ride-pool candidate
-  // within radius was tried and none accepted. Distinct from `no_answer`
-  // (a single candidate's own timeout) so customer-app can tell "still
-  // retrying" apart from "search exhausted, nothing left to try".
-  'no_driver_found',
 ]);
 
 // Once a trip lands in one of these, it's done — no more status changes.
@@ -32,25 +39,35 @@ const ALLOWED_STATUSES = new Set([
 const CANCELLED_STATUSES = new Set(['cancelled', 'cancelled_by_driver']);
 
 // Who may cancel, and from which states — enforced here (not just by which
-// button the FE happens to show), so a customer can't cancel a trip already
-// past pickup and a driver can't back out via `cancelled_by_driver` before
-// they've actually accepted it:
-//   - Customer can cancel (`cancelled`) any time before a driver has
-//     committed — pending/notified/calling/confirmed, plus rejected/
-//     no_answer (this specific driver didn't take it, but the trip itself
-//     is still pending redispatch, not resolved — the customer shouldn't
-//     have to wait out a retry they no longer want). Once a driver has
-//     moved past confirmed (arrived_pickup/picked_up), only the driver can
-//     back out.
-//   - Driver can cancel (`cancelled_by_driver`) only after they've confirmed
-//     the trip — confirmed/arrived_pickup/picked_up. They can't "cancel" a
-//     trip they haven't accepted yet; that's `reject`.
+// button the FE happens to show). Both sides get the exact same cutoff:
+// cancellation is only ever allowed *before* the customer is actually in the
+// vehicle (`picked_up`) — once the ride is physically underway, neither side
+// can back out via cancel anymore (see POST /:tripId/issues for reporting a
+// problem mid-ride instead).
+//   - Customer can cancel (`cancelled`) any time from booking up through
+//     arrived_pickup — pending/notified/calling/confirmed/arrived_pickup,
+//     plus rejected/no_answer (this specific driver didn't take it, but the
+//     trip itself is still pending redispatch, not resolved — the customer
+//     shouldn't have to wait out a retry they no longer want).
+//   - Driver can cancel (`cancelled_by_driver`) from confirmed/
+//     arrived_pickup — i.e. after accepting but before pickup. They can't
+//     "cancel" a trip they haven't accepted yet; that's `reject`.
 const CANCEL_RULES: Partial<Record<string, { role: 'customer' | 'driver'; fromStatuses: Set<string> }>> = {
   cancelled: {
     role: 'customer',
-    fromStatuses: new Set(['pending', 'notified', 'calling', 'confirmed', 'rejected', 'no_answer']),
+    fromStatuses: new Set(['pending', 'notified', 'calling', 'confirmed', 'arrived_pickup', 'rejected', 'no_answer']),
   },
-  cancelled_by_driver: { role: 'driver', fromStatuses: new Set(['confirmed', 'arrived_pickup', 'picked_up']) },
+  cancelled_by_driver: { role: 'driver', fromStatuses: new Set(['confirmed', 'arrived_pickup']) },
+};
+
+// arrived_pickup/picked_up require the driver to actually be near the pickup
+// point; completed requires them to be near the dropoff point — both checked
+// against config.arrivalRadiusMeters. Admin (service callers) bypass this,
+// same as isTripOwner, since they're not the ones physically holding the GPS.
+const ARRIVAL_LOCATION_TARGET: Partial<Record<string, 'pickup' | 'dropoff'>> = {
+  arrived_pickup: 'pickup',
+  picked_up: 'pickup',
+  completed: 'dropoff',
 };
 
 // TODO(temporary): there's no real driver-matching/dispatch logic yet, so every
@@ -94,7 +111,10 @@ function isTripOwner(req: Request, trip: tripService.Trip): boolean {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
-    const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address);
+    const route = await mapsService.getRoute(
+      body.pickup_address, body.dropoff_address,
+      coordsFromBody(body, 'pickup_lat', 'pickup_lng'), coordsFromBody(body, 'dropoff_lat', 'dropoff_lng'),
+    );
     const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
     const trip = await tripService.create({
       ...body,
@@ -112,42 +132,13 @@ router.post('/', async (req: Request, res: Response) => {
     // Mark it 'notified' right away so it shows up on the assigned driver's dashboard.
     const notified = await tripService.updateStatus(trip.trip_id, 'notified');
     await driverContextService.invalidateTripParties(notified ?? trip);
-    return res.status(201).json(notified ?? trip);
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
-});
-
-// Separate booking flow from POST / above — that one takes a specific
-// driver_phone and assigns it directly (unchanged, still used e.g. when the
-// caller already knows which driver). This one has no driver_phone at all:
-// it searches nearby drivers (idle first, then same-direction ride-pool)
-// and offers the trip to the best candidate, cascading to the next on a
-// 15s timeout — see dispatchOrchestrator.ts.
-router.post('/auto-match', async (req: Request, res: Response) => {
-  try {
-    const body = req.body;
-    const route = await mapsService.getRoute(body.pickup_address, body.dropoff_address);
-    if (typeof route.pickup_lat !== 'number' || typeof route.pickup_lng !== 'number') {
-      return res.status(422).json({ detail: 'Could not resolve pickup coordinates for this address' });
-    }
-
-    const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
-    const trip = await tripService.create({
-      ...body,
-      ...(idAccount ? { id_account: idAccount } : {}),
-      distance_km: route.distance_km ?? 0,
-      eta_minutes: route.eta_minutes ?? 0,
-      traffic_note: route.traffic_note ?? '',
-      route_summary: route.summary ?? '',
-      pickup_lat: route.pickup_lat,
-      pickup_lng: route.pickup_lng,
-      dropoff_lat: route.dropoff_lat,
-      dropoff_lng: route.dropoff_lng,
-    });
-
-    const dispatched = await dispatchOrchestrator.startAutoMatch(trip);
-    return res.status(201).json(dispatched);
+    // Real-time nudge to the driver the customer picked — driver-app's
+    // useDispatchSocket invalidates its driverContext query on 'trip_offer'.
+    // notify() itself is a safe no-op if the driver has no live connection
+    // (see notify/types.ts) — the 5s poll remains the fallback either way.
+    const finalTrip = notified ?? trip;
+    if (finalTrip.driver_phone) await notifyDriver(finalTrip.driver_phone, 'trip_offer', { trip_id: finalTrip.trip_id });
+    return res.status(201).json(finalTrip);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }
@@ -214,12 +205,42 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
         });
       }
     }
+    const arrivalTarget = ARRIVAL_LOCATION_TARGET[status];
+    if (arrivalTarget && req.user?.role !== 'admin') {
+      const targetLat = arrivalTarget === 'pickup' ? trip.pickup_lat : trip.dropoff_lat;
+      const targetLng = arrivalTarget === 'pickup' ? trip.pickup_lng : trip.dropoff_lng;
+      // Older/text-only-address trips have no stored coords to check against
+      // — nothing to validate, so let those through same as before this rule.
+      if (typeof targetLat === 'number' && typeof targetLng === 'number') {
+        const driverLat = Number(req.body.lat);
+        const driverLng = Number(req.body.lng);
+        if (!Number.isFinite(driverLat) || !Number.isFinite(driverLng)) {
+          return res.status(400).json({
+            detail: 'Cần vị trí hiện tại (lat/lng) của tài xế để xác nhận trạng thái này',
+          });
+        }
+        const distance = distanceMeters({ lat: driverLat, lng: driverLng }, { lat: targetLat, lng: targetLng });
+        if (distance > config.arrivalRadiusMeters) {
+          return res.status(409).json({
+            detail: arrivalTarget === 'pickup'
+              ? 'Bạn chưa đến điểm đón khách. Vui lòng di chuyển đến gần điểm đón để xác nhận.'
+              : 'Bạn chưa đến điểm trả khách. Vui lòng di chuyển đến gần điểm trả khách để hoàn thành chuyến.',
+            distance_meters: Math.round(distance),
+            required_radius_meters: config.arrivalRadiusMeters,
+          });
+        }
+      }
+    }
     const updated = await tripService.updateStatus(req.params.tripId, status);
     await driverContextService.invalidateTripParties(updated);
-    // Harmless no-op for trips from the plain POST / flow (nothing was ever
-    // tracked for them) — only actually clears bookkeeping for auto-match
-    // trips once a driver accepts, so a later stray timeout can't re-offer.
-    if (status === 'confirmed') dispatchOrchestrator.cancelPendingOffer(req.params.tripId);
+    // Real-time nudge back to the customer once the driver they picked has
+    // answered — accept or reject. Same notify() no-op-if-offline semantics
+    // as the trip_offer push on POST / (see notify/types.ts); customer-app's
+    // 10s poll (useTripStatus.ts) is still the fallback either way.
+    if (updated && (status === 'confirmed' || status === 'rejected')) {
+      const customerId = updated.id_account || updated.customer_phone;
+      if (customerId) await notifyCustomer(customerId, status === 'confirmed' ? 'trip_confirmed' : 'trip_rejected', { trip_id: updated.trip_id });
+    }
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -262,7 +283,6 @@ router.post('/:tripId/location', async (req: Request, res: Response) => {
     }
 
     await cacheSet(driverLocationKey(trip.trip_id), { lat, lng, updated_at: new Date().toISOString() }, 120);
-    if (trip.driver_phone) await geoAddDriver(trip.driver_phone, lat, lng);
 
     await maybeNotifyCustomerOfProximity(trip, { lat, lng });
 
@@ -365,6 +385,37 @@ router.post('/:tripId/extend-wait', async (req: Request, res: Response) => {
       total_wait_minutes: current + extra,
       trip: updated,
     });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Customer's "Đặt lại chuyến" button after a driver rejects — updates the
+// SAME trip record (driver_phone + status back to 'notified'), not a new
+// booking, so trip history/pricing/pickup stay attached to one record.
+// Distinct from POST /:tripId/dispatch below: that one is a phone-call
+// redispatch (sets status='calling'); this one re-offers through the app,
+// same as the original POST / booking's notify.
+router.post('/:tripId/reassign-driver', async (req: Request, res: Response) => {
+  try {
+    const trip = await tripService.get(req.params.tripId);
+    if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (!isTripOwner(req, trip)) {
+      return res.status(403).json({ detail: 'Not authorized to modify this trip' });
+    }
+    if (req.user?.role === 'driver') {
+      return res.status(403).json({ detail: 'Only the customer can reassign a driver' });
+    }
+    if (trip.status !== 'rejected') {
+      return res.status(409).json({ detail: `Cannot reassign driver for trip with status=${trip.status}` });
+    }
+    const driverPhone = typeof req.body.driver_phone === 'string' ? req.body.driver_phone.trim() : '';
+    if (!driverPhone) return res.status(400).json({ detail: 'driver_phone is required' });
+
+    const updated = await tripService.updateStatus(req.params.tripId, 'notified', { driver_phone: driverPhone });
+    await driverContextService.invalidateTripParties(updated ?? trip);
+    if (updated) await notifyDriver(driverPhone, 'trip_offer', { trip_id: updated.trip_id });
+    return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

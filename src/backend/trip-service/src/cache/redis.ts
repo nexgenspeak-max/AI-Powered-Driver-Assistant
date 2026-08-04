@@ -2,25 +2,14 @@
  * Redis cache with in-memory fallback when REDIS_URL is not set (local dev).
  */
 import { config } from '../config';
-import { distanceMeters, type LatLng } from '../utils/geo';
-
-export interface GeoSearchResult {
-  member: string;
-  distanceMeters: number;
-  lat: number;
-  lng: number;
-}
 
 type RedisClient = {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, mode?: string, ttl?: number): Promise<unknown>;
   del(...keys: string[]): Promise<unknown>;
-  geoAdd(key: string, member: string, lat: number, lng: number): Promise<void>;
-  geoSearch(key: string, center: LatLng, radiusMeters: number): Promise<GeoSearchResult[]>;
 };
 
 const memory = new Map<string, { value: string; expiresAt: number }>();
-const memoryGeo = new Map<string, Map<string, LatLng>>();
 
 const memoryClient: RedisClient = {
   async get(key) {
@@ -41,51 +30,14 @@ const memoryClient: RedisClient = {
     for (const k of keys) memory.delete(k);
     return keys.length;
   },
-  async geoAdd(key, member, lat, lng) {
-    if (!memoryGeo.has(key)) memoryGeo.set(key, new Map());
-    memoryGeo.get(key)!.set(member, { lat, lng });
-  },
-  async geoSearch(key, center, radiusMeters) {
-    const set = memoryGeo.get(key);
-    if (!set) return [];
-    const results: GeoSearchResult[] = [];
-    for (const [member, pos] of set) {
-      const d = distanceMeters(center, pos);
-      if (d <= radiusMeters) results.push({ member, distanceMeters: d, lat: pos.lat, lng: pos.lng });
-    }
-    results.sort((a, b) => a.distanceMeters - b.distanceMeters);
-    return results;
-  },
 };
 
-// Thin adapter around a live ioredis connection — kept separate from
-// memoryClient rather than casting the raw ioredis instance, since ioredis's
-// own `.geoadd`/`.geosearch` methods don't match this interface's signature
-// (different arg order / return shape), unlike get/set/del which happen to
-// line up 1:1.
 function makeRedisAdapter(redis: import('ioredis').Redis): RedisClient {
   return {
     get: (key) => redis.get(key),
     set: (key, value, mode, ttl) =>
       mode === 'EX' && ttl ? redis.set(key, value, 'EX', ttl) : redis.set(key, value),
     del: (...keys) => redis.del(...keys),
-    async geoAdd(key, member, lat, lng) {
-      await redis.call('GEOADD', key, String(lng), String(lat), member);
-    },
-    async geoSearch(key, center, radiusMeters) {
-      const raw = (await redis.call(
-        'GEOSEARCH', key,
-        'FROMLONLAT', String(center.lng), String(center.lat),
-        'BYRADIUS', String(radiusMeters), 'm',
-        'ASC', 'WITHDIST', 'WITHCOORD',
-      )) as [string, string, [string, string]][];
-      return raw.map(([member, distStr, [lngStr, latStr]]) => ({
-        member,
-        distanceMeters: Number(distStr),
-        lat: Number(latStr),
-        lng: Number(lngStr),
-      }));
-    },
   };
 }
 
@@ -141,20 +93,6 @@ export async function cacheDel(...keys: string[]): Promise<void> {
   if (!keys.length) return;
   const c = await getClient();
   await c.del(...keys);
-}
-
-export async function geoAddDriver(phone: string, lat: number, lng: number): Promise<void> {
-  const c = await getClient();
-  await c.geoAdd(driverGeoKey(), phone, lat, lng);
-}
-
-export async function geoSearchDrivers(center: LatLng, radiusMeters: number): Promise<GeoSearchResult[]> {
-  const c = await getClient();
-  return c.geoSearch(driverGeoKey(), center, radiusMeters);
-}
-
-export function driverGeoKey(): string {
-  return 'drivers:geo';
 }
 
 export function driverContextKey(phone: string): string {

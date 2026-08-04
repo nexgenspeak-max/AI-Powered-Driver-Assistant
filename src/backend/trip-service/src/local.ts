@@ -7,6 +7,7 @@ import voiceRouter from './routes/voice';
 import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
 import deliveryOrdersRouter from './routes/deliveryOrders';
+import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
 import { attachLocalWebSocketServer } from './services/notify';
 
@@ -31,6 +32,7 @@ app.use('/api/v1/voice', voiceRouter);
 app.use('/api/v1/reminders', remindersRouter);
 app.use('/api/v1/customers', customersRouter);
 app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
+app.use('/api/v1/places', placesRouter);
 
 const PORT = process.env.PORT || 8002;
 const server = app.listen(PORT, () => console.log(`trip-service running on :${PORT}`));
