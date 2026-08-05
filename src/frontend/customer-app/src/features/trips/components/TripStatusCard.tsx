@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Alert } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { View, YStack, Text, useThemeName } from "tamagui";
 import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +9,7 @@ import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { getBackButtonClearance } from "../../../components/BackButton";
 import { tripsService } from "../../../services/api/trips";
+import { confirmDestructive } from "../../../utils/confirmDialog";
 import { DriverPicker } from "../../booking/components/DriverPicker";
 import {
   TRIP_STATUS_LABELS,
@@ -58,14 +59,13 @@ export function TripStatusCard({ trip }: { trip: Trip }) {
   const isRejected = trip.status === "rejected";
 
   const confirmCancel = () => {
-    Alert.alert(
-      "Cancel this trip?",
-      "This can't be undone — you'll need to book a new trip instead.",
-      [
-        { text: "Keep trip", style: "cancel" },
-        { text: "Cancel trip", style: "destructive", onPress: () => cancelTrip() },
-      ],
-    );
+    confirmDestructive({
+      title: "Cancel this trip?",
+      message: "This can't be undone — you'll need to book a new trip instead.",
+      cancelLabel: "Keep trip",
+      confirmLabel: "Cancel trip",
+      onConfirm: () => cancelTrip(),
+    });
   };
 
   return (

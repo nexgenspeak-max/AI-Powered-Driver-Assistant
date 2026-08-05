@@ -12,6 +12,7 @@ from app.voicebot.processors.handback import (
     build_driver_agent,
     disconnect_sip_participant,
     notify_driver_of_background_call_result,
+    restore_room_participant,
     restore_session_audio,
     store_call_summary,
 )
@@ -150,6 +151,7 @@ async def end_customer_call(context: RunContext, summary: str):
         context.userdata["bridge_call_active"] = False
         await _say_goodbye_and_wait(context, lang)
         restore_session_audio(context.session)
+        restore_room_participant(context.session, context.userdata)
         await disconnect_sip_participant(context.userdata)
 
         tracker = context.userdata.get("_silence_tracker")

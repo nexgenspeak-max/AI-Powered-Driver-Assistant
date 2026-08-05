@@ -14,12 +14,9 @@ authClient.interceptors.request.use(config => {
   return config
 })
 
-// Without this, an expired access token made every authClient call (e.g.
-// voiceService.checkVoiceprint) fail with a silent 401 — apiClient already
-// retries-after-refresh for trip-service calls, but authClient previously had
-// no equivalent, so callers that fail open on error (like the voiceprint
-// check, which must not block chat on a network hiccup) never saw the real
-// "not enrolled" result once the token aged past its ~15min lifetime.
+// Without this, an expired access token made every authClient call fail with
+// a silent 401 — apiClient already retries-after-refresh for trip-service
+// calls, but authClient previously had no equivalent.
 authClient.interceptors.response.use(
   r => r,
   async err => {

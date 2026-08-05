@@ -10,11 +10,8 @@ import { StatusBar } from 'expo-status-bar'
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
-import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
-import { voiceService } from '../../../services/api/voice'
-import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
   idle: 'Chạm vào quả cầu để kết nối với trợ lý',
@@ -23,16 +20,18 @@ const MIC_LABEL = {
   error: 'Kết nối lỗi, thử lại',
 }
 
-// Recorded audio cue (not device TTS) played on loop while connecting — see
-// the effect below for why.
-const connectingCueAsset = require('../../../../assets/audio/connecting-cue.mp3')
-
-// TEMP: voice enrollment gate turned off while it's being reworked — flip
-// back to true to re-require enrollment before the first AI conversation.
-const VOICE_ENROLL_GATE_ENABLED = false
+// Recorded audio cues (not device TTS) played while connecting — see the
+// effect below for why. One is picked at random per connect by
+// voiceSessionStore (`connectingCueIndex`), which also delays the real
+// LiveKit connect by that same file's length (`CONNECTING_CUE_DURATIONS_MS`)
+// — index here must line up with that array.
+const connectingCueAssets = [
+  require('../../../../assets/audio/connecting-cue.mp3'),
+  require('../../../../assets/audio/connecting-cue-2.mp3'),
+  require('../../../../assets/audio/connecting-cue-3.mp3'),
+]
 
 export function AssistantChatPanel() {
-  const { data: driver } = useCurrentUser()
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()
@@ -41,10 +40,9 @@ export function AssistantChatPanel() {
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
-  const [hasVoiceprint, setHasVoiceprint] = useState<boolean | null>(null)
   const scrollRef = useRef<ScrollView>(null)
   const insets = useSafeAreaInsets()
-  const connectingCuePlayer = useAudioPlayer(connectingCueAsset)
+  const connectingCuePlayer = useAudioPlayer(connectingCueAssets[voice.connectingCueIndex])
   const connectingCueStatus = useAudioPlayerStatus(connectingCuePlayer)
 
   // TEMP DEBUG: prints whether the asset actually loaded and what the
@@ -52,14 +50,6 @@ export function AssistantChatPanel() {
   useEffect(() => {
     console.log('[connecting-cue] status:', JSON.stringify(connectingCueStatus))
   }, [connectingCueStatus])
-
-  // Gate the very first AI conversation on voiceprint enrollment — checked once
-  // per mount, not on every mic press, so an already-enrolled driver's tap
-  // connects instantly instead of waiting on this network round-trip.
-  useEffect(() => {
-    if (!driver?.id) return
-    voiceService.checkVoiceprint(driver.id).then(setHasVoiceprint).catch(() => setHasVoiceprint(true))
-  }, [driver?.id])
 
   useEffect(() => subscribeVoiceMessages((text, from) => {
     if (from === 'user') addUserMessage(text)
@@ -151,11 +141,28 @@ export function AssistantChatPanel() {
   // longer pauses on every cleanup (see its comment), so this is the only
   // thing left to prevent an orphaned player still playing after the
   // screen is gone.
+  //
+  // Deliberately `[]`, not `[connectingCuePlayer]` — connectingCuePlayer is
+  // a NEW player instance every time connectingCueIndex changes (random cue
+  // per connect), and useAudioPlayer already auto-releases the previous
+  // instance's native object when that happens. A `[connectingCuePlayer]`
+  // dependency made this cleanup fire on every such swap too, calling
+  // `.pause()` on the just-released old player and crashing with "Cannot
+  // use shared object that was already released". The ref always points at
+  // whichever player is current, so true unmount still pauses the right
+  // one; the try/catch is a last-resort guard for the same race (player
+  // swapped/released between the ref read and the pause() call).
+  const connectingCuePlayerRef = useRef(connectingCuePlayer)
+  connectingCuePlayerRef.current = connectingCuePlayer
   useEffect(() => {
     return () => {
-      connectingCuePlayer.pause()
+      try {
+        connectingCuePlayerRef.current.pause()
+      } catch {
+        // already released — nothing to clean up
+      }
     }
-  }, [connectingCuePlayer])
+  }, [])
 
   const handleSend = async () => {
     Keyboard.dismiss()
@@ -187,14 +194,6 @@ export function AssistantChatPanel() {
     // user = black text on purple, in light mode specifically.
     <Theme name={themeMode}>
     <StatusBar style={isLight ? 'dark' : 'light'} />
-    {VOICE_ENROLL_GATE_ENABLED && hasVoiceprint === false && driver ? (
-      // Mandatory first-time gate: no voiceprint enrolled yet -> the whole
-      // chat UI is replaced by enrollment, not just blocked on mic-press —
-      // the driver can't reach chat/text-only fallback until this passes.
-      <View flex={1} backgroundColor="$surface" justifyContent="center" paddingHorizontal={20}>
-        <VoiceEnrollPanel phone={driver.phone} accountId={driver.id} onDone={setHasVoiceprint} />
-      </View>
-    ) : (
     <KeyboardSafeView
       style={{ backgroundColor: theme.surface.val }}
       keyboardVerticalOffset={60}
@@ -298,7 +297,6 @@ export function AssistantChatPanel() {
         </TouchableOpacity>
       </XStack>
     </KeyboardSafeView>
-    )}
     </Theme>
   )
 }

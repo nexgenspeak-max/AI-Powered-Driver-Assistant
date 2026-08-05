@@ -103,13 +103,22 @@ async def start_agent_call_to_contact(
     context.userdata["bridge_call_active"] = False
     context.userdata["background_call_active"] = False
 
+    # Agent mode: retarget STT to the contact's SIP leg, same reasoning as
+    # customer_call.py::_save_call_context — the driver joined the room
+    # first, so RoomIO stays locked onto their mic unless switched
+    # explicitly. Restored back to the driver on handback (see
+    # handback.py::restore_room_participant).
+    room_io = context.session.room_io
+    linked = room_io.linked_participant
+    if linked:
+        context.userdata["customer_call"]["_driver_room_identity"] = linked.identity
+    sip_identity = result.get("sip_identity", "")
+    if sip_identity:
+        room_io.set_participant(sip_identity)
+
     tracker = context.userdata.get("_silence_tracker")
     if tracker:
         tracker.pause()
-
-    dialed = result.get("dialed_number", phone_number)
-    note = result.get("override_note") or ""
-    suffix = f" {note}" if note else ""
 
     agent = CustomerCallAgent(
         lang=lang,
@@ -118,14 +127,10 @@ async def start_agent_call_to_contact(
         custom_message=custom_message,
     )
 
-    if lang == "en":
-        msg = (
-            f"Dialing {contact_name} at {dialed} into this call.{suffix} "
-            "You can listen live while I speak with them."
-        )
-    else:
-        msg = (
-            f"Đang gọi {contact_name} tại {dialed} vào cuộc gọi này.{suffix} "
-            "Anh/chị có thể nghe trực tiếp trong khi tôi nói chuyện."
-        )
-    return agent, msg
+    # No extra ad-libbed line here — same fix as customer_call.py's
+    # start_in_room_agent_call: _announce_pre_dial already spoke the one
+    # scripted line ("Đang gọi X, xin đợi trong giây lát") before the dial
+    # above. This used to hand the LLM free text ("you can listen live") to
+    # paraphrase into its own words, which is exactly the kind of off-script
+    # ad-lib line the driver should never hear.
+    return agent, ""

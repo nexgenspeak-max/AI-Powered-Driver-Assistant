@@ -65,8 +65,6 @@ interface VoiceSessionState {
    */
   isCallActive: boolean
   connect: (customerPhone: string) => Promise<void>
-  /** One-time voiceprint enrollment session — same LiveKit plumbing as connect(), routed to EnrollAgent server-side via a distinct room-name prefix. */
-  enroll: (phone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
@@ -173,7 +171,6 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     isCallActive: false,
 
     connect: (customerPhone: string) => connectWithToken(() => voiceService.getCustomerToken(customerPhone)),
-    enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'customer')),
 
     // The mic button on Home must gate its own hangup on `isCallActive`
     // before calling this — see AssistantChatPanel.tsx's handleMicPress.

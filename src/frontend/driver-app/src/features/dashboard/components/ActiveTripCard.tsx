@@ -7,6 +7,7 @@ import { Button } from "../../../components/Button";
 import { InfoRow } from "./InfoRow";
 import { TripProgressStepper } from "./TripProgressStepper";
 import { tripsService } from "../../../services/api/trips";
+import { confirmDestructive } from "../../../utils/confirmDialog";
 import { formatCurrency, formatDate } from "../../../utils/format";
 import type { Trip } from "../../../types";
 
@@ -84,14 +85,13 @@ export function ActiveTripCard({
   });
 
   const confirmCancel = () => {
-    Alert.alert(
-      "Cancel this trip?",
-      "The customer will be notified. This can't be undone.",
-      [
-        { text: "Keep trip", style: "cancel" },
-        { text: "Cancel trip", style: "destructive", onPress: () => cancelTrip() },
-      ],
-    );
+    confirmDestructive({
+      title: "Cancel this trip?",
+      message: "The customer will be notified. This can't be undone.",
+      cancelLabel: "Keep trip",
+      confirmLabel: "Cancel trip",
+      onConfirm: () => cancelTrip(),
+    });
   };
 
   const avatarLetter =

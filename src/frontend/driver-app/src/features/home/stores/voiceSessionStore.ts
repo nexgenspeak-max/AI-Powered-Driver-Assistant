@@ -59,12 +59,14 @@ export type VoiceMessageListener = (text: string, from: VoiceMessageSource) => v
 const CHAT_TOPIC = 'lk.chat'
 const TRANSCRIPTION_TOPIC = 'lk.transcription'
 
-// The connecting-cue audio file's own length (~2.53s, AssistantChatPanel.tsx)
-// plus a short trailing pause — held here so connectWithToken can delay
-// starting the actual LiveKit connect until the cue has genuinely finished,
-// instead of letting the AI's first words race it. Update this if the cue
-// file is ever replaced with a different-length recording.
-const CONNECTING_CUE_DURATION_MS = 2800
+// Each connecting-cue audio file's own length (AssistantChatPanel.tsx plays
+// one of these, picked randomly per connect) plus a short trailing pause —
+// held here so connectWithToken can delay starting the actual LiveKit
+// connect until the cue has genuinely finished, instead of letting the AI's
+// first words race it. Index must line up with `connectingCueAssets` in
+// AssistantChatPanel.tsx. Update/add entries if a cue file is ever replaced
+// or a new one added — measured lengths: 2.53s, 5.93s, 5.20s.
+const CONNECTING_CUE_DURATIONS_MS = [2800, 6200, 5500]
 
 // Module-level (not React state) so the LiveKit session survives navigation
 // between tabs — only the store's `status` needs to be reactive.
@@ -122,9 +124,9 @@ interface VoiceSessionState {
    * reports by publishing `active: false`) may end the session.
    */
   isCallActive: boolean
+  /** Which entry of `connectingCueAssets` (AssistantChatPanel.tsx) to play for the current/last connect — picked randomly once per connect() call so the delay below and the cue actually played always agree on the same file. */
+  connectingCueIndex: number
   connect: (driverPhone: string) => Promise<void>
-  /** One-time voiceprint enrollment session — same LiveKit plumbing as connect(), routed to EnrollAgent server-side via a distinct room-name prefix. */
-  enroll: (phone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
@@ -194,10 +196,15 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
     }
 
+    // Picked once per connect, not per render — AssistantChatPanel.tsx reads
+    // this same index for which file to actually play, so the delay below
+    // and the cue on screen always agree.
+    const cueIndex = Math.floor(Math.random() * CONNECTING_CUE_DURATIONS_MS.length)
+
     // `status` flips to 'connecting' first, immediately — the connecting-cue
     // audio (AssistantChatPanel.tsx) reacts to that and starts playing right
     // away.
-    set({ status: 'connecting', isCallActive: false, agentSpeaking: false })
+    set({ status: 'connecting', isCallActive: false, agentSpeaking: false, connectingCueIndex: cueIndex })
     try {
       // Sequential, not overlapping: the actual LiveKit connect (and
       // whatever the AI says the instant it joins the room) must not start
@@ -205,9 +212,9 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       // its own audio track regardless of what this store's `status` says,
       // so merely delaying when we *expose* 'connected' doesn't stop it
       // from overlapping the cue. Actually holding off the connect itself
-      // is what does. `CONNECTING_CUE_DURATION_MS` must stay in sync with
-      // the cue file's real length (AssistantChatPanel.tsx).
-      await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATION_MS))
+      // is what does. `CONNECTING_CUE_DURATIONS_MS` must stay in sync with
+      // the cue files' real lengths (AssistantChatPanel.tsx).
+      await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATIONS_MS[cueIndex]))
       await startAudioSession()
       const { token, livekit_url } = await getToken()
       const r = new Room()
@@ -355,9 +362,9 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     agentAudioLevel: 0,
     isCallActive: false,
     agentSpeaking: false,
+    connectingCueIndex: 0,
 
     connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
-    enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'driver')),
 
     // The AI orb on Home must gate its own hangup on `isCallActive`
     // before calling this — see AssistantChatPanel.tsx's handleOrbPress.

@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     agent_name: str = "driver-assistant"
 
     # ── Provider selection ────────────────────────────────────────────────────
-    stt_provider: str = "openai"        # openai | deepgram | google
+    stt_provider: str = "openai"        # openai | deepgram | google | inference
     stt_model: str = "whisper-1"
     stt_language: str = "vi-VN"         # BCP-47, e.g. vi-VN | en-US (comma-separated for Google)
 
-    llm_provider: str = "openai"        # openai | gemini
+    llm_provider: str = "openai"        # openai | gemini | kimi
     llm_model: str = "gpt-4o-mini"
 
     tts_provider: str = "elevenlabs"    # elevenlabs | google
@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_tts_model: str = "gpt-4o-mini-tts"
     openai_tts_voice: str = "nova"
+
+    # ── Kimi (via LiveKit Inference — uses LIVEKIT_API_KEY/SECRET, no separate key) ──
+    kimi_provider: str = ""   # optional: force a specific inference provider (e.g. "baseten")
+
+    # STT_PROVIDER=inference uses the same LiveKit Inference route (no separate
+    # key) — set STT_MODEL to a "provider/model" string, e.g. "deepgram/nova-3"
+    # or "cartesia/ink-whisper". Drop-in swap when OPENAI_API_KEY runs out of
+    # credit, same idea as Kimi above.
 
     # ── Deepgram ──────────────────────────────────────────────────────────────
     deepgram_api_key: str = ""
@@ -61,20 +69,7 @@ class Settings(BaseSettings):
     # ── Downstream services ───────────────────────────────────────────────────
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
-    auth_service_url: str = ""   # http://localhost:8003 — voiceprint lookup/enroll only
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
-
-    # ── Speaker verification (wake-word voiceprint gate) ─────────────────────
-    # Off by default — this gate silently records ~2.5s of the caller's mic
-    # audio (capture_clip in speaker_verify.py) and blocks the session on
-    # that finishing before responding to anything the driver actually said,
-    # right after the greeting plays. That's a real, unavoidable ~2.5s+ of
-    # dead air on every connect with no client-side indication it's
-    # happening, which read as "phải đợi khá lâu" (having to wait a long
-    # time) — opt back in per-environment (SPEAKER_VERIFY_ENABLED=true) only
-    # where that security trade-off is worth it.
-    speaker_verify_enabled: bool = False
-    speaker_verify_threshold: float = 0.6
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True

@@ -113,7 +113,7 @@ function GlassGradientLayers({
   // Dark mode sits on an *opaque* card background (`$surfaceElevated`), so
   // unlike light mode (white-on-white ≈ invisible) this wash is genuinely
   // visible — on a short button that reads as a nice sheen, but stretched
-  // over a tall card (a whole VoiceEnrollPanel-height card, say) the top 35%
+  // over a tall card (a full-screen modal card, say) the top 35%
   // vs. the rest banded into two visibly different shades, like two panels
   // stacked instead of one surface. Halved so it stays a hint, not a band —
   // but that same halved value on a small 40-ish px badge is nearly

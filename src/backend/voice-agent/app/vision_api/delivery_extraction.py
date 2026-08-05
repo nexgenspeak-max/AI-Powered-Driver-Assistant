@@ -36,7 +36,7 @@ async def extract_delivery_info(image_base64: str, mime_type: str = "image/jpeg"
 
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     completion = await client.chat.completions.create(
-        model=settings.llm_model or "gpt-4o-mini",
+        model="gpt-4o-mini",
         temperature=0,
         response_format={"type": "json_object"},
         messages=[

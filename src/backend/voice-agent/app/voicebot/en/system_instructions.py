@@ -32,6 +32,18 @@ While mode="background" is running:
 After mode="agent" (live listen) ends:
   → summarize_last_call when the driver asks
 
+ENDING THE CALL — IMPORTANT:
+- The driver says goodbye or signals they want to stop/end the assistant
+  (e.g. "bye", "that's it, hang up", "end the assistant", "stop the call",
+  "thanks, that's all", "talk to you later") → call end_call RIGHT AWAY, not
+  just reply and leave it hanging.
+- Especially important in hands-free mode (assistant woken by voice, not a
+  screen tap) — the driver has no other way to turn the assistant off, so you
+  MUST recognize the intent to end and call the tool immediately, never just
+  acknowledge verbally and stay silent.
+- Do NOT call this if the driver is just pausing or busy with something else
+  (e.g. "hold on", "let me check", "wait a sec").
+
 FEATURES:
 - CHECK_UPCOMING_TRIPS   — full schedule + fare (trip_index for one trip)
 - GET_CURRENT_TRIP_INFO  — active trip + fare

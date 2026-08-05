@@ -97,6 +97,28 @@ def _save_call_context(
         # persists independently), but harmless to set either way.
         "turns_from": len(conv_service.turns) if conv_service else 0,
     }
+    if mode == "agent":
+        # Agent mode: the AI is meant to actually converse WITH the customer,
+        # but RoomIO links its STT input to exactly one participant, resolved
+        # once at session start — the driver, since they joined the room
+        # first. Dialing the customer's SIP leg into the same room does NOT
+        # make RoomIO switch to listening to them (see
+        # RoomIO._on_participant_connected: it no-ops once already linked),
+        # so without this the AI's STT stays locked on the driver's mic for
+        # the whole customer call and never hears a word the customer says.
+        # Explicitly retarget it here, and restore it back to the driver on
+        # handback (see handback.py::restore_room_participant) — bridge mode
+        # deliberately does NOT do this, since there the AI should keep
+        # listening to the DRIVER for a wake phrase while driver and customer
+        # talk to each other directly over room audio.
+        room_io = context.session.room_io
+        linked = room_io.linked_participant
+        if linked:
+            context.userdata["customer_call"]["_driver_room_identity"] = linked.identity
+        sip_identity = result.get("sip_identity", "")
+        if sip_identity:
+            room_io.set_participant(sip_identity)
+
     if mode == "bridge":
         context.userdata["bridge_call_active"] = True
         context.userdata["customer_call_active"] = False
@@ -179,9 +201,6 @@ async def start_in_room_agent_call(
         return result
 
     name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
-    dialed = result.get("dialed_number", current.get("customer_phone", ""))
-    note = result.get("override_note") or ""
-    suffix = f" {note}" if note else ""
 
     profile = context_store.get(context.userdata, "profile") or {}
     agent = CustomerCallAgent(
@@ -191,17 +210,13 @@ async def start_in_room_agent_call(
         driver_name=profile.get("name", ""),
     )
 
-    if lang == "en":
-        msg = (
-            f"Dialing {name} at {dialed} into this call.{suffix} "
-            "You can listen live while I speak with the customer."
-        )
-    else:
-        msg = (
-            f"Đang gọi {name} tại {dialed} vào cuộc gọi này.{suffix} "
-            "Anh/chị có thể nghe trực tiếp trong khi tôi nói chuyện với khách."
-        )
-    return agent, msg
+    # No extra ad-libbed line here (unlike the old `msg`, which handed the LLM
+    # free text like "you can listen live" to paraphrase on its own — not
+    # actual scripted content). _announce_pre_dial already spoke the one
+    # scripted line ("Đang gọi X, xin đợi trong giây lát") before the dial
+    # above; same principle as bridge mode (see _pre_dial_announcement's
+    # docstring): nothing left for the AI to improvise once the call connects.
+    return agent, ""
 
 
 async def start_in_room_bridge_call(

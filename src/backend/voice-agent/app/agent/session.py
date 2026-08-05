@@ -26,7 +26,6 @@ from app.providers import get_stt, get_llm, get_tts
 from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
-from app.voicebot.processors import speaker_verify
 from app.voicebot.processors.call_state import CallAwareUserData
 from app.voicebot.processors.agent_state import publish_agent_state
 from app.voicebot.processors.handback import BACKGROUND_CALL_SUMMARY_TOPIC
@@ -36,8 +35,6 @@ from app.voicebot.processors.sip_call_watch import (
     register_sip_call_watchers,
 )
 from app.voicebot.customer_call_agent import CustomerCallAgent
-from app.agent.enroll_agent import EnrollAgent
-from app.services import auth_api, speaker_id
 from app.services.conversation_service import ConversationService
 from app.services.silence_tracker import SilenceTracker
 
@@ -48,9 +45,8 @@ _DRIVER_RE   = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700
 _CUSTOMER_RE = re.compile(r"^customer-(\d+)-\d+$")  # customer-84901234567-1748700000
 _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbound)
 _CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
-_ENROLL_RE   = re.compile(r"^enroll-(driver|customer)-(\d+)-\d+$")  # enroll-driver-84867347452-1748700000
 
-RoomMode = Literal["driver", "customer", "outbound", "custcall", "enroll"]
+RoomMode = Literal["driver", "customer", "outbound", "custcall"]
 
 
 def _parse_room(room_name: str) -> tuple[RoomMode, str]:
@@ -61,12 +57,7 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
       "driver"   — inbound driver session; phone = driver phone digits
       "customer" — customer support session; phone = customer phone digits
       "outbound" — SIP outbound call, trip data comes from room.metadata
-      "enroll"   — voiceprint enrollment session (see EnrollAgent)
     """
-    m = _ENROLL_RE.match(room_name)
-    if m:
-        return "enroll", m.group(2)
-
     m = _DRIVER_RE.match(room_name)
     if m:
         return "driver", m.group(1)
@@ -87,40 +78,6 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     return "driver", phone
 
 
-async def _run_enroll_session(ctx: JobContext, room_name: str, phone: str) -> None:
-    """Voiceprint enrollment — fully separate from the driver/customer call
-    pipeline below (no trip context, tools, silence tracker, or SIP watchers)."""
-    m = _ENROLL_RE.match(room_name)
-    role = m.group(1) if m else "driver"
-    identity = f"{role}-{phone}"
-
-    account_id: str | None = None
-    try:
-        account_id = await auth_api.get_account_id_by_phone(phone, role)
-    except Exception:
-        logger.exception("enroll: failed to resolve account_id | phone=%s role=%s", phone, role)
-
-    try:
-        session = AgentSession(
-            stt=get_stt(),
-            llm=get_llm(),
-            tts=get_tts(),
-            vad=ctx.proc.userdata["vad"],
-            turn_detection=None,
-            userdata={"room_name": room_name},
-        )
-        agent = EnrollAgent(identity=identity, account_id=account_id, room=ctx.room)
-
-        await session.start(agent=agent, room=ctx.room)
-
-        disconnected = asyncio.Event()
-        ctx.room.on("disconnected", lambda: disconnected.set())
-        if ctx.room.connection_state != 3:
-            await disconnected.wait()
-    except Exception:
-        logger.error("enroll session crashed:\n%s", traceback.format_exc())
-
-
 # ── Noise cancellation (optional plugin) ──────────────────────────────────────
 try:
     from livekit.plugins import noise_cancellation as _nc
@@ -137,8 +94,6 @@ def prewarm(proc: JobProcess) -> None:
     from app.config.logging import setup_logging
     setup_logging()
     proc.userdata["vad"] = silero.VAD.load()
-    if get_settings().speaker_verify_enabled:
-        speaker_id.load_model()
 
 
 # ── Entrypoint ─────────────────────────────────────────────────────────────────
@@ -150,10 +105,6 @@ async def entrypoint(ctx: JobContext) -> None:
 
     mode, phone = _parse_room(room_name)
     logger.info("room_mode=%s phone=%r", mode, phone)
-
-    if mode == "enroll":
-        await _run_enroll_session(ctx, room_name, phone)
-        return
 
     # ── Resolve trip metadata ───────────────────────────────────────────────
     trip: dict | None = None
@@ -318,6 +269,25 @@ async def entrypoint(ctx: JobContext) -> None:
             room=ctx.room,
             room_input_options=RoomInputOptions(
                 noise_cancellation=noise_cancel,
+                # Agent-mode customer calls retarget RoomIO's linked
+                # participant to the dialed-in SIP customer (see
+                # customer_call.py::_save_call_context) so the AI can hear
+                # them directly. RoomIO's own close_on_disconnect (default
+                # True) then closes this ENTIRE AgentSession the instant
+                # that linked participant leaves — i.e. whenever the
+                # customer hangs up — before our own handback logic
+                # (sip_call_watch.py / end_customer_call) gets a chance to
+                # restore the link back to the driver, since session.start()
+                # (which wires up RoomIO's internal listener) always runs
+                # before register_sip_call_watchers() below, so RoomIO's
+                # handler always sees the disconnect first. Net effect: the
+                # driver's whole connection to the AI died every time a
+                # customer hung up on an agent-mode call. Disabled — actual
+                # room/job teardown never depended on this anyway, it's
+                # driven by ctx.room's own "disconnected" event further
+                # down, and background/bridge calls don't rely on this flag
+                # either (see the comment there).
+                close_on_disconnect=False,
             ),
             room_output_options=RoomOutputOptions(
                 transcription_enabled=True,
@@ -338,30 +308,6 @@ async def entrypoint(ctx: JobContext) -> None:
         @session.on("agent_state_changed")
         def _on_agent_state_broadcast(ev) -> None:
             publish_agent_state(ev.new_state)
-
-        # ── Wake-word voiceprint gate ──────────────────────────────────────────
-        # Only for organically-triggered driver/customer sessions (wake-word or
-        # opening the assistant screen) — never for outbound/custcall, which are
-        # backend-initiated notification calls, not "someone woke up the AI".
-        if mode in ("driver", "customer") and phone and not trip:
-            identity = f"{mode}-{phone}"
-            account_id: str | None = None
-            try:
-                account_id = await auth_api.get_account_id_by_phone(phone, mode)
-            except Exception:
-                logger.exception("speaker-verify: account lookup failed, failing open | phone=%s", phone)
-
-            allowed = True
-            if account_id:
-                allowed = await speaker_verify.verify_speaker(session, ctx.room, identity, account_id)
-
-            if not allowed:
-                logger.warning("speaker-verify: rejected | mode=%s phone=%s", mode, phone)
-                # Room/session stay connected — just stop listening and
-                # responding, no rejection message and no hangup.
-                session.input.set_audio_enabled(False)
-                session.output.set_audio_enabled(False)
-                return
 
         conv_service.attach(session)
 

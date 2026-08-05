@@ -64,6 +64,18 @@ def restore_session_audio(session: AgentSession) -> None:
     session.output.set_audio_enabled(True)
 
 
+def restore_room_participant(session: AgentSession, userdata: dict) -> None:
+    """Undo the agent-mode STT retarget from customer_call.py::_save_call_context
+    (mode=="agent" only — bridge/background never touch room_io, see there)."""
+    driver_identity = (userdata.get("customer_call") or {}).get("_driver_room_identity", "")
+    if not driver_identity:
+        return
+    try:
+        session.room_io.set_participant(driver_identity)
+    except Exception:
+        logger.warning("failed to restore room_io participant to driver", exc_info=True)
+
+
 async def disconnect_sip_participant(userdata: dict) -> None:
     """
     Actually hang up the other side's phone line (SIP leg) after a manual
@@ -201,6 +213,7 @@ async def handback_to_driver(
         userdata["customer_call_active"] = False
         userdata["bridge_call_active"] = False
         restore_session_audio(session)
+        restore_room_participant(session, userdata)
 
         driver = build_driver_agent(userdata, summary=summary)
         session.update_agent(driver)

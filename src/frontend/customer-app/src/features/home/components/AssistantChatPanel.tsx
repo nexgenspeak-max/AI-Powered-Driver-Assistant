@@ -11,9 +11,7 @@ import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSes
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
-import { voiceService } from '../../../services/api/voice'
 import { AssistantAvatar } from './AssistantAvatar'
-import { VoiceEnrollPanel } from './VoiceEnrollPanel'
 
 const MIC_LABEL = {
   idle: 'Bấm để nói chuyện với AI',
@@ -32,17 +30,8 @@ export function AssistantChatPanel() {
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
-  const [hasVoiceprint, setHasVoiceprint] = useState<boolean | null>(null)
   const scrollRef = useRef<ScrollView>(null)
   const insets = useSafeAreaInsets()
-
-  // Gate the very first AI conversation on voiceprint enrollment — checked once
-  // per mount, not on every mic press, so an already-enrolled customer's tap
-  // connects instantly instead of waiting on this network round-trip.
-  useEffect(() => {
-    if (!customer?.id) return
-    voiceService.checkVoiceprint(customer.id).then(setHasVoiceprint).catch(() => setHasVoiceprint(true))
-  }, [customer?.id])
 
   useEffect(() => subscribeVoiceMessages((text, from) => {
     if (from === 'user') addUserMessage(text)
@@ -102,14 +91,6 @@ export function AssistantChatPanel() {
     // user = black text on purple, in light mode specifically.
     <Theme name={themeMode}>
     <StatusBar style={isLight ? 'dark' : 'light'} />
-    {hasVoiceprint === false && customer ? (
-      // Mandatory first-time gate: no voiceprint enrolled yet -> the whole
-      // chat UI is replaced by enrollment, not just blocked on mic-press —
-      // the customer can't reach chat/text-only fallback until this passes.
-      <View flex={1} backgroundColor="$surface" justifyContent="center" paddingHorizontal={20}>
-        <VoiceEnrollPanel phone={customer.phone} accountId={customer.id} onDone={setHasVoiceprint} />
-      </View>
-    ) : (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: theme.surface.val }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -221,7 +202,6 @@ export function AssistantChatPanel() {
         </TouchableOpacity>
       </XStack>
     </KeyboardAvoidingView>
-    )}
     </Theme>
   )
 }

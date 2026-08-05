@@ -85,7 +85,7 @@ print(f"\n{GREEN}── 2. Settings{RESET}")
 from app.config.settings import get_settings  # noqa: E402
 s = get_settings()
 check("STT provider valid", lambda: s.stt_provider in ("openai", "deepgram", "google") or (_ for _ in ()).throw(ValueError(f"unknown: {s.stt_provider}")))  # type: ignore[attr-defined]
-check("LLM provider valid", lambda: s.llm_provider in ("openai", "gemini", "google") or (_ for _ in ()).throw(ValueError(f"unknown: {s.llm_provider}")))  # type: ignore[attr-defined]
+check("LLM provider valid", lambda: s.llm_provider in ("openai", "gemini", "google", "kimi", "moonshot") or (_ for _ in ()).throw(ValueError(f"unknown: {s.llm_provider}")))  # type: ignore[attr-defined]
 check("TTS provider valid", lambda: s.tts_provider in ("elevenlabs", "google") or (_ for _ in ()).throw(ValueError(f"unknown: {s.tts_provider}")))  # type: ignore[attr-defined]
 print(f"  {PASS}  providers: STT={s.stt_provider}/{s.stt_model}  LLM={s.llm_provider}/{s.llm_model}  TTS={s.tts_provider}")
 

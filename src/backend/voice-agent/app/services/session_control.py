@@ -13,8 +13,8 @@ logger = logging.getLogger("voice-agent.session_control")
 async def end_room_session(ctx: JobContext, reason: str) -> None:
     """Remove remote participants (if any) then shut the agent job down.
 
-    Callers (end_conversation.py, end_call.py, silence_tracker.py,
-    enroll_agent.py) all `await session.say(...)` a final goodbye/summary line
+    Callers (end_conversation.py, end_call.py, silence_tracker.py)
+    all `await session.say(...)` a final goodbye/summary line
     right before this — `session.say()`'s await only resolves once the agent
     has finished GENERATING/publishing that speech, not once the caller's
     device has actually finished rendering the last of it through their

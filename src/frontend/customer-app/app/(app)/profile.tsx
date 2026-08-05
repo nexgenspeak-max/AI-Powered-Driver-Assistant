@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ScrollView, TouchableOpacity, Switch, Modal, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
+import { ScrollView, TouchableOpacity, Switch, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
 import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -13,7 +12,6 @@ import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { useWakeWordSettingsStore, WAKE_WORD_FEATURE_ENABLED } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
-import { VoiceEnrollPanel } from '../../src/features/home/components/VoiceEnrollPanel'
 
 // Literal per-screen background, same approach as the trips/booking screens
 // (features/trips/components/TripHistoryList.tsx, features/booking/
@@ -36,7 +34,6 @@ const ICONS = {
   voiceAssistant: require('../../assets/icons/light/voice-assistant.png') as ImageSourcePropType,
   sun: require('../../assets/icons/light/sun.png') as ImageSourcePropType,
   moon: require('../../assets/icons/light/moon.png') as ImageSourcePropType,
-  microphone: require('../../assets/icons/light/microphone.png') as ImageSourcePropType,
   chatInfo: require('../../assets/icons/light/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/light/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/light/logout.png') as ImageSourcePropType,
@@ -53,7 +50,6 @@ const DARK_ICONS = {
   voiceAssistant: require('../../assets/icons/dark/voice-assistant.png') as ImageSourcePropType,
   sun: require('../../assets/icons/dark/sun.png') as ImageSourcePropType,
   moon: require('../../assets/icons/dark/moon.png') as ImageSourcePropType,
-  microphone: require('../../assets/icons/dark/microphone.png') as ImageSourcePropType,
   chatInfo: require('../../assets/icons/dark/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/dark/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/dark/logout.png') as ImageSourcePropType,
@@ -82,7 +78,6 @@ export default function ProfileScreen() {
   const isLight = useThemeName() === 'light'
   const isDark = !isLight
   const insets = useSafeAreaInsets()
-  const [showVoiceEnroll, setShowVoiceEnroll] = useState(false)
 
   if (!customer) return null
 
@@ -206,13 +201,6 @@ export default function ProfileScreen() {
         </XStack>
         <View height={1} backgroundColor="$border" />
         <MenuRow
-          icon={isDark ? DARK_ICONS.microphone : ICONS.microphone}
-          isDark={isDark}
-          label="Đổi giọng nói của bạn"
-          onPress={() => setShowVoiceEnroll(true)}
-        />
-        <View height={1} backgroundColor="$border" />
-        <MenuRow
           icon={isDark ? DARK_ICONS.chatInfo : ICONS.chatInfo}
           isDark={isDark}
           label="Giới thiệu"
@@ -239,22 +227,6 @@ export default function ProfileScreen() {
         Phiên bản {Constants.expoConfig?.version ?? '1.0.0'}
       </Text>
       </ScrollView>
-
-      {/* Bottom-sheet presentation per the reference mockup: the top area is
-          deliberately empty (no close button/header) — dismissal is a tap
-          anywhere on that empty backdrop, a standard bottom-sheet
-          convention, rather than the screen having no way to close at all. */}
-      <Modal visible={showVoiceEnroll} animationType="slide" transparent onRequestClose={() => setShowVoiceEnroll(false)}>
-        <View flex={1}>
-          {isLight ? (
-            <LinearGradient colors={LIGHT_SCREEN_GRADIENT} style={StyleSheet.absoluteFillObject} />
-          ) : (
-            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DARK_SCREEN_BACKGROUND }]} />
-          )}
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowVoiceEnroll(false)} />
-          <VoiceEnrollPanel sheet phone={customer.phone} accountId={customer.id} onDone={() => setShowVoiceEnroll(false)} />
-        </View>
-      </Modal>
     </View>
   )
 }

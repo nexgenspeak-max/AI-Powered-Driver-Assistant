@@ -1,5 +1,7 @@
 # FEAT-M003 — Xác thực giọng nói "chủ nhân" cho wake-word (voiceprint)
 
+> **OBSOLETE (2026-08-05):** Toàn bộ tính năng (enrollment + verification) đã bị gỡ bỏ khỏi codebase theo yêu cầu — gây delay kết nối, tạo record rỗng trong call-logger khi bị từ chối, và không còn cần thiết. Xem code review/commit liên quan để biết chi tiết các file đã xoá. Giữ lại ticket này chỉ để tham khảo lịch sử.
+
 | | |
 |---|---|
 | **Loại** | Feature |

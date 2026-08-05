@@ -13,8 +13,3 @@ llama-index-llms-openai>=0.3.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 openai>=1.50.0
-
-# ── Speaker verification (wake-word voiceprint gate) ───────────────────────────
-onnxruntime>=1.18.0
-kaldi-native-fbank>=1.20.0
-numpy>=1.26.0

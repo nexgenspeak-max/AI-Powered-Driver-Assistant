@@ -1,8 +1,8 @@
 """
 Provider factory — swap STT / LLM / TTS by changing env vars only:
 
-  STT_PROVIDER = openai | deepgram | google
-  LLM_PROVIDER = openai | gemini
+  STT_PROVIDER = openai | deepgram | google | inference
+  LLM_PROVIDER = openai | gemini | kimi
   TTS_PROVIDER = openai | elevenlabs | google
 
 All provider modules are imported at the top level so that LiveKit plugins
@@ -14,8 +14,10 @@ from app.config.settings import get_settings
 from app.providers.stt.openai import OpenAISTT
 from app.providers.stt.deepgram import DeepgramSTT
 from app.providers.stt.google import GoogleSTT
+from app.providers.stt.inference import InferenceSTT
 from app.providers.llm.openai import OpenAILLM
 from app.providers.llm.gemini import GeminiLLM
+from app.providers.llm.kimi import KimiLLM
 from app.providers.tts.openai import OpenAITTS
 from app.providers.tts.elevenlabs import ElevenLabsTTS
 from app.providers.tts.google import GoogleTTS
@@ -24,9 +26,10 @@ from app.providers.tts.google import GoogleTTS
 def get_stt():
     s = get_settings()
     _map = {
-        "openai":   OpenAISTT,
-        "deepgram": DeepgramSTT,
-        "google":   GoogleSTT,
+        "openai":    OpenAISTT,
+        "deepgram":  DeepgramSTT,
+        "google":    GoogleSTT,
+        "inference": InferenceSTT,
     }
     cls = _map.get(s.stt_provider)
     if cls is None:
@@ -42,6 +45,8 @@ def get_llm():
         "openai":  OpenAILLM,
         "gemini":  GeminiLLM,
         "google":  GeminiLLM,
+        "kimi":    KimiLLM,
+        "moonshot": KimiLLM,
     }
     cls = _map.get(s.llm_provider)
     if cls is None:
