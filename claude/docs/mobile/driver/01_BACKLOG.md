@@ -12,6 +12,7 @@
 | FEAT-005 | Chốt quan hệ giữa `driver-app` và `driver-web` (mục chung, xem [`../../web/driver/01_BACKLOG.md`](../../web/driver/01_BACKLOG.md)) | 🟡 Trung bình | ⬜ | — |
 | FEAT-M004 | Tự động gọi khách hàng khi tài xế GPS còn ~1km tới điểm đón (background location tracking + proximity call) | 🟡 Trung bình | 🔨 Code xong (FE+BE+voice-agent), BE/voice-agent test thật rồi, FE chờ test thiết bị thật | [FEAT-M004](tickets/FEAT-M004.md) |
 | FEAT-M005 | ~~Tự động tìm & gán tài xế theo vị trí~~ → **đã gỡ bỏ**, thay bằng khách tự chọn tài xế online từ danh sách (`DriverPicker` + `GET /drivers/online`), gửi thẳng qua `POST /trips` (flow gán trực tiếp cũ, không đổi). WebSocket real-time giữ lại, dùng thêm cho thông báo nhận/từ chối chuyến về khách | 🟡 Trung bình | 🔨 Code xong (BE+2 FE), test local qua tsc + grep sạch; **chưa test thiết bị thật** (khách chọn tài xế → tài xế nhận/từ chối trên app thật) | [FEAT-M005](tickets/FEAT-M005.md) |
+| FEAT-M006 | Tài xế gửi SMS qua trợ lý giọng nói — tới khách hàng của chuyến / người trong danh bạ (theo tên) / số bất kỳ, nội dung tự do, gửi thật qua Twilio (`call-center` cầm credentials, `trip-service` chỉ resolve số rồi chuyển tiếp) | 🟡 Trung bình | 🔴 Tạm dừng — code + luồng giọng nói chạy đúng, nhưng **nhà mạng Việt Nam chặn cứng SMS A2P chưa đăng ký Sender ID** (không phải lỗi code/Twilio config, không tự sửa được). Chờ quyết định hướng: đăng ký Sender ID Twilio (~5 tuần) / nhà mạng SMS VN / dùng SIM thật tài xế qua `expo-sms` | [FEAT-M006](tickets/FEAT-M006.md) |
 
 ## Đã hoàn thành
 

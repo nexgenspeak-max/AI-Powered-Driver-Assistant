@@ -127,9 +127,24 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
   // Primary always renders white text now (like GlassButton) — the previous
   // light-mode black-text carve-out was tuned for the old lighter gradient
   // (#7C5B9C); the darker one below reads fine with white in both themes.
-  const labelColor = variant === 'outline' || variant === 'dark' ? '$textPrimary' : variant === 'primary' ? '#ffffff' : '$textInverse'
+  //
+  // success/danger fills are theme-dependent brand colors, not a fixed dark
+  // shade like primary's gradient: light theme uses saturated `#16a34a`/
+  // `#ef4444` (white text keeps AA-ish contrast), but dark theme's versions
+  // (`#34d399`/`#f87171`, tamagui.config.ts) are much lighter pastels —
+  // white-on-pastel drops below 2:1 contrast and reads as blank. Dark text
+  // there instead keeps every other variant/theme combination unchanged.
+  const isFilledStatus = variant === 'success' || variant === 'danger'
+  const statusTextColor = !isLight && isFilledStatus ? '#111827' : '$textInverse'
+  const labelColor = variant === 'outline' || variant === 'dark' ? '$textPrimary' : variant === 'primary' ? '#ffffff' : statusTextColor
   const spinnerColor =
-    variant === 'outline' || variant === 'dark' ? theme.textPrimary.val : variant === 'primary' ? '#ffffff' : theme.textInverse.val
+    variant === 'outline' || variant === 'dark'
+      ? theme.textPrimary.val
+      : variant === 'primary'
+        ? '#ffffff'
+        : !isLight && isFilledStatus
+          ? '#111827'
+          : theme.textInverse.val
 
   return (
     <GestureDetector gesture={gesture}>

@@ -168,6 +168,17 @@ async def start_call(
         return r.json()
 
 
+async def send_sms(message: str, phone_number: str = "", trip_id: str = "") -> dict:
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/sms/send",
+            json={"phoneNumber": phone_number, "tripId": trip_id, "message": message},
+            headers=auth_headers(),
+        )
+        r.raise_for_status()
+        return r.json()
+
+
 async def call_driver(customer_phone: str, trip_id: str, room_name: str) -> dict:
     """Customer-initiated call: dial the trip's driver into the customer's room."""
     async with httpx.AsyncClient(timeout=25) as c:

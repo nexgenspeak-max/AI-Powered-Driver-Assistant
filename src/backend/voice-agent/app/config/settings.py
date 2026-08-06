@@ -36,8 +36,15 @@ class Settings(BaseSettings):
     openai_tts_model: str = "gpt-4o-mini-tts"
     openai_tts_voice: str = "nova"
 
-    # ── Kimi (via LiveKit Inference — uses LIVEKIT_API_KEY/SECRET, no separate key) ──
-    kimi_provider: str = ""   # optional: force a specific inference provider (e.g. "baseten")
+    # ── Kimi ──────────────────────────────────────────────────────────────────
+    # If kimi_api_key is set, KimiLLM calls Moonshot's own OpenAI-compatible API
+    # directly (billed to that account, bypasses LiveKit Inference Gateway
+    # entirely — use this when the Gateway's own credit is exhausted). Leaves
+    # kimi_provider unused in that case; empty key falls back to the original
+    # LiveKit Inference route (LIVEKIT_API_KEY/SECRET, no separate key needed).
+    kimi_api_key: str = ""
+    kimi_base_url: str = "https://api.moonshot.ai/v1"
+    kimi_provider: str = ""   # optional: force a specific inference provider (e.g. "baseten") — only used via LiveKit Inference route
 
     # STT_PROVIDER=inference uses the same LiveKit Inference route (no separate
     # key) — set STT_MODEL to a "provider/model" string, e.g. "deepgram/nova-3"

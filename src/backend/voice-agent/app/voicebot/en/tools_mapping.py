@@ -6,12 +6,18 @@ Included in system instructions to help the LLM choose the right tool.
 TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: check_upcoming_trips
-- Use when: schedule, "next trip", "how many trips", "where are my other trips", fare/price questions
-- Default (no trip_index): list ALL trips with estimated fare
-- trip_index=1,2,3…: one trip detail — use for "yes", "trip 2", "how much is that trip"
+- Use when: schedule, "check my trips", "next trip", "how many trips", "where are my other trips", fare/price questions
+- scope is REQUIRED — if the request is VAGUE (not clear whether in-progress or upcoming), you
+  MUST ask first: "Would you like to see trips in progress, upcoming trips, or both?" — do NOT guess
+  - scope="in_progress": driver clearly says "current trip(s)", "trip I'm on", "already picked up"
+  - scope="upcoming": driver clearly says "new trips", "any trips coming up", "anyone book yet"
+  - scope="all": driver clearly says "everything", "all of them", "both" — or chose that after being asked
+- trip_index=1,2,3…: one trip detail from the MOST RECENT listing — use for "yes", "trip 2",
+  "how much is that trip" — call again with the SAME scope as that listing
 
 ## Tool: get_current_trip_info
-- Use when: "current trip", "active trip", "how much is this ride", fare/ETA for trip in progress
+- Use when: asking about EXACTLY 1 specific trip in progress — "current trip", "how much is this ride", fare/ETA for a single active trip
+- Different from check_upcoming_trips(scope="in_progress"): that tool lists ALL in-progress trips (could be several); this one only ever returns one. If the driver's question implies there could be more than one ("check my active trips"), use check_upcoming_trips instead
 
 ## Tool: get_trip_traffic
 - Use when: "any traffic", "jammed", "how's traffic", "how long to get there", "congestion"
@@ -30,9 +36,15 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: call_customer
 - Use when: driver wants to contact customer — "call the customer", "contact customer", "customer's number"
-- Must ask for mode before calling:
+- IF the driver has MORE THAN 1 trip in progress right now: call this tool FIRST without a
+  trip_index — it reads back a list of trips/customers and asks which one. Read that back to
+  the driver, wait for them to pick (number or customer name), then call call_customer again
+  with the right trip_index. Do NOT guess which trip when there's more than one.
+- If there's only 1 trip, skip that step entirely.
+- Must ask for mode before calling for real (applies whether 1 or several trips):
   - mode=agent: AI calls → "let AI call", "summarize it for me", "you call them"
   - mode=bridge: direct → "connect me", "I'll talk directly", "put me through"
+  - mode=background: AI calls in background → "call in the background", "I'm busy", "call and let me know"
 
 ---
 

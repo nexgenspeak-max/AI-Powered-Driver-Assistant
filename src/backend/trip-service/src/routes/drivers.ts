@@ -7,7 +7,13 @@ import { phoneVariants } from '../utils/phone';
 
 const router = Router();
 
-const UPCOMING_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed']);
+// "Chuyến đang có" của tài xế — chỉ những chuyến THỰC SỰ còn đang diễn ra: chưa tới điểm
+// đón (pending/notified/calling/confirmed) hoặc đã đón khách rồi (arrived_pickup/picked_up).
+// Dùng whitelist thay vì loại trừ để không lỡ tính nhầm status mới thêm sau này vào "đang có".
+// Loại hẳn: cancelled/cancelled_by_driver (đã hủy), completed (đã xong), và — quan trọng —
+// rejected/no_answer (tài xế đã từ chối/không bắt máy, chuyến không còn thuộc tài xế này nữa)
+// cùng no_show (khách không ra, chuyến coi như khép lại phía tài xế).
+const DRIVER_ACTIVE_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed', 'arrived_pickup', 'picked_up']);
 const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
 
 async function tripsForDriver(phone: string) {
@@ -45,7 +51,7 @@ router.get('/me/trips/upcoming', async (req: Request, res: Response) => {
   try {
     const driverPhone = req.headers['x-driver-phone'] as string;
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
-    const trips = (await tripsForDriver(driverPhone)).filter(t => UPCOMING_STATUSES.has(t.status));
+    const trips = (await tripsForDriver(driverPhone)).filter(t => DRIVER_ACTIVE_STATUSES.has(t.status));
     return res.json(trips);
   } catch (err) {
     return res.status(500).json({ error: String(err) });

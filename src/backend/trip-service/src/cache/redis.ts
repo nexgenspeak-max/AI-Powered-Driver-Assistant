@@ -114,3 +114,7 @@ export function driverLocationKey(tripId: string): string {
 export function tripProximityNotifiedKey(tripId: string): string {
   return `trip:proximity_notified:${tripId}`;
 }
+
+export function tripDropoffProximityNotifiedKey(tripId: string): string {
+  return `trip:dropoff_proximity_notified:${tripId}`;
+}

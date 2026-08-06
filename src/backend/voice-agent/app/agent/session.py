@@ -476,10 +476,17 @@ async def entrypoint(ctx: JobContext) -> None:
                     else "Cuộc gọi nền với khách đã kết thúc."
                 )
                 text = f"{prefix} {summary}".strip()
-                asyncio.create_task(
-                    session.say(text, allow_interruptions=True),
-                    name="announce_background_call_summary",
-                )
+                # session.say() is a plain (non-async) method that schedules
+                # the speech synchronously and returns a SpeechHandle, not a
+                # coroutine — wrapping it in asyncio.create_task() raised
+                # TypeError every time this fired (confirmed live: "a
+                # coroutine was expected, got SpeechHandle"), logged as an
+                # uncaught error in this data_received callback. The speech
+                # itself still went out (say() already schedules it before
+                # returning), so this was pure log noise/fragile behavior,
+                # not a missed announcement — but fix it properly rather than
+                # rely on that. No text/behavior change for either call type.
+                session.say(text, allow_interruptions=True)
 
         logger.info(
             "session started | mode=%s phone=%s trip=%s",

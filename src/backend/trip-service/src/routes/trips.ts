@@ -6,7 +6,7 @@ import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
-import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey } from '../cache/redis';
+import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey, tripDropoffProximityNotifiedKey } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
 import * as callService from '../services/callService';
 import { notifyDriver, notifyCustomer } from '../services/notify';
@@ -285,6 +285,7 @@ router.post('/:tripId/location', async (req: Request, res: Response) => {
     await cacheSet(driverLocationKey(trip.trip_id), { lat, lng, updated_at: new Date().toISOString() }, 120);
 
     await maybeNotifyCustomerOfProximity(trip, { lat, lng });
+    await maybeNotifyCustomerOfDropoffProximity(trip, { lat, lng });
 
     return res.json({ status: 'ok' });
   } catch (err) {
@@ -323,6 +324,39 @@ async function maybeNotifyCustomerOfProximity(
     });
   } catch (err) {
     console.warn(`[trips] proximity call failed for trip=${trip.trip_id}:`, err);
+  }
+}
+
+// Mirrors maybeNotifyCustomerOfProximity above but for the DROPOFF point —
+// only fires once the customer is actually in the car (status=picked_up),
+// separate dedupe key so it doesn't collide with the pickup-side notify
+// (both can legitimately fire once each within the same trip).
+async function maybeNotifyCustomerOfDropoffProximity(
+  trip: tripService.Trip,
+  driverCoords: { lat: number; lng: number },
+): Promise<void> {
+  if (trip.status !== 'picked_up') return;
+  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
+  if (!trip.driver_phone || !trip.customer_phone) return;
+
+  const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
+  if (distance > config.proximityAlertMeters) return;
+
+  const notifiedKey = tripDropoffProximityNotifiedKey(trip.trip_id);
+  if (await cacheGet(notifiedKey)) return;
+  await cacheSet(notifiedKey, true, 3600);
+
+  try {
+    await callService.startCustomerCall({
+      driverPhone: trip.driver_phone,
+      customerPhone: trip.customer_phone,
+      tripId: trip.trip_id,
+      mode: 'background',
+      customerName: trip.customer_name,
+      customMessage: 'Vui lòng kiểm tra hành lý trên xe, bạn sắp đến nơi rồi.',
+    });
+  } catch (err) {
+    console.warn(`[trips] dropoff proximity call failed for trip=${trip.trip_id}:`, err);
   }
 }
 

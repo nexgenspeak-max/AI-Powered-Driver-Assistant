@@ -1,6 +1,7 @@
 import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
+from app.services import backend_api
 from app.voicebot.processors import context_store
 
 logger = logging.getLogger("voice-agent.vn.tools.get_driver_stats")
@@ -8,6 +9,15 @@ logger = logging.getLogger("voice-agent.vn.tools.get_driver_stats")
 
 @function_tool(raw_schema=raw_schema["get_driver_stats"])
 async def get_driver_stats(raw_arguments: dict, context: RunContext) -> str:
+    # Live re-fetch — see check_upcoming_trips.py for why.
+    driver_phone = context.userdata.get("driver_phone", "")
+    if driver_phone:
+        try:
+            fresh = await backend_api.get_driver_profile(driver_phone)
+            context_store.set_context(context.userdata, "driver_profile", fresh)
+        except Exception:
+            logger.warning("get_driver_stats — live refresh failed, using cached data", exc_info=True)
+
     data = context_store.get(context.userdata, "driver_profile", {})
     if not data:
         return "Chưa có dữ liệu thống kê."

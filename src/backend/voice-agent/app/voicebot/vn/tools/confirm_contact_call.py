@@ -24,7 +24,11 @@ async def confirm_contact_call(raw_arguments: dict, context: RunContext):
     phone_number = pending["phone_number"]
 
     try:
-        if mode == "agent":
+        if mode == "background":
+            result = await contact_call.start_background_call_to_contact(
+                context, phone_number, contact_name=name, lang="vn",
+            )
+        elif mode == "agent":
             message = (raw_arguments.get("message") or "").strip()
             result = await contact_call.start_agent_call_to_contact(
                 context, phone_number, contact_name=name, custom_message=message, lang="vn",

@@ -26,12 +26,24 @@ function arrivalErrorMessage(err: unknown): string {
 // `confirmed`), but ask again here too — cheap no-op if already granted, and
 // this is the only thing standing between the driver and a stuck button if
 // that earlier request was ever missed or revoked.
+//
+// getCurrentPositionAsync always blocks on a brand-new GPS fix (can take
+// several seconds indoors/cold GPS). useProximityTracking's background task
+// already pings a fix every ~15s while this trip is being tracked, so try
+// that cached fix first — maxAge/requiredAccuracy keep it safe: anything
+// stale or too imprecise is rejected and we fall back to the old
+// getCurrentPositionAsync path unchanged, so the backend's arrival-radius
+// check never sees a worse location than before, only a faster one.
 async function getCurrentCoords(): Promise<{ lat: number; lng: number }> {
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== "granted") {
     throw new Error("Cần quyền vị trí để xác nhận trạng thái này");
   }
-  const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+  const cached = await Location.getLastKnownPositionAsync({
+    maxAge: 20000,
+    requiredAccuracy: 100,
+  });
+  const position = cached ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
   return { lat: position.coords.latitude, lng: position.coords.longitude };
 }
 

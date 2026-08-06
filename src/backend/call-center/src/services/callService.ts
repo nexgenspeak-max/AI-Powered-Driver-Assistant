@@ -54,3 +54,12 @@ export async function listCalls(limit = 50, direction?: string, status?: string)
   const calls = await getClient().calls.list(params as any);
   return calls.map(callToDict);
 }
+
+export async function sendSms(to: string, body: string): Promise<{ sid: string; to: string; status: string }> {
+  const message = await getClient().messages.create({
+    to,
+    from: config.twilioPhoneNumber,
+    body,
+  });
+  return { sid: message.sid, to: message.to, status: message.status };
+}
