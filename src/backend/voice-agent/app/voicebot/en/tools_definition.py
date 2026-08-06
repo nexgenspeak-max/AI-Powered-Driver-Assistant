@@ -11,22 +11,38 @@ raw_schema = {
         "type": "function",
         "name": "check_upcoming_trips",
         "description": (
-            "View full upcoming schedule — lists ALL trips with pickup, dropoff, estimated fare. "
-            "Use for schedule questions, 'where are my other trips', fare questions, "
-            "'trip 2', or follow-ups after listing."
+            "View the driver's trips — lists trips (pickup, dropoff, estimated fare) within the "
+            "exact scope the driver wants. IMPORTANT: if the driver's request is vague ('check my "
+            "trips', 'how are my trips looking', 'any trips?') — do NOT guess the scope, ASK "
+            "first: 'Would you like to see trips in progress (already accepted, currently "
+            "running), upcoming trips (new, awaiting confirmation), or both?' then call the tool. "
+            "If the driver already specified in their question ('what's my current trip', 'any "
+            "new trips', 'show me everything'), call directly, no need to ask. For follow-ups "
+            "('how much is trip 2', 'yes' to see more) → call again with the SAME scope as the "
+            "most recent listing."
         ),
         "parameters": {
             "type": "object",
             "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["in_progress", "upcoming", "all"],
+                    "description": (
+                        "'in_progress' = accepted trips currently running (driving to pickup, or "
+                        "already picked up). 'upcoming' = new trips awaiting the driver's "
+                        "confirmation. 'all' = both — only use once the driver has clearly asked "
+                        "for everything, or chose 'both' after being asked."
+                    ),
+                },
                 "trip_index": {
                     "type": "integer",
                     "description": (
-                        "Trip number (1 = nearest). Use for 'how much is that trip', "
-                        "'trip 2 details', or when driver says yes to see more."
+                        "Trip number in the most recent listing (1 = first). Use for 'how much is "
+                        "that trip', 'trip 2 details', or when driver says yes to see more."
                     ),
                 }
             },
-            "required": [],
+            "required": ["scope"],
         },
     },
 
@@ -84,12 +100,18 @@ raw_schema = {
         "type": "function",
         "name": "call_customer",
         "description": (
-            "Call the customer for the active trip. "
-            "IMPORTANT: Before calling, ask the driver to choose a mode:\n"
+            "Call the customer of ONE active trip. "
+            "IF the driver currently has MORE THAN 1 trip in progress: you MUST ask which "
+            "trip's customer to call FIRST — call this tool without trip_index and it will "
+            "answer with a list of the trips to read back to the driver; wait for them to "
+            "pick, do NOT guess. If there's only 1 trip, skip this and don't bother with "
+            "trip_index. "
+            "IMPORTANT: Before actually calling, also ask the driver to choose a mode:\n"
             "  • mode='background' — AI calls customer in a separate room; driver keeps using assistant (RECOMMENDED when busy).\n"
             "  • mode='agent'  — AI dials customer into the same room; driver listens live.\n"
             "  • mode='bridge' — Driver speaks directly to customer in the same room.\n"
-            "Only call this tool after the driver has chosen a mode."
+            "Only call this tool for real once the driver has picked the right trip (if needed) "
+            "AND chosen a mode."
         ),
         "parameters": {
             "type": "object",
@@ -98,7 +120,15 @@ raw_schema = {
                     "type": "string",
                     "enum": ["background", "agent", "bridge"],
                     "description": "'background' = AI calls in background, 'agent' = driver listens, 'bridge' = driver talks directly.",
-                }
+                },
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Trip number from the list THIS tool just read out (1 = first) — only "
+                        "needed when the driver has more than 1 trip and has already picked one. "
+                        "Leave empty if there's only 1 trip, or if you haven't asked yet."
+                    ),
+                },
             },
             "required": ["mode"],
         },

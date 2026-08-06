@@ -21,6 +21,16 @@ def build_customer_call_prompt(
     trip_line_vi = f"Chuyến: {trip_id}\n" if trip_id else ""
     pickup_line_vi = f"Điểm đón: {pickup_address}\n" if pickup_address else ""
 
+    # Contact calls (trip_id=="") were defaulting to the same "confirm
+    # pickup" framing as real trip-customer calls whenever the driver hadn't
+    # dictated a custom_message — the AI would open an isolated background
+    # call to a personal contact with "gọi để xác nhận đón anh/chị", which is
+    # nonsensical for someone who isn't a ride customer (confirmed live: the
+    # contact replied confused, AI doubled down on "xác nhận đón... cho
+    # chuyến"). Only affects the trip_id=="" branch below — real
+    # trip-customer calls (trip_id always set) keep byte-identical output.
+    is_contact = not trip_id
+
     if lang == "en":
         audience = (
             "The driver is NOT on this call — they continue other tasks. "
@@ -31,12 +41,19 @@ def build_customer_call_prompt(
         # A driver-dictated message (contact calls only) replaces the generic
         # "explain the driver asked you to call" goal with the actual content
         # to relay — verbatim intent, not necessarily verbatim wording.
-        goal_line = (
-            f'- Open with this message from the driver: "{custom_message}" '
-            "Then continue the conversation naturally based on their reply."
-            if custom_message
-            else "- Explain the driver asked you to call (confirm pickup, share ETA, or relay a message)."
-        )
+        if custom_message:
+            goal_line = (
+                f'- Open with this message from the driver: "{custom_message}" '
+                "Then continue the conversation naturally based on their reply."
+            )
+        elif is_contact:
+            goal_line = (
+                "- Explain the driver (a personal contact of theirs, not a ride customer) asked "
+                "you to give them a call — do NOT mention a pickup, a trip, or ride confirmation, "
+                "none of that applies here."
+            )
+        else:
+            goal_line = "- Explain the driver asked you to call (confirm pickup, share ETA, or relay a message)."
         return f"""You are the ride platform's voice assistant calling on behalf of the driver.
 {audience}
 
@@ -76,12 +93,19 @@ Rules:
         if isolated
         else "Tài xế đang nghe trực tiếp trong cùng cuộc gọi — nói ngắn gọn, lịch sự."
     )
-    goal_line_vi = (
-        f'- Mở đầu bằng đúng nội dung tài xế nhắn: "{custom_message}" '
-        "Sau đó tiếp tục trò chuyện tự nhiên theo phản hồi của người nghe."
-        if custom_message
-        else "- Giải thích tài xế nhờ bạn gọi (xác nhận đón, báo ETA, hoặc nhắn tin)."
-    )
+    if custom_message:
+        goal_line_vi = (
+            f'- Mở đầu bằng đúng nội dung tài xế nhắn: "{custom_message}" '
+            "Sau đó tiếp tục trò chuyện tự nhiên theo phản hồi của người nghe."
+        )
+    elif is_contact:
+        goal_line_vi = (
+            "- Giải thích tài xế (người quen của tài xế, KHÔNG PHẢI khách đặt xe) nhờ bạn gọi "
+            "cho họ — KHÔNG được nhắc tới 'xác nhận đón', 'chuyến đi', hay 'điểm đón' dưới bất kỳ "
+            "hình thức nào, những điều đó không áp dụng ở đây."
+        )
+    else:
+        goal_line_vi = "- Giải thích tài xế nhờ bạn gọi (xác nhận đón, báo ETA, hoặc nhắn tin)."
     return f"""Bạn là trợ lý giọng nói của nền tảng, đang gọi thay mặt tài xế.
 {audience}
 

@@ -22,6 +22,12 @@ from app.voicebot.vn.tools.select_contact_match       import select_contact_matc
 from app.voicebot.vn.tools.confirm_contact_call       import confirm_contact_call
 from app.voicebot.vn.tools.get_customer_location      import get_customer_location
 from app.voicebot.vn.tools.confirm_trip_with_customer import confirm_trip_with_customer
+from app.voicebot.vn.tools.send_sms_to_customer        import send_sms_to_customer
+from app.voicebot.vn.tools.send_sms_to_custom_number   import send_sms_to_custom_number
+from app.voicebot.vn.tools.confirm_send_sms_to_custom_number import confirm_send_sms_to_custom_number
+from app.voicebot.vn.tools.find_contact_to_message     import find_contact_to_message
+from app.voicebot.vn.tools.select_contact_match_for_sms import select_contact_match_for_sms
+from app.voicebot.vn.tools.confirm_send_sms_to_contact import confirm_send_sms_to_contact
 from app.voicebot.vn.tools.summarize_last_call        import summarize_last_call
 from app.voicebot.vn.tools.check_customer_call_status import check_customer_call_status
 from app.voicebot.vn.tools.create_reminder            import create_reminder
@@ -79,6 +85,12 @@ _DRIVER_INBOUND_TOOLS = [
     confirm_contact_call,
     get_customer_location,
     confirm_trip_with_customer,
+    send_sms_to_customer,
+    send_sms_to_custom_number,
+    confirm_send_sms_to_custom_number,
+    find_contact_to_message,
+    select_contact_match_for_sms,
+    confirm_send_sms_to_contact,
     summarize_last_call,
     check_customer_call_status,
     # Productivity

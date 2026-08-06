@@ -4,7 +4,11 @@ import * as earningsService from './earningsService';
 import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey } from '../cache/redis';
 import { phoneVariants } from '../utils/phone';
 
-const UPCOMING = new Set(['pending', 'notified', 'calling', 'confirmed']);
+// "Chuyến đang có" — chỉ chuyến THỰC SỰ còn đang diễn ra (chưa tới điểm đón hoặc đã đón
+// khách rồi). Loại hẳn cancelled/cancelled_by_driver/completed lẫn rejected/no_answer (tài
+// xế đã từ chối/không bắt máy — chuyến không còn thuộc tài xế này) và no_show (khách không
+// ra — coi như khép lại). Mirrors routes/drivers.ts's DRIVER_ACTIVE_STATUSES.
+const DRIVER_ACTIVE_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed', 'arrived_pickup', 'picked_up']);
 const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
 // Every trip the driver has actually accepted and is executing right now —
 // unlike ACTIVE above (which also matches notified/calling, used only to
@@ -39,7 +43,7 @@ export async function buildDriverContext(driverPhone: string) {
   ]);
 
   const upcoming = trips
-    .filter(t => UPCOMING.has(t.status))
+    .filter(t => DRIVER_ACTIVE_STATUSES.has(t.status))
     .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
   const inProgress = trips
     .filter(t => IN_PROGRESS.has(t.status))

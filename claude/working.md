@@ -26,21 +26,49 @@ Live session log. Updated as work progresses. Use this to resume any session ins
 
 ### Start commands
 
+**Cach nhanh nhat — chay tat ca cung luc:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File run\start-all.ps1
+```
+
+Mo 11 cua so PowerShell rieng biet (moi service 1 cua so, dong cua so nao la tat service do): `auth-service`, `call-center`, `call-logger`, `trip-service`, `voice-agent`, `admin-panel`, `customer-web`, `driver-web`, `agents-playground`, `driver-app`, `customer-app`. Script tu bo qua service nao thieu `node_modules`/`.venv`. Xem chi tiet script tai [`run/start-all.ps1`](../run/start-all.ps1).
+
+**Chay tay tung service** (neu chi can 1-2 cai — luu y trip-service/auth-service/call-center/call-logger gio la Express/TS, khong con FastAPI/Python nhu ghi cu):
+
 ```bash
-# trip-service  (--host 0.0.0.0 required so mobile devices on LAN can reach it)
-cd src/backend/trip-service && AWS_PROFILE=david ENV=local python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+# trip-service (Express/TS, port 8002)
+cd src/backend/trip-service && npm run dev
+
+# auth-service (Express/TS, port 8003)
+cd src/backend/auth-service && npm run dev
+
+# call-center (Express/TS, port 8000)
+cd src/backend/call-center && npm run dev
+
+# call-logger (Express/TS, port 8001)
+cd src/backend/call-logger && npm run dev
 
 # voice-agent
-cd src/backend/voice-agent && ENV=local python -m app.main dev
+cd src/backend/voice-agent && .venv\Scripts\python.exe -m app.main dev
 
-# admin panel
+# admin panel (Vite, port 5173)
 cd src/frontend/admin-panel && npm run dev
 
-# driver app (iOS)
-cd src/frontend/mobile-app/driver-app && npx expo run:ios
+# customer-web (Vite, port 5174)
+cd src/frontend/customer-web && npm run dev
 
-# customer app
-cd src/frontend/mobile-app/customer-app && npx react-native run-ios
+# driver-web (Vite, port 5175)
+cd src/frontend/driver-web && npm run dev
+
+# agents-playground (Next.js, port 3000)
+cd src/frontend/agents-playground && npm run dev
+
+# driver app (Expo, port 8081) — src/frontend/driver-app, KHONG phai mobile-app/driver-app (thu muc do la ban nhap cu)
+cd src/frontend/driver-app && npm start
+
+# customer app (Expo, port 8083)
+cd src/frontend/customer-app && npm start
 ```
 
 ---

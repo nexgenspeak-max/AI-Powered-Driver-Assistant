@@ -90,6 +90,28 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
                     "Tài xế nghe trực tiếp — nói ngắn gọn."
                 )
             )
+        elif not self._trip.get("trip_id"):
+            # Contact call (no trip attached) with no dictated message — same
+            # "Khách"/pickup-flavored wording as the trip-customer branch
+            # below was wrong here too (a personal contact isn't a ride
+            # customer), just milder since it doesn't name "pickup"
+            # explicitly. The custom_message branch above already got this
+            # right ("Người nhận"/"The person"); mirror that neutral framing
+            # here. Real trip-customer calls (trip_id set) are unaffected —
+            # they still hit the branches below, unchanged.
+            hint = (
+                "The person is being dialed into this room. When they answer, greet them and "
+                "explain the driver asked you to give them a call — this is a personal contact, "
+                "NOT a ride customer, so don't mention a pickup or a trip. "
+                "The driver can hear everything — stay brief."
+                if self._lang == "en"
+                else (
+                    "Người nhận đang được kết nối vào cuộc gọi. Khi họ nghe máy, chào và giải "
+                    "thích tài xế nhờ bạn gọi cho họ — đây là người quen của tài xế, KHÔNG PHẢI "
+                    "khách đặt xe, nên đừng nhắc gì tới đón khách hay chuyến đi. "
+                    "Tài xế nghe trực tiếp — nói ngắn gọn."
+                )
+            )
         elif self._lang == "en":
             hint = (
                 "The customer is being dialed into this room. "
@@ -130,8 +152,44 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
         if self._customer_spoke():
             return  # customer already talking — normal LLM turn-taking takes it from here
 
+        # Contact calls (no trip attached — self._trip == {}) must NOT use the
+        # pickup-confirmation line below: it's nonsensical for a personal
+        # contact ("gọi để xác nhận đón anh/chị" to someone who isn't a ride
+        # customer — confirmed live, the contact got confused and pushed
+        # back). Real trip-customer calls (trip_id always set) are
+        # unaffected — same branch condition as build_customer_call_prompt's
+        # own trip_id=="" check, so this stays consistent with the system
+        # prompt's framing.
+        is_contact = not self._trip.get("trip_id")
         pickup_address = self._trip.get("pickup_address", "")
-        if self._lang == "en":
+        # custom_message ALWAYS wins first, for both contacts AND real trips —
+        # this used to only be checked in the is_contact branch, so a real
+        # trip's background call (proximity-arrival notify, etc.) with a
+        # custom_message set would silently ignore it here and speak the
+        # generic pickup-confirm line instead whenever the callee stayed
+        # silent past the first 3s (very common — many people wait for the
+        # caller to speak first). The system prompt's own goal_line already
+        # prioritized custom_message correctly; this fallback line just
+        # hadn't been taught to match. Only the no-custom_message case still
+        # branches on is_contact/trip below — unchanged from before.
+        if self._custom_message:
+            if self._lang == "en":
+                purpose = (
+                    f'Hello, this is the driver\'s assistant. The driver asked me to pass along: '
+                    f'"{self._custom_message}" Can you hear me?'
+                )
+            else:
+                purpose = (
+                    f'Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi nhắn: "{self._custom_message}". '
+                    "Anh/chị có nghe rõ không?"
+                )
+        elif is_contact:
+            purpose = (
+                "Hello, this is the driver's assistant. The driver asked me to give you a call. Can you hear me?"
+                if self._lang == "en"
+                else "Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi gọi cho anh/chị. Anh/chị có nghe rõ không?"
+            )
+        elif self._lang == "en":
             purpose = (
                 f"Hello, this is the driver's assistant calling to confirm your pickup"
                 + (f" at {pickup_address}" if pickup_address else "")

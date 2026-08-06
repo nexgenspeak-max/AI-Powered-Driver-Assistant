@@ -11,23 +11,38 @@ raw_schema = {
         "type": "function",
         "name": "check_upcoming_trips",
         "description": (
-            "Xem lịch chuyến sắp tới — liệt kê TẤT CẢ chuyến (điểm đón, điểm đến, giá ước tính). "
-            "Gọi khi hỏi lịch, chuyến tiếp theo, 'các chuyến còn lại đi đâu', 'bao nhiêu tiền', "
-            "'chuyến thứ 2', hoặc follow-up sau khi liệt kê."
+            "Xem chuyến đi của tài xế — liệt kê chuyến (điểm đón, điểm đến, giá ước tính) trong "
+            "đúng phạm vi tài xế muốn. QUAN TRỌNG: nếu tài xế hỏi mơ hồ kiểu 'kiểm tra chuyến "
+            "đi', 'chuyến đi thế nào', 'có chuyến nào không' — KHÔNG tự đoán scope, PHẢI hỏi lại "
+            "trước: 'Anh/chị muốn xem chuyến đang chạy (đã nhận, đang thực hiện), chuyến sắp tới "
+            "(chuyến mới, đang chờ xác nhận), hay cả hai?' rồi mới gọi tool. Nếu tài xế đã nói rõ "
+            "trong câu hỏi (vd 'chuyến đang chạy có gì', 'có chuyến mới nào không', 'xem hết cho "
+            "tôi') thì gọi thẳng, không cần hỏi lại. Khi hỏi follow-up ('chuyến thứ 2 bao tiền', "
+            "'có' muốn xem thêm) → gọi lại với ĐÚNG scope của lần liệt kê gần nhất."
         ),
         "parameters": {
             "type": "object",
             "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["in_progress", "upcoming", "all"],
+                    "description": (
+                        "'in_progress' = chuyến đã nhận, đang thực hiện (đang trên đường đón/đã "
+                        "đón khách). 'upcoming' = chuyến mới, chưa xác nhận, đang chờ tài xế "
+                        "trả lời. 'all' = cả hai — chỉ dùng khi tài xế đã nói rõ muốn xem tất cả, "
+                        "hoặc đã chọn 'cả hai' sau khi được hỏi."
+                    ),
+                },
                 "trip_index": {
                     "type": "integer",
                     "description": (
-                        "Số thứ tự chuyến (1 = gần nhất). "
+                        "Số thứ tự chuyến trong danh sách vừa liệt kê (1 = đầu tiên). "
                         "Dùng khi tài xế hỏi chi tiết/giá một chuyến cụ thể: "
                         "'chuyến đó bao tiền', 'chuyến thứ 2', 'có' (muốn xem thêm)."
                     ),
                 }
             },
-            "required": [],
+            "required": ["scope"],
         },
     },
 
@@ -87,12 +102,17 @@ raw_schema = {
         "type": "function",
         "name": "call_customer",
         "description": (
-            "Gọi điện cho khách hàng của chuyến đang hoạt động. "
-            "QUAN TRỌNG: Trước khi gọi, hỏi tài xế chọn chế độ:\n"
+            "Gọi điện cho khách hàng của MỘT chuyến đang hoạt động. "
+            "NẾU tài xế đang có NHIỀU HƠN 1 chuyến (đã nhận, đang thực hiện): PHẢI hỏi rõ muốn "
+            "gọi khách của chuyến nào TRƯỚC — gọi tool này mà chưa có trip_index sẽ tự trả lời "
+            "câu hỏi liệt kê các chuyến, đọc lại câu đó cho tài xế nghe rồi chờ tài xế chọn, KHÔNG "
+            "tự đoán chuyến nào. Nếu chỉ có 1 chuyến thì không cần hỏi, khỏi cần trip_index. "
+            "QUAN TRỌNG: Trước khi gọi thật, hỏi tài xế chọn chế độ:\n"
             "  • mode='background' — AI tự gọi khách ở phòng riêng; tài xế vẫn hỏi trợ lý việc khác; tóm tắt sau (KHUYÊN DÙNG khi tài xế bận).\n"
             "  • mode='agent'  — AI gọi khách vào cùng phòng; tài xế nghe trực tiếp.\n"
             "  • mode='bridge' — Tài xế nói trực tiếp với khách trong cùng phòng.\n"
-            "Sau khi tài xế chọn xong, mới gọi tool này với đúng mode."
+            "Sau khi tài xế đã chọn đúng chuyến (nếu cần) VÀ đúng chế độ, mới gọi tool này với "
+            "đủ mode (và trip_index nếu có nhiều chuyến)."
         ),
         "parameters": {
             "type": "object",
@@ -101,7 +121,15 @@ raw_schema = {
                     "type": "string",
                     "enum": ["background", "agent", "bridge"],
                     "description": "'background' = AI gọi nền, 'agent' = AI gọi tài xế nghe, 'bridge' = tài xế nói trực tiếp.",
-                }
+                },
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Số thứ tự chuyến trong danh sách VỪA được tool này đọc ra (1 = đầu tiên) "
+                        "— chỉ cần khi tài xế đang có nhiều hơn 1 chuyến và đã chọn. Để trống nếu "
+                        "tài xế chỉ có đúng 1 chuyến, hoặc nếu chưa hỏi tài xế chọn chuyến nào."
+                    ),
+                },
             },
             "required": ["mode"],
         },
@@ -195,17 +223,20 @@ raw_schema = {
         "description": (
             "Bước cuối: thực hiện gọi thật tới người trong danh bạ đã được xác nhận qua find_contact "
             "(hoặc select_contact_match). Chỉ gọi sau khi: (1) tài xế đã xác nhận ĐÚNG người, "
-            "(2) tài xế đã chọn chế độ — hỏi giống call_customer: 'muốn tôi tự gọi rồi tóm tắt lại, "
-            "hay kết nối để anh/chị nói chuyện trực tiếp?'. Nếu tài xế chọn AI tự gọi và có nhắn nội "
-            "dung gì cụ thể muốn truyền đạt, điền vào message."
+            "(2) tài xế đã chọn chế độ — hỏi giống call_customer, có đúng 3 lựa chọn:\n"
+            "  • mode='background' — AI tự gọi người này ở phòng riêng; tài xế vẫn hỏi trợ lý việc khác; tóm tắt sau (KHUYÊN DÙNG khi tài xế bận).\n"
+            "  • mode='agent'  — AI gọi người này vào cùng phòng; tài xế nghe trực tiếp.\n"
+            "  • mode='bridge' — Tài xế nói trực tiếp với người này trong cùng phòng.\n"
+            "Nếu tài xế chọn mode='agent' và có nhắn nội dung gì cụ thể muốn truyền đạt, điền "
+            "vào message (mode='background' không hỗ trợ message, giống hệt call_customer)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["bridge", "agent"],
-                    "description": "'bridge' = kết nối trực tiếp cho tài xế tự nói; 'agent' = AI tự gọi và tóm tắt lại sau.",
+                    "enum": ["background", "agent", "bridge"],
+                    "description": "'background' = AI gọi nền, 'agent' = AI gọi tài xế nghe, 'bridge' = tài xế nói trực tiếp.",
                 },
                 "message": {
                     "type": ["string", "null"],
@@ -213,6 +244,135 @@ raw_schema = {
                 },
             },
             "required": ["mode"],
+        },
+    },
+
+    "send_sms_to_customer": {
+        "type": "function",
+        "name": "send_sms_to_customer",
+        "description": (
+            "Gửi tin nhắn SMS với nội dung TỰ DO do tài xế đọc cho khách hàng của chuyến đang "
+            "hoạt động. Khác confirm_trip_with_customer (chỉ gửi 1 câu xác nhận mẫu cố định) — "
+            "tool này dùng khi tài xế tự đọc ra nội dung muốn nhắn, ví dụ 'nhắn khách là tôi "
+            "đến trễ 10 phút', 'nhắn tin cho khách nói tôi đang kẹt xe'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "Nội dung tin nhắn tài xế muốn gửi cho khách, đúng như tài xế đọc ra.",
+                },
+            },
+            "required": ["message"],
+        },
+    },
+
+    "send_sms_to_custom_number": {
+        "type": "function",
+        "name": "send_sms_to_custom_number",
+        "description": (
+            "Bước 1: Gửi tin nhắn SMS tới một số điện thoại BẤT KỲ do tài xế đọc ra — không "
+            "phải số khách của chuyến hiện tại. KHÔNG gửi thẳng — tool này chỉ NHẮC LẠI số và "
+            "nội dung để tài xế xác nhận, tránh nghe nhầm qua giọng nói. Sau khi tài xế xác "
+            "nhận đúng ('đúng', 'gửi đi', 'ừ'), mới gọi confirm_send_sms_to_custom_number để "
+            "gửi thật. Nếu tài xế muốn nhắn tin cho khách của chuyến đang chạy → dùng "
+            "send_sms_to_customer, không dùng tool này."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "phone_number": {
+                    "type": "string",
+                    "description": "Số điện thoại tài xế vừa đọc ra, giữ nguyên dạng số (vd: '0912345678').",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "Nội dung tin nhắn tài xế muốn gửi, đúng như tài xế đọc ra.",
+                },
+                "contact_name": {
+                    "type": ["string", "null"],
+                    "description": "Tên người/nơi cần nhắn nếu tài xế có nói (vd: 'vợ tôi'). Để trống nếu tài xế chỉ đọc số.",
+                },
+            },
+            "required": ["phone_number", "message"],
+        },
+    },
+
+    "confirm_send_sms_to_custom_number": {
+        "type": "function",
+        "name": "confirm_send_sms_to_custom_number",
+        "description": (
+            "Bước 2: Thực hiện gửi tin nhắn tới số điện thoại tự do sau khi tài xế đã xác nhận "
+            "đúng số và nội dung qua send_sms_to_custom_number. Chỉ gọi sau khi tài xế nói "
+            "'đúng'/'gửi đi'/'ừ' xác nhận."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "find_contact_to_message": {
+        "type": "function",
+        "name": "find_contact_to_message",
+        "description": (
+            "Bước 1: Tìm một người TRONG DANH BẠ ĐIỆN THOẠI CỦA TÀI XẾ theo tên để NHẮN TIN "
+            "(không phải gọi điện) — vd 'nhắn tin cho Tuấn', 'nhắn giúp tôi anh Tuấn là tôi tới "
+            "trễ'. Tool tự tra danh bạ và đọc lại tên tìm được để tài xế xác nhận, hoặc hỏi "
+            "chọn nếu có nhiều người trùng tên (dùng select_contact_match_for_sms). Sau khi "
+            "tài xế xác nhận đúng người và cho biết nội dung muốn nhắn, gọi "
+            "confirm_send_sms_to_contact. KHÔNG tự đoán số điện thoại — luôn dựa vào kết quả "
+            "tra danh bạ. Nếu tài xế muốn GỌI ĐIỆN (không phải nhắn tin) cho người trong danh "
+            "bạ → dùng find_contact, không dùng tool này."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "contact_name": {
+                    "type": "string",
+                    "description": "Tên người tài xế muốn nhắn tin, đúng như tài xế đọc ra (vd: 'Tuấn', 'vợ tôi').",
+                },
+            },
+            "required": ["contact_name"],
+        },
+    },
+
+    "select_contact_match_for_sms": {
+        "type": "function",
+        "name": "select_contact_match_for_sms",
+        "description": (
+            "Chỉ dùng khi find_contact_to_message trả về NHIỀU người trùng tên và tài xế nói rõ "
+            "hơn là ai (vd: 'người đầu tiên', 'Tuấn kho', 'số 2'). Không dùng nếu "
+            "find_contact_to_message chỉ trả về 1 người."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "selection": {
+                    "type": "string",
+                    "description": "Nội dung tài xế nói để chọn ai trong danh sách vừa đọc.",
+                },
+            },
+            "required": ["selection"],
+        },
+    },
+
+    "confirm_send_sms_to_contact": {
+        "type": "function",
+        "name": "confirm_send_sms_to_contact",
+        "description": (
+            "Bước cuối: gửi tin nhắn thật tới người trong danh bạ đã được xác nhận qua "
+            "find_contact_to_message (hoặc select_contact_match_for_sms). Chỉ gọi sau khi: "
+            "(1) tài xế đã xác nhận ĐÚNG người, (2) tài xế đã cho biết nội dung muốn nhắn — "
+            "LUÔN cần message, không được gọi tool này nếu chưa biết nhắn gì."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "Nội dung tin nhắn tài xế muốn gửi cho người này.",
+                },
+            },
+            "required": ["message"],
         },
     },
 

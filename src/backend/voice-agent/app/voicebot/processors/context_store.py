@@ -70,6 +70,10 @@ def get(userdata: dict, key: str, default: Any = None) -> Any:
     return userdata.get("context", {}).get(key, default)
 
 
+def set_context(userdata: dict, key: str, value: Any) -> None:
+    userdata.setdefault("context", {})[key] = value
+
+
 def get_current_trip(userdata: dict) -> dict | None:
     return get(userdata, "current_trip")
 
@@ -80,6 +84,14 @@ def get_upcoming_trips(userdata: dict) -> list[dict]:
     if isinstance(upcoming, list):
         return upcoming
     return []
+
+
+def set_upcoming_trips(userdata: dict, trips: list[dict]) -> None:
+    """Overwrite the cached upcoming-trips list — used by check_upcoming_trips
+    to fold in a live re-fetch (see that tool for why: this is a one-time
+    session-start snapshot otherwise, so a trip booked mid-session never
+    shows up until something replaces it)."""
+    userdata.setdefault("context", {})["upcoming_trips"] = trips
 
 
 def resolve_trip(userdata: dict, trip_index: int | None = None) -> dict | None:
@@ -114,6 +126,22 @@ def get_schedule_trips(userdata: dict) -> list[dict]:
             seen.add(tid)
             result.append(t)
     return result
+
+
+# Trips where the driver actually has a customer worth calling — accepted
+# and currently in progress, not just a new offer still awaiting response.
+# Mirrors check_upcoming_trips.py's own IN_PROGRESS_STATUSES tuple (kept as
+# a separate copy there rather than importing this, to avoid coupling one
+# tool file to another — same values, intentionally duplicated).
+CALLABLE_TRIP_STATUSES = ("confirmed", "arrived_pickup", "picked_up")
+
+
+def get_callable_trips(userdata: dict) -> list[dict]:
+    """Trips with a customer to call, in schedule order (see get_schedule_trips)."""
+    return [
+        t for t in get_schedule_trips(userdata)
+        if t.get("status") in CALLABLE_TRIP_STATUSES and t.get("customer_phone")
+    ]
 
 
 def build_context_hint(userdata: dict, lang: str = "vi") -> str:
