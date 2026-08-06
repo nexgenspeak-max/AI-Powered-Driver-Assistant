@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ScrollView, TouchableOpacity, Switch, Modal, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
+import { ScrollView, TouchableOpacity, Switch, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
 import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -8,13 +7,13 @@ import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { ProfileCard } from '../../src/features/profile/components/ProfileCard'
+import { SectionTitle } from '../../src/features/profile/components/SectionTitle'
 import { GlassSurface } from '../../src/components/GlassSurface'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
-import { VoiceEnrollPanel } from '../../src/features/home/components/VoiceEnrollPanel'
 
 // Literal per-screen background — same treatment as customer-app's Profile
 // screen (app/(app)/profile.tsx there), locked to the exact reference hex
@@ -36,7 +35,6 @@ const ICONS = {
   voiceAssistant: require('../../assets/icons/light/voice-assistant.png') as ImageSourcePropType,
   sun: require('../../assets/icons/light/sun.png') as ImageSourcePropType,
   moon: require('../../assets/icons/light/moon.png') as ImageSourcePropType,
-  microphone: require('../../assets/icons/light/microphone.png') as ImageSourcePropType,
   chatInfo: require('../../assets/icons/light/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/light/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/light/logout.png') as ImageSourcePropType,
@@ -52,7 +50,6 @@ const DARK_ICONS = {
   voiceAssistant: require('../../assets/icons/dark/voice-assistant.png') as ImageSourcePropType,
   sun: require('../../assets/icons/dark/sun.png') as ImageSourcePropType,
   moon: require('../../assets/icons/dark/moon.png') as ImageSourcePropType,
-  microphone: require('../../assets/icons/dark/microphone.png') as ImageSourcePropType,
   chatInfo: require('../../assets/icons/dark/chat-info.png') as ImageSourcePropType,
   faq: require('../../assets/icons/dark/faq.png') as ImageSourcePropType,
   logout: require('../../assets/icons/dark/logout.png') as ImageSourcePropType,
@@ -81,7 +78,6 @@ export default function ProfileScreen() {
   const isLight = useThemeName() === 'light'
   const isDark = !isLight
   const insets = useSafeAreaInsets()
-  const [showVoiceEnroll, setShowVoiceEnroll] = useState(false)
 
   if (!driver) return null
 
@@ -162,7 +158,7 @@ export default function ProfileScreen() {
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
             <Image
               source={isDark ? DARK_ICONS.voiceAssistant : ICONS.voiceAssistant}
-              style={{ width: isDark ? 23 : 28, height: isDark ? 23 : 28, tintColor: isDark ? '#ffffff' : undefined }}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
               resizeMode="contain"
             />
             <YStack flex={1}>
@@ -174,7 +170,21 @@ export default function ProfileScreen() {
               </Text>
             </YStack>
           </XStack>
-          <Switch value={wakeWordEnabled} onValueChange={setWakeWordEnabled} />
+          <Switch
+            value={wakeWordEnabled}
+            onValueChange={setWakeWordEnabled}
+            // Default OS colors left this switch nearly invisible in light
+            // mode (a pale system gray track against the screen's own light
+            // gradient) — explicit brand colors here match the purple used
+            // everywhere else (ThemeToggle's gradient, Button's primary
+            // shadow) and a track dark enough to actually read against the
+            // light background. Dark mode already reads fine unstyled, but
+            // themed anyway so both states are visibly deliberate, not a
+            // sudden discontinuity.
+            trackColor={{ false: isLight ? '#B8BCC8' : theme.borderStrong.val, true: '#8B5CF6' }}
+            thumbColor="#ffffff"
+            ios_backgroundColor={isLight ? '#B8BCC8' : theme.borderStrong.val}
+          />
         </XStack>
         <View height={1} backgroundColor="$border" />
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
@@ -190,13 +200,6 @@ export default function ProfileScreen() {
           </XStack>
           <ThemeToggle isDark={themeMode === 'dark'} onToggle={toggleTheme} />
         </XStack>
-        <View height={1} backgroundColor="$border" />
-        <MenuRow
-          icon={isDark ? DARK_ICONS.microphone : ICONS.microphone}
-          isDark={isDark}
-          label="Đổi giọng nói của bạn"
-          onPress={() => setShowVoiceEnroll(true)}
-        />
         <View height={1} backgroundColor="$border" />
         <MenuRow
           icon={isDark ? DARK_ICONS.chatInfo : ICONS.chatInfo}
@@ -226,31 +229,7 @@ export default function ProfileScreen() {
         Phiên bản {Constants.expoConfig?.version ?? '1.0.0'}
       </Text>
       </ScrollView>
-
-      {/* Bottom-sheet presentation per the reference mockup: the top area is
-          deliberately empty (no close button/header) — dismissal is a tap
-          anywhere on that empty backdrop, a standard bottom-sheet
-          convention, rather than the screen having no way to close at all. */}
-      <Modal visible={showVoiceEnroll} animationType="slide" transparent onRequestClose={() => setShowVoiceEnroll(false)}>
-        <View flex={1}>
-          {isLight ? (
-            <LinearGradient colors={LIGHT_SCREEN_GRADIENT} style={StyleSheet.absoluteFillObject} />
-          ) : (
-            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DARK_SCREEN_BACKGROUND }]} />
-          )}
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowVoiceEnroll(false)} />
-          <VoiceEnrollPanel sheet phone={driver.phone} accountId={driver.id} onDone={() => setShowVoiceEnroll(false)} />
-        </View>
-      </Modal>
     </View>
-  )
-}
-
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <Text color="$textSecondary" fontSize={12} fontWeight="700" paddingHorizontal="$4" paddingTop="$4" paddingBottom="$1">
-      {children}
-    </Text>
   )
 }
 
@@ -274,13 +253,13 @@ function MenuRow({
 }) {
   const theme = useTheme()
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} >
       <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
-        <XStack alignItems="center" gap="$3">
+        <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
           {icon ? (
             <Image
               source={icon}
-              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
+              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined}}
               resizeMode="contain"
             />
           ) : (
@@ -288,7 +267,7 @@ function MenuRow({
               <Ionicons name={ionIcon} size={20} color={theme.textSecondary.val} />
             </View>
           )}
-          <Text color={labelColor} fontWeight="500">
+          <Text color={labelColor} fontWeight="500" flexShrink={1} numberOfLines={1}>
             {label}
           </Text>
         </XStack>

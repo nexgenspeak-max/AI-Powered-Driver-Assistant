@@ -1,8 +1,13 @@
 import { create } from 'zustand'
 import { Platform } from 'react-native'
 import ForegroundService from '@supersami/rn-foreground-service'
-import { Room, RoomEvent, Track, ConnectionState, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
+import { Room, RoomEvent, Track, ConnectionState, ConnectionError, ConnectionErrorReason, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
 import { voiceService } from '../../../services/api/voice'
+import { useWakeWordSettingsStore } from '../../assistant-wakeword/wakeWordSettingsStore'
+import { searchContacts } from '../services/contactsSearch'
+
+const CALL_STATE_TOPIC = 'call_state'
+const AGENT_STATE_TOPIC = 'agent_state'
 
 // Must run once at module load (before the service is ever started), per the
 // package's own requirement — registers the headless task the service runs on.
@@ -33,6 +38,17 @@ async function startCallForegroundService() {
 
 function stopCallForegroundService() {
   if (Platform.OS !== 'android') return
+  // @supersami/rn-foreground-service tracks one Android service for the
+  // whole app, not one per feature — this same service is what wake-word
+  // listening runs under too (see wakeWordService.ts's
+  // ensureForegroundServiceForListening). Stopping it here whenever a call
+  // ends would also kill hands-free listening the instant "Trợ lý rảnh tay"
+  // is on, even though nothing asked for it to turn off — the toggle itself
+  // is meant to be the only thing that can do that. So skip the actual
+  // stop() while hands-free is enabled; wake-word's own resume logic reuses
+  // (and re-labels) the still-running service instead of it ever having
+  // stopped.
+  if (useWakeWordSettingsStore.getState().enabled) return
   ForegroundService.stop()
 }
 
@@ -43,41 +59,192 @@ export type VoiceMessageListener = (text: string, from: VoiceMessageSource) => v
 const CHAT_TOPIC = 'lk.chat'
 const TRANSCRIPTION_TOPIC = 'lk.transcription'
 
+// Each connecting-cue audio file's own length (AssistantChatPanel.tsx plays
+// one of these, picked randomly per connect) plus a short trailing pause —
+// held here so connectWithToken can delay starting the actual LiveKit
+// connect until the cue has genuinely finished, instead of letting the AI's
+// first words race it. Index must line up with `connectingCueAssets` in
+// AssistantChatPanel.tsx. Update/add entries if a cue file is ever replaced
+// or a new one added — measured lengths: 2.53s, 5.93s, 5.20s.
+const CONNECTING_CUE_DURATIONS_MS = [2800, 6200, 5500]
+
 // Module-level (not React state) so the LiveKit session survives navigation
 // between tabs — only the store's `status` needs to be reactive.
 let room: Room | null = null
+// Set synchronously at the very top of connectWithToken(), before any
+// `await` — the `room`-based staleness check further down only protects
+// against a call landing *after* a previous one already assigned `room`;
+// two calls close enough together (e.g. wake-word's own retry firing while
+// the first attempt is still awaiting a token/room.disconnect()) can both
+// race past that check before either has set `room` yet, each creating its
+// own competing Room/RTCPeerConnection. Confirmed in production logs as
+// overlapping peer connections and a WebRTC "Local fingerprint does not
+// match identity" failure.
+let connecting = false
 const audioEls = new Set<HTMLAudioElement>()
 const messageListeners = new Set<VoiceMessageListener>()
+
+// Polls the room's own connection state while `status` claims 'connected',
+// as a fallback for cases where `RoomEvent.Disconnected` never fires at all
+// — e.g. a data channel (the "publisher data channel ... closed
+// unexpectedly" error some drivers see) dying without the underlying room
+// connection itself being torn down cleanly. Without this, `status` gets
+// stuck at 'connected' forever in that case: wake-word's own resume logic
+// only watches for `status === 'idle'`, so a disconnect that never properly
+// reports itself would permanently block hands-free listening from ever
+// restarting, even though the driver's toggle is still on.
+let watchdogTimer: ReturnType<typeof setInterval> | null = null
+const WATCHDOG_INTERVAL_MS = 4000
+
+function clearWatchdog() {
+  if (watchdogTimer) {
+    clearInterval(watchdogTimer)
+    watchdogTimer = null
+  }
+}
 
 interface VoiceSessionState {
   status: VoiceSessionStatus
   /** Smoothed 0..1 audio level of the AI agent's voice track, from LiveKit's ActiveSpeakersChanged — 0 when silent/not connected. */
   agentAudioLevel: number
+  /**
+   * True while the backend's own agent_state_changed reports "speaking" or
+   * "thinking" — unlike agentAudioLevel, this stays true through a natural
+   * mid-sentence pause (no audio, but the AI hasn't finished replying yet),
+   * so the assistant orb can keep moving for the AI's whole turn instead of
+   * stalling every time its voice briefly drops out. See backend's
+   * agent_state.py.
+   */
+  agentSpeaking: boolean
+  /**
+   * True while the voice-agent backend reports a real SIP-dialed phone call
+   * in progress (bridge, agent-mediated, or background call — see backend's
+   * call_state.py). The Home mic button must not be able to hang up while
+   * this is true; only the underlying phone call ending (which the backend
+   * reports by publishing `active: false`) may end the session.
+   */
+  isCallActive: boolean
+  /** Which entry of `connectingCueAssets` (AssistantChatPanel.tsx) to play for the current/last connect — picked randomly once per connect() call so the delay below and the cue actually played always agree on the same file. */
+  connectingCueIndex: number
   connect: (driverPhone: string) => Promise<void>
-  /** One-time voiceprint enrollment session — same LiveKit plumbing as connect(), routed to EnrollAgent server-side via a distinct room-name prefix. */
-  enroll: (phone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
 
 export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
+  // Shared by the real RoomEvent.Disconnected listener and the watchdog
+  // below — both need to do the exact same teardown, the only difference is
+  // *how* they found out the room is gone (a clean event vs. polling
+  // discovering it's already dead). `guardRoom` is the specific `Room`
+  // instance that detected the problem — skipped if a *newer* room has
+  // since replaced the module-level `room` (a fresh connect() already
+  // superseded this one, so tearing down would clobber the new session).
+  const handleDisconnected = async (guardRoom: Room) => {
+    if (room !== guardRoom) {
+      console.log('[voice-session] handleDisconnected: skipped, room already replaced')
+      return
+    }
+    console.log('[voice-session] handleDisconnected: tearing down')
+    room = null
+    clearWatchdog()
+    audioEls.forEach(el => el.remove())
+    audioEls.clear()
+    // Awaited, not fire-and-forget — `status` used to flip to 'idle' before
+    // the mic was actually released, so wake-word's own resume logic (which
+    // watches for `status === 'idle'`) could only guess how long to wait
+    // before it was safe to grab the mic again. Now that `idle` only fires
+    // once LiveKit's audio session has genuinely torn down, that handoff is
+    // both faster and doesn't depend on the guess being long enough.
+    await stopAudioSession()
+    console.log('[voice-session] handleDisconnected: stopAudioSession done, setting idle')
+    stopCallForegroundService()
+    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
+  }
+
   const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
+    // Synchronous re-entrancy guard — see `connecting`'s own comment for why
+    // the `room`-based staleness check below isn't enough on its own.
+    if (connecting) {
+      console.log('[voice-session] connectWithToken already in flight, ignoring re-entrant call')
+      return
+    }
+    connecting = true
+    try {
+      await connectWithTokenLocked(getToken)
+    } finally {
+      connecting = false
+    }
+  }
+
+  const connectWithTokenLocked = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
     // suspends WebRTC threads while the app isn't in the foreground) — treat
     // anything that isn't actively connected/connecting as dead and reconnect.
     if (room) {
       if (room.state === ConnectionState.Connected || room.state === ConnectionState.Connecting) return
-      room.disconnect()
+      // Awaited — `disconnect()` is async (tears down the underlying
+      // RTCPeerConnection/DTLS identity) and was previously fire-and-forget
+      // here. Creating the new Room() below before the old peer connection
+      // had actually finished disposing raced its teardown against the new
+      // one's handshake — confirmed in production logs as a WebRTC "Local
+      // fingerprint does not match identity" failure, and separately as
+      // several overlapping peer connections (rn-webrtc pc ids incrementing
+      // back-to-back within the same second) once rapid wake-word-triggered
+      // reconnects piled up.
+      await room.disconnect()
       room = null
     }
 
-    set({ status: 'connecting' })
+    // Picked once per connect, not per render — AssistantChatPanel.tsx reads
+    // this same index for which file to actually play, so the delay below
+    // and the cue on screen always agree.
+    const cueIndex = Math.floor(Math.random() * CONNECTING_CUE_DURATIONS_MS.length)
+
+    // `status` flips to 'connecting' first, immediately — the connecting-cue
+    // audio (AssistantChatPanel.tsx) reacts to that and starts playing right
+    // away.
+    set({ status: 'connecting', isCallActive: false, agentSpeaking: false, connectingCueIndex: cueIndex })
     try {
+      // Sequential, not overlapping: the actual LiveKit connect (and
+      // whatever the AI says the instant it joins the room) must not start
+      // until the cue has genuinely finished — the AI's voice arrives over
+      // its own audio track regardless of what this store's `status` says,
+      // so merely delaying when we *expose* 'connected' doesn't stop it
+      // from overlapping the cue. Actually holding off the connect itself
+      // is what does. `CONNECTING_CUE_DURATIONS_MS` must stay in sync with
+      // the cue files' real lengths (AssistantChatPanel.tsx).
+      await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATIONS_MS[cueIndex]))
       await startAudioSession()
       const { token, livekit_url } = await getToken()
       const r = new Room()
       room = r
+
+      // Backend publishes this whenever a real SIP-dialed call starts/ends
+      // (bridge/agent-mediated/background) — see call_state.py. `payload` is
+      // UTF-8 JSON, not a text-stream, so it's decoded manually here rather
+      // than via registerTextStreamHandler.
+      r.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
+        if (topic === CALL_STATE_TOPIC) {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(payload))
+            if (msg?.type === 'call_state') set({ isCallActive: !!msg.active })
+          } catch (err) {
+            console.error('[voice-session] failed to parse call_state payload', err)
+          }
+          return
+        }
+        if (topic === AGENT_STATE_TOPIC) {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(payload))
+            if (msg?.type === 'agent_state') {
+              set({ agentSpeaking: msg.state === 'speaking' || msg.state === 'thinking' })
+            }
+          } catch (err) {
+            console.error('[voice-session] failed to parse agent_state payload', err)
+          }
+        }
+      })
 
       r.on(RoomEvent.TrackSubscribed, track => {
         if (track.kind !== Track.Kind.Audio) return
@@ -100,13 +267,9 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         }
       })
 
-      r.on(RoomEvent.Disconnected, () => {
-        room = null
-        audioEls.forEach(el => el.remove())
-        audioEls.clear()
-        stopAudioSession()
-        stopCallForegroundService()
-        set({ status: 'idle', agentAudioLevel: 0 })
+      r.on(RoomEvent.Disconnected, reason => {
+        console.log('[voice-session] RoomEvent.Disconnected fired, reason:', reason)
+        handleDisconnected(r)
       })
 
       // Drives the assistant orb's shape from the AI's actual voice loudness
@@ -128,27 +291,85 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       r.registerTextStreamHandler(TRANSCRIPTION_TOPIC, handleStream)
       r.registerTextStreamHandler(CHAT_TOPIC, handleStream)
 
+      // Lets the backend voice agent ask this device to search the driver's
+      // own phone contacts by name — contacts only exist on-device, the
+      // agent has no other way to reach them. See contactsSearch.ts and the
+      // backend's find_contact tool (app/voicebot/vn/tools/find_contact.py).
+      // Errors are caught and returned as a JSON `{error}` string rather than
+      // thrown — a thrown error only surfaces to the Python caller as an
+      // opaque generic "Application Error", losing the actual reason.
+      r.registerRpcMethod('search_contacts', async data => {
+        try {
+          const { query } = JSON.parse(data.payload)
+          const matches = await searchContacts(query)
+          return JSON.stringify({ matches })
+        } catch (err) {
+          return JSON.stringify({ error: err instanceof Error ? err.message : String(err) })
+        }
+      })
+
       await r.connect(livekit_url, token)
       await r.localParticipant.setMicrophoneEnabled(true)
       await startCallForegroundService()
       set({ status: 'connected' })
+
+      clearWatchdog()
+      watchdogTimer = setInterval(() => {
+        if (room !== r) {
+          clearWatchdog()
+          return
+        }
+        // `r.state` is the room's own live WebRTC connection state — checked
+        // directly rather than trusting `status` to already reflect it,
+        // since that's exactly what a partial failure (a data channel dying
+        // without RoomEvent.Disconnected ever firing) leaves stale.
+        if (r.state === ConnectionState.Disconnected) {
+          handleDisconnected(r)
+        }
+      }, WATCHDOG_INTERVAL_MS)
     } catch (err) {
-      console.error('[voice-session] connect failed', err)
-      room?.disconnect()
+      // The driver cancelling mid-connect (disconnect() called while r.connect()
+      // was still in flight — see the store's own `disconnect`) surfaces here
+      // as this specific, expected rejection, not as a real connection
+      // failure. Treating it as one used to flip `status` to 'error', which
+      // (a) reads as a broken connection to the driver even though they just
+      // cancelled on purpose, and (b) left this catch's cleanup racing the
+      // *next* connect attempt: `stopAudioSession()`/`room.disconnect()`
+      // below were fire-and-forget, so a fast reconnect (wake-word retrying,
+      // or the driver tapping the orb again) could call `startAudioSession()`
+      // /create a new Room before the cancelled attempt's teardown had
+      // actually finished — this is what produced the observed "connects
+      // this session, but the previous one turns on instead" symptom and the
+      // cascading WebRTC errors (negotiation timeout, "Cannot read property
+      // 'client' of undefined") on the next attempt.
+      const cancelled = err instanceof ConnectionError && err.reason === ConnectionErrorReason.Cancelled
+      if (cancelled) {
+        console.log('[voice-session] connect cancelled by disconnect()')
+      } else {
+        console.error('[voice-session] connect failed', err)
+      }
+      clearWatchdog()
+      await room?.disconnect()
       room = null
-      stopAudioSession()
+      await stopAudioSession()
       stopCallForegroundService()
-      set({ status: 'error', agentAudioLevel: 0 })
+      set({ status: cancelled ? 'idle' : 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
     }
   }
 
   return {
     status: 'idle',
     agentAudioLevel: 0,
+    isCallActive: false,
+    agentSpeaking: false,
+    connectingCueIndex: 0,
 
     connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
-    enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'driver')),
 
+    // The AI orb on Home must gate its own hangup on `isCallActive`
+    // before calling this — see AssistantChatPanel.tsx's handleOrbPress.
+    // `disconnect()` itself stays unconditional (also used for cleanup paths
+    // like unmount/logout that must always be able to tear the room down).
     disconnect: () => {
       room?.disconnect()
     },

@@ -1,32 +1,37 @@
-import { ScrollView, StyleSheet, Alert } from "react-native";
-import { View, YStack, XStack, Text, useTheme, useThemeName } from "tamagui";
+import { ScrollView, StyleSheet } from "react-native";
+import { View, YStack, Text, useThemeName } from "tamagui";
 import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GlassSurface } from "../../../components/GlassSurface";
 import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { getBackButtonClearance } from "../../../components/BackButton";
 import { tripsService } from "../../../services/api/trips";
+import { confirmDestructive } from "../../../utils/confirmDialog";
+import { DriverPicker } from "../../booking/components/DriverPicker";
 import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
 } from "../../../constants/status";
-import type { Trip, TripStatus } from "../../../types";
+import type { Trip, TripStatus, Driver } from "../../../types";
 
 // Mirrors the backend's CANCEL_RULES.cancelled window (trips.ts) — a
-// customer can cancel any time before a driver has moved past confirming
-// the trip, including rejected/no_answer: those just mean *this* driver
-// didn't take it, not that the trip itself is resolved — it's still
-// awaiting redispatch to another driver (see POST /:tripId/dispatch), so
-// the customer shouldn't be stuck waiting out a retry they no longer want.
-// The server enforces this independently regardless of what this gates in
-// the UI; this just avoids showing a button that would 409.
+// customer can cancel any time from booking through the driver arriving at
+// pickup, right up until they're actually in the vehicle (`picked_up`),
+// including rejected/no_answer: those just mean *this* driver didn't take
+// it, not that the trip itself is resolved — it's still awaiting redispatch
+// to another driver (see POST /:tripId/dispatch), so the customer shouldn't
+// be stuck waiting out a retry they no longer want. The server enforces
+// this independently regardless of what this gates in the UI; this just
+// avoids showing a button that would 409.
 const CUSTOMER_CANCELLABLE_STATUSES: TripStatus[] = [
   "pending",
   "notified",
   "calling",
   "confirmed",
+  "arrived_pickup",
   "rejected",
   "no_answer",
 ];
@@ -43,15 +48,24 @@ export function TripStatusCard({ trip }: { trip: Trip }) {
   });
   const canCancel = CUSTOMER_CANCELLABLE_STATUSES.includes(trip.status);
 
+  const [reassignTo, setReassignTo] = useState<Driver | null>(null);
+  const { mutate: reassignDriver, isPending: reassigning } = useMutation({
+    mutationFn: () => tripsService.reassignDriver(trip.trip_id, reassignTo!.phone),
+    onSuccess: () => {
+      setReassignTo(null);
+      qc.invalidateQueries({ queryKey: ["trip", trip.trip_id] });
+    },
+  });
+  const isRejected = trip.status === "rejected";
+
   const confirmCancel = () => {
-    Alert.alert(
-      "Cancel this trip?",
-      "This can't be undone — you'll need to book a new trip instead.",
-      [
-        { text: "Keep trip", style: "cancel" },
-        { text: "Cancel trip", style: "destructive", onPress: () => cancelTrip() },
-      ],
-    );
+    confirmDestructive({
+      title: "Cancel this trip?",
+      message: "This can't be undone — you'll need to book a new trip instead.",
+      cancelLabel: "Keep trip",
+      confirmLabel: "Cancel trip",
+      onConfirm: () => cancelTrip(),
+    });
   };
 
   return (
@@ -193,6 +207,33 @@ export function TripStatusCard({ trip }: { trip: Trip }) {
           </YStack>
         </YStack>
       </GlassSurface>
+
+      {isRejected && (
+        <GlassSurface
+          style={{
+            padding: 20,
+            borderRadius: 24,
+            backgroundColor: isLight ? "rgba(255,255,255,0.78)" : "rgba(21,16,32,0.78)",
+          }}
+          cornerRadius={24}
+          topShadowAlpha={0}
+          bottomHighlightAlpha={0.4}
+        >
+          <YStack gap="$4">
+            <Text fontSize={15} fontWeight="600" color={isLight ? "#111827" : "#FFFFFF"}>
+              Tài xế đã từ chối chuyến này. Chọn tài xế khác để đặt lại.
+            </Text>
+            <DriverPicker selected={reassignTo} onSelect={setReassignTo} />
+            <Button
+              label="Đặt lại chuyến"
+              variant="primary"
+              onPress={() => reassignDriver()}
+              loading={reassigning}
+              disabled={!reassignTo}
+            />
+          </YStack>
+        </GlassSurface>
+      )}
 
       {canCancel && (
         <Button

@@ -19,12 +19,17 @@ export function getBackButtonClearance(insetsTop: number) {
   return insetsTop + BACK_BUTTON_TOP_GAP + BACK_BUTTON_SIZE
 }
 
-export function BackButton() {
+interface Props {
+  /** Where the button navigates — defaults to '/profile' (this button's original, only destination). */
+  to?: Parameters<typeof router.replace>[0]
+}
+
+export function BackButton({ to = '/profile' }: Props = {}) {
   const theme = useTheme()
   const themeMode = useThemeStore(s => s.mode)
   const insets = useSafeAreaInsets()
   const { gesture, stretchStyle, touchX, touchY, glowOpacity } = useGlassPress(BACK_BUTTON_SIZE, BACK_BUTTON_SIZE, {
-    onPress: () => router.replace('/profile'),
+    onPress: () => router.replace(to),
     hitSlop: 10,
   })
 

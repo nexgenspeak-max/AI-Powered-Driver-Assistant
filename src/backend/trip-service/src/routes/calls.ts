@@ -35,6 +35,7 @@ router.post('/start', async (req: Request, res: Response) => {
       lang: (req.body.lang as string) || 'vn',
       customerName: (req.body.customerName as string) || '',
       pickupAddress: (req.body.pickupAddress as string) || '',
+      customMessage: (req.body.customMessage as string) || '',
     });
     return res.json(result);
   } catch (err) {

@@ -15,6 +15,7 @@ from livekit.agents import Agent, RunContext
 
 from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
+from app.voicebot.prompts.bridge_call import bridge_greeting
 
 logger = logging.getLogger("voice-agent.processors.custom_call")
 
@@ -61,6 +62,36 @@ def _dial_failed(lang: str) -> str:
     )
 
 
+def _pre_dial_announcement(name: str, lang: str) -> str:
+    # Always bridge mode here (see module docstring) — say the FULL
+    # bridge_greeting (connecting + "talk directly, I'll stay silent, say the
+    # wake phrase or wait for hangup when done") before dialing, not after
+    # pickup, so the AI has nothing left to say once the call actually
+    # connects. See BridgeCallAgent.on_enter(), which no longer speaks a
+    # greeting.
+    return bridge_greeting(lang, name)
+
+
+async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:
+    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
+    is required here — a bare `session.say()` races with this same tool's own
+    queued reply (the handoff message returned below) and silently fails the
+    whole tool call (confirmed: no exception ever reached the try/except around
+    the dial, the tool just returned near-instantly with no call placed).
+    Best-effort: any failure here must never block the actual call, so it's
+    swallowed and logged rather than left to propagate.
+    """
+    logger.info("DIAL-TRACE custom_call: entering _announce_pre_dial for %r", name)
+    try:
+        async with context.foreground():
+            logger.info("DIAL-TRACE custom_call: inside foreground, about to say")
+            await context.session.say(_pre_dial_announcement(name, lang), allow_interruptions=False)
+            logger.info("DIAL-TRACE custom_call: say() returned")
+    except Exception:
+        logger.warning("DIAL-TRACE custom_call: pre-dial announcement failed — dialing anyway", exc_info=True)
+    logger.info("DIAL-TRACE custom_call: leaving _announce_pre_dial")
+
+
 async def start_bridge_call_to_number(
     context: RunContext,
     phone_number: str,
@@ -69,11 +100,21 @@ async def start_bridge_call_to_number(
     lang: str = "vn",
 ) -> tuple[Agent, str] | str:
     """Dial an arbitrary number via SIP and hand off to BridgeCallAgent (driver talks directly)."""
+    logger.info("DIAL-TRACE custom_call: start_bridge_call_to_number entered | phone=%s contact_name=%r", phone_number, contact_name)
     driver_phone = context.userdata.get("driver_phone", "")
     room_name = context.userdata.get("room_name", "")
     if not room_name:
+        logger.warning("DIAL-TRACE custom_call: room_name missing, bailing")
         return _room_missing(lang)
 
+    display_name = contact_name or ("số bạn yêu cầu" if lang == "vn" else "the number you requested")
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "connecting X" before the SIP INVITE (and its network/
+    # telecom latency) starts, instead of the phone connecting in silence.
+    await _announce_pre_dial(context, display_name, lang)
+
+    logger.info("DIAL-TRACE custom_call: calling backend_api.start_call now")
     try:
         result = await backend_api.start_call(
             driver_id=driver_phone,
@@ -85,16 +126,22 @@ async def start_bridge_call_to_number(
             lang=lang,
         )
     except Exception:
-        logger.error("custom number bridge call — start_call failed", exc_info=True)
+        logger.error("DIAL-TRACE custom_call: start_call failed", exc_info=True)
         return _dial_failed(lang)
+    logger.info("DIAL-TRACE custom_call: start_call returned result=%r", result)
 
     call_id = str(result.get("call_id") or "")
+    conv_service = context.userdata.get("_conv_service")
     context.userdata["customer_call"] = {
         "call_id": call_id,
         "trip_id": "",
+        "customer_phone": phone_number,
         "sip_identity": result.get("sip_identity", ""),
         "room_name": room_name,
         "mode": "bridge",
+        # Checkpoint into conv_service.turns — see
+        # customer_call.py::_save_call_context for why this is needed.
+        "turns_from": len(conv_service.turns) if conv_service else 0,
     }
     context.userdata["bridge_call_active"] = True
     context.userdata["customer_call_active"] = False
@@ -107,7 +154,6 @@ async def start_bridge_call_to_number(
     dialed = result.get("dialed_number", phone_number)
     note = result.get("override_note") or ""
     suffix = f" {note}" if note else ""
-    display_name = contact_name or ("số bạn yêu cầu" if lang == "vn" else "the number you requested")
 
     agent = BridgeCallAgent(lang=lang, customer_name=display_name)
 

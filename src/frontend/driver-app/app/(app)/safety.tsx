@@ -44,7 +44,7 @@ export default function SafetyScreen() {
                   value={item.number}
                   onPress={() => Linking.openURL(`tel:${item.number}`)}
                 />
-                {i < EMERGENCY_NUMBERS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={0} />}
+                {i < EMERGENCY_NUMBERS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={0} alignSelf="stretch" />}
               </View>
             ))}
           </YStack>
@@ -73,14 +73,14 @@ export default function SafetyScreen() {
 function TouchableRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress}>
-      <XStack alignItems="center" justifyContent="space-between" paddingVertical="$3">
-        <XStack alignItems="center" gap="$3">
+      <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3">
+        <XStack alignItems="center" gap="$3" flex={1}>
           <Ionicons name="call" size={18} color="#ef4444" />
-          <Text color="$textPrimary" fontWeight="500">
+          <Text color="$textPrimary" fontWeight="500" flexShrink={1} numberOfLines={1}>
             {label}
           </Text>
         </XStack>
-        <Text color="$textSecondary" fontWeight="600">
+        <Text color="$textSecondary" fontWeight="600" flexShrink={1} numberOfLines={1}>
           {value}
         </Text>
       </XStack>

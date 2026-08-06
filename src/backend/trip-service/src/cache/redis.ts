@@ -32,6 +32,15 @@ const memoryClient: RedisClient = {
   },
 };
 
+function makeRedisAdapter(redis: import('ioredis').Redis): RedisClient {
+  return {
+    get: (key) => redis.get(key),
+    set: (key, value, mode, ttl) =>
+      mode === 'EX' && ttl ? redis.set(key, value, 'EX', ttl) : redis.set(key, value),
+    del: (...keys) => redis.del(...keys),
+  };
+}
+
 let client: RedisClient | null = null;
 let initAttempted = false;
 
@@ -54,7 +63,7 @@ async function getClient(): Promise<RedisClient> {
       connectTimeout: 2000,
     });
     await redis.connect();
-    client = redis as unknown as RedisClient;
+    client = makeRedisAdapter(redis);
     console.info('[cache] connected to Redis');
     return client;
   } catch (err) {
@@ -96,4 +105,12 @@ export function customerContextKey(phone: string): string {
 
 export function driverLastCallKey(phone: string): string {
   return `driver:last_call:${phone.replace(/^\+/, '')}`;
+}
+
+export function driverLocationKey(tripId: string): string {
+  return `trip:driver_location:${tripId}`;
+}
+
+export function tripProximityNotifiedKey(tripId: string): string {
+  return `trip:proximity_notified:${tripId}`;
 }

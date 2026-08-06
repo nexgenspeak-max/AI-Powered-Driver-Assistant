@@ -29,8 +29,6 @@ export interface User {
   vehicle_plate?: string;
   vehicle_name?: string;
   fcm_token?: string;
-  /** 256-dim unit-length speaker embedding for the wake-word voiceprint gate — never returned by sanitize(). */
-  voice_embedding?: number[];
   permissions: string[];
   status: Status;
   created_at: string;

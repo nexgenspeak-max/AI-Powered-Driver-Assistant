@@ -49,10 +49,10 @@ uniform float specularScale;
 // cheap way to get a "rounded top, square bottom" sheet without a full
 // 4-corner SDF. The two halves' formulas only disagree deep in the box's
 // interior (SDF very negative there regardless), never near either edge, so
-// there's no visible seam at the y=0 split — see VoiceEnrollPanel's
-// sheet=true usage for why (topRadius != bottomRadius there; every other
-// caller passes them equal, which reduces to the original uniform-radius
-// shader exactly).
+// there's no visible seam at the y=0 split — see the `sheet=true` usage
+// below for why (topRadius != bottomRadius there; every other caller
+// passes them equal, which reduces to the original uniform-radius shader
+// exactly).
 float sdRoundRect(float2 p, float2 halfSize, float topRadius, float bottomRadius) {
   float radius = p.y < 0.0 ? topRadius : bottomRadius;
   float2 q = abs(p) - halfSize + radius;
@@ -160,9 +160,9 @@ const THEME_PARAMS = {
 export interface GlassSurfaceProps {
   cornerRadius?: number;
   /** Overrides the bottom two corners' radius independently — e.g. 0 for a
-   *  "rounded top, flat bottom" sheet (VoiceEnrollPanel's `sheet` mode).
-   *  Defaults to `cornerRadius`, i.e. every existing caller (uniform
-   *  rounding on all 4 corners) is unaffected. */
+   *  "rounded top, flat bottom" sheet. Defaults to `cornerRadius`, i.e.
+   *  every existing caller (uniform rounding on all 4 corners) is
+   *  unaffected. */
   bottomCornerRadius?: number;
   onPress?: () => void;
   style?: { flex?: number; [key: string]: unknown };

@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     agent_name: str = "driver-assistant"
 
     # ── Provider selection ────────────────────────────────────────────────────
-    stt_provider: str = "openai"        # openai | deepgram | google
+    stt_provider: str = "openai"        # openai | deepgram | google | inference
     stt_model: str = "whisper-1"
     stt_language: str = "vi-VN"         # BCP-47, e.g. vi-VN | en-US (comma-separated for Google)
 
-    llm_provider: str = "openai"        # openai | gemini
+    llm_provider: str = "openai"        # openai | gemini | kimi
     llm_model: str = "gpt-4o-mini"
 
     tts_provider: str = "elevenlabs"    # elevenlabs | google
@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     openai_tts_model: str = "gpt-4o-mini-tts"
     openai_tts_voice: str = "nova"
 
+    # ── Kimi (via LiveKit Inference — uses LIVEKIT_API_KEY/SECRET, no separate key) ──
+    kimi_provider: str = ""   # optional: force a specific inference provider (e.g. "baseten")
+
+    # STT_PROVIDER=inference uses the same LiveKit Inference route (no separate
+    # key) — set STT_MODEL to a "provider/model" string, e.g. "deepgram/nova-3"
+    # or "cartesia/ink-whisper". Drop-in swap when OPENAI_API_KEY runs out of
+    # credit, same idea as Kimi above.
+
     # ── Deepgram ──────────────────────────────────────────────────────────────
     deepgram_api_key: str = ""
 
@@ -45,6 +53,13 @@ class Settings(BaseSettings):
     google_stt_model: str = "telephony"
     google_stt_location: str = ""     # auto: asia-southeast1 for chirp_3, global for latest_long
     google_tts_voice: str = "vi-VN-Neural2-A"
+    # Northern-Vietnamese-standard delivery: slightly slower for clear
+    # enunciation ("rõ chữ") and a touch lower-pitched for the gentle
+    # downward inflection ("hơi xuống") typical of Northern Vietnamese
+    # speech — Google's pitch range is roughly -20..+20 semitones, so -2 is
+    # a subtle shift, not a different-sounding voice.
+    google_tts_speaking_rate: float = 0.95
+    google_tts_pitch: float = -2.0
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────
     elevenlabs_api_key: str = ""
@@ -54,12 +69,7 @@ class Settings(BaseSettings):
     # ── Downstream services ───────────────────────────────────────────────────
     call_logger_url: str = ""    # http://localhost:8001
     trip_service_url: str = ""   # http://localhost:8002
-    auth_service_url: str = ""   # http://localhost:8003 — voiceprint lookup/enroll only
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
-
-    # ── Speaker verification (wake-word voiceprint gate) ─────────────────────
-    speaker_verify_enabled: bool = True
-    speaker_verify_threshold: float = 0.6
 
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True

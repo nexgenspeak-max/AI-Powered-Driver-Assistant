@@ -10,6 +10,7 @@ from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.prompts.bridge_call import bridge_greeting
 
 if TYPE_CHECKING:
     from app.services.silence_tracker import SilenceTracker
@@ -41,6 +42,36 @@ def _dial_failed(name: str, lang: str) -> str:
     )
 
 
+def _pre_dial_announcement(name: str, lang: str, *, mode: str) -> str:
+    """`mode` picks the phrasing. Bridge mode says the FULL bridge_greeting
+    (connecting + "talk directly, I'll stay silent, say the wake phrase or
+    wait for hangup when done") here, before dialing — not after pickup —
+    since that's everything the driver needs to know, and it means the AI
+    has nothing left to say once the call actually connects: no risk of it
+    barging in on a conversation that started the moment the callee picked
+    up. See BridgeCallAgent.on_enter(), which no longer speaks a greeting."""
+    if mode == "bridge":
+        return bridge_greeting(lang, name)
+    return f"Đang gọi {name}, xin đợi trong giây lát." if lang == "vn" else f"Calling {name}, please hold on."
+
+
+async def _announce_pre_dial(context: RunContext, name: str, lang: str, *, mode: str) -> None:
+    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
+    is required here — a bare `session.say()` races with this same tool's own
+    queued reply (the handoff message for agent/bridge mode, or this tool's own
+    return string for background mode) and silently fails the whole tool call
+    (confirmed: no exception ever reached the try/except around the dial, the
+    tool just returned near-instantly with no call placed). Best-effort: any
+    failure here must never block the actual call, so it's swallowed and
+    logged rather than left to propagate.
+    """
+    try:
+        async with context.foreground():
+            await context.session.say(_pre_dial_announcement(name, lang, mode=mode), allow_interruptions=False)
+    except Exception:
+        logger.warning("pre-dial announcement failed — dialing anyway", exc_info=True)
+
+
 def _save_call_context(
     context: RunContext,
     current: dict,
@@ -50,6 +81,7 @@ def _save_call_context(
 ) -> None:
     call_id = str(result.get("call_id") or result.get("call_sid") or "")
     room_name = context.userdata.get("room_name", "")
+    conv_service = context.userdata.get("_conv_service")
     context.userdata["customer_call"] = {
         "call_id": call_id,
         "trip_id": current.get("trip_id", ""),
@@ -57,7 +89,36 @@ def _save_call_context(
         "sip_identity": result.get("sip_identity", ""),
         "room_name": room_name,
         "mode": mode,
+        # Checkpoint into conv_service.turns — agent/bridge mode dials the
+        # SIP leg straight into the driver's own room, so without this
+        # marker there'd be no way to tell which turns belong to THIS
+        # sub-call when it ends (see ConversationService.save_subcall).
+        # Not used for background mode (that gets its own isolated room and
+        # persists independently), but harmless to set either way.
+        "turns_from": len(conv_service.turns) if conv_service else 0,
     }
+    if mode == "agent":
+        # Agent mode: the AI is meant to actually converse WITH the customer,
+        # but RoomIO links its STT input to exactly one participant, resolved
+        # once at session start — the driver, since they joined the room
+        # first. Dialing the customer's SIP leg into the same room does NOT
+        # make RoomIO switch to listening to them (see
+        # RoomIO._on_participant_connected: it no-ops once already linked),
+        # so without this the AI's STT stays locked on the driver's mic for
+        # the whole customer call and never hears a word the customer says.
+        # Explicitly retarget it here, and restore it back to the driver on
+        # handback (see handback.py::restore_room_participant) — bridge mode
+        # deliberately does NOT do this, since there the AI should keep
+        # listening to the DRIVER for a wake phrase while driver and customer
+        # talk to each other directly over room audio.
+        room_io = context.session.room_io
+        linked = room_io.linked_participant
+        if linked:
+            context.userdata["customer_call"]["_driver_room_identity"] = linked.identity
+        sip_identity = result.get("sip_identity", "")
+        if sip_identity:
+            room_io.set_participant(sip_identity)
+
     if mode == "bridge":
         context.userdata["bridge_call_active"] = True
         context.userdata["customer_call_active"] = False
@@ -100,9 +161,15 @@ async def _dial_customer_in_room(
         return _room_missing(lang)
 
     phone = current.get("customer_phone", "")
+    name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
     if not phone:
-        name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
         return _phone_missing(name, lang)
+
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "calling/connecting X" before the SIP INVITE (and its
+    # network/telecom latency) starts, instead of the phone connecting in
+    # silence.
+    await _announce_pre_dial(context, name, lang, mode=mode)
 
     try:
         result = await backend_api.start_call(
@@ -115,7 +182,6 @@ async def _dial_customer_in_room(
         )
     except Exception:
         logger.error("in-room customer call — start_call failed | mode=%s", mode, exc_info=True)
-        name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
         return _dial_failed(name, lang)
 
     _save_call_context(context, current, result, mode=mode)
@@ -135,9 +201,6 @@ async def start_in_room_agent_call(
         return result
 
     name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
-    dialed = result.get("dialed_number", current.get("customer_phone", ""))
-    note = result.get("override_note") or ""
-    suffix = f" {note}" if note else ""
 
     profile = context_store.get(context.userdata, "profile") or {}
     agent = CustomerCallAgent(
@@ -147,17 +210,13 @@ async def start_in_room_agent_call(
         driver_name=profile.get("name", ""),
     )
 
-    if lang == "en":
-        msg = (
-            f"Dialing {name} at {dialed} into this call.{suffix} "
-            "You can listen live while I speak with the customer."
-        )
-    else:
-        msg = (
-            f"Đang gọi {name} tại {dialed} vào cuộc gọi này.{suffix} "
-            "Anh/chị có thể nghe trực tiếp trong khi tôi nói chuyện với khách."
-        )
-    return agent, msg
+    # No extra ad-libbed line here (unlike the old `msg`, which handed the LLM
+    # free text like "you can listen live" to paraphrase on its own — not
+    # actual scripted content). _announce_pre_dial already spoke the one
+    # scripted line ("Đang gọi X, xin đợi trong giây lát") before the dial
+    # above; same principle as bridge mode (see _pre_dial_announcement's
+    # docstring): nothing left for the AI to improvise once the call connects.
+    return agent, ""
 
 
 async def start_in_room_bridge_call(
@@ -204,6 +263,11 @@ async def start_background_call(
     if not phone:
         return _phone_missing(name, lang)
 
+    # Speak — and wait for it to finish — before dialing, so the driver
+    # always hears "calling X" before the SIP INVITE (and its network/
+    # telecom latency) starts, instead of the phone connecting in silence.
+    await _announce_pre_dial(context, name, lang, mode="background")
+
     try:
         result = await backend_api.start_call(
             driver_id=driver_phone,
@@ -211,6 +275,14 @@ async def start_background_call(
             trip_id=current.get("trip_id", ""),
             phone_number=phone,
             mode="background",
+            # Not "the room to dial into" here (background calls always get
+            # their own separate custcall-* room) — this is the driver's OWN
+            # room, threaded through so the isolated call can push a data
+            # message back into it once it ends, letting the driver's own
+            # DriverAgent proactively announce the summary the moment it's
+            # ready instead of only on request (see session.py's
+            # "background_call_summary" data handler).
+            room_name=context.userdata.get("room_name", ""),
             lang=lang,
             customer_name=name,
             pickup_address=current.get("pickup_address", ""),

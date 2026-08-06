@@ -16,12 +16,21 @@ class ElevenLabsTTS(BaseTTS):
             # unset falls back to the voice's stored ElevenLabs dashboard
             # settings, which can drift (sound like a different voice) across
             # turns on expressive models like eleven_flash_v2_5. stability
-            # raised from 0.5 and speed slowed from the 1.0 default — dense,
-            # number-heavy turns (trip lists, phone number confirmations)
-            # were reading too fast and drifting in tone/pace mid-sentence.
+            # nudged up (0.5 -> 0.8) for steadier tone. speed reset to 1.0
+            # (ElevenLabs' normal pace) — the earlier 0.85 (slowed for
+            # clearer enunciation on dense/number-heavy turns) read as
+            # noticeably too slow/unnatural overall; revisit a smaller nudge
+            # down only if enunciation complaints come back.
+            # Note this only tunes pacing/steadiness, not accent: "Adam" is a
+            # Western multilingual voice reading Vietnamese text, not a
+            # native Vietnamese voice, so it can't be made to sound
+            # authentically Vietnamese (let alone Northern-accented) through
+            # these settings alone — see GoogleTTS (app/providers/tts/google.py)
+            # for a genuine vi-VN Neural2 voice already wired up and ready
+            # once real Google Cloud credentials are available.
             voice_settings=elevenlabs_plugin.VoiceSettings(
-                stability=0.7,
+                stability=0.8,
                 similarity_boost=0.75,
-                speed=0.9,
+                speed=1.0,
             ),
         )

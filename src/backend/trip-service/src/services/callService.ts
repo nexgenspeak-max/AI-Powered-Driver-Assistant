@@ -121,6 +121,7 @@ export async function startCustomerCall(opts: {
   lang?: string;
   customerName?: string;
   pickupAddress?: string;
+  customMessage?: string;
 }) {
   const [dialTo, overrideNote] = resolveDialTo(opts.customerPhone);
 
@@ -137,8 +138,19 @@ export async function startCustomerCall(opts: {
       customer_name: opts.customerName ?? '',
       customer_phone: normalizePhone(opts.customerPhone),
       pickup_address: opts.pickupAddress ?? '',
+      // Read by session.py's custcall branch and forwarded into
+      // CustomerCallAgent — empty string preserves the agent's existing
+      // fixed background-call opening (no behavior change for callers that
+      // don't set this).
+      custom_message: opts.customMessage ?? '',
       lang: opts.lang ?? 'vn',
       mode: 'background',
+      // The driver's OWN room (not dialed into — background calls always get
+      // their own separate room) — the voice-agent job for this background
+      // room reads this back to push a summary notification into the
+      // driver's room once the call ends, so the driver's own agent can
+      // announce it proactively instead of only on request.
+      driver_room_name: opts.roomName ?? '',
     };
 
     const bgRoom = await createBackgroundCallRoom(baseMeta);

@@ -1,5 +1,5 @@
 import { ScrollView, Linking, TouchableOpacity } from 'react-native'
-import { View, YStack, XStack, Text } from 'tamagui'
+import { View, YStack, XStack, Text, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
@@ -20,6 +20,7 @@ const SAFETY_TIPS = [
 
 export default function SafetyScreen() {
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
 
   return (
     <View flex={1} backgroundColor="$surface">
@@ -42,6 +43,7 @@ export default function SafetyScreen() {
                 <TouchableRow
                   label={item.label}
                   value={item.number}
+                  iconColor={theme.danger.val}
                   onPress={() => Linking.openURL(`tel:${item.number}`)}
                 />
                 {i < EMERGENCY_NUMBERS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={0} />}
@@ -57,7 +59,7 @@ export default function SafetyScreen() {
             </Text>
             {SAFETY_TIPS.map((tip, i) => (
               <XStack key={i} gap="$2" alignItems="flex-start">
-                <Ionicons name="shield-checkmark-outline" size={16} color="#34d399" style={{ marginTop: 2 }} />
+                <Ionicons name="shield-checkmark-outline" size={16} color={theme.success.val} style={{ marginTop: 2 }} />
                 <Text color="$textPrimary" fontSize={13} lineHeight={19} flex={1}>
                   {tip}
                 </Text>
@@ -70,12 +72,22 @@ export default function SafetyScreen() {
   )
 }
 
-function TouchableRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+function TouchableRow({
+  label,
+  value,
+  iconColor,
+  onPress,
+}: {
+  label: string
+  value: string
+  iconColor: string
+  onPress: () => void
+}) {
   return (
     <TouchableOpacity onPress={onPress}>
       <XStack alignItems="center" justifyContent="space-between" paddingVertical="$3">
         <XStack alignItems="center" gap="$3">
-          <Ionicons name="call" size={18} color="#ef4444" />
+          <Ionicons name="call" size={18} color={iconColor} />
           <Text color="$textPrimary" fontWeight="500">
             {label}
           </Text>

@@ -1,4 +1,5 @@
 """Tools used by CustomerCallAgent during customer calls."""
+import asyncio
 import logging
 import time
 
@@ -10,11 +11,53 @@ from app.services import backend_api
 from app.voicebot.processors.handback import (
     build_driver_agent,
     disconnect_sip_participant,
+    notify_driver_of_background_call_result,
+    restore_room_participant,
     restore_session_audio,
     store_call_summary,
 )
 
 logger = logging.getLogger("voice-agent.tools.customer_call")
+
+# Grace period between the AI's closing line and actually hanging up, once the
+# customer has confirmed they have nothing more to say — ending the call the
+# instant end_customer_call was invoked used to cut the customer off
+# mid-goodbye (or hang up on them with zero warning). Mirrors the same
+# await-before-acting pattern already used for pre-dial announcements
+# (customer_call.py/custom_call.py) and post-pickup delays (sip_call_watch.py).
+_HANGUP_GRACE_SECONDS = 5.0
+
+
+def _closing_line(lang: str) -> str:
+    return "Vâng, cảm ơn anh/chị nhé, tạm biệt ạ." if lang != "en" else "Alright, thank you, goodbye!"
+
+
+async def _customer_still_on_line(userdata: dict) -> bool:
+    """True if the dialed party's SIP leg is still actually in the room —
+    skip the goodbye/grace-period entirely if they already hung up
+    themselves, since there's nobody left to hear it or wait for."""
+    sip_identity = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    if not sip_identity:
+        return False
+    try:
+        room = get_job_context().room
+    except RuntimeError:
+        return False
+    return sip_identity in room.remote_participants
+
+
+async def _say_goodbye_and_wait(context: RunContext, lang: str) -> None:
+    """Speak a brief closing line and give the customer a moment before the
+    call actually ends — only if they're still connected (see
+    _customer_still_on_line)."""
+    if not await _customer_still_on_line(context.userdata):
+        return
+    try:
+        await context.session.say(_closing_line(lang), allow_interruptions=False)
+    except Exception:
+        logger.warning("failed to speak closing goodbye", exc_info=True)
+    await asyncio.sleep(_HANGUP_GRACE_SECONDS)
+
 
 # Background (isolated) calls: the LLM is instructed via prompt to wait for
 # <speech_not_detected> before concluding "no answer", but that is a soft
@@ -47,6 +90,15 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
             call_id,
         )
 
+    # Proactively tell the driver's own room the result — the driver doesn't
+    # have to ask "tóm tắt cuộc gọi" first.
+    await notify_driver_of_background_call_result(context.userdata, summary)
+
+    # Explicitly hang up the SIP leg — relying on delete_room alone has shown
+    # the SIP call session still ACTIVE on LiveKit's own telephony dashboard
+    # after this ran (room gone, backend marked completed, driver already
+    # told the call ended, but the actual phone call kept going).
+    await disconnect_sip_participant(context.userdata)
     try:
         job_ctx = get_job_context()
         await job_ctx.api.room.delete_room(
@@ -85,6 +137,7 @@ async def end_customer_call(context: RunContext, summary: str):
                     "receive the <speech_not_detected> signal 2-3 times."
                 )
         try:
+            await _say_goodbye_and_wait(context, context.userdata.get("lang", "vn"))
             await _finish_isolated_call(context, summary)
         except Exception:
             logger.error("end_customer_call (isolated) failed", exc_info=True)
@@ -93,10 +146,12 @@ async def end_customer_call(context: RunContext, summary: str):
 
     lang = context.userdata.get("lang", "vn")
     try:
-        store_call_summary(context.userdata, summary, mode="agent")
+        await store_call_summary(context.userdata, summary, mode="agent")
         context.userdata["customer_call_active"] = False
         context.userdata["bridge_call_active"] = False
+        await _say_goodbye_and_wait(context, lang)
         restore_session_audio(context.session)
+        restore_room_participant(context.session, context.userdata)
         await disconnect_sip_participant(context.userdata)
 
         tracker = context.userdata.get("_silence_tracker")

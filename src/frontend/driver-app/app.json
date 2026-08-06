@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant."
+        "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
+        "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
+        "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order.",
+        "NSContactsUsageDescription": "Czen Driver needs contacts access so the AI assistant can call people from your phone by name."
       },
       "bitcode": false
     },
@@ -26,6 +29,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
@@ -46,7 +50,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.BLUETOOTH",
+        "android.permission.READ_CONTACTS"
       ],
       "package": "com.anonymous.driverapp"
     },
@@ -67,13 +72,26 @@
         }
       ],
       "./plugins/withForegroundService.js",
+      "./plugins/withGestureExclusion.js",
       [
         "react-native-vosk",
         {
-          "models": ["assets/model-vi-vn"]
+          "models": ["assets/model-en-us"]
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-contacts",
+      "expo-audio",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Czen Driver needs your location to track the trip while you're driving.",
+          "locationAlwaysAndWhenInUsePermission": "Czen Driver needs your location in the background so it can notify the customer when you're close to the pickup point, even while you're using another navigation app.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ]
   }
 }

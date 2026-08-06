@@ -1,0 +1,42 @@
+diff --git a/node_modules/expo-gl/build/GLView.js b/node_modules/expo-gl/build/GLView.js
+index 7d4873c..98455df 100644
+--- a/node_modules/expo-gl/build/GLView.js
++++ b/node_modules/expo-gl/build/GLView.js
+@@ -82,6 +82,21 @@ export class GLView extends React.Component {
+     };
+     _onSurfaceCreate = ({ nativeEvent: { exglCtxId } }) => {
+         const gl = getGl(exglCtxId);
++        // Fast Refresh can reset `global.__EXGLContexts` without the native
++        // surface re-firing a fresh onSurfaceCreate, so this event can carry
++        // an `exglCtxId` the JS-side registry no longer has an entry for.
++        // `getGl` returns undefined in that case instead of throwing (see
++        // below) — skip wiring up a context that doesn't exist instead of
++        // handing `onContextCreate` an undefined `gl`, which crashes
++        // differently one level down (e.g. `new Renderer({ gl: undefined })`).
++        // A real remount (component key change) fires a genuine new
++        // onSurfaceCreate that resolves this on its own.
++        if (!gl) {
++            if (__DEV__) {
++                console.warn('GLView: onSurfaceCreate fired for an orphaned context id (likely a Fast Refresh registry reset) — skipping onContextCreate.');
++            }
++            return;
++        }
+         this.exglCtxId = exglCtxId;
+         if (this.props.onContextCreate) {
+             this.props.onContextCreate(gl);
+@@ -150,6 +165,15 @@ const getGl = (exglCtxId) => {
+         throw new CodedError('ERR_GL_NOT_AVAILABLE', 'GL is currently not available. (Have you enabled remote debugging? GL is not available while debugging remotely.)');
+     }
+     const gl = global.__EXGLContexts[String(exglCtxId)];
++    // `gl` can be undefined for an orphaned/stale context id (see the
++    // `_onSurfaceCreate` comment above) — `configureLogging` unconditionally
++    // does `gl.__expoSetLogging = ...`, which throws "Cannot set property
++    // '__expoSetLogging' of undefined" instead of surfacing the real,
++    // recoverable "this context doesn't exist" condition. Skip it and let
++    // the caller decide what to do with an undefined `gl`.
++    if (!gl) {
++        return gl;
++    }
+     configureLogging(gl);
+     return gl;
+ };

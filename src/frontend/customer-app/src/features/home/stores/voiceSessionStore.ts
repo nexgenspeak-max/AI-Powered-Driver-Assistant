@@ -4,6 +4,8 @@ import ForegroundService from '@supersami/rn-foreground-service'
 import { Room, RoomEvent, Track, ConnectionState, startAudioSession, stopAudioSession } from '../lib/livekitRuntime'
 import { voiceService } from '../../../services/api/voice'
 
+const CALL_STATE_TOPIC = 'call_state'
+
 // Must run once at module load (before the service is ever started), per the
 // package's own requirement — registers the headless task the service runs on.
 if (Platform.OS === 'android') {
@@ -54,9 +56,15 @@ interface VoiceSessionState {
   status: VoiceSessionStatus
   /** Smoothed 0..1 audio level of the AI agent's voice track, from LiveKit's ActiveSpeakersChanged — 0 when silent/not connected. */
   agentAudioLevel: number
+  /**
+   * True while the voice-agent backend reports a real SIP-dialed phone call
+   * in progress (bridge, agent-mediated, or background call — see backend's
+   * call_state.py). The Home mic button must not be able to hang up while
+   * this is true; only the underlying phone call ending (which the backend
+   * reports by publishing `active: false`) may end the session.
+   */
+  isCallActive: boolean
   connect: (customerPhone: string) => Promise<void>
-  /** One-time voiceprint enrollment session — same LiveKit plumbing as connect(), routed to EnrollAgent server-side via a distinct room-name prefix. */
-  enroll: (phone: string) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
@@ -73,12 +81,26 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
     }
 
-    set({ status: 'connecting' })
+    set({ status: 'connecting', isCallActive: false })
     try {
       await startAudioSession()
       const { token, livekit_url } = await getToken()
       const r = new Room()
       room = r
+
+      // Backend publishes this whenever a real SIP-dialed call starts/ends
+      // (bridge/agent-mediated/background) — see call_state.py. `payload` is
+      // UTF-8 JSON, not a text-stream, so it's decoded manually here rather
+      // than via registerTextStreamHandler.
+      r.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
+        if (topic !== CALL_STATE_TOPIC) return
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload))
+          if (msg?.type === 'call_state') set({ isCallActive: !!msg.active })
+        } catch (err) {
+          console.error('[voice-session] failed to parse call_state payload', err)
+        }
+      })
 
       r.on(RoomEvent.TrackSubscribed, track => {
         if (track.kind !== Track.Kind.Audio) return
@@ -107,7 +129,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         audioEls.clear()
         stopAudioSession()
         stopCallForegroundService()
-        set({ status: 'idle', agentAudioLevel: 0 })
+        set({ status: 'idle', agentAudioLevel: 0, isCallActive: false })
       })
 
       // Drives the assistant orb's shape from the AI's actual voice loudness
@@ -139,17 +161,21 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
       stopAudioSession()
       stopCallForegroundService()
-      set({ status: 'error', agentAudioLevel: 0 })
+      set({ status: 'error', agentAudioLevel: 0, isCallActive: false })
     }
   }
 
   return {
     status: 'idle',
     agentAudioLevel: 0,
+    isCallActive: false,
 
     connect: (customerPhone: string) => connectWithToken(() => voiceService.getCustomerToken(customerPhone)),
-    enroll: (phone: string) => connectWithToken(() => voiceService.getEnrollToken(phone, 'customer')),
 
+    // The mic button on Home must gate its own hangup on `isCallActive`
+    // before calling this — see AssistantChatPanel.tsx's handleMicPress.
+    // `disconnect()` itself stays unconditional (also used for cleanup paths
+    // like unmount/logout that must always be able to tear the room down).
     disconnect: () => {
       room?.disconnect()
     },

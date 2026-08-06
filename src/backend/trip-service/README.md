@@ -24,13 +24,35 @@ aws dynamodb create-table \
   --profile david --region ap-southeast-1
 ```
 
+Same for the delivery-orders table (driver-app "Giao hàng" tab — AI-scanned delivery orders):
+
+```bash
+aws dynamodb create-table \
+  --table-name local-driver-assistant-delivery-orders \
+  --attribute-definitions \
+    AttributeName=order_id,AttributeType=S \
+    AttributeName=driver_phone,AttributeType=S \
+    AttributeName=created_at,AttributeType=S \
+  --key-schema AttributeName=order_id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --global-secondary-indexes '[
+    {"IndexName":"driver_phone-created_at-index","KeySchema":[{"AttributeName":"driver_phone","KeyType":"HASH"},{"AttributeName":"created_at","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}
+  ]' \
+  --profile david --region ap-southeast-1
+```
+
 ### 2. Fill in envs/.env.local
 
 ```env
 GOOGLE_MAPS_API_KEY=   # get from console.cloud.google.com → Directions API
+VOICE_AGENT_URL=http://localhost:8080   # POST /delivery-orders/scan proxies here
 ```
 
 LiveKit keys are pre-filled. AWS profile is david.
+
+`POST /delivery-orders/scan` calls voice-agent's vision-api sidecar to read the photo, so voice-agent
+must be running locally too: from `src/backend/voice-agent`, `uvicorn app.vision_api.main:app --port 8080`
+(needs `OPENAI_API_KEY` and a `JWT_SECRET` matching trip-service's in its own `envs/.env.local`).
 
 For **driver → customer calls** (`call_customer` agent + bridge modes use **LiveKit SIP in-room**):
 

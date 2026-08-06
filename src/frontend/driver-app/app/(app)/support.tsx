@@ -73,15 +73,15 @@ function Row({
 }) {
   return (
     <TouchableOpacity onPress={onPress}>
-      <XStack alignItems="center" justifyContent="space-between" paddingVertical="$3">
-        <XStack alignItems="center" gap="$3">
+      <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3">
+        <XStack alignItems="center" gap="$3" flex={1}>
           <Ionicons name={iconName} size={18} color={iconColor} />
-          <Text color="$textPrimary" fontWeight="500">
+          <Text color="$textPrimary" fontWeight="500" flexShrink={1} numberOfLines={1}>
             {label}
           </Text>
         </XStack>
         {!!value && (
-          <Text color="$textSecondary" fontWeight="600">
+          <Text color="$textSecondary" fontWeight="600" flexShrink={1} numberOfLines={1}>
             {value}
           </Text>
         )}

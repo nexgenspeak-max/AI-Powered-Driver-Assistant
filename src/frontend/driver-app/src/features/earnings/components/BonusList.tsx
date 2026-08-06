@@ -5,19 +5,9 @@ import type { Bonus } from '../../../types'
 // Distinct promo/warning tone — deliberately NOT run through GlassSurface's
 // neutral-white wash + specular shader (per spec: applying the white
 // specular streak would wash out this card's characteristic olive-amber
-// color). Only the outer shadow is shared with the rest of the "finalized"
-// glass formula, so this card still reads as the same elevation as its
-// neighbors, just a different material.
-function getBonusOuterShadow(isLight: boolean) {
-  return {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: isLight ? 0.12 : 0.22,
-    shadowRadius: isLight ? 10 : 14,
-    elevation: 3,
-  } as const
-}
-
+// color). Outer shadow removed — same real-device issue as GlassSurface's
+// own shadow (renders as a hard gray outline on Android instead of a soft
+// blur, see GlassSurface.tsx's note).
 const BONUS_RADIUS = 16
 
 const THEME_COLORS = {
@@ -36,12 +26,13 @@ export function BonusList({ bonuses }: { bonuses: Bonus[] }) {
         Active bonuses
       </Text>
       {bonuses.map((bonus, i) => (
-        <RNView key={i} style={{ borderRadius: BONUS_RADIUS, ...getBonusOuterShadow(isLight) }}>
+        <RNView key={i} style={{ borderRadius: BONUS_RADIUS }}>
           <XStack
             alignItems="center"
             justifyContent="space-between"
             backgroundColor={colors.background}
             borderRadius={BONUS_RADIUS}
+            overflow="hidden"
             padding="$4"
           >
             <YStack flex={1} paddingRight="$2">

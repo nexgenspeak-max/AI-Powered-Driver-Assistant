@@ -25,11 +25,16 @@ export interface Trip {
   customer_phone: string;
   pickup_address: string;
   dropoff_address: string;
+  pickup_lat?: number;
+  pickup_lng?: number;
+  dropoff_lat?: number;
+  dropoff_lng?: number;
   pickup_time: string;
   booked_via: string;
   distance_km: number;
   eta_minutes: number;
   traffic_note: string;
+  note: string;
   route_summary: string;
   room_name: string;
   driver_phone?: string;
@@ -54,6 +59,7 @@ export async function create(data: Record<string, unknown>): Promise<Trip> {
     distance_km: (data.distance_km as number) || 0,
     eta_minutes: (data.eta_minutes as number) || 0,
     traffic_note: (data.traffic_note as string) || '',
+    note: (data.note as string) || '',
     route_summary: (data.route_summary as string) || '',
     room_name: '',
     created_at: now(),
@@ -61,6 +67,10 @@ export async function create(data: Record<string, unknown>): Promise<Trip> {
   };
   if (data.driver_phone) trip.driver_phone = data.driver_phone as string;
   if (data.id_account) trip.id_account = data.id_account as string;
+  if (typeof data.pickup_lat === 'number') trip.pickup_lat = data.pickup_lat;
+  if (typeof data.pickup_lng === 'number') trip.pickup_lng = data.pickup_lng;
+  if (typeof data.dropoff_lat === 'number') trip.dropoff_lat = data.dropoff_lat;
+  if (typeof data.dropoff_lng === 'number') trip.dropoff_lng = data.dropoff_lng;
 
   await docClient.send(new PutCommand({ TableName: config.dynamodbTable, Item: trip }));
   return trip;

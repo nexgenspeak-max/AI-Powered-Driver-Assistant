@@ -42,6 +42,23 @@ export const GLASS_SHADOW = {
   elevation: 14,
 } as const;
 
+// Single source of truth for every "kính" (frosted glass) surface's border
+// color — Card/Badge/SearchInput/Input (via GlassSheen), Button's non-primary
+// variants and the tab bar (LiquidGlassTabBar, both platforms) all rendered
+// the exact same rgba values as separate hardcoded literals before, which
+// only stayed in sync by coincidence. Centralized here so they can't drift
+// apart again. Uniform on all four sides — a brighter top edge was tried as
+// a "light reflection" cue but read as an unbalanced/lopsided border, so the
+// top-vs-rest split was removed. Deliberately NOT used by the purple/green/
+// red CTA buttons (GlassButton, Button's primary/success/danger) or
+// GlassSurface's flat `outline` mode — those are each a different, already-
+// documented "shadow/border matches this element's own fill color" language,
+// not generic glass.
+export const GLASS_BORDER_COLOR = {
+  light: "rgba(255, 255, 255, 0.35)",
+  dark: "rgba(255, 255, 255, 0.1)",
+} as const;
+
 // Apple-style concentric nesting: a rounded shape inset by `padding` inside
 // a container of `outerRadius` should itself use `outerRadius - padding` so
 // both curves share the same center — not a fixed/guessed constant, which
@@ -96,7 +113,7 @@ function GlassGradientLayers({
   // Dark mode sits on an *opaque* card background (`$surfaceElevated`), so
   // unlike light mode (white-on-white ≈ invisible) this wash is genuinely
   // visible — on a short button that reads as a nice sheen, but stretched
-  // over a tall card (a whole VoiceEnrollPanel-height card, say) the top 35%
+  // over a tall card (a full-screen modal card, say) the top 35%
   // vs. the rest banded into two visibly different shades, like two panels
   // stacked instead of one surface. Halved so it stays a hint, not a band —
   // but that same halved value on a small 40-ish px badge is nearly
@@ -146,15 +163,11 @@ function GlassGradientLayers({
             StyleSheet.absoluteFill,
             {
               borderRadius,
+              // Same 1px, same color, on all four sides — was borderTopWidth:
+              // 1.5 plus a brighter top-only color, both of which read as a
+              // lopsided/unbalanced border instead of a clean thin outline.
               borderWidth: 1,
-              borderColor: isLight
-                ? "rgba(255, 255, 255, 0.35)"
-                : "rgba(255, 255, 255, 0.1)",
-              // Add a secondary inner ring to simulate depth (top reflection)
-              borderTopWidth: 1.5,
-              borderTopColor: isLight
-                ? "rgba(255, 255, 255, 0.55)"
-                : "rgba(255, 255, 255, 0.2)",
+              borderColor: isLight ? GLASS_BORDER_COLOR.light : GLASS_BORDER_COLOR.dark,
             },
           ]}
           pointerEvents="none"
@@ -207,7 +220,17 @@ export function GlassMaterial({
       collapsable={false}
     >
       <View style={{ flex: 1, borderRadius, overflow: "hidden" }}>
-        <BlurView tint={resolvedTint} intensity={blurIntensity} style={fill} />
+        {/* `experimentalBlurMethod="dimezisBlurView"` — Android otherwise
+            falls back to a plain semi-transparent tint (expo-blur's own
+            documented default there) instead of actually blurring whatever's
+            behind this surface; iOS already blurs real content natively and
+            ignores this prop. */}
+        <BlurView
+          tint={resolvedTint}
+          intensity={blurIntensity}
+          experimentalBlurMethod="dimezisBlurView"
+          style={fill}
+        />
         <GlassGradientLayers borderRadius={borderRadius} />
         <View
           style={[

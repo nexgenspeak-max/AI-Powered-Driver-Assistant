@@ -117,8 +117,7 @@ export interface GlassButtonProps {
 // fill stays purple in both themes, only the glass cues on top (specular,
 // inner shadow, outer shadow tint) adapt per theme. Originally
 // `GlassBookButton` in features/booking — promoted here once a second
-// caller (VoiceEnrollPanel's "Bắt đầu" button) needed the exact same
-// recipe with a different gradient pair.
+// caller needed the exact same recipe with a different gradient pair.
 export function GlassButton({ label, onPress, loading, disabled, colors }: GlassButtonProps) {
   const isLight = useThemeName() === 'light'
   const params = isLight ? THEME_PARAMS.light : THEME_PARAMS.dark

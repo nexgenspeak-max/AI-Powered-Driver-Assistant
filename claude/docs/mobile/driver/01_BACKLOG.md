@@ -9,8 +9,9 @@
 |---|---|---|---|---|
 | FEAT-M001 | Xác nhận wake-word ("trợ lý rảnh tay") chạy ổn định trên **điện thoại thật** — mọi test đến nay đều trên emulator, nơi có giới hạn đã biết của Android (xem [BUG-M001](tickets/BUG-M001.md)) | 🔴 Cao | ⬜ | [BUG-M001](tickets/BUG-M001.md) |
 | FEAT-M002 | Nối LLM thật cho khung chat text trong `AssistantChatPanel` (hiện gọi `getAssistantReply`, cần xác nhận đã nối thật hay còn stub) | 🟡 Trung bình | ⬜ | — |
-| FEAT-M003 | Xác thực giọng nói "chủ nhân" cho wake-word (voiceprint) — chỉ đúng giọng chủ tài khoản mới dùng được trợ lý AI | 🟡 Trung bình | 🔨 Đã code, chưa test thiết bị thật | [FEAT-M003](tickets/FEAT-M003.md) |
 | FEAT-005 | Chốt quan hệ giữa `driver-app` và `driver-web` (mục chung, xem [`../../web/driver/01_BACKLOG.md`](../../web/driver/01_BACKLOG.md)) | 🟡 Trung bình | ⬜ | — |
+| FEAT-M004 | Tự động gọi khách hàng khi tài xế GPS còn ~1km tới điểm đón (background location tracking + proximity call) | 🟡 Trung bình | 🔨 Code xong (FE+BE+voice-agent), BE/voice-agent test thật rồi, FE chờ test thiết bị thật | [FEAT-M004](tickets/FEAT-M004.md) |
+| FEAT-M005 | ~~Tự động tìm & gán tài xế theo vị trí~~ → **đã gỡ bỏ**, thay bằng khách tự chọn tài xế online từ danh sách (`DriverPicker` + `GET /drivers/online`), gửi thẳng qua `POST /trips` (flow gán trực tiếp cũ, không đổi). WebSocket real-time giữ lại, dùng thêm cho thông báo nhận/từ chối chuyến về khách | 🟡 Trung bình | 🔨 Code xong (BE+2 FE), test local qua tsc + grep sạch; **chưa test thiết bị thật** (khách chọn tài xế → tài xế nhận/từ chối trên app thật) | [FEAT-M005](tickets/FEAT-M005.md) |
 
 ## Đã hoàn thành
 

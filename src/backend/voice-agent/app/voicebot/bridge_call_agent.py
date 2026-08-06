@@ -3,7 +3,7 @@ import logging
 
 from livekit.agents import Agent
 
-from app.voicebot.prompts.bridge_call import bridge_greeting, build_bridge_instructions
+from app.voicebot.prompts.bridge_call import build_bridge_instructions
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.bridge_call_tools import end_bridge_call
 
@@ -30,9 +30,15 @@ class BridgeCallAgent(SpeechTextFixMixin, Agent):
     async def on_enter(self) -> None:
         from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout
         from app.voicebot.processors.handback import enter_bridge_listen_mode
+        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
 
-        msg = bridge_greeting(self._lang, self._customer_name)
         logger.info("BridgeCallAgent active | customer=%s", self._customer_name)
-        await self.session.say(msg, allow_interruptions=False)
+        # No greeting spoken here anymore — the full bridge_greeting script
+        # (connecting + "talk directly, I'll stay silent, say the wake
+        # phrase or wait for hangup when done") was already said in full
+        # *before* dialing (see customer_call.py/custom_call.py's
+        # _pre_dial_announcement), so the driver already knows everything by
+        # the time the callee picks up. The AI has nothing left to say.
+        await wait_for_sip_pickup(self.session.userdata)
         enter_bridge_listen_mode(self.session)
         schedule_bridge_timeout(self.session, self.session.userdata)
