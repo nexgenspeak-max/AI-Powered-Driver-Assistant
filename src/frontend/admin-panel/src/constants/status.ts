@@ -35,7 +35,7 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   picked_up:           'Picked Up',
 }
 
-export const DISPATCHABLE_STATUSES: TripStatus[] = ['pending', 'no_answer', 'rejected']
+export const DISPATCHABLE_STATUSES: TripStatus[] = ['pending', 'notified', 'no_answer', 'rejected']
 
 // trip-service normalizes every incoming status to lowercase before storing it
 // (PATCH /api/v1/trips/:tripId lowercases req.body.status), but older rows written

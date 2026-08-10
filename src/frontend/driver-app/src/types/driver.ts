@@ -50,6 +50,11 @@ export interface DriverContext {
   upcoming_trips: (import('./trip').Trip & { estimated_fare: number })[]
   active_trips: (import('./trip').Trip & { estimated_fare: number })[]
   current_trip: (import('./trip').Trip & { estimated_fare: number }) | null
+  current_location: { lat: number; lng: number; updated_at: string } | null
+  // True when the assistant has a proactive nudge waiting (proximity alert,
+  // next-stop suggestion) it couldn't deliver live — see
+  // useAutoConnectOnNudge.ts, which opens a voice session to collect it.
+  has_pending_nudge: boolean
   last_call: { call_id: string; summary?: string } | null
   fetched_at: string
 }

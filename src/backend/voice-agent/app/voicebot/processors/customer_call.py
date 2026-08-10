@@ -98,6 +98,22 @@ def _save_call_context(
         "turns_from": len(conv_service.turns) if conv_service else 0,
     }
     if mode == "agent":
+        # Reset — _customer_spoke is session-wide (session.py's
+        # conversation_item_added/user_input_transcribed handlers), so
+        # without this it could already be True just from the DRIVER talking
+        # earlier in the session, making it useless for "has the CUSTOMER
+        # said anything yet THIS call". Safe to clear here: RoomIO gets
+        # retargeted to the customer's SIP identity a few lines below, so
+        # every transcript event from this point until handback genuinely is
+        # the customer, not the driver.
+        context.userdata["_customer_spoke"] = False
+        # Same reset, for the ring-time gate (session.py's agent_state_changed
+        # handler / end_customer_call's silence backstop) — without this, a
+        # SECOND agent-mode call later in the same session would inherit
+        # _agent_call_answered=True from the first one and start counting
+        # "quiet time" during the new call's ringing too.
+        context.userdata["_agent_call_answered"] = False
+        context.userdata["_agent_call_quiet_since"] = None
         # Agent mode: the AI is meant to actually converse WITH the customer,
         # but RoomIO links its STT input to exactly one participant, resolved
         # once at session start — the driver, since they joined the room
@@ -194,8 +210,17 @@ async def start_in_room_agent_call(
     current: dict,
     *,
     lang: str,
+    custom_message: str = "",
 ) -> tuple[Agent, str] | str:
-    """Dial customer via SIP and hand off to CustomerCallAgent."""
+    """Dial customer via SIP and hand off to CustomerCallAgent.
+
+    `custom_message` — when set, CustomerCallAgent delivers this EXACT line
+    to the customer before anything else (see its own `_custom_message`
+    branch) instead of its generic trip-aware greeting. Used for calls that
+    have a specific reason the customer must hear first — e.g. the driver
+    agreeing to a proximity nudge ("mời khách ra điểm đón") — so the AI
+    states the purpose of the call before letting the conversation continue.
+    """
     result = await _dial_customer_in_room(context, current, lang=lang, mode="agent")
     if isinstance(result, str):
         return result
@@ -208,6 +233,7 @@ async def start_in_room_agent_call(
         trip=current,
         customer_name=name,
         driver_name=profile.get("name", ""),
+        custom_message=custom_message,
     )
 
     # No extra ad-libbed line here (unlike the old `msg`, which handed the LLM

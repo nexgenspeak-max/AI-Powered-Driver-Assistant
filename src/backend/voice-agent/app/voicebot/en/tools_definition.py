@@ -15,23 +15,38 @@ raw_schema = {
             "exact scope the driver wants. IMPORTANT: if the driver's request is vague ('check my "
             "trips', 'how are my trips looking', 'any trips?') — do NOT guess the scope, ASK "
             "first: 'Would you like to see trips in progress (already accepted, currently "
-            "running), upcoming trips (new, awaiting confirmation), or both?' then call the tool. "
-            "If the driver already specified in their question ('what's my current trip', 'any "
-            "new trips', 'show me everything'), call directly, no need to ask. For follow-ups "
-            "('how much is trip 2', 'yes' to see more) → call again with the SAME scope as the "
-            "most recent listing."
+            "running), trips awaiting confirmation (offered, not yet answered), or all?' then "
+            "call the tool. If the driver already specified in their question, call directly, no "
+            "need to ask — e.g. 'what trips do I currently have' / 'show me everything' → "
+            "scope=all; 'which customers have I picked up' → scope=picked_up; 'which trips "
+            "haven't I picked up yet' → scope=not_picked_up; 'any new or unconfirmed trips' → "
+            "scope=awaiting_confirmation. For follow-ups ('how much is trip 2', 'yes' to see "
+            "more) → call again with the SAME scope as the most recent listing. When answering "
+            "any in-progress scope (in_progress/not_picked_up/picked_up), if the driver also has "
+            "a trip 'awaiting_confirmation', you MUST mention it too — don't wait for the driver "
+            "to ask again to find out a new trip is waiting."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "scope": {
                     "type": "string",
-                    "enum": ["in_progress", "upcoming", "all"],
+                    "enum": ["in_progress", "not_picked_up", "picked_up", "awaiting_confirmation", "new", "all"],
                     "description": (
-                        "'in_progress' = accepted trips currently running (driving to pickup, or "
-                        "already picked up). 'upcoming' = new trips awaiting the driver's "
-                        "confirmation. 'all' = both — only use once the driver has clearly asked "
-                        "for everything, or chose 'both' after being asked."
+                        "'in_progress' = ALL accepted trips currently running: covers confirmed-"
+                        "but-not-yet-at-pickup, arrived-at-pickup-but-not-yet-picked-up, AND "
+                        "already-picked-up — use when the driver asks generally without "
+                        "distinguishing picked up or not. 'not_picked_up' = only accepted trips "
+                        "where the customer is NOT yet in the car (on the way to pickup, or "
+                        "arrived but waiting) — use for 'which trips haven't I picked up', 'any "
+                        "customers still waiting'. 'picked_up' = only trips where the customer IS "
+                        "already in the car, on the way to dropoff — use for 'which customers "
+                        "have I picked up', 'who's in the car right now'. 'awaiting_confirmation' "
+                        "= a NEW trip the system has offered the driver and is waiting for their "
+                        "yes/no. 'new' = a trip just created, the system hasn't offered it to the "
+                        "driver yet (very rare in practice). 'all' = every group above — use when "
+                        "the driver asks generally ('what trips do I currently have'), or chose "
+                        "'all' after being asked."
                     ),
                 },
                 "trip_index": {
@@ -52,6 +67,21 @@ raw_schema = {
         "description": (
             "Active/current trip details: customer, addresses, fare, ETA, status. "
             "Use for 'current trip', 'this trip', 'how much is this ride'."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "suggest_next_stop": {
+        "type": "function",
+        "name": "suggest_next_stop",
+        "description": (
+            "Suggest which pickup/dropoff the driver should head to NEXT, based on their current "
+            "location and their whole schedule (both not-yet-picked-up and already-picked-up-"
+            "awaiting-dropoff trips) — picks whichever is closest. Use when the driver asks "
+            "'where should I go next', 'who should I pick up or drop off now', 'what's my next "
+            "stop'. Different from check_upcoming_trips: that one just lists trips by status, it "
+            "does NOT rank by distance/location — use this tool when the driver wants a "
+            "recommendation of where to go, not just a list."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -111,7 +141,14 @@ raw_schema = {
             "  • mode='agent'  — AI dials customer into the same room; driver listens live.\n"
             "  • mode='bridge' — Driver speaks directly to customer in the same room.\n"
             "Only call this tool for real once the driver has picked the right trip (if needed) "
-            "AND chosen a mode."
+            "AND chosen a mode.\n"
+            "RIGHT AFTER the AI proactively asked 'would you like me to call the customer' "
+            "(proximity nudge) and the driver agreed: call DIRECTLY with mode='agent' AND fill "
+            "in `message` with the exact content to convey (e.g. 'Please head to the pickup "
+            "point, the driver is almost there' for pickup, or 'Please get your belongings "
+            "ready, you're almost at the dropoff' for dropoff) — do NOT ask for mode again, and "
+            "do NOT call without `message` in this situation, or the AI will just make generic "
+            "small talk with the customer instead of stating why it called."
         ),
         "parameters": {
             "type": "object",
@@ -127,6 +164,17 @@ raw_schema = {
                         "Trip number from the list THIS tool just read out (1 = first) — only "
                         "needed when the driver has more than 1 trip and has already picked one. "
                         "Leave empty if there's only 1 trip, or if you haven't asked yet."
+                    ),
+                },
+                "message": {
+                    "type": "string",
+                    "description": (
+                        "mode='agent' only. The exact content the AI must say to the customer as "
+                        "soon as they pick up, before anything else (e.g. invite them to the "
+                        "pickup point, remind them to get ready to get out) — required when this "
+                        "call follows a proactive nudge (approaching pickup/dropoff). Leave empty "
+                        "if the driver just wants a generic call with no specific content to "
+                        "deliver first."
                     ),
                 },
             },

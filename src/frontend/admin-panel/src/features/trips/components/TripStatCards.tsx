@@ -14,7 +14,7 @@ type Props = {
 
 export function TripStatCards({ trips, drivers }: Props) {
   const pending   = trips.filter(t => t.status === 'pending').length
-  const active    = trips.filter(t => ['notified', 'calling', 'confirmed'].includes(t.status)).length
+  const active    = trips.filter(t => ['notified', 'calling', 'confirmed', 'arrived_pickup', 'picked_up'].includes(t.status)).length
   const completed = trips.filter(t => t.status === 'completed').length
   const online    = drivers.filter(d => d.status === 'online').length
 

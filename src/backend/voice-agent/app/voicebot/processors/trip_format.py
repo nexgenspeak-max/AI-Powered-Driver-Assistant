@@ -14,13 +14,12 @@ def estimated_fare(trip: dict) -> int:
 
 
 def fmt_money(amount: int, lang: str) -> str:
+    # Always the exact figure — "X nghìn"/"X.Y triệu" shorthand used to round/
+    # truncate (e.g. 15.500đ -> "15 nghìn đ" silently drops the 500), and the
+    # driver needs the real fare read out, not an approximation.
     if lang == "en":
         return f"{amount:,} VND"
-    if amount >= 1_000_000:
-        return f"{amount / 1_000_000:.1f} triệu đ"
-    if amount >= 1_000:
-        return f"{amount // 1_000} nghìn đ"
-    return f"{amount:,}đ"
+    return f"{amount:,}".replace(",", ".") + "đ"
 
 
 def short_address(address: str, max_len: int = 48) -> str:
@@ -111,6 +110,33 @@ def format_traffic_info(trip: dict, lang: str = "vi") -> str:
 
 _UNCONFIRMED_STATUSES = ("pending", "notified", "calling")
 
+# Spoken-language status — a driver has no idea what "notified" or
+# "arrived_pickup" means read out loud; describe where the trip actually is
+# in the pickup→dropoff sequence instead of the raw backend status code.
+_STATUS_PHRASES_VI = {
+    "pending": "vừa được tạo, đang chờ hệ thống liên hệ",
+    "notified": "chưa xác nhận, đang chờ anh/chị đồng ý",
+    "calling": "chưa xác nhận, đang chờ anh/chị đồng ý",
+    "confirmed": "đã xác nhận, đang trên đường đến điểm đón",
+    "arrived_pickup": "đã đến điểm đón, đang chờ đón khách",
+    "picked_up": "đã đón khách, đang trên đường đến điểm trả",
+    "completed": "đã hoàn thành",
+}
+_STATUS_PHRASES_EN = {
+    "pending": "just created, waiting to be assigned",
+    "notified": "not yet confirmed, awaiting your response",
+    "calling": "not yet confirmed, awaiting your response",
+    "confirmed": "confirmed, on the way to pickup",
+    "arrived_pickup": "arrived at pickup, waiting for the customer",
+    "picked_up": "customer picked up, on the way to dropoff",
+    "completed": "completed",
+}
+
+
+def status_phrase(status: str, lang: str = "vi") -> str:
+    phrases = _STATUS_PHRASES_EN if lang == "en" else _STATUS_PHRASES_VI
+    return phrases.get(status, status)
+
 
 def _needs_schedule_confirm(trip: dict) -> bool:
     """A trip is an unconfirmed scheduled pickup if it has a pickup_time and isn't accepted yet."""
@@ -151,7 +177,7 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
         if eta:
             msg += f" ETA: {eta} min."
         if status:
-            msg += f" Status: {status}."
+            msg += f" Status: {status_phrase(status, lang)}."
         traffic = trip.get("traffic_note")
         if traffic:
             msg += f" Traffic: {traffic}."
@@ -170,7 +196,7 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
     if eta:
         msg += f" Dự kiến {eta} phút."
     if status:
-        msg += f" Trạng thái: {status}."
+        msg += f" Trạng thái: {status_phrase(status, lang)}."
     traffic = trip.get("traffic_note")
     if traffic:
         msg += f" {traffic}."
@@ -184,12 +210,23 @@ def format_trip_brief(trip: dict, index: int, lang: str = "vi") -> str:
     dropoff = short_address(trip.get("dropoff_address", ""), 36)
     fare = fmt_money(estimated_fare(trip), lang)
     time = trip.get("pickup_time", "")
+    customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
     # Plain words instead of "—"/"→" — this string is spoken aloud by TTS, and
     # ElevenLabs (eleven_flash_v2_5) noticeably destabilizes pacing/tone when
     # it hits non-standard punctuation glyphs in a dense, list-like sentence.
-    time_prefix = f"{time}, " if time else ""
-    arrow_word = "đến" if lang != "en" else "to"
-    return f"{index}. {time_prefix}{pickup} {arrow_word} {dropoff} ({fare})"
+    # Each field is explicitly labeled (customer/pickup/dropoff/fare) rather
+    # than a bare comma list — the driver needs to hear WHO/WHERE/HOW MUCH
+    # unambiguously for each trip in a multi-trip list, not guess from order.
+    if lang == "en":
+        msg = f"{index}. Customer {customer}, pickup {pickup}, dropoff {dropoff}, fare {fare}"
+        if time:
+            msg += f", pickup time {time}"
+        return msg
+
+    msg = f"{index}. Khách hàng {customer}, điểm đón {pickup}, điểm trả {dropoff}, giá {fare}"
+    if time:
+        msg += f", giờ đón {time}"
+    return msg
 
 
 def format_trip_list(trips: list[dict], lang: str = "vi") -> str:

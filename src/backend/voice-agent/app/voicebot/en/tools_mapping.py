@@ -7,17 +7,42 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: check_upcoming_trips
 - Use when: schedule, "check my trips", "next trip", "how many trips", "where are my other trips", fare/price questions
-- scope is REQUIRED — if the request is VAGUE (not clear whether in-progress or upcoming), you
-  MUST ask first: "Would you like to see trips in progress, upcoming trips, or both?" — do NOT guess
-  - scope="in_progress": driver clearly says "current trip(s)", "trip I'm on", "already picked up"
-  - scope="upcoming": driver clearly says "new trips", "any trips coming up", "anyone book yet"
-  - scope="all": driver clearly says "everything", "all of them", "both" — or chose that after being asked
+- scope is REQUIRED — if the request is VAGUE (not clear whether in-progress, awaiting
+  confirmation, or new), you MUST ask first: "Would you like to see trips in progress, trips
+  awaiting confirmation, or all?" — do NOT guess
+  - scope="all": driver asks generally — "what trips do I currently have", "check my trips",
+    "everything", "all of them", "both" — or chose that after being asked
+  - scope="in_progress": driver clearly says "current trip(s)", "trip I'm on" WITHOUT
+    distinguishing picked up or not — covers confirmed-not-yet-at-pickup, arrived-not-yet-
+    picked-up, AND already-picked-up. If the driver also has a trip awaiting confirmation,
+    mention it too, don't wait to be asked
+  - scope="not_picked_up": driver clearly says "which trips haven't I picked up", "who's still
+    waiting", "customers not in the car yet" — only confirmed/arrived_pickup, excludes picked_up
+  - scope="picked_up": driver clearly says "which customers have I picked up", "who's in the car
+    right now", "already picked up" — only trips with the customer already on board
+  - scope="awaiting_confirmation": driver clearly says "new trips", "any trips coming up",
+    "anyone book yet", "trips awaiting confirmation", "any new or unconfirmed trips"
+  - scope="new": rarely picked on its own — only for a trip just created that hasn't been
+    offered to the driver yet (not something drivers naturally ask about)
 - trip_index=1,2,3…: one trip detail from the MOST RECENT listing — use for "yes", "trip 2",
   "how much is that trip" — call again with the SAME scope as that listing
 
 ## Tool: get_current_trip_info
 - Use when: asking about EXACTLY 1 specific trip in progress — "current trip", "how much is this ride", fare/ETA for a single active trip
 - Different from check_upcoming_trips(scope="in_progress"): that tool lists ALL in-progress trips (could be several); this one only ever returns one. If the driver's question implies there could be more than one ("check my active trips"), use check_upcoming_trips instead
+- Do NOT use for a question implying LOCATION/distance (e.g. "which customer am I currently
+  heading to pick up/drop off") — this tool does NOT rank by GPS, it just returns whichever
+  active trip happens to be first. Use suggest_next_stop for that instead.
+
+## Tool: suggest_next_stop
+- Use when: driver asks where they SHOULD go next, OR which customer they're CURRENTLY heading
+  to pick up/drop off (implies needing the current GPS position, not just a list) — "where
+  should I go next", "who should I pick up or drop off now", "what's my next stop", "who am I
+  heading to pick up", "which customer am I on my way to" — ranks by distance from the driver's
+  latest GPS position automatically, no parameters needed
+- Different from check_upcoming_trips: that one only lists by status, does NOT rank by
+  location; use suggest_next_stop when the driver wants an actual recommendation or is asking
+  about their current heading, not just a list
 
 ## Tool: get_trip_traffic
 - Use when: "any traffic", "jammed", "how's traffic", "how long to get there", "congestion"
@@ -41,10 +66,28 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
   the driver, wait for them to pick (number or customer name), then call call_customer again
   with the right trip_index. Do NOT guess which trip when there's more than one.
 - If there's only 1 trip, skip that step entirely.
-- Must ask for mode before calling for real (applies whether 1 or several trips):
+- Must ask for mode before calling for real (applies whether 1 or several trips) — EXCEPT the
+  case right below (already asked and driver agreed → call mode="agent" directly, no re-ask):
   - mode=agent: AI calls → "let AI call", "summarize it for me", "you call them"
   - mode=bridge: direct → "connect me", "I'll talk directly", "put me through"
   - mode=background: AI calls in background → "call in the background", "I'm busy", "call and let me know"
+
+### After the AI proactively asked "would you like me to call the customer" (proximity nudge)
+- If the driver agrees ("yes", "go ahead", "sure") → call `call_customer(mode="agent", message=...)`
+  DIRECTLY, do NOT ask for mode again (already implied). ALWAYS fill in `message` with the exact
+  content to convey — do NOT call without `message` here, or the AI will just make generic small
+  talk instead of stating why it called:
+  - Nudge about the PICKUP point → message example: "Please head to the pickup point, the driver
+    is almost there."
+  - Nudge about the DROPOFF point → message example: "Please get your things ready, the driver
+    is almost at the dropoff."
+  - Only continue normal conversation with the customer AFTER this content has been delivered —
+    don't make small talk before stating the reason for the call.
+  If the driver currently has more than one trip and the tool asks which one, use the customer
+  name/address just mentioned in the nudge to pick the right one, or read the tool's question
+  back to the driver if unsure.
+- If the driver declines/stays silent/says not needed ("no", "skip it") → do NOT call the
+  customer, just acknowledge briefly and continue the conversation normally.
 
 ---
 

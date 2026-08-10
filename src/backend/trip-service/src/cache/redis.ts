@@ -111,10 +111,48 @@ export function driverLocationKey(tripId: string): string {
   return `trip:driver_location:${tripId}`;
 }
 
+// Driver's periodic GPS ping while online (every ~10 min, independent of any
+// single trip) — separate from driverLocationKey above, which is keyed per
+// trip and only fed by the old per-trip tracking endpoint.
+export function driverLiveLocationKey(phone: string): string {
+  return `driver:live_location:${phone.replace(/^\+/, '')}`;
+}
+
 export function tripProximityNotifiedKey(tripId: string): string {
   return `trip:proximity_notified:${tripId}`;
 }
 
 export function tripDropoffProximityNotifiedKey(tripId: string): string {
   return `trip:dropoff_proximity_notified:${tripId}`;
+}
+
+// Separate dedupe pair for the closer ~200m "arriving, here's the optimal
+// next stop" announcement — independent of the 1km call-offer flags above,
+// since both can legitimately fire once each for the same trip.
+export function tripArrivalAnnouncedKey(tripId: string): string {
+  return `trip:arrival_announced:${tripId}`;
+}
+
+export function tripDropoffArrivalAnnouncedKey(tripId: string): string {
+  return `trip:dropoff_arrival_announced:${tripId}`;
+}
+
+// The driver's currently open voice session (if any) — set by voice-agent
+// when a driver job connects, cleared when it disconnects. Read by
+// driverReachService.ts to decide whether to push a proactive nudge into
+// the open room or open a brand new one. Long TTL (a few hours) is just a
+// self-cleanup backstop in case a job crashes before clearing it — normal
+// disconnects always clear it explicitly.
+export function driverSessionKey(phone: string): string {
+  return `driver:session:${phone.replace(/^\+/, '')}`;
+}
+
+// A nudge that couldn't be delivered live (driver had no session open, and
+// reachDriver no longer places a phone call to force one open) — held here
+// until the driver opens the app on their own (POST /voice/token embeds it
+// into that room's metadata, then clears this key). TTL caps how stale a
+// nudge can get before it's just dropped instead of surprising the driver
+// with a long-outdated "you're near pickup" hours later.
+export function driverPendingNudgeKey(phone: string): string {
+  return `driver:pending_nudge:${phone.replace(/^\+/, '')}`;
 }

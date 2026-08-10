@@ -78,6 +78,16 @@ def get_current_trip(userdata: dict) -> dict | None:
     return get(userdata, "current_trip")
 
 
+def get_current_location(userdata: dict) -> dict | None:
+    """Driver's last GPS ping (~every 10 min while online) — {lat, lng,
+    updated_at}, or None if they've never gone online. See
+    driverContextService.ts's `current_location` field."""
+    loc = get(userdata, "current_location")
+    if isinstance(loc, dict) and "lat" in loc and "lng" in loc:
+        return loc
+    return None
+
+
 def get_upcoming_trips(userdata: dict) -> list[dict]:
     """Upcoming trips from prefetched driver context."""
     upcoming = get(userdata, "upcoming_trips")
@@ -229,6 +239,25 @@ def patch_trip_by_id(userdata: dict, trip_id: str, **fields: Any) -> None:
 def set_last_call(userdata: dict, call_id: str, **fields: Any) -> None:
     ctx = userdata.setdefault("context", {})
     ctx["last_call"] = {"call_id": call_id, **fields}
+
+
+def set_last_nudge_trip(userdata: dict, trip_id: str) -> None:
+    """Remembers which trip a just-delivered proactive nudge
+    (proximity_pickup/dropoff) was about — see session.py's
+    `_speak_driver_nudge` and agent.py's `on_enter` proactive_nudge branch,
+    both call this right after speaking the nudge. Lets call_customer.py
+    resolve "gọi khách đó" without asking the driver to disambiguate again
+    when they simply say yes to the nudge's own question — the LLM
+    shouldn't have to re-derive which trip from the just-spoken sentence.
+    """
+    userdata.setdefault("context", {})["_last_nudge_trip_id"] = trip_id
+
+
+def pop_last_nudge_trip(userdata: dict) -> str:
+    """One-shot read — cleared on read so it only resolves the very next
+    call_customer, not some unrelated one much later in the conversation."""
+    ctx = userdata.setdefault("context", {})
+    return ctx.pop("_last_nudge_trip_id", "") or ""
 
 
 def patch_current_trip(userdata: dict, **fields: Any) -> None:

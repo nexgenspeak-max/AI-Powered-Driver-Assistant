@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fake GPS — Driver Assistant e2e</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --text: #e6e8ec;
+    --muted: #8b93a1;
+    --accent: #7c5cff;
+    --accent2: #22c55e;
+    --danger: #ef4444;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  #map { flex: 1 1 auto; height: 100%; }
+  #panel {
+    width: 400px;
+    flex: 0 0 400px;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+  }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px 12px;
+    margin: 0 0 14px;
+  }
+  fieldset[disabled] { opacity: 0.4; }
+  legend { font-size: 12px; color: var(--muted); padding: 0 6px; }
+  label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 2px; }
+  input, select {
+    width: 100%;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 8px;
+    width: 100%;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: #262a35; color: var(--text); }
+  .btn-danger { background: var(--danger); color: white; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #status { font-size: 12px; padding: 8px; border-radius: 6px; margin-bottom: 12px; background: #1c2030; }
+  #status.ok { color: var(--accent2); }
+  #status.bad { color: var(--danger); }
+  #coords { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  #log {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .log-ok { color: var(--accent2); }
+  .log-bad { color: var(--danger); }
+  .log-info { color: var(--muted); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .quickgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quickgrid button { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+  <h1>Fake GPS — Driver Assistant</h1>
+  <p class="sub">Chỉ dùng local/dev để test. Gọi thẳng API sẵn có, không đụng code driver-app/trip-service.</p>
+
+  <div id="status">Chưa đăng nhập.</div>
+
+  <fieldset>
+    <legend>1. Địa chỉ service</legend>
+    <label>trip-service URL</label>
+    <input id="tripBase" value="http://localhost:8002" />
+    <label>auth-service URL</label>
+    <input id="authBase" value="http://localhost:8003" />
+  </fieldset>
+
+  <fieldset>
+    <legend>2. Đăng nhập tài khoản tài xế</legend>
+    <label>Số điện thoại</label>
+    <input id="driverPhone" value="84867347452" />
+    <label>Mật khẩu</label>
+    <input id="driverPassword" type="password" value="" />
+    <button class="btn-primary" id="btnLogin">Đăng nhập</button>
+    <p class="hint">Đăng nhập bằng đúng tài khoản tài xế thật (giống hệt <span style="color:var(--text)">POST /auth/login</span> mà driver-app dùng) — không tạo/không đổi mật khẩu gì cả.</p>
+  </fieldset>
+
+  <fieldset id="tripsBox" disabled>
+    <legend>3. Chuyến của tài xế</legend>
+    <select id="tripSelect"><option>— đăng nhập để tải danh sách —</option></select>
+    <p id="tripCustomerInfo" class="hint">Khách hàng: —</p>
+    <button class="btn-secondary" id="btnRefreshTrips">Tải lại danh sách chuyến</button>
+  </fieldset>
+
+  <fieldset id="quickBox" disabled>
+    <legend>4. Đặt nhanh vị trí tài xế</legend>
+    <div class="quickgrid">
+      <button class="btn-secondary" id="btnAtPickup">Tại điểm đón</button>
+      <button class="btn-secondary" id="btnAtDropoff">Tại điểm trả</button>
+    </div>
+    <label>Cách điểm đón bao nhiêu mét (&lt; 1000 để test proximity)</label>
+    <div class="row">
+      <input id="nearMeters" type="number" value="700" min="1" max="999" />
+      <button class="btn-secondary" id="btnNearPickup" style="margin-top:0">Đặt cách điểm đón</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>5. Gửi vị trí</legend>
+    <p class="hint">Bấm vào bản đồ hoặc kéo marker cam để đặt tay vị trí tài xế.</p>
+    <p id="coords">lat: —, lng: —</p>
+    <button class="btn-primary" id="btnSendOnce" disabled>Gửi vị trí 1 lần</button>
+    <div class="row">
+      <div>
+        <label>Tự động gửi mỗi (giây)</label>
+        <input id="intervalSec" type="number" value="5" min="1" />
+      </div>
+    </div>
+    <button class="btn-secondary" id="btnAutoToggle" disabled>Bắt đầu tự động gửi</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Log</legend>
+    <div id="log"></div>
+  </fieldset>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+
+function $(id) { return document.getElementById(id); }
+
+// ── Persisted config (this page's own localStorage — separate from any real app's) ──
+const LS_KEY = 'fakegps.config.v1';
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+}
+function saveConfig() {
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    tripBase: $('tripBase').value.trim(),
+    authBase: $('authBase').value.trim(),
+    driverPhone: $('driverPhone').value.trim(),
+  }));
+}
+const cfg = loadConfig();
+if (cfg.tripBase) $('tripBase').value = cfg.tripBase;
+if (cfg.authBase) $('authBase').value = cfg.authBase;
+if (cfg.driverPhone) $('driverPhone').value = cfg.driverPhone;
+
+let accessToken = '';
+
+// This driver account's login/trip records are keyed on the plain local
+// format ("0382759152"), NOT E.164 ("+84382759152") — confirmed by testing
+// against the real account (an earlier version of this page guessed E.164
+// and got "Invalid credentials"). Send exactly what's typed, no conversion.
+function toE164(raw) {
+  return raw.trim();
+}
+
+// ── Log panel ──
+function log(msg, kind) {
+  const el = $('log');
+  const line = document.createElement('div');
+  line.className = kind === 'ok' ? 'log-ok' : kind === 'bad' ? 'log-bad' : 'log-info';
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function setStatus(text, kind) {
+  const el = $('status');
+  el.textContent = text;
+  el.className = kind || '';
+}
+
+// ── Geo helper: destination point given distance(m) + bearing(deg) from an origin ──
+function destinationPoint(lat, lng, distanceMeters, bearingDeg) {
+  const R = 6371000;
+  const brng = bearingDeg * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lng1 = lng * Math.PI / 180;
+  const dR = distanceMeters / R;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dR) + Math.cos(lat1) * Math.sin(dR) * Math.cos(brng));
+  const lng2 = lng1 + Math.atan2(Math.sin(brng) * Math.sin(dR) * Math.cos(lat1), Math.cos(dR) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: lat2 * 180 / Math.PI, lng: lng2 * 180 / Math.PI };
+}
+
+// ── Map ──
+const map = L.map('map').setView([10.7769, 106.7009], 13); // Ho Chi Minh City default
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+const driverIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:22px;height:22px;border-radius:50%;background:#f97316;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.5)"></div>',
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+});
+const pickupIcon = L.divIcon({ className: '', html: '<div style="width:16px;height:16px;border-radius:50%;background:#3b82f6;border:2px solid white"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+const dropoffIcon = L.divIcon({ className: '', html: '<div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:2px solid white"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+
+let driverMarker = null;
+let pickupMarker = null, pickupCircle = null;
+let dropoffMarker = null, dropoffCircle = null;
+let selectedTrip = null;
+
+function setDriverPosition(lat, lng) {
+  if (!driverMarker) {
+    driverMarker = L.marker([lat, lng], { icon: driverIcon, draggable: true }).addTo(map);
+    driverMarker.on('drag', e => updateCoords(e.target.getLatLng()));
+    driverMarker.on('dragend', e => updateCoords(e.target.getLatLng()));
+  } else {
+    driverMarker.setLatLng([lat, lng]);
+  }
+  updateCoords({ lat, lng });
+}
+function updateCoords(latlng) {
+  $('coords').textContent = `lat: ${latlng.lat.toFixed(6)}, lng: ${latlng.lng.toFixed(6)}`;
+  $('btnSendOnce').disabled = !accessToken;
+  $('btnAutoToggle').disabled = !accessToken;
+}
+map.on('click', e => setDriverPosition(e.latlng.lat, e.latlng.lng));
+
+// ── Login (real driver account — plain login, never registers/resets anything) ──
+$('btnLogin').addEventListener('click', async () => {
+  saveConfig();
+  const authBase = $('authBase').value.trim();
+  const phoneRaw = $('driverPhone').value.trim();
+  const phone = toE164(phoneRaw);
+  const password = $('driverPassword').value;
+  const btn = $('btnLogin');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${authBase}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'driver', phone, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+    accessToken = data.access_token;
+    setStatus(`Đã đăng nhập — driver ${phoneRaw}`, 'ok');
+    log(`Đăng nhập OK (phone=${phoneRaw})`, 'ok');
+    $('tripsBox').disabled = false;
+    if (driverMarker) updateCoords(driverMarker.getLatLng());
+    await loadTrips();
+  } catch (err) {
+    setStatus(`Đăng nhập lỗi: ${err.message}`, 'bad');
+    log(`Đăng nhập lỗi: ${err.message}`, 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ── Trips list for the logged-in driver ──
+async function loadTrips() {
+  const tripBase = $('tripBase').value.trim();
+  const phone = toE164($('driverPhone').value.trim());
+  const sel = $('tripSelect');
+  sel.innerHTML = '<option>Đang tải...</option>';
+  try {
+    const res = await fetch(`${tripBase}/api/v1/trips?driver_phone=${encodeURIComponent(phone)}&limit=30`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const allTrips = await res.json();
+    if (!res.ok) throw new Error(allTrips.detail || allTrips.error || `HTTP ${res.status}`);
+    // Loại các chuyến không còn ý nghĩa để test proximity/next-stop: đã
+    // hủy, đã bị từ chối, hoặc chưa được báo cho tài xế (notified — tài xế
+    // chưa nhận nên chưa có gì để đi đón cả).
+    const EXCLUDED = new Set(['cancelled', 'cancelled_by_driver', 'rejected', 'notified']);
+    const trips = Array.isArray(allTrips) ? allTrips.filter(t => !EXCLUDED.has(t.status)) : [];
+    if (trips.length === 0) {
+      sel.innerHTML = '<option>— không có chuyến nào phù hợp —</option>';
+      log('Tài xế này không có chuyến nào ngoài hủy/từ chối/notified.', 'info');
+      return;
+    }
+    sel.innerHTML = trips.map((t, i) => {
+      const customer = t.customer_name || '?';
+      const phone = t.customer_phone || '?';
+      return `<option value="${i}">[${t.status}] ${customer} (${phone}) — ${(t.pickup_address || '?').slice(0, 24)} → ${(t.dropoff_address || '?').slice(0, 24)}</option>`;
+    }).join('');
+    sel.dataset.trips = JSON.stringify(trips);
+    log(`Tải được ${trips.length} chuyến.`, 'ok');
+    drawTripFromSelect();
+  } catch (err) {
+    sel.innerHTML = '<option>— lỗi tải chuyến —</option>';
+    log(`Tải chuyến lỗi: ${err.message}`, 'bad');
+  }
+}
+$('btnRefreshTrips').addEventListener('click', loadTrips);
+$('tripSelect').addEventListener('change', drawTripFromSelect);
+
+function drawTripFromSelect() {
+  const sel = $('tripSelect');
+  const trips = sel.dataset.trips ? JSON.parse(sel.dataset.trips) : [];
+  const trip = trips[Number(sel.value)];
+  selectedTrip = trip || null;
+
+  if (pickupMarker) { map.removeLayer(pickupMarker); map.removeLayer(pickupCircle); pickupMarker = pickupCircle = null; }
+  if (dropoffMarker) { map.removeLayer(dropoffMarker); map.removeLayer(dropoffCircle); dropoffMarker = dropoffCircle = null; }
+  $('quickBox').disabled = true;
+  if (!trip) { $('tripCustomerInfo').textContent = 'Khách hàng: —'; return; }
+
+  const customerLine = `Khách hàng: ${trip.customer_name || '?'} — ${trip.customer_phone || '?'}`;
+  $('tripCustomerInfo').textContent = customerLine;
+
+  const bounds = [];
+  if (typeof trip.pickup_lat === 'number' && typeof trip.pickup_lng === 'number') {
+    pickupMarker = L.marker([trip.pickup_lat, trip.pickup_lng], { icon: pickupIcon }).addTo(map)
+      .bindTooltip(`Điểm đón: ${trip.pickup_address || ''}<br>${customerLine}`);
+    // 1000m = default PROXIMITY_ALERT_METERS / ARRIVAL_RADIUS_METERS (trip-service config.ts)
+    pickupCircle = L.circle([trip.pickup_lat, trip.pickup_lng], { radius: 1000, color: '#3b82f6', fillOpacity: 0.06, dashArray: '4,6' }).addTo(map);
+    bounds.push([trip.pickup_lat, trip.pickup_lng]);
+    $('quickBox').disabled = false;
+  }
+  if (typeof trip.dropoff_lat === 'number' && typeof trip.dropoff_lng === 'number') {
+    dropoffMarker = L.marker([trip.dropoff_lat, trip.dropoff_lng], { icon: dropoffIcon }).addTo(map)
+      .bindTooltip(`Điểm trả: ${trip.dropoff_address || ''}<br>${customerLine}`);
+    dropoffCircle = L.circle([trip.dropoff_lat, trip.dropoff_lng], { radius: 1000, color: '#22c55e', fillOpacity: 0.06, dashArray: '4,6' }).addTo(map);
+    bounds.push([trip.dropoff_lat, trip.dropoff_lng]);
+  }
+  if (bounds.length) map.fitBounds(bounds, { padding: [60, 60] });
+  if (!bounds.length) log('Chuyến này chưa có toạ độ pickup/dropoff (địa chỉ chưa geocode qua Goong/Google).', 'info');
+}
+
+// ── Quick placement ──
+$('btnAtPickup').addEventListener('click', () => {
+  if (!selectedTrip?.pickup_lat) return;
+  setDriverPosition(selectedTrip.pickup_lat, selectedTrip.pickup_lng);
+  log('Đặt tài xế đúng tại điểm đón.', 'info');
+});
+$('btnAtDropoff').addEventListener('click', () => {
+  if (!selectedTrip?.dropoff_lat) return;
+  setDriverPosition(selectedTrip.dropoff_lat, selectedTrip.dropoff_lng);
+  log('Đặt tài xế đúng tại điểm trả.', 'info');
+});
+$('btnNearPickup').addEventListener('click', () => {
+  if (!selectedTrip?.pickup_lat) return;
+  const meters = Math.min(999, Math.max(1, Number($('nearMeters').value) || 700));
+  const p = destinationPoint(selectedTrip.pickup_lat, selectedTrip.pickup_lng, meters, 45);
+  setDriverPosition(p.lat, p.lng);
+  log(`Đặt tài xế cách điểm đón ~${meters}m (trong bán kính 1000m).`, 'info');
+});
+
+// ── Send location ──
+async function sendLocationOnce() {
+  if (!driverMarker) return;
+  const tripBase = $('tripBase').value.trim();
+  const phone = toE164($('driverPhone').value.trim());
+  const pos = driverMarker.getLatLng();
+  try {
+    const res = await fetch(`${tripBase}/api/v1/drivers/me/location`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-Driver-Phone': phone,
+      },
+      body: JSON.stringify({ lat: pos.lat, lng: pos.lng }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+    log(`Gửi vị trí OK — lat=${pos.lat.toFixed(6)} lng=${pos.lng.toFixed(6)}`, 'ok');
+  } catch (err) {
+    log(`Gửi vị trí lỗi: ${err.message}`, 'bad');
+  }
+}
+$('btnSendOnce').addEventListener('click', sendLocationOnce);
+
+let autoTimer = null;
+$('btnAutoToggle').addEventListener('click', () => {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    $('btnAutoToggle').textContent = 'Bắt đầu tự động gửi';
+    $('btnAutoToggle').classList.remove('btn-danger');
+    $('btnAutoToggle').classList.add('btn-secondary');
+    log('Đã dừng tự động gửi.', 'info');
+    return;
+  }
+  const sec = Math.max(1, Number($('intervalSec').value) || 5);
+  sendLocationOnce();
+  autoTimer = setInterval(sendLocationOnce, sec * 1000);
+  $('btnAutoToggle').textContent = 'Dừng tự động gửi';
+  $('btnAutoToggle').classList.remove('btn-secondary');
+  $('btnAutoToggle').classList.add('btn-danger');
+  log(`Bắt đầu tự động gửi mỗi ${sec}s.`, 'info');
+});
+
+log('Sẵn sàng. Đăng nhập tài khoản tài xế để bắt đầu.', 'info');
+</script>
+</body>
+</html>

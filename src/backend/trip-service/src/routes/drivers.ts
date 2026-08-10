@@ -4,6 +4,13 @@ import * as tripService from '../services/tripService';
 import * as earningsService from '../services/earningsService';
 import * as driverContextService from '../services/driverContextService';
 import { phoneVariants } from '../utils/phone';
+import { cacheSet, cacheDel, driverLiveLocationKey, driverSessionKey } from '../cache/redis';
+import {
+  maybeNotifyCustomerOfProximity,
+  maybeNotifyCustomerOfDropoffProximity,
+  maybeAnnouncePickupArrivalNextStop,
+  maybeAnnounceDropoffArrivalNextStop,
+} from '../services/proximityService';
 
 const router = Router();
 
@@ -14,7 +21,9 @@ const router = Router();
 // rejected/no_answer (tài xế đã từ chối/không bắt máy, chuyến không còn thuộc tài xế này nữa)
 // cùng no_show (khách không ra, chuyến coi như khép lại phía tài xế).
 const DRIVER_ACTIVE_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed', 'arrived_pickup', 'picked_up']);
-const ACTIVE_STATUSES = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
+// Accepted trips only — mirrors driverContextService.ts's IN_PROGRESS. Used
+// to scope the proximity-call check in POST /me/location below.
+const IN_PROGRESS_STATUSES = new Set(['confirmed', 'arrived_pickup', 'picked_up']);
 
 async function tripsForDriver(phone: string) {
   const seen = new Set<string>();
@@ -133,6 +142,73 @@ router.patch('/me/status', async (req: Request, res: Response) => {
     if (!updated) return res.status(404).json({ detail: 'Driver not found' });
     await driverContextService.invalidateDriverContext(driverPhone);
     return res.json(updated);
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Presence: which room (if any) the driver currently has a voice session
+// open in — set by voice-agent's job entrypoint on connect, cleared on
+// disconnect (best-effort). Read by driverReachService.reachDriver() to
+// decide whether to push a proactive nudge into the open room or dial a
+// fresh one. TTL is a self-cleanup backstop only; normal disconnects always
+// clear this explicitly via DELETE below.
+router.put('/me/session', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    const roomName = typeof req.body.room_name === 'string' ? req.body.room_name.trim() : '';
+    if (!roomName) return res.status(400).json({ detail: 'room_name is required' });
+    await cacheSet(driverSessionKey(driverPhone), { room_name: roomName }, 3 * 3600);
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+router.delete('/me/session', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+    await cacheDel(driverSessionKey(driverPhone));
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+// Driver's periodic GPS ping while online (~every 10 min, driver-app side) —
+// NOT tied to a single trip, unlike POST /trips/:tripId/location. Runs the
+// same proximity-call checks as that endpoint against every trip the driver
+// currently holds, since a driver can have more than one active trip.
+router.post('/me/location', async (req: Request, res: Response) => {
+  try {
+    const driverPhone = req.headers['x-driver-phone'] as string;
+    if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
+
+    const lat = Number(req.body.lat);
+    const lng = Number(req.body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ detail: 'lat and lng must be numbers' });
+    }
+
+    await cacheSet(driverLiveLocationKey(driverPhone), { lat, lng, updated_at: new Date().toISOString() }, 1200);
+
+    // Only trips the driver has actually ACCEPTED — proximity-to-pickup
+    // doesn't make sense for a still-pending/notified/calling offer they
+    // haven't committed to yet (mirrors driverContextService.ts's IN_PROGRESS).
+    const trips = (await tripsForDriver(driverPhone)).filter(t => IN_PROGRESS_STATUSES.has(t.status));
+    for (const trip of trips) {
+      if (trip.status === 'picked_up') {
+        await maybeNotifyCustomerOfDropoffProximity(trip, { lat, lng });
+        await maybeAnnounceDropoffArrivalNextStop(trip, { lat, lng });
+      } else {
+        await maybeNotifyCustomerOfProximity(trip, { lat, lng });
+        await maybeAnnouncePickupArrivalNextStop(trip, { lat, lng });
+      }
+    }
+
+    return res.json({ status: 'ok' });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

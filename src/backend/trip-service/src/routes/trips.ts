@@ -6,10 +6,11 @@ import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
-import { cacheSet, cacheGet, driverLocationKey, tripProximityNotifiedKey, tripDropoffProximityNotifiedKey } from '../cache/redis';
+import { cacheSet, driverLocationKey } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
-import * as callService from '../services/callService';
 import { notifyDriver, notifyCustomer } from '../services/notify';
+import { maybeNotifyCustomerOfProximity, maybeNotifyCustomerOfDropoffProximity } from '../services/proximityService';
+import { reachDriver } from '../services/driverReachService';
 
 const router = Router();
 
@@ -241,6 +242,22 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
       const customerId = updated.id_account || updated.customer_phone;
       if (customerId) await notifyCustomer(customerId, status === 'confirmed' ? 'trip_confirmed' : 'trip_rejected', { trip_id: updated.trip_id });
     }
+    // Proactive "what should I do next" nudge — fires right when the driver
+    // just picked up (status=picked_up) or just dropped off (status=
+    // completed) a customer, whether that PATCH came from the driver-app UI
+    // button or the voice-agent's update_trip_status tool, since both go
+    // through this exact same handler. Deliberately excludes arrived_pickup
+    // — that's "reached pickup, customer not in the car yet", not actually
+    // "done with this stop" yet. Fire-and-forget: must never delay or fail
+    // this response over a nudge. Empty payload on purpose — nudge.py's
+    // suggest_next_stop live-refetches the driver's schedule itself rather
+    // than trusting whatever this request's body had.
+    if (config.enableNextStopNudge && updated?.driver_phone
+        && (status === 'picked_up' || status === 'completed')) {
+      reachDriver(updated.driver_phone, 'suggest_next_stop', {}).catch(err => {
+        console.warn(`[trips] next-stop nudge failed for trip=${updated.trip_id}:`, err);
+      });
+    }
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -292,73 +309,6 @@ router.post('/:tripId/location', async (req: Request, res: Response) => {
     return res.status(500).json({ error: String(err) });
   }
 });
-
-// Fires the "driver is close to pickup" call at most once per trip — the
-// dedupe flag is what makes this safe to call on every single GPS ping
-// without spamming the customer.
-async function maybeNotifyCustomerOfProximity(
-  trip: tripService.Trip,
-  driverCoords: { lat: number; lng: number },
-): Promise<void> {
-  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
-  if (!trip.driver_phone || !trip.customer_phone) return;
-
-  const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
-  if (distance > config.proximityAlertMeters) return;
-
-  const notifiedKey = tripProximityNotifiedKey(trip.trip_id);
-  if (await cacheGet(notifiedKey)) return;
-  // Set the flag before dialing (not after) so two near-simultaneous pings
-  // can't both pass the cacheGet check above and double-dial.
-  await cacheSet(notifiedKey, true, 3600);
-
-  try {
-    await callService.startCustomerCall({
-      driverPhone: trip.driver_phone,
-      customerPhone: trip.customer_phone,
-      tripId: trip.trip_id,
-      mode: 'background',
-      customerName: trip.customer_name,
-      pickupAddress: trip.pickup_address,
-      customMessage: 'Tài xế sắp đến điểm đón, vui lòng ra cổng hoặc đường lớn để tài xế dễ đón bạn nhé.',
-    });
-  } catch (err) {
-    console.warn(`[trips] proximity call failed for trip=${trip.trip_id}:`, err);
-  }
-}
-
-// Mirrors maybeNotifyCustomerOfProximity above but for the DROPOFF point —
-// only fires once the customer is actually in the car (status=picked_up),
-// separate dedupe key so it doesn't collide with the pickup-side notify
-// (both can legitimately fire once each within the same trip).
-async function maybeNotifyCustomerOfDropoffProximity(
-  trip: tripService.Trip,
-  driverCoords: { lat: number; lng: number },
-): Promise<void> {
-  if (trip.status !== 'picked_up') return;
-  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
-  if (!trip.driver_phone || !trip.customer_phone) return;
-
-  const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
-  if (distance > config.proximityAlertMeters) return;
-
-  const notifiedKey = tripDropoffProximityNotifiedKey(trip.trip_id);
-  if (await cacheGet(notifiedKey)) return;
-  await cacheSet(notifiedKey, true, 3600);
-
-  try {
-    await callService.startCustomerCall({
-      driverPhone: trip.driver_phone,
-      customerPhone: trip.customer_phone,
-      tripId: trip.trip_id,
-      mode: 'background',
-      customerName: trip.customer_name,
-      customMessage: 'Vui lòng kiểm tra hành lý trên xe, bạn sắp đến nơi rồi.',
-    });
-  } catch (err) {
-    console.warn(`[trips] dropoff proximity call failed for trip=${trip.trip_id}:`, err);
-  }
-}
 
 router.post('/:tripId/confirm-with-customer', async (req: Request, res: Response) => {
   try {

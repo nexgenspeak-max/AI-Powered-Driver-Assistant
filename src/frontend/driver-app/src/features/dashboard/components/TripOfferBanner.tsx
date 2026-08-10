@@ -145,6 +145,22 @@ export function TripOfferBanner() {
             <Button label="Không nhận chuyến" variant="outline" onPress={() => reject()} loading={rejecting} full />
             <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} full />
           </XStack>
+
+          {/* Purely local dismiss — no API call, trip stays notified/calling
+              server-side. Same fallback path as an offer going stale from
+              outside this component (see the auto-dismiss effect above):
+              the driver can still find/accept it later from Dashboard's own
+              TripCard list. */}
+          <Text
+            textAlign="center"
+            fontSize="$3"
+            color="$textSecondary"
+            onPress={dismiss}
+            pressStyle={{ opacity: 0.6 }}
+            paddingVertical="$1"
+          >
+            Để sau
+          </Text>
         </YStack>
       </GlassSurface>
     </Animated.View>

@@ -62,8 +62,10 @@ export default function DashboardScreen() {
   const active = context?.active_trips ?? [];
   const isOnline = driver?.status === "online";
   // Called unconditionally, above the `!driver` early return below — hooks
-  // can't be called after a conditional return (Rules of Hooks).
-  useProximityTracking(active);
+  // can't be called after a conditional return (Rules of Hooks). Tracks
+  // for as long as the driver is online, regardless of trip status (see
+  // useProximityTracking.ts).
+  useProximityTracking(isOnline);
 
   if (!driver) return null;
   const pending =

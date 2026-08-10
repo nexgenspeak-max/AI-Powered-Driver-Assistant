@@ -19,4 +19,9 @@ export const driversService = {
 
   getBonuses: () =>
     apiClient.get<Bonus[]>('/drivers/me/bonuses').then(r => r.data),
+
+  // Periodic GPS ping while online (~every 10 min, see locationTracking.ts)
+  // — not tied to a specific trip, unlike tripsService.updateLocation.
+  updateLocation: (lat: number, lng: number) =>
+    apiClient.post('/drivers/me/location', { lat, lng }).then(r => r.data),
 }

@@ -115,29 +115,17 @@ export function AddressAutocompleteInput({
 
   return (
     <YStack position="relative" zIndex={showDropdown ? 20 : 1}>
-      <View position="relative">
-        <GlassBookingInput
-          label={label}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          error={error}
-        />
-        {actionLabel && (
+      {/* Own row above the field, not overlapping it — was absolutely
+          positioned on top of the glass box, landing on the same row as the
+          floating label inside it (cramped/attached look). Normal flow here
+          instead of a guessed negative offset, so it can't overlap whatever
+          field happens to sit above this one either. */}
+      {actionLabel && (
+        <View flexDirection="row" justifyContent="flex-end" marginBottom="$1">
           <TouchableOpacity
             onPress={onPressAction}
             disabled={actionLoading}
-            style={{
-              position: 'absolute',
-              right: 14,
-              top: 14,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              paddingVertical: 4,
-              paddingHorizontal: 8,
-            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8 }}
           >
             {actionLoading ? (
               <ActivityIndicator size="small" color="#8B5CF6" />
@@ -148,7 +136,17 @@ export function AddressAutocompleteInput({
               {actionLabel}
             </Text>
           </TouchableOpacity>
-        )}
+        </View>
+      )}
+      <View position="relative">
+        <GlassBookingInput
+          label={label}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          error={error}
+        />
       </View>
 
       {showDropdown && (

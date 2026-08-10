@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
-import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
+import { useVoiceSessionStore } from '../stores/voiceSessionStore'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
 
@@ -31,7 +31,14 @@ const connectingCueAssets = [
   require('../../../../assets/audio/connecting-cue-3.mp3'),
 ]
 
-export function AssistantChatPanel() {
+interface Props {
+  // Set when rendered as the tap-to-open overlay on Home (see index.tsx) —
+  // shows a close (X) button next to the status label. Omitted wherever this
+  // might still be rendered as permanent full-screen content instead.
+  onClose?: () => void
+}
+
+export function AssistantChatPanel({ onClose }: Props = {}) {
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()
@@ -50,11 +57,6 @@ export function AssistantChatPanel() {
   useEffect(() => {
     console.log('[connecting-cue] status:', JSON.stringify(connectingCueStatus))
   }, [connectingCueStatus])
-
-  useEffect(() => subscribeVoiceMessages((text, from) => {
-    if (from === 'user') addUserMessage(text)
-    else addBotMessage(text)
-  }), [addUserMessage, addBotMessage])
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true })
@@ -95,6 +97,11 @@ export function AssistantChatPanel() {
       return
     }
     if (voice.status !== 'connecting') return
+    // Auto-triggered by a pending nudge (useAutoConnectOnNudge.ts), not a
+    // driver tap — connect() already skips its own artificial delay for
+    // this case, and playing a "connecting..." cue the driver never asked
+    // for would just add a spoken-content collision with the nudge itself.
+    if (voice.silentConnect) return
     let cancelled = false
     ;(async () => {
       try {
@@ -198,7 +205,7 @@ export function AssistantChatPanel() {
       style={{ backgroundColor: theme.surface.val }}
       keyboardVerticalOffset={60}
     >
-      <View width="100%" paddingTop={insets.top}>
+      <View width="100%" paddingTop={insets.top} position="relative">
         {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
             the (app) layout level as a small draggable bubble on every tab
             (Home included) — no more full-size 360px canvas reserved here,
@@ -209,6 +216,14 @@ export function AssistantChatPanel() {
             ? 'Đang trong cuộc gọi — không thể tắt'
             : MIC_LABEL[voice.status]}
         </Text>
+        {onClose && (
+          <TouchableOpacity
+            onPress={onClose}
+            style={{ position: 'absolute', right: 20, top: insets.top + 4, padding: 8 }}
+          >
+            <Ionicons name="close" size={22} color={theme.textPrimary.val} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView

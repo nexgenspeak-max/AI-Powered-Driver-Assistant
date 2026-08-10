@@ -78,6 +78,26 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
 
         await wait_for_sip_pickup(self.session.userdata)
 
+        # Same resume-on-pickup as _run_isolated_answer_flow below — without
+        # this, the tracker (paused right before dialing, see
+        # customer_call.py::_pause_silence) never runs again for the rest of
+        # an agent-mode call: the agent_state_changed handler in session.py
+        # only auto-resumes it once customer_call_active goes False, which
+        # doesn't happen until the call actually ends. That silenced the
+        # <speech_not_detected> signal this class's own prompt tells the LLM
+        # to wait for, removing any timing feedback and leaving nothing but
+        # the LLM's own (unreliable) judgment of when the call is "done".
+        tracker = self.session.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.resume()
+
+        # Marks "ring/dial time is over, this is genuine pickup" — gates
+        # session.py's agent_state_changed handler so it only starts the
+        # "customer isn't responding" clock (_agent_call_quiet_since) from
+        # here onward, never during ringing. Mirrors _isolated_call_answered
+        # below, same reasoning.
+        self.session.userdata["_agent_call_answered"] = True
+
         if self._custom_message:
             hint = (
                 f'The person is being dialed into this room. When they answer, greet them '

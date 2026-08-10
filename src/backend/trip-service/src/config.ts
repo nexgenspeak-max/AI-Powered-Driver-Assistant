@@ -27,11 +27,25 @@ export const config = {
   mapsProvider: process.env.MAPS_PROVIDER || 'google',
   mapsApiKey: process.env.MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',
   proximityAlertMeters: Number(process.env.PROXIMITY_ALERT_METERS || 1000),
+  // Closer, second checkpoint (~200m) — driver is now genuinely arriving at
+  // A, so this is the right moment to compute and announce which pending
+  // stop B to head to next (route-optimized, see next_stop.py), separate
+  // from the 1km call-offer trigger above.
+  nextStopAnnounceMeters: Number(process.env.NEXT_STOP_ANNOUNCE_METERS || 200),
   // How close (meters) the driver's reported GPS must be to the pickup/
   // dropoff point before arrived_pickup/picked_up/completed is accepted —
   // separate knob from proximityAlertMeters (the auto-call trigger) even
   // though they default to the same distance.
   arrivalRadiusMeters: Number(process.env.ARRIVAL_RADIUS_METERS || 1000),
+
+  // Feature flags — default OFF so deploying this code never changes
+  // production behavior on its own; flip on per-environment once verified.
+  // ENABLE_PROXIMITY_ASK: when off, the 1km-away trigger keeps calling the
+  // customer directly (today's behavior) instead of asking the driver first.
+  enableProximityAsk: process.env.ENABLE_PROXIMITY_ASK === 'true',
+  // ENABLE_NEXT_STOP_NUDGE: when off, finishing a pickup/dropoff never
+  // proactively nudges the driver with a next-stop suggestion.
+  enableNextStopNudge: process.env.ENABLE_NEXT_STOP_NUDGE === 'true',
 
   // Deployed (Lambda) WebSocket push — unused when env === 'local' (notify/
   // picks the `ws` implementation instead). Still used for trip_offer/

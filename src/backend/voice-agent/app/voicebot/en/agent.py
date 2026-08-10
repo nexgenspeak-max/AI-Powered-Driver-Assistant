@@ -8,9 +8,12 @@ from app.voicebot.en.tools_mapping import TOOLS_MAPPING_PROMPT
 from app.voicebot.en.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
+from app.voicebot.processors.nudge import build_nudge_message
+from app.voicebot.processors import context_store
 
 from app.voicebot.en.tools.check_upcoming_trips       import check_upcoming_trips
 from app.voicebot.en.tools.get_current_trip_info      import get_current_trip_info
+from app.voicebot.en.tools.suggest_next_stop          import suggest_next_stop
 from app.voicebot.en.tools.get_trip_traffic           import get_trip_traffic
 from app.voicebot.en.tools.update_trip_status         import update_trip_status
 from app.voicebot.en.tools.call_customer              import call_customer
@@ -42,6 +45,7 @@ _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
     get_current_trip_info,
+    suggest_next_stop,
     get_trip_traffic,
     update_trip_status,
     request_cancel_trip,
@@ -90,15 +94,19 @@ class DriverAgent(SpeechTextFixMixin, Agent):
         driver_phone: str = "",
         context_hint: str = "",
         resume_summary: str = "",
+        proactive_nudge: dict | None = None,
     ) -> None:
-        self._trip           = trip
-        self._driver_phone   = driver_phone
-        self._resume_summary = resume_summary
+        self._trip            = trip
+        self._driver_phone    = driver_phone
+        self._resume_summary  = resume_summary
+        self._proactive_nudge = proactive_nudge
 
         if trip:
             instructions = build_outbound_prompt(trip, lang="en") + "\n" + TOOLS_MAPPING_PROMPT
             tools        = _DRIVER_OUTBOUND_TOOLS
         else:
+            # proactive_nudge sessions still need the FULL inbound toolset —
+            # only `trip` truthy switches to the 2-tool outbound set above.
             hint = f"\n\n{context_hint}" if context_hint else ""
             instructions = INBOUND_PROMPT + hint + "\n" + TOOLS_MAPPING_PROMPT
             tools        = _DRIVER_INBOUND_TOOLS
@@ -112,6 +120,23 @@ class DriverAgent(SpeechTextFixMixin, Agent):
                 allow_interruptions=False,
             )
             return
+        if not self._trip and self._proactive_nudge:
+            nudge_kind = self._proactive_nudge.get("nudge_kind", "")
+            payload = {k: v for k, v in self._proactive_nudge.items() if k != "nudge_kind"}
+            text = await build_nudge_message(nudge_kind, payload, lang="en", userdata=self.session.userdata)
+            if text:
+                # suggest_next_stop sets this itself (see next_stop.py) —
+                # payload's related_trip_id means something else for that
+                # kind (trip to EXCLUDE from ranking), see session.py's
+                # identical guard for the full reasoning.
+                if nudge_kind != "suggest_next_stop":
+                    related_trip_id = payload.get("related_trip_id", "")
+                    if related_trip_id:
+                        context_store.set_last_nudge_trip(self.session.userdata, related_trip_id)
+                await self.session.say(text, allow_interruptions=False)
+                return
+            # Unrecognized nudge_kind — fall through to the normal inbound
+            # greeting rather than saying nothing at all.
         msg = self._build_outbound_greeting() if self._trip else GREETING_INBOUND
         await self.session.say(msg, allow_interruptions=False)
 

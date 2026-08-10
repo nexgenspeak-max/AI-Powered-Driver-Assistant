@@ -6,6 +6,8 @@ import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../s
 import { GlobalAssistantOrb } from '../../src/features/home/components/GlobalAssistantOrb'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
+import { useAutoConnectOnNudge } from '../../src/features/home/hooks/useAutoConnectOnNudge'
+import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptureVoiceMessages'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 
 // Light mode: flat, full-color icon set (assets/icons/light/) — fixed
@@ -66,6 +68,14 @@ export default function AppLayout() {
   // currently has open, not just while Dashboard is mounted.
   const { data: driver } = useCurrentUser()
   useDispatchSocket(driver?.status === 'online', driver?.phone)
+  // Lives here too (not dashboard.tsx) so a pending nudge gets delivered
+  // regardless of which tab the driver has open — same reasoning as the
+  // dispatch socket above.
+  useAutoConnectOnNudge()
+  // Always-on, independent of whether the chat overlay is currently open —
+  // see useCaptureVoiceMessages.ts for why this can't live inside
+  // AssistantChatPanel anymore.
+  useCaptureVoiceMessages()
 
   return (
     // Shares the `pageBlur` shared value between the tab bar (writer, on

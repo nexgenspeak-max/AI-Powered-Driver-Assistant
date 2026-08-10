@@ -6,7 +6,25 @@ import { useTripOfferStore } from '../../../stores/tripOfferStore'
 // see trip-service's notify/local.ts (dev, plain `ws`) and
 // notify/lambda.ts + handlers/websocketConnect.ts (deployed, API Gateway
 // WebSocket) — the query-string identification is identical either way.
-const WS_URL = process.env.EXPO_PUBLIC_TRIP_SERVICE_WS_URL ?? 'ws://localhost:8002/ws'
+//
+// Derived from EXPO_PUBLIC_TRIP_SERVICE_URL (the REST base URL, used by
+// apiClient.ts) rather than needing its own separately-configured env var:
+// a literal "localhost" fallback here works fine on web (same machine as
+// the dev server) but silently never connects on a real device — the
+// phone's own "localhost" isn't the dev machine's. REST calls kept working
+// there because EXPO_PUBLIC_TRIP_SERVICE_URL gets set to the dev machine's
+// LAN IP; this failed only because EXPO_PUBLIC_TRIP_SERVICE_WS_URL is a
+// second, easy-to-forget variable that has to be kept in sync with it.
+// EXPO_PUBLIC_TRIP_SERVICE_WS_URL is still honored first for deployed
+// builds, where the WS endpoint (API Gateway) is a genuinely different
+// host/protocol than the REST API, not just http->ws on the same host.
+function deriveWsUrl(): string {
+  const explicit = process.env.EXPO_PUBLIC_TRIP_SERVICE_WS_URL
+  if (explicit) return explicit
+  const restBase = process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1'
+  return restBase.replace(/^http/, 'ws').replace(/\/api\/v1\/?$/, '') + '/ws'
+}
+const WS_URL = deriveWsUrl()
 
 const RECONNECT_DELAY_MS = 3000
 

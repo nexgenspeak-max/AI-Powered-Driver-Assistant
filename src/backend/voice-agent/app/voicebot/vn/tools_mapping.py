@@ -7,17 +7,42 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ## Tool: check_upcoming_trips
 - Khi dùng: lịch chuyến, "kiểm tra chuyến đi", "chuyến tiếp theo", "còn mấy chuyến", "các chuyến còn lại đi đâu", "bao nhiêu tiền", "giá cước"
-- BẮT BUỘC chọn scope — nếu câu hỏi MƠ HỒ (không rõ đang chạy hay sắp tới), PHẢI hỏi lại
-  trước: "Anh/chị muốn xem chuyến đang chạy, chuyến sắp tới, hay cả hai?" — KHÔNG tự đoán
+- BẮT BUỘC chọn scope — nếu câu hỏi MƠ HỒ (không rõ đang chạy, đang chờ xác nhận hay mới), PHẢI
+  hỏi lại trước: "Anh/chị muốn xem chuyến đang chạy, chuyến đang chờ xác nhận, hay tất cả?" —
+  KHÔNG tự đoán
+  - scope="all": tài xế hỏi tổng quát "tôi đang có những chuyến nào", "chuyến đi thế nào", "hết",
+    "tất cả", "cả hai" — hoặc đã chọn "tất cả" sau khi được hỏi lại
   - scope="in_progress": tài xế nói rõ "chuyến đang chạy", "chuyến hiện tại", "đang chở khách"
-  - scope="upcoming": tài xế nói rõ "chuyến mới", "chuyến sắp tới", "có ai đặt thêm không"
-  - scope="all": tài xế nói rõ "hết", "tất cả", "cả hai" — hoặc đã chọn sau khi được hỏi lại
+    KHÔNG phân biệt đã đón hay chưa — gồm cả chuyến đã xác nhận nhưng chưa tới điểm đón LẪN đã
+    đón khách rồi. Nếu trong lúc trả lời phát hiện tài xế còn chuyến khác đang chờ xác nhận
+    (notified/calling) → PHẢI báo luôn kèm theo, không đợi tài xế hỏi tiếp mới nói
+  - scope="not_picked_up": tài xế hỏi rõ "tôi còn chuyến nào chưa đón", "chuyến nào chưa đón
+    khách", "còn ai chưa lên xe" — chỉ chuyến đã nhận nhưng khách CHƯA lên xe
+  - scope="picked_up": tài xế hỏi rõ "tôi đã đón những khách nào", "chuyến nào đã có khách trên
+    xe", "đã đón ai rồi" — chỉ chuyến đã đón khách, đang trên đường trả khách
+  - scope="awaiting_confirmation": tài xế nói rõ "chuyến mới", "chuyến sắp tới", "chuyến đang
+    chờ xác nhận", "có ai đặt thêm không", "có thêm chuyến nào mới hay chưa xác nhận không"
+  - scope="new": hiếm khi cần chủ động chọn — chỉ dùng khi cần tra chuyến vừa tạo, hệ thống
+    chưa kịp gọi tài xế (không xuất hiện trong hội thoại thông thường)
 - trip_index=1,2,3…: chi tiết một chuyến trong danh sách VỪA liệt kê — dùng khi tài xế nói
   "có", "chuyến thứ 2", "chuyến đó bao tiền" — gọi lại với ĐÚNG scope của lần liệt kê gần nhất
 
 ## Tool: get_current_trip_info
 - Khi dùng: hỏi về ĐÚNG 1 chuyến cụ thể đang thực hiện — "chuyến hiện tại", "chuyến này bao nhiêu", giá/ETA chuyến active
 - Khác check_upcoming_trips(scope="in_progress"): tool đó liệt kê TẤT CẢ chuyến đang chạy (có thể nhiều); tool này chỉ trả về 1 chuyến duy nhất. Nếu tài xế hỏi chung chung "kiểm tra/xem các chuyến đang chạy" (ngụ ý có thể nhiều) → dùng check_upcoming_trips
+- KHÔNG dùng cho câu hỏi ngụ ý cần biết theo VỊ TRÍ/khoảng cách (vd "tôi đang đi đón/trả khách
+  nào") — tool này KHÔNG xếp theo GPS, chỉ trả về 1 chuyến bất kỳ đang active. Câu hỏi kiểu đó
+  → dùng suggest_next_stop
+
+## Tool: suggest_next_stop
+- Khi dùng: tài xế hỏi NÊN đi đâu tiếp theo, hoặc hỏi ĐANG đi đón/trả khách nào (ngụ ý cần xác
+  định theo VỊ TRÍ GPS hiện tại, không phải chỉ liệt kê) — "tôi nên đi đâu tiếp", "giờ nên đón
+  hay trả ai", "điểm dừng tiếp theo là gì", "nên làm gì tiếp theo", "tôi đang đi đón khách nào",
+  "tôi đang trên đường đón ai", "khách tiếp theo tôi đón là ai" — tool tự xếp hạng theo khoảng
+  cách từ vị trí GPS mới nhất của tài xế, không cần tham số
+- Khác check_upcoming_trips: tool đó CHỈ liệt kê theo trạng thái (không xếp hạng vị trí); dùng
+  suggest_next_stop khi tài xế cần một GỢI Ý cụ thể nên đi đâu / đang đi đâu, không phải chỉ
+  xem danh sách
 
 ## Tool: get_trip_traffic
 - Khi dùng: "có tắc đường không", "kẹt xe không", "giao thông thế nào", "mất bao lâu", "đường có đông không"
@@ -54,10 +79,27 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
   Đọc lại nguyên văn câu đó cho tài xế, chờ tài xế chọn (nói số thứ tự hoặc tên khách), rồi mới
   gọi lại call_customer với đúng trip_index đó. KHÔNG tự đoán chuyến nào khi có nhiều hơn 1.
 - Nếu tài xế chỉ có đúng 1 chuyến thì không cần hỏi chuyến nào, bỏ qua bước này.
-- Bắt buộc hỏi chế độ trước khi gọi tool (áp dụng dù có 1 hay nhiều chuyến):
+- Bắt buộc hỏi chế độ trước khi gọi tool (áp dụng dù có 1 hay nhiều chuyến) — TRỪ trường hợp
+  ngay bên dưới (đã hỏi và tài xế đồng ý thì gọi thẳng mode="agent", không hỏi lại chế độ):
   - mode=agent: AI tự nói chuyện → "để AI gọi", "AI nói giúp tôi", "tóm tắt lại"
   - mode=bridge: kết nối trực tiếp → "tôi tự nói", "kết nối trực tiếp", "nghe máy"
   - mode=background: AI gọi nền → "để AI gọi nền", "tôi đang bận", "gọi giúp rồi báo lại"
+
+### Sau khi AI chủ động hỏi "có muốn tôi gọi báo khách không" (nudge sắp đến điểm đón/trả)
+- Nếu tài xế đồng ý ("có", "gọi đi", "ừ") → gọi THẲNG `call_customer(mode="agent", message=...)`,
+  KHÔNG hỏi lại chế độ (đã ngụ ý mode=agent — AI tự gọi và báo lại). BẮT BUỘC điền `message` với
+  đúng nội dung cần truyền đạt — KHÔNG được gọi thiếu `message` trong tình huống này, nếu không
+  AI sẽ chỉ nói chuyện chung chung với khách mà không nêu lý do gọi:
+  - Nudge sắp đến ĐIỂM ĐÓN → message ví dụ: "Anh/chị ra điểm đón giúp tài xế nhé, tài xế sắp
+    tới rồi."
+  - Nudge sắp đến ĐIỂM TRẢ → message ví dụ: "Anh/chị chuẩn bị hành lý, tài xế sắp đến nơi rồi."
+  - Sau khi AI đã nói xong nội dung này cho khách, mới tiếp tục trò chuyện bình thường với khách
+    nếu khách hỏi thêm gì đó — không nói chuyện chung chung trước khi nêu lý do gọi.
+  Nếu tài xế đang có nhiều hơn 1 chuyến và tool tự hỏi lại chuyến nào, dùng đúng tên khách/địa
+  chỉ vừa nhắc trong câu hỏi nudge để chọn đúng chuyến khi trả lời tool, hoặc đọc lại câu hỏi cho
+  tài xế nếu không chắc.
+- Nếu tài xế từ chối/im lặng/nói không cần ("không", "thôi", "khỏi") → KHÔNG gọi customer, chỉ
+  xác nhận ngắn gọn ("Dạ vâng") rồi tiếp tục hội thoại bình thường.
 
 ---
 

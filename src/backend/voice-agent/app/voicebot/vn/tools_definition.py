@@ -14,23 +14,38 @@ raw_schema = {
             "Xem chuyến đi của tài xế — liệt kê chuyến (điểm đón, điểm đến, giá ước tính) trong "
             "đúng phạm vi tài xế muốn. QUAN TRỌNG: nếu tài xế hỏi mơ hồ kiểu 'kiểm tra chuyến "
             "đi', 'chuyến đi thế nào', 'có chuyến nào không' — KHÔNG tự đoán scope, PHẢI hỏi lại "
-            "trước: 'Anh/chị muốn xem chuyến đang chạy (đã nhận, đang thực hiện), chuyến sắp tới "
-            "(chuyến mới, đang chờ xác nhận), hay cả hai?' rồi mới gọi tool. Nếu tài xế đã nói rõ "
-            "trong câu hỏi (vd 'chuyến đang chạy có gì', 'có chuyến mới nào không', 'xem hết cho "
-            "tôi') thì gọi thẳng, không cần hỏi lại. Khi hỏi follow-up ('chuyến thứ 2 bao tiền', "
-            "'có' muốn xem thêm) → gọi lại với ĐÚNG scope của lần liệt kê gần nhất."
+            "trước: 'Anh/chị muốn xem chuyến đang chạy (đã nhận, đang thực hiện), chuyến đang "
+            "chờ xác nhận (đã gọi, chưa trả lời), hay tất cả?' rồi mới gọi tool. Nếu tài xế đã "
+            "nói rõ trong câu hỏi thì gọi thẳng, không cần hỏi lại, ví dụ: 'tôi đang có những "
+            "chuyến nào' / 'xem hết cho tôi' → scope=all; 'tôi đã đón những khách nào' → "
+            "scope=picked_up; 'tôi còn chuyến nào chưa đón' → scope=not_picked_up; 'có thêm "
+            "chuyến nào mới hay chưa xác nhận không' → scope=awaiting_confirmation. Khi hỏi "
+            "follow-up ('chuyến thứ 2 bao tiền', 'có' muốn xem thêm) → gọi lại với ĐÚNG scope "
+            "của lần liệt kê gần nhất. Khi trả lời scope thuộc nhóm đang chạy (in_progress/"
+            "not_picked_up/picked_up), nếu tài xế còn có chuyến khác đang 'awaiting_"
+            "confirmation' (chưa xác nhận), PHẢI báo thêm cho tài xế biết luôn, đừng để tài xế "
+            "phải hỏi lại mới biết có chuyến mới đang chờ."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "scope": {
                     "type": "string",
-                    "enum": ["in_progress", "upcoming", "all"],
+                    "enum": ["in_progress", "not_picked_up", "picked_up", "awaiting_confirmation", "new", "all"],
                     "description": (
-                        "'in_progress' = chuyến đã nhận, đang thực hiện (đang trên đường đón/đã "
-                        "đón khách). 'upcoming' = chuyến mới, chưa xác nhận, đang chờ tài xế "
-                        "trả lời. 'all' = cả hai — chỉ dùng khi tài xế đã nói rõ muốn xem tất cả, "
-                        "hoặc đã chọn 'cả hai' sau khi được hỏi."
+                        "'in_progress' = TẤT CẢ chuyến đã xác nhận, đang thực hiện: gồm cả chưa "
+                        "đến điểm đón, đã đến nhưng chưa đón khách, VÀ đã đón khách rồi — dùng "
+                        "khi tài xế hỏi chung 'chuyến đang chạy' không phân biệt đã đón hay chưa. "
+                        "'not_picked_up' = riêng chuyến đã nhận nhưng CHƯA đón khách (đang trên "
+                        "đường đến điểm đón, hoặc đã đến điểm đón nhưng khách chưa lên xe) — dùng "
+                        "khi tài xế hỏi rõ 'chuyến nào tôi chưa đón', 'còn chuyến nào chưa đón "
+                        "khách'. 'picked_up' = riêng chuyến ĐÃ đón khách, đang trên đường trả "
+                        "khách — dùng khi tài xế hỏi 'tôi đã đón những khách nào', 'chuyến nào "
+                        "đã có khách trên xe'. 'awaiting_confirmation' = chuyến MỚI, chưa xác "
+                        "nhận, hệ thống đã gọi tài xế và đang chờ tài xế đồng ý/từ chối. 'new' = "
+                        "chuyến vừa tạo, hệ thống chưa kịp gọi tài xế (rất hiếm gặp). 'all' = tất "
+                        "cả các nhóm trên — chỉ dùng khi tài xế đã nói rõ muốn xem tất cả (vd "
+                        "'tôi đang có những chuyến nào'), hoặc đã chọn 'tất cả' sau khi được hỏi."
                     ),
                 },
                 "trip_index": {
@@ -52,6 +67,21 @@ raw_schema = {
         "description": (
             "Thông tin chuyến đang chạy / active: khách, điểm đón-trả, giá, ETA, trạng thái. "
             "Gọi khi hỏi 'chuyến hiện tại', 'chuyến đang chạy', 'chuyến này bao tiền'."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "suggest_next_stop": {
+        "type": "function",
+        "name": "suggest_next_stop",
+        "description": (
+            "Gợi ý tài xế nên đón/trả khách nào TIẾP THEO, dựa trên vị trí hiện tại của tài xế "
+            "và toàn bộ lịch trình đang có (cả chuyến chưa đón lẫn đã đón đang chờ trả) — chọn "
+            "điểm gần tài xế nhất. Gọi khi tài xế hỏi 'tôi nên đi đâu tiếp', 'giờ nên đón hay "
+            "trả ai', 'điểm dừng tiếp theo là gì', 'nên làm gì tiếp theo'. Khác "
+            "check_upcoming_trips: tool đó chỉ liệt kê theo trạng thái, KHÔNG xếp hạng theo "
+            "khoảng cách/vị trí — dùng tool này khi tài xế cần gợi ý NÊN đi đâu, không phải chỉ "
+            "xem danh sách."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -112,7 +142,13 @@ raw_schema = {
             "  • mode='agent'  — AI gọi khách vào cùng phòng; tài xế nghe trực tiếp.\n"
             "  • mode='bridge' — Tài xế nói trực tiếp với khách trong cùng phòng.\n"
             "Sau khi tài xế đã chọn đúng chuyến (nếu cần) VÀ đúng chế độ, mới gọi tool này với "
-            "đủ mode (và trip_index nếu có nhiều chuyến)."
+            "đủ mode (và trip_index nếu có nhiều chuyến).\n"
+            "SAU KHI AI VỪA CHỦ ĐỘNG HỎI TÀI XẾ 'có muốn tôi gọi báo khách không' (nudge sắp đến "
+            "điểm đón/trả) và tài xế đồng ý: gọi THẲNG mode='agent' KÈM message đúng nội dung cần "
+            "truyền đạt (vd 'Anh/chị ra điểm đón giúp tài xế nhé, tài xế sắp tới rồi' cho điểm "
+            "đón, hoặc 'Anh/chị chuẩn bị hành lý, sắp đến nơi rồi' cho điểm trả) — KHÔNG hỏi lại "
+            "chế độ, KHÔNG gọi mà thiếu message trong tình huống này, vì nếu thiếu thì AI sẽ nói "
+            "chuyện chung chung với khách mà không nêu rõ lý do gọi."
         ),
         "parameters": {
             "type": "object",
@@ -128,6 +164,16 @@ raw_schema = {
                         "Số thứ tự chuyến trong danh sách VỪA được tool này đọc ra (1 = đầu tiên) "
                         "— chỉ cần khi tài xế đang có nhiều hơn 1 chuyến và đã chọn. Để trống nếu "
                         "tài xế chỉ có đúng 1 chuyến, hoặc nếu chưa hỏi tài xế chọn chuyến nào."
+                    ),
+                },
+                "message": {
+                    "type": "string",
+                    "description": (
+                        "CHỈ dùng với mode='agent'. Nội dung cụ thể AI phải nói với khách NGAY khi "
+                        "khách bắt máy, trước khi làm gì khác (vd mời khách ra điểm đón, nhắc khách "
+                        "chuẩn bị xuống xe) — bắt buộc điền khi đây là cuộc gọi sau một nudge chủ "
+                        "động (sắp đến điểm đón/trả). Để trống nếu tài xế chỉ muốn AI gọi chung "
+                        "chung không có nội dung cụ thể cần truyền đạt trước."
                     ),
                 },
             },
