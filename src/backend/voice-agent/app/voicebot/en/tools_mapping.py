@@ -27,6 +27,12 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - trip_index=1,2,3…: one trip detail from the MOST RECENT listing — use for "yes", "trip 2",
   "how much is that trip" — call again with the SAME scope as that listing
 
+## Tool: refresh_latest_data
+- Use when: driver said "yes"/"sure"/"go ahead" right after check_upcoming_trips OR
+  get_today_earnings ended its reply asking "would you like me to get the latest data?"
+- Do NOT call proactively, and do NOT call for any other tool — only these two ask that question
+- If the driver declines/ignores/asks something else instead → do NOT call it, just continue
+
 ## Tool: get_current_trip_info
 - Use when: asking about EXACTLY 1 specific trip in progress — "current trip", "how much is this ride", fare/ETA for a single active trip
 - Different from check_upcoming_trips(scope="in_progress"): that tool lists ALL in-progress trips (could be several); this one only ever returns one. If the driver's question implies there could be more than one ("check my active trips"), use check_upcoming_trips instead
@@ -120,11 +126,18 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 
 ---
 
-## Tool: confirm_trip (outbound only)
+## Tool: confirm_trip
 - Use when: driver accepts a new trip — "yes", "I'll take it", "accept", "ok"
+- IF the driver has MORE THAN 1 trip awaiting confirmation right now: call this tool FIRST
+  without a trip_index — it reads back a list and asks which one. Read that back to the driver,
+  wait for them to pick (number or customer name), then call again with the right trip_index.
+- If there's only 1 trip awaiting confirmation, or this is an outbound call about a single new
+  trip offer, skip that step entirely — no trip_index needed.
 
-## Tool: reject_trip (outbound only)
+## Tool: reject_trip
 - Use when: driver declines — "no", "can't do it", "decline", "I'm busy"
+- Same multi-trip disambiguation as confirm_trip above — call without trip_index first if there's
+  more than 1 trip awaiting confirmation, then call again with the driver's chosen trip_index.
 
 ---
 

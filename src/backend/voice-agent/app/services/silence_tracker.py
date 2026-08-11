@@ -33,6 +33,7 @@ class SilenceTracker:
         max_consecutive_silences: int = 3,
         end_session_on_timeout: bool = True,
         on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
+        goodbye_message: Optional[str] = None,
     ) -> None:
         self.session = session
         self.ctx = ctx
@@ -41,6 +42,7 @@ class SilenceTracker:
         self.max_consecutive_silences = max_consecutive_silences
         self.end_session_on_timeout = end_session_on_timeout
         self.on_timeout = on_timeout
+        self.goodbye_message = goodbye_message
 
         self._last_speech_time: Optional[float] = None
         self._silence_task: Optional[asyncio.Task] = None
@@ -102,7 +104,7 @@ class SilenceTracker:
         self._is_paused = True
         if self._silence_task and not self._silence_task.done():
             self._silence_task.cancel()
-        logger.debug("SilenceTracker paused")
+        logger.info("SilenceTracker paused")
 
     def resume(self) -> None:
         """Resume after the assistant has finished speaking."""
@@ -111,7 +113,7 @@ class SilenceTracker:
         self._is_paused = False
         self._last_speech_time = time.time()
         self._schedule_silence_check()
-        logger.debug("SilenceTracker resumed")
+        logger.info("SilenceTracker resumed")
 
     # ── Properties ───────────────────────────────────────────────────────────
 
@@ -184,6 +186,12 @@ class SilenceTracker:
     async def _end_session(self) -> None:
         try:
             await self.stop()
+
+            if self.goodbye_message:
+                try:
+                    await self.session.say(self.goodbye_message, allow_interruptions=False)
+                except Exception:
+                    logger.error("SilenceTracker | failed to say goodbye message", exc_info=True)
 
             if self.on_timeout:
                 try:

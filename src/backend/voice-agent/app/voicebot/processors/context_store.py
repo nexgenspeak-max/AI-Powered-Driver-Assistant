@@ -66,6 +66,46 @@ def is_stale(userdata: dict) -> bool:
     return age > STALE_SECONDS
 
 
+def age_seconds(userdata: dict) -> float:
+    ctx = userdata.get("context", {})
+    return _now() - ctx.get("fetched_at", _now())
+
+
+def format_age_note(userdata: dict, lang: str = "vi") -> str:
+    """Human-readable, speakable age of the cached context data."""
+    age = age_seconds(userdata)
+    if lang == "en":
+        if age < 60:
+            return "moments ago"
+        minutes = int(age // 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    if age < 60:
+        return "vài giây trước"
+    minutes = int(age // 60)
+    return f"{minutes} phút trước"
+
+
+def set_pending_refresh(userdata: dict, topic: str, args: dict | None = None) -> None:
+    """Remembers which cached-data topic a driver was just asked 'want the
+    latest?' about — a single slot, like set_last_nudge_trip below. If the
+    driver asks about a second topic before confirming the first, the new
+    topic simply overwrites it: a bare "yes" naturally answers whichever
+    question was asked most recently, not some earlier one."""
+    userdata.setdefault("context", {})["_pending_refresh"] = {
+        "topic": topic,
+        "args": args or {},
+    }
+
+
+def pop_pending_refresh(userdata: dict) -> tuple[str, dict]:
+    """One-shot read — cleared on read, mirrors pop_last_nudge_trip."""
+    ctx = userdata.setdefault("context", {})
+    pending = ctx.pop("_pending_refresh", None)
+    if not pending:
+        return "", {}
+    return pending.get("topic", ""), pending.get("args", {})
+
+
 def get(userdata: dict, key: str, default: Any = None) -> Any:
     return userdata.get("context", {}).get(key, default)
 

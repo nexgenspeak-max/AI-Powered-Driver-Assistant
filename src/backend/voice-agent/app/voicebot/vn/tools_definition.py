@@ -61,6 +61,18 @@ raw_schema = {
         },
     },
 
+    "refresh_latest_data": {
+        "type": "function",
+        "name": "refresh_latest_data",
+        "description": (
+            "Bước 2: Lấy dữ liệu mới nhất cho những gì check_upcoming_trips hoặc "
+            "get_today_earnings vừa trả lời từ cache. Chỉ gọi ngay sau khi một trong hai tool đó "
+            "kết thúc câu trả lời bằng 'anh/chị có muốn em lấy dữ liệu mới nhất không?' VÀ tài xế "
+            "xác nhận đồng ý. KHÔNG tự ý gọi hoặc dùng cho việc khác."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_current_trip_info": {
         "type": "function",
         "name": "get_current_trip_info",
@@ -623,9 +635,25 @@ raw_schema = {
             "Gọi khi tài xế đồng ý nhận chuyến: 'có', 'nhận', 'đồng ý', 'tôi sẽ đi chuyến đó', "
             "'tôi xác nhận muốn chở chuyến đó', 'ok chuyến này' — dù đang trong cuộc gọi thông báo "
             "chuyến mới hay đang hỏi assistant bình thường về một chuyến 'notified' trong lịch. "
+            "NẾU tài xế đang có NHIỀU HƠN 1 chuyến chờ xác nhận cùng lúc: gọi tool này KHÔNG kèm "
+            "trip_index trước — nó sẽ tự đọc lại danh sách và hỏi chuyến nào. Đọc lại câu hỏi đó "
+            "cho tài xế, chờ họ chọn, rồi gọi lại kèm đúng trip_index. Trong cuộc gọi outbound về "
+            "1 chuyến duy nhất thì không bao giờ cần trip_index. "
             "KHÔNG dùng update_trip_status cho việc này — đó là tool báo cáo tiến độ SAU KHI đã nhận chuyến."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Số thứ tự chuyến từ câu hỏi 'chuyến nào' gần nhất (1 = chuyến đầu). Chỉ "
+                        "cần khi tài xế có nhiều hơn 1 chuyến đang chờ xác nhận."
+                    ),
+                }
+            },
+            "required": [],
+        },
     },
 
     "reject_trip": {
@@ -635,9 +663,25 @@ raw_schema = {
             "Từ chối một chuyến đi mới (chuyến CHƯA nhận, đang ở trạng thái chờ/thông báo). "
             "Gọi khi tài xế không muốn nhận: 'không', 'từ chối', 'bận', 'bỏ qua chuyến đó' — dù "
             "đang trong cuộc gọi thông báo hay đang hỏi assistant về một chuyến 'notified' trong lịch. "
+            "NẾU tài xế đang có NHIỀU HƠN 1 chuyến chờ xác nhận cùng lúc: gọi tool này KHÔNG kèm "
+            "trip_index trước — nó sẽ tự đọc lại danh sách và hỏi chuyến nào. Đọc lại câu hỏi đó "
+            "cho tài xế, chờ họ chọn, rồi gọi lại kèm đúng trip_index. Trong cuộc gọi outbound về "
+            "1 chuyến duy nhất thì không bao giờ cần trip_index. "
             "Chuyến ĐÃ nhận rồi muốn hủy → dùng request_cancel_trip, không dùng tool này."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Số thứ tự chuyến từ câu hỏi 'chuyến nào' gần nhất (1 = chuyến đầu). Chỉ "
+                        "cần khi tài xế có nhiều hơn 1 chuyến đang chờ xác nhận."
+                    ),
+                }
+            },
+            "required": [],
+        },
     },
 
     # ── Customer agent ────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ from app.voicebot.processors.nudge import build_nudge_message
 from app.voicebot.processors import context_store
 
 from app.voicebot.vn.tools.check_upcoming_trips       import check_upcoming_trips
+from app.voicebot.vn.tools.refresh_latest_data        import refresh_latest_data
 from app.voicebot.vn.tools.get_current_trip_info      import get_current_trip_info
 from app.voicebot.vn.tools.suggest_next_stop          import suggest_next_stop
 from app.voicebot.vn.tools.get_trip_traffic           import get_trip_traffic
@@ -72,6 +73,7 @@ def _registered_phone_hint(customer_phone: str) -> str:
 _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
+    refresh_latest_data,
     get_current_trip_info,
     suggest_next_stop,
     get_trip_traffic,

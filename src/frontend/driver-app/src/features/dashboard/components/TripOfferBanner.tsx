@@ -3,10 +3,21 @@ import { StyleSheet } from 'react-native'
 import { XStack, YStack, Text } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated'
+import { GestureDetector, Gesture } from 'react-native-gesture-handler'
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated'
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio'
 import * as Haptics from 'expo-haptics'
-import { GlassSurface } from '../../../components/GlassSurface'
+import { Card } from '../../../components/Card'
 import { Badge } from '../../../components/Badge'
 import { Button } from '../../../components/Button'
 import { InfoRow } from './InfoRow'
@@ -116,54 +127,96 @@ export function TripOfferBanner() {
     if (!stillOffered) dismiss()
   }, [trip, driver, dismiss])
 
+  // Swipe-up-to-dismiss — follows the finger 1:1 (translateY + fading opacity)
+  // rather than a fixed-duration animation, so it reads as physically dragged
+  // away instead of just triggered by the gesture. Same "purely local
+  // dismiss" as the "Để sau" text below (no API call, trip stays
+  // notified/calling server-side) — swiping is just a faster gesture for the
+  // exact same action, not a reject.
+  const translateY = useSharedValue(0)
+  const DISMISS_DISTANCE = -80
+  const OFFSCREEN_DISTANCE = -400
+
+  // Guards against a stale drag offset carrying over if a new offer replaces
+  // this one while the shared value wasn't already back at 0 (e.g. the
+  // auto-dismiss effect above fires mid-drag).
+  useEffect(() => {
+    translateY.value = 0
+  }, [tripId, translateY])
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY(-10)
+    .onChange(event => {
+      // Clamp at 0 — dragging down does nothing, only up drags it away.
+      translateY.value = Math.min(0, translateY.value + event.changeY)
+    })
+    .onEnd(event => {
+      const pastThreshold = translateY.value < DISMISS_DISTANCE || event.velocityY < -800
+      if (pastThreshold) {
+        translateY.value = withTiming(OFFSCREEN_DISTANCE, { duration: 180 }, finished => {
+          if (finished) runOnJS(dismiss)()
+        })
+      } else {
+        translateY.value = withSpring(0, { damping: 18, stiffness: 220 })
+      }
+    })
+
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: interpolate(translateY.value, [DISMISS_DISTANCE, 0], [0, 1], Extrapolation.CLAMP),
+  }))
+
   if (!tripId || !trip) return null
 
   const statusColor = TRIP_STATUS_COLORS[trip.status]
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(220)}
-      exiting={FadeOutUp.duration(180)}
-      style={[styles.wrap, { top: insets.top + 12 }]}
-    >
-      <GlassSurface cornerRadius={20} style={{ width: '100%' }}>
-        <YStack padding="$4" gap="$3">
-          <XStack alignItems="center" justifyContent="space-between">
-            <Text fontWeight="700" fontSize="$4" color="$textPrimary">
-              Chuyến mới!
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        entering={FadeInDown.duration(220)}
+        exiting={FadeOutUp.duration(180)}
+        style={[styles.wrap, { top: insets.top + 12 }, dragStyle]}
+      >
+        <Card borderRadius={20} style={{ width: '100%' }}>
+          <YStack gap="$3">
+            <XStack alignItems="center" justifyContent="space-between">
+              <Text fontWeight="700" fontSize="$4" color="$textPrimary">
+                Chuyến mới!
+              </Text>
+              <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} glass={false} />
+            </XStack>
+
+            <YStack gap="$2">
+              <InfoRow label="Khách" value={trip.customer_name} />
+              <InfoRow label="Đón" value={trip.pickup_address} />
+              <InfoRow label="Trả" value={trip.dropoff_address} />
+            </YStack>
+
+            <XStack gap="$3">
+              <Button label="Không nhận chuyến" variant="outline" onPress={() => reject()} loading={rejecting} full />
+              <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} full />
+            </XStack>
+
+            {/* Purely local dismiss — no API call, trip stays notified/calling
+                server-side. Same fallback path as an offer going stale from
+                outside this component (see the auto-dismiss effect above):
+                the driver can still find/accept it later from Dashboard's own
+                TripCard list. */}
+            <Text
+              textAlign="center"
+              fontSize="$3"
+              fontWeight="600"
+              color="$textPrimary"
+              onPress={dismiss}
+              pressStyle={{ opacity: 0.6 }}
+              paddingVertical="$1"
+            >
+              Để sau
             </Text>
-            <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} glass={false} />
-          </XStack>
-
-          <YStack gap="$2">
-            <InfoRow label="Khách" value={trip.customer_name} />
-            <InfoRow label="Đón" value={trip.pickup_address} />
-            <InfoRow label="Trả" value={trip.dropoff_address} />
           </YStack>
-
-          <XStack gap="$3">
-            <Button label="Không nhận chuyến" variant="outline" onPress={() => reject()} loading={rejecting} full />
-            <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} full />
-          </XStack>
-
-          {/* Purely local dismiss — no API call, trip stays notified/calling
-              server-side. Same fallback path as an offer going stale from
-              outside this component (see the auto-dismiss effect above):
-              the driver can still find/accept it later from Dashboard's own
-              TripCard list. */}
-          <Text
-            textAlign="center"
-            fontSize="$3"
-            color="$textSecondary"
-            onPress={dismiss}
-            pressStyle={{ opacity: 0.6 }}
-            paddingVertical="$1"
-          >
-            Để sau
-          </Text>
-        </YStack>
-      </GlassSurface>
-    </Animated.View>
+        </Card>
+      </Animated.View>
+    </GestureDetector>
   )
 }
 

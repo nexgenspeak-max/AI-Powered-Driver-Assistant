@@ -48,5 +48,6 @@ ERR_CONTACT_RPC_FAILED     = "Không thể truy cập danh bạ trên điện th
 ERR_NO_PENDING_CONTACT_CALL = "Không có yêu cầu gọi điện nào đang chờ xác nhận."
 ERR_INVALID_CUSTOM_SMS_PHONE = "Số điện thoại này nghe không hợp lệ. Anh/chị đọc lại giúp tôi số điện thoại Việt Nam cần nhắn tin."
 ERR_NO_PENDING_CUSTOM_SMS   = "Không có tin nhắn nào đang chờ xác nhận. Anh/chị đọc lại số và nội dung cần nhắn trước nhé."
+ERR_NO_PENDING_REFRESH      = "Hiện không có dữ liệu nào đang chờ làm mới cả."
 ERR_NO_PENDING_CONTACT_SMS  = "Không có yêu cầu nhắn tin nào đang chờ xác nhận."
 ERR_SMS_SEND_FAILED         = "Không thể gửi tin nhắn lúc này. Vui lòng thử lại."

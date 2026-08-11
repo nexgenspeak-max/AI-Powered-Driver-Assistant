@@ -1,12 +1,8 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
 from app.voicebot.vn.constants import ERR_NO_UPCOMING
-from app.services import backend_api
 from app.voicebot.processors import context_store
 from app.voicebot.processors.trip_format import format_trip_detail, format_trip_list
-
-logger = logging.getLogger("voice-agent.vn.tools.check_upcoming_trips")
 
 # "Đang chạy" = tài xế đã nhận và đang thực hiện (gồm 2 giai đoạn con: chưa đón/đã đón khách);
 # "đang chờ xác nhận" = đã gọi tài xế, chờ tài xế trả lời (chưa nhận/chưa từ chối); "mới tạo" =
@@ -31,25 +27,8 @@ _SCOPE_LABELS_VI = {
 }
 
 
-@function_tool(raw_schema=raw_schema["check_upcoming_trips"])
-async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
-    # context_store's prefetched data is a one-time snapshot taken at
-    # session start — a trip a customer books mid-session never appears in
-    # it (confirmed live: driver had 2 trips, this tool only reported 1
-    # because the 2nd was booked after prefetch). This is the driver
-    # explicitly asking to check, so re-fetch live instead of trusting the
-    # cache; update the cache too so a follow-up trip_index lookup in the
-    # same/next turn stays consistent with what was just read out. Falls
-    # back to the cached snapshot if the live call fails, same as before.
-    driver_phone = context.userdata.get("driver_phone", "")
-    if driver_phone:
-        try:
-            fresh = await backend_api.get_upcoming_trips(driver_phone)
-            context_store.set_upcoming_trips(context.userdata, fresh)
-        except Exception:
-            logger.warning("check_upcoming_trips — live refresh failed, using cached data", exc_info=True)
-
-    trips = context_store.get_schedule_trips(context.userdata)
+def _format_trips_reply(userdata: dict, raw_arguments: dict) -> str:
+    trips = context_store.get_schedule_trips(userdata)
     if not trips:
         return ERR_NO_UPCOMING
 
@@ -89,3 +68,13 @@ async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
         return format_trip_detail(trips[idx - 1], idx, lang="vi") + awaiting_note
 
     return format_trip_list(trips, lang="vi") + awaiting_note
+
+
+@function_tool(raw_schema=raw_schema["check_upcoming_trips"])
+async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
+    # Trả lời từ cache trước — live re-fetch chỉ diễn ra trong
+    # refresh_latest_data.py, khi tài xế thật sự xác nhận muốn dữ liệu mới.
+    reply = _format_trips_reply(context.userdata, raw_arguments)
+    age_note = context_store.format_age_note(context.userdata, lang="vi")
+    context_store.set_pending_refresh(context.userdata, "upcoming_trips", dict(raw_arguments))
+    return f"{reply} (dữ liệu lúc {age_note}). Anh/chị có muốn em lấy dữ liệu mới nhất không ạ? Việc này sẽ mất một chút thời gian."

@@ -61,6 +61,18 @@ raw_schema = {
         },
     },
 
+    "refresh_latest_data": {
+        "type": "function",
+        "name": "refresh_latest_data",
+        "description": (
+            "Step 2: Re-fetch live data for whatever check_upcoming_trips or get_today_earnings "
+            "just answered from cache. Only call right after one of those tools ended its reply "
+            "with 'would you like me to get the latest data?' AND the driver said yes/confirmed. "
+            "Do NOT call proactively or for anything else."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_current_trip_info": {
         "type": "function",
         "name": "get_current_trip_info",
@@ -379,9 +391,25 @@ raw_schema = {
         "name": "confirm_trip",
         "description": (
             "Confirm acceptance of a new trip. "
-            "Use when the driver agrees, says 'yes', 'accept', or 'I'll take it'."
+            "Use when the driver agrees, says 'yes', 'accept', or 'I'll take it'. "
+            "If the driver has MORE THAN 1 trip awaiting confirmation right now, call this "
+            "WITHOUT trip_index first — it reads back a list and asks which one. Read that back "
+            "to the driver, wait for them to pick, then call again with the right trip_index. "
+            "During an outbound call about a single new trip offer, no trip_index is ever needed."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Trip number from the most recent 'which trip' listing (1 = first). Only "
+                        "needed when the driver has multiple trips awaiting confirmation."
+                    ),
+                }
+            },
+            "required": [],
+        },
     },
 
     "reject_trip": {
@@ -389,9 +417,25 @@ raw_schema = {
         "name": "reject_trip",
         "description": (
             "Decline a new trip. "
-            "Use when the driver refuses, says 'no', 'decline', or 'I'm busy'."
+            "Use when the driver refuses, says 'no', 'decline', or 'I'm busy'. "
+            "If the driver has MORE THAN 1 trip awaiting confirmation right now, call this "
+            "WITHOUT trip_index first — it reads back a list and asks which one. Read that back "
+            "to the driver, wait for them to pick, then call again with the right trip_index. "
+            "During an outbound call about a single new trip offer, no trip_index is ever needed."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trip_index": {
+                    "type": "integer",
+                    "description": (
+                        "Trip number from the most recent 'which trip' listing (1 = first). Only "
+                        "needed when the driver has multiple trips awaiting confirmation."
+                    ),
+                }
+            },
+            "required": [],
+        },
     },
 
     # ── Customer agent ────────────────────────────────────────────────────────

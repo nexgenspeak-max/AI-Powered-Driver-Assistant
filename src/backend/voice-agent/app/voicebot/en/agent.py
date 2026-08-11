@@ -38,12 +38,14 @@ from app.voicebot.en.tools.extend_wait_time           import extend_wait_time
 from app.voicebot.en.tools.set_driver_status          import set_driver_status
 from app.voicebot.en.tools.answer_app_faq             import answer_app_faq
 from app.voicebot.en.tools.end_call                   import end_call
+from app.voicebot.en.tools.refresh_latest_data        import refresh_latest_data
 
 logger = logging.getLogger("voice-agent.en.agent")
 
 _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
+    refresh_latest_data,
     get_current_trip_info,
     suggest_next_stop,
     get_trip_traffic,

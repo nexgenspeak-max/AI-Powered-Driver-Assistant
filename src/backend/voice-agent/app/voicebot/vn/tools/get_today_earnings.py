@@ -1,24 +1,10 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
-from app.services import backend_api
 from app.voicebot.processors import context_store
 
-logger = logging.getLogger("voice-agent.vn.tools.get_today_earnings")
 
-
-@function_tool(raw_schema=raw_schema["get_today_earnings"])
-async def get_today_earnings(raw_arguments: dict, context: RunContext) -> str:
-    # Live re-fetch — see check_upcoming_trips.py for why.
-    driver_phone = context.userdata.get("driver_phone", "")
-    if driver_phone:
-        try:
-            fresh = await backend_api.get_today_earnings(driver_phone)
-            context_store.set_context(context.userdata, "today_earnings", fresh)
-        except Exception:
-            logger.warning("get_today_earnings — live refresh failed, using cached data", exc_info=True)
-
-    data = context_store.get(context.userdata, "today_earnings", {})
+def _format_earnings_reply(userdata: dict) -> str:
+    data = context_store.get(userdata, "today_earnings", {})
     if not data:
         return "Chưa có dữ liệu thu nhập hôm nay."
 
@@ -33,3 +19,13 @@ async def get_today_earnings(raw_arguments: dict, context: RunContext) -> str:
     if hours:
         msg += f" Thời gian online: {hours:.1f} giờ."
     return msg
+
+
+@function_tool(raw_schema=raw_schema["get_today_earnings"])
+async def get_today_earnings(raw_arguments: dict, context: RunContext) -> str:
+    # Trả lời từ cache trước — live re-fetch chỉ diễn ra trong
+    # refresh_latest_data.py, khi tài xế thật sự xác nhận muốn dữ liệu mới.
+    msg = _format_earnings_reply(context.userdata)
+    age_note = context_store.format_age_note(context.userdata, lang="vi")
+    context_store.set_pending_refresh(context.userdata, "today_earnings")
+    return f"{msg} (dữ liệu lúc {age_note}). Anh/chị có muốn em lấy dữ liệu mới nhất không ạ? Việc này sẽ mất một chút thời gian."

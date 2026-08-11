@@ -289,7 +289,7 @@ async def entrypoint(ctx: JobContext) -> None:
             max_silences_default = 1
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
-            silence_seconds = 20.0   # customers may pause longer
+            silence_seconds = 60.0   # 60s x 3 = 3min total before hangup
             max_silences_default = 3
         else:
             context_hint = context_store.build_context_hint(
@@ -299,12 +299,12 @@ async def entrypoint(ctx: JobContext) -> None:
                 trip=trip, driver_phone=phone, context_hint=context_hint,
                 proactive_nudge=proactive_nudge,
             )
-            silence_seconds = 50.0
-            # Check-in nudges at 50s/100s, then hang up at 150s (2.5 min) of
+            silence_seconds = 60.0
+            # Check-in nudges at 60s/120s, then hang up at 180s (3 min) of
             # total silence — driver asked not to leave the session hanging
             # open indefinitely once they've gone quiet. max_silences_default
             # here matches the .env SILENCE_MAX_CONSECUTIVE default (3) on
-            # purpose, so the 2-3min total holds whether or not that env var
+            # purpose, so the 3min total holds whether or not that env var
             # is actually set.
             max_silences_default = 3
 
@@ -442,6 +442,18 @@ async def entrypoint(ctx: JobContext) -> None:
                     )
                 await complete_isolated_call(session, session_userdata, summary)
 
+            # custcall has its own wrap-up path (_on_isolated_silence_timeout
+            # above generates a call summary) and isn't a live back-and-forth
+            # with a listening driver/customer, so it gets no spoken goodbye
+            # here — only driver/customer sessions do.
+            goodbye_message = None
+            if mode != "custcall":
+                goodbye_message = (
+                    "If there's nothing else, I'll go ahead and end the call here. Goodbye!"
+                    if lang == "en" else
+                    "Nếu anh/chị không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt anh/chị!"
+                )
+
             silence_tracker = SilenceTracker(
                 session=session,
                 ctx=ctx,
@@ -450,12 +462,24 @@ async def entrypoint(ctx: JobContext) -> None:
                 max_consecutive_silences=max_silences,
                 end_session_on_timeout=end_on_timeout,
                 on_timeout=_on_isolated_silence_timeout if mode == "custcall" else None,
+                goodbye_message=goodbye_message,
             )
 
             @session.on("conversation_item_added")
             def _on_conversation_item(ev) -> None:
                 item = ev.item
-                if isinstance(item, ChatMessage) and item.role == "user" and item.text_content:
+                if (
+                    isinstance(item, ChatMessage)
+                    and item.role == "user"
+                    and item.text_content
+                    # The tracker's own hidden nudge (<speech_not_detected>) is
+                    # injected as a role="user" ChatMessage too, so it fires this
+                    # same event — without this check it would reset_silence_timer()
+                    # right after every increment, permanently capping the
+                    # consecutive-silence count at 1 and making the ~2.5min
+                    # auto-hangup unreachable no matter how long the real silence.
+                    and item.text_content != silence_tracker.silence_message
+                ):
                     silence_tracker.reset_silence_timer()
                     session_userdata["_customer_spoke"] = True
 

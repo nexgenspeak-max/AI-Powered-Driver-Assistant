@@ -27,6 +27,12 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - trip_index=1,2,3…: chi tiết một chuyến trong danh sách VỪA liệt kê — dùng khi tài xế nói
   "có", "chuyến thứ 2", "chuyến đó bao tiền" — gọi lại với ĐÚNG scope của lần liệt kê gần nhất
 
+## Tool: refresh_latest_data
+- Khi dùng: tài xế nói "có"/"lấy đi"/"được" ngay sau khi check_upcoming_trips HOẶC
+  get_today_earnings kết thúc câu trả lời bằng "anh/chị có muốn em lấy dữ liệu mới nhất không?"
+- KHÔNG tự ý gọi, và KHÔNG dùng cho tool nào khác — chỉ 2 tool trên hỏi câu này
+- Nếu tài xế từ chối/im lặng/hỏi việc khác → KHÔNG gọi, cứ tiếp tục hội thoại bình thường
+
 ## Tool: get_current_trip_info
 - Khi dùng: hỏi về ĐÚNG 1 chuyến cụ thể đang thực hiện — "chuyến hiện tại", "chuyến này bao nhiêu", giá/ETA chuyến active
 - Khác check_upcoming_trips(scope="in_progress"): tool đó liệt kê TẤT CẢ chuyến đang chạy (có thể nhiều); tool này chỉ trả về 1 chuyến duy nhất. Nếu tài xế hỏi chung chung "kiểm tra/xem các chuyến đang chạy" (ngụ ý có thể nhiều) → dùng check_upcoming_trips
@@ -56,10 +62,17 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 - "có", "nhận", "đồng ý", "ok chuyến này", "tôi sẽ đi chuyến đó", "tôi xác nhận muốn chở chuyến đó"
 - Áp dụng cả khi đang trong cuộc gọi thông báo chuyến mới LẪN khi tài xế hỏi assistant bình
   thường về một chuyến "notified" đang có trong lịch
+- NẾU tài xế đang có NHIỀU HƠN 1 chuyến chờ xác nhận: gọi tool này TRƯỚC không kèm trip_index —
+  nó sẽ tự đọc lại danh sách và hỏi chuyến nào. Đọc lại câu hỏi đó cho tài xế, chờ họ chọn (số
+  thứ tự hoặc tên khách), rồi gọi lại kèm đúng trip_index.
+- Nếu chỉ có 1 chuyến chờ xác nhận, hoặc đang trong cuộc gọi outbound về đúng 1 chuyến, bỏ qua
+  bước hỏi lại đó — không cần trip_index.
 - KHÔNG dùng update_trip_status cho việc này
 
 ## Tool: reject_trip
 - Khi dùng: tài xế TỪ CHỐI một chuyến chưa nhận — "không", "từ chối", "bận", "bỏ qua chuyến đó"
+- Cách phân biệt nhiều chuyến giống hệt confirm_trip ở trên — gọi không kèm trip_index trước nếu
+  có nhiều hơn 1 chuyến chờ xác nhận, rồi gọi lại kèm trip_index tài xế đã chọn.
 - Chuyến ĐÃ nhận rồi mà muốn hủy → dùng request_cancel_trip, không phải tool này
 
 ---

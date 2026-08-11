@@ -1,12 +1,8 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.en.tools_definition import raw_schema
 from app.voicebot.en.constants import ERR_NO_UPCOMING
-from app.services import backend_api
 from app.voicebot.processors import context_store
 from app.voicebot.processors.trip_format import format_trip_detail, format_trip_list
-
-logger = logging.getLogger("voice-agent.en.tools.check_upcoming_trips")
 
 # Mirrors vn/tools/check_upcoming_trips.py's split — status-based, same sets.
 IN_PROGRESS_STATUSES = ("confirmed", "arrived_pickup", "picked_up")
@@ -24,20 +20,8 @@ _SCOPE_LABELS_EN = {
 }
 
 
-@function_tool(raw_schema=raw_schema["check_upcoming_trips"])
-async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
-    # See vn/tools/check_upcoming_trips.py's comment — same fix, same reason:
-    # the prefetched cache is a one-time session-start snapshot, so a trip
-    # booked mid-session never shows up without a live re-fetch here.
-    driver_phone = context.userdata.get("driver_phone", "")
-    if driver_phone:
-        try:
-            fresh = await backend_api.get_upcoming_trips(driver_phone)
-            context_store.set_upcoming_trips(context.userdata, fresh)
-        except Exception:
-            logger.warning("check_upcoming_trips — live refresh failed, using cached data", exc_info=True)
-
-    trips = context_store.get_schedule_trips(context.userdata)
+def _format_trips_reply(userdata: dict, raw_arguments: dict) -> str:
+    trips = context_store.get_schedule_trips(userdata)
     if not trips:
         return ERR_NO_UPCOMING
 
@@ -77,3 +61,13 @@ async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
         return format_trip_detail(trips[idx - 1], idx, lang="en") + awaiting_note
 
     return format_trip_list(trips, lang="en") + awaiting_note
+
+
+@function_tool(raw_schema=raw_schema["check_upcoming_trips"])
+async def check_upcoming_trips(raw_arguments: dict, context: RunContext) -> str:
+    # Cache-first — see refresh_latest_data.py for the live re-fetch, only
+    # triggered when the driver actually confirms they want it.
+    reply = _format_trips_reply(context.userdata, raw_arguments)
+    age_note = context_store.format_age_note(context.userdata, lang="en")
+    context_store.set_pending_refresh(context.userdata, "upcoming_trips", dict(raw_arguments))
+    return f"{reply} (as of {age_note}). Would you like me to get the latest data? It'll take a moment."
