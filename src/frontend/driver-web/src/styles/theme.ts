@@ -19,5 +19,15 @@ export const theme = createTheme({
     MuiCard: { defaultProps: { elevation: 0 } },
     MuiButton: { styleOverrides: { root: { textTransform: 'none', borderRadius: 8 } } },
     MuiTextField: { defaultProps: { size: 'small', fullWidth: true } },
+    MuiFormHelperText: {
+      styleOverrides: {
+        // MUI renders this as a <p>, and the app-wide `p { margin: 0 }`
+        // reset (index.css) strips its default `3px 14px 0` margin —
+        // without it, error/hint text sits flush against the field's left
+        // edge instead of lined up with the input's own text, reading as
+        // clipped/misaligned. Restored explicitly here.
+        root: { margin: '3px 14px 0' },
+      },
+    },
   },
 })

@@ -1,11 +1,10 @@
 """Shared helper to gracefully tear down a driver/customer voice-agent room."""
 import asyncio
 import logging
-import os
 
-from livekit import api
 from livekit.agents import JobContext
-from livekit.protocol.room import RoomParticipantIdentity
+
+from app.services import backend_api
 
 logger = logging.getLogger("voice-agent.session_control")
 
@@ -33,23 +32,21 @@ async def end_room_session(ctx: JobContext, reason: str) -> None:
         # lag so the last words of the goodbye line actually finish playing.
         await asyncio.sleep(0.8)
 
-        lk = api.LiveKitAPI(
-            url=os.getenv("LIVEKIT_URL", ""),
-            api_key=os.getenv("LIVEKIT_API_KEY", ""),
-            api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
-        )
+        # Routed through trip-service (which already owns a RoomServiceClient
+        # for token issuance) rather than voice-agent holding its own
+        # separate LiveKit admin client just for this one teardown step —
+        # see backend_api.end_voice_session. Non-fatal: a failure here just
+        # means the participant(s) stay connected to an agent that's shutting
+        # down anyway (ctx.shutdown() below always runs regardless).
         try:
-            for p in remote_participants:
-                try:
-                    await lk.room.remove_participant(
-                        RoomParticipantIdentity(room=ctx.room.name, identity=p.identity)
-                    )
-                    logger.info("end_room_session | removed participant %s", p.identity)
-                except Exception as exc:
-                    logger.warning(
-                        "end_room_session | could not remove %s: %s", p.identity, exc
-                    )
-        finally:
-            await lk.aclose()
+            await backend_api.end_voice_session(
+                ctx.room.name, [p.identity for p in remote_participants]
+            )
+            logger.info(
+                "end_room_session | removed participants via trip-service | %s",
+                [p.identity for p in remote_participants],
+            )
+        except Exception as exc:
+            logger.warning("end_room_session | trip-service removal failed: %s", exc)
 
     ctx.shutdown(reason=reason)

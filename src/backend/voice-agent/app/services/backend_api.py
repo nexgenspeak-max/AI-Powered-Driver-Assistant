@@ -385,6 +385,25 @@ async def clear_driver_session(driver_phone: str) -> None:
     r.raise_for_status()
 
 
+async def end_voice_session(room_name: str, participant_identities: list[str]) -> None:
+    """Remove the given participant(s) from a LiveKit room via trip-service,
+    which owns the RoomServiceClient/admin credentials — see
+    session_control.py's end_room_session(), the only caller. Centralizes
+    room administration in trip-service instead of voice-agent holding its
+    own separate LiveKit admin client just for this one teardown step.
+    Best-effort from the caller's perspective (session_control.py already
+    treats this as non-fatal); raises on a genuine HTTP failure like every
+    other method here, left to the caller to catch."""
+    c = _get_client()
+    r = await c.post(
+        f"{_trip_base()}/api/v1/voice/end-session",
+        json={"room_name": room_name, "participant_identities": participant_identities},
+        headers=auth_headers(),
+        timeout=8,
+    )
+    r.raise_for_status()
+
+
 async def set_driver_online_status(driver_phone: str, online: bool) -> None:
     """Set driver availability: online=True to accept trips, False to go offline."""
     c = _get_client()

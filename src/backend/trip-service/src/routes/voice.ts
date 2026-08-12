@@ -75,6 +75,45 @@ router.post('/token', async (req: Request, res: Response) => {
   }
 });
 
+// Called by voice-agent (session_control.py's end_room_session) instead of
+// voice-agent holding its own LiveKit admin credentials/client to remove
+// participants directly — centralizes room-administration in trip-service,
+// which already has a RoomServiceClient set up for token issuance above.
+// Per-identity, not a blanket deleteRoom(): only removes the specific
+// participant(s) the caller identified (typically just the driver/customer,
+// not the agent's own participant), matching the previous direct-LiveKit-API
+// behavior exactly. Errors are logged and skipped per-identity rather than
+// failing the whole request — a participant that already left is not this
+// caller's problem to retry.
+router.post('/end-session', async (req: Request, res: Response) => {
+  try {
+    const { room_name, participant_identities } = req.body as {
+      room_name?: string;
+      participant_identities?: string[];
+    };
+    if (!room_name || !Array.isArray(participant_identities)) {
+      return res.status(400).json({ detail: 'room_name and participant_identities are required' });
+    }
+    if (!config.livekitApiKey || !config.livekitApiSecret) {
+      return res.status(503).json({ detail: 'LiveKit not configured' });
+    }
+
+    const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
+    for (const identity of participant_identities) {
+      try {
+        await roomService.removeParticipant(room_name, identity);
+        console.log(`[voice] end-session removed participant | room=${room_name} identity=${identity}`);
+      } catch (err) {
+        console.warn(`[voice] end-session could not remove ${identity} from ${room_name}: ${err}`);
+      }
+    }
+
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 router.post('/customer-token', async (req: Request, res: Response) => {
   try {
     const { customer_phone } = req.query;

@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Map, Camera, Marker, type LngLat, type LngLatBounds, type CameraRef } from '@maplibre/maplibre-react-native'
 import { useDriverContext } from '../../dashboard/hooks/useDriverContext'
+import { useLiveDriverLocation } from '../hooks/useLiveDriverLocation'
 
 const DRIVER_VAN_ICON = require('../../../../assets/icons/driver-van.png')
 
@@ -100,12 +101,28 @@ function StopMarker({ kind, name, color }: { kind: 'pickup' | 'dropoff'; name: s
 
 export function DriverMap() {
   const { data: context } = useDriverContext()
+  // Local GPS stream, updates every few seconds straight off the phone —
+  // takes priority over the backend's current_location (only refreshed by
+  // the ~10-min proximity ping and possibly several minutes stale even then,
+  // see driverContextService.ts) whenever it's available. That backend value
+  // is only a fallback for the brief window before this device's own GPS has
+  // produced a first fix (e.g. right after opening the app).
+  const live = useLiveDriverLocation()
+
+  const driverPoint: LngLat | null = live
+    ? [live.lng, live.lat]
+    : context?.current_location
+      ? [context.current_location.lng, context.current_location.lat]
+      : null
   const cameraRef = useRef<CameraRef>(null)
   const hasFitOnceRef = useRef(false)
-
-  const driverPoint: LngLat | null = context?.current_location
-    ? [context.current_location.lng, context.current_location.lat]
-    : null
+  // Separate from hasFitOnceRef: the very first placement can land on a
+  // trip-bounds fit instead of the driver (see below) when trips exist but
+  // no GPS fix has arrived yet — this tracks whether we've actually zoomed
+  // in on the driver at least once, so the follow effect can "upgrade" from
+  // that wide trip-bounds view the moment a fix does land, instead of only
+  // ever panning at whatever zoom the trip-bounds fit happened to pick.
+  const hasCenteredOnDriverRef = useRef(false)
 
   const trips = context?.active_trips ?? []
 
@@ -150,7 +167,7 @@ export function DriverMap() {
   // an unchanged 5s poll re-fetch) — driverPoint itself is a fresh array
   // every render even when the coordinates haven't changed, so it can't be
   // used as an effect dependency directly.
-  const driverUpdatedAt = context?.current_location?.updated_at ?? null
+  const driverUpdatedAt = live?.updatedAt ?? context?.current_location?.updated_at ?? null
 
   // First-ever camera placement: center close on the driver if we already
   // have a fix — not a bounds fit across every trip marker, which can leave
@@ -162,6 +179,7 @@ export function DriverMap() {
     if (driverPoint) {
       cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, duration: 0 })
       hasFitOnceRef.current = true
+      hasCenteredOnDriverRef.current = true
     } else if (allPoints.length > 0) {
       const bounds = boundsFromPoints(allPoints)
       if (bounds) cameraRef.current?.fitBounds(bounds, { padding: FIT_PADDING, duration: 0 })
@@ -180,6 +198,15 @@ export function DriverMap() {
   // camera when a genuinely new reading lands.
   useEffect(() => {
     if (!hasFitOnceRef.current || !driverPoint) return
+    if (!hasCenteredOnDriverRef.current) {
+      // First real fix arriving after the initial placement already fell
+      // back to a trip-bounds view (no GPS yet at that point) — zoom in on
+      // the driver now instead of just panning at whatever wide zoom the
+      // bounds fit picked.
+      cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, duration: 800 })
+      hasCenteredOnDriverRef.current = true
+      return
+    }
     cameraRef.current?.easeTo({ center: driverPoint, duration: 800 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverUpdatedAt])

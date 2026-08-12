@@ -5,6 +5,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
+import { useMutation } from '@tanstack/react-query'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { ProfileCard } from '../../src/features/profile/components/ProfileCard'
 import { SectionTitle } from '../../src/features/profile/components/SectionTitle'
@@ -14,6 +15,7 @@ import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { driversService } from '../../src/services/api/drivers'
 
 // Literal per-screen background — same treatment as customer-app's Profile
 // screen (app/(app)/profile.tsx there), locked to the exact reference hex
@@ -69,6 +71,19 @@ export default function ProfileScreen() {
   // here is the network round trip, not "logged in or not".
   const { data: driver } = useCurrentUser()
   const logout = useAuthStore(s => s.logout)
+  // Best-effort: goes offline server-side before clearing tokens so a
+  // driver who forgets to flip the dashboard switch first doesn't keep
+  // showing as available for dispatch after logging out. Never blocks the
+  // logout itself — a failed/slow request (no network, server down) still
+  // falls through to `logout()` via `onSettled`.
+  const { mutate: logoutAndGoOffline } = useMutation({
+    mutationFn: async () => {
+      if (driver && driver.status === 'online') {
+        await driversService.update(driver.phone, { status: 'offline' }).catch(() => {})
+      }
+    },
+    onSettled: () => logout(),
+  })
   const { data: context, isLoading } = useDriverContext()
   const wakeWordEnabled = useWakeWordSettingsStore(s => s.enabled)
   const setWakeWordEnabled = useWakeWordSettingsStore(s => s.setEnabled)
@@ -221,7 +236,7 @@ export default function ProfileScreen() {
           label="Đăng xuất"
           labelColor="$danger"
           showChevron={false}
-          onPress={() => logout()}
+          onPress={() => logoutAndGoOffline()}
         />
       </GlassSurface>
 

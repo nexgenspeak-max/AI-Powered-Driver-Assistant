@@ -480,13 +480,15 @@ async def entrypoint(ctx: JobContext) -> None:
                     # auto-hangup unreachable no matter how long the real silence.
                     and item.text_content != silence_tracker.silence_message
                 ):
-                    silence_tracker.reset_silence_timer()
+                    silence_tracker.reset_silence_timer(source="conversation_item_added")
                     session_userdata["_customer_spoke"] = True
 
             @session.on("user_input_transcribed")
             def _on_user_transcribed(ev) -> None:
                 if ev.is_final and ev.transcript.strip():
-                    silence_tracker.reset_silence_timer()
+                    silence_tracker.reset_silence_timer(
+                        source=f"user_input_transcribed:{ev.transcript!r}"
+                    )
                     session_userdata["_customer_spoke"] = True
 
             @session.on("agent_state_changed")

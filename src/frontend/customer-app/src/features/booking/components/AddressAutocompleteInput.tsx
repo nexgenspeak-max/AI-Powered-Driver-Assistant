@@ -8,6 +8,12 @@ import { placesService, type PlaceSuggestion, type PlaceLocation } from '../../.
 
 const DEBOUNCE_MS = 300
 const MIN_QUERY_LENGTH = 2
+// Gap between the field's own bottom edge and the dropdown below it.
+const DROPDOWN_GAP = 8
+// Fallback used only for the very first render, before the field's real
+// layout has been measured (see `fieldBottom` below) — close to the actual
+// field height so there's no visible jump once the real measurement lands.
+const FALLBACK_FIELD_BOTTOM = 62
 
 interface Props {
   label: string
@@ -48,6 +54,12 @@ export function AddressAutocompleteInput({
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  // Measured (not a hardcoded constant) so the dropdown sits right below the
+  // field regardless of whether the `actionLabel` row above it is present —
+  // that row's height was previously unaccounted for, so a fixed offset
+  // landed the dropdown high enough to cover the field's own bottom edge on
+  // fields that have it (e.g. pickup's "use current location" pill).
+  const [fieldBottom, setFieldBottom] = useState(FALLBACK_FIELD_BOTTOM)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Selecting a suggestion sets `value` to its own description — that
@@ -138,7 +150,10 @@ export function AddressAutocompleteInput({
           </TouchableOpacity>
         </View>
       )}
-      <View position="relative">
+      <View
+        position="relative"
+        onLayout={e => setFieldBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}
+      >
         <GlassBookingInput
           label={label}
           value={value}
@@ -150,7 +165,24 @@ export function AddressAutocompleteInput({
       </View>
 
       {showDropdown && (
-        <View position="absolute" top={62} left={0} right={0} zIndex={20}>
+        // Solid backing behind GlassSurface's own translucent wash — the
+        // dropdown floats over unpredictable content (whatever's below on
+        // the booking screen), and GlassSurface's dark-mode fill is only
+        // ~5-9% opaque (tuned for surfaces sitting on a known background,
+        // e.g. cards on the screen's own gradient), which left suggestion
+        // text nearly illegible here. This backing is opaque enough that
+        // legibility no longer depends on what's underneath, while the
+        // glass wash/specular/shadow on top still read as intended.
+        <View
+          position="absolute"
+          top={fieldBottom + DROPDOWN_GAP}
+          left={0}
+          right={0}
+          zIndex={20}
+          borderRadius={16}
+          backgroundColor="$surfaceElevated"
+          overflow="hidden"
+        >
           <GlassSurface cornerRadius={16} style={{ maxHeight: 220 }}>
             {loading && suggestions.length === 0 ? (
               <View padding="$3" alignItems="center">

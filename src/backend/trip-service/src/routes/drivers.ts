@@ -193,6 +193,11 @@ router.post('/me/location', async (req: Request, res: Response) => {
     }
 
     await cacheSet(driverLiveLocationKey(driverPhone), { lat, lng, updated_at: new Date().toISOString() }, 1200);
+    // Without this, a fresh ping only becomes visible to GET /drivers/me/context
+    // once its own cache (driverContextKey, up to config.cacheTtlSeconds) expires
+    // on its own — so a driver who just went online could sit "on the map" as
+    // stale/missing for up to that long despite the location update having landed.
+    await driverContextService.invalidateDriverContext(driverPhone);
 
     // Only trips the driver has actually ACCEPTED — proximity-to-pickup
     // doesn't make sense for a still-pending/notified/calling offer they

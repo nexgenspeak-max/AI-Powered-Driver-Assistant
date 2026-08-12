@@ -57,15 +57,26 @@ async function ensurePermission(): Promise<boolean> {
 // per-trip version of this module). Safe to call repeatedly.
 export async function startTracking(): Promise<boolean> {
   const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
-  if (alreadyRunning) {
-    tracking = true
-    return true
+
+  if (!alreadyRunning) {
+    const granted = await ensurePermission()
+    if (!granted) return false
   }
 
-  const granted = await ensurePermission()
-  if (!granted) return false
-
   tracking = true
+
+  // Fires one immediate fix on every call (including the "already running"
+  // path below) — without this, going online, or reopening the app while
+  // the background task was still registered from an earlier session, left
+  // the driver absent from the map for up to `timeInterval` (10 min), since
+  // startLocationUpdatesAsync's first callback only lands after that much
+  // time or that much movement. Best-effort: a failure here (e.g. GPS still
+  // warming up) just means the periodic task covers it instead.
+  Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+    .then(loc => onUpdate({ lat: loc.coords.latitude, lng: loc.coords.longitude }))
+    .catch(() => {})
+
+  if (alreadyRunning) return true
 
   // Purely time-based (10 min) — distanceInterval: 0 means "don't also
   // trigger early on movement", so the driver's live-location cadence stays
