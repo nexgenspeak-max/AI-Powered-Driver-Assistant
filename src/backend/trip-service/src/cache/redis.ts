@@ -103,6 +103,16 @@ export function customerContextKey(phone: string): string {
   return `customer:context:${phone.replace(/^\+/, '')}`;
 }
 
+// The driver's multi-stop optimized visiting order (routeOptimizationService.ts)
+// — expensive to compute (a Distance Matrix call + 2-opt), so kept until the
+// active-stop SET changes (see invalidateTripParties in driverContextService.ts),
+// not TTL-driven staleness like driverContext's own cache. The TTL passed here
+// is just a safety backstop against a missed invalidation, not the primary
+// invalidation mechanism.
+export function driverOptimizedRouteKey(phone: string): string {
+  return `driver:optimized_route:${phone.replace(/^\+/, '')}`;
+}
+
 export function driverLastCallKey(phone: string): string {
   return `driver:last_call:${phone.replace(/^\+/, '')}`;
 }

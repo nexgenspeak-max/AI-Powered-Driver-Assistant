@@ -98,6 +98,25 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
+    "get_optimal_route": {
+        "type": "function",
+        "name": "get_optimal_route",
+        "description": (
+            "Cho biết THỨ TỰ TỐI ƯU để ghé TẤT CẢ các điểm đón/trả khách đang chờ, dựa trên "
+            "khoảng cách đường bộ thực tế (không phải đường chim bay). Gọi khi tài xế có TỪ 2 "
+            "điểm dừng đang chờ trở lên và hỏi 'tôi nên đi theo thứ tự nào', 'lộ trình tối ưu là "
+            "gì', 'sắp xếp giúp tôi các điểm dừng', 'đi đường nào cho nhanh nhất qua hết các điểm "
+            "này', 'cả ngày nay tôi nên chạy sao cho hợp lý'. LUÔN sẵn sàng gọi khi tài xế hỏi, "
+            "không phụ thuộc cài đặt nào. Khác suggest_next_stop (chỉ gợi ý điểm GẦN NHẤT tiếp "
+            "theo duy nhất, cần bật cài đặt tự động gợi ý mới hoạt động chủ động, nhưng khi được "
+            "hỏi trực tiếp thì vẫn trả lời) và check_upcoming_trips (chỉ liệt kê theo trạng thái, "
+            "KHÔNG tính toán thứ tự tối ưu theo khoảng cách/thời gian). Nếu tài xế chỉ có 0 hoặc "
+            "1 điểm dừng đang chờ, tool sẽ tự báo không có gì cần sắp xếp — không cần hỏi trước "
+            "khi gọi."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_trip_traffic": {
         "type": "function",
         "name": "get_trip_traffic",

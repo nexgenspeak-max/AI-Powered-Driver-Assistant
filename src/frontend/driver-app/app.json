@@ -18,7 +18,8 @@
         "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
         "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
         "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order.",
-        "NSContactsUsageDescription": "Czen Driver needs contacts access so the AI assistant can call people from your phone by name."
+        "NSContactsUsageDescription": "Czen Driver needs contacts access so the AI assistant can call people from your phone by name.",
+        "UIBackgroundModes": ["audio"]
       },
       "bitcode": false
     },
@@ -29,7 +30,6 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true,
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
@@ -62,6 +62,14 @@
     "scheme": "driver-app",
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       "@config-plugins/react-native-webrtc",
       [
         "@livekit/react-native-expo-plugin",

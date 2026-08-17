@@ -138,6 +138,7 @@ export default function AppLayout() {
           <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
           <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
           <Tabs.Screen name="edit-profile" options={{ href: null, title: 'Edit Profile' }} />
+          <Tabs.Screen name="assistant-settings" options={{ href: null, title: 'Assistant Settings' }} />
           <Tabs.Screen name="add-delivery" options={{ href: null, title: 'Add Delivery' }} />
           <Tabs.Screen name="vehicle" options={{ href: null, title: 'Vehicle' }} />
           <Tabs.Screen name="bank-info" options={{ href: null, title: 'Bank Info' }} />

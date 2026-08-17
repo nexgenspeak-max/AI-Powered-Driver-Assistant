@@ -171,6 +171,12 @@ function scheduleRestart(delayMs = RESTART_DELAY_MS) {
 }
 
 async function ensureForegroundServiceForListening() {
+  // @supersami/rn-foreground-service has no iOS native module at all (only
+  // an android/ folder) — calling start() there throws, so this stays a
+  // no-op on iOS. iOS keeps the recognizer alive in the background via the
+  // UIBackgroundModes "audio" entry (app.json) instead of a foreground
+  // notification.
+  if (Platform.OS !== "android") return;
   await ForegroundService.start({
     id: SERVICE_ID,
     title: LISTENING_TITLE,
@@ -302,7 +308,14 @@ async function ensureModelLoaded() {
 }
 
 async function startListening() {
-  if (Platform.OS !== "android") return;
+  // react-native-vosk ships a real iOS implementation (Vosk.mm +
+  // libvosk.xcframework) and the plugin bundles assets/model-en-us into the
+  // Xcode project the same way it does for Android gradle — so this no
+  // longer needs to be Android-only. Per-word confidence (MIN_CONFIDENCE
+  // gate above) is Android-only (see patches/react-native-vosk+2.1.7.patch,
+  // which only touches VoskModule.kt) — onResult already treats
+  // `confidence === null` as "fall back to plain text match", which is
+  // exactly what iOS reports, so no extra branching needed here.
   if (sessionActive) {
     console.log("[wake-word] startListening: skipped, sessionActive already true");
     return;
@@ -394,8 +407,9 @@ export async function disableWakeWord() {
     modelLoadPromise = null;
   }
   // A call in progress keeps its own foreground service running — only stop
-  // it here if nothing else needs it.
-  if (useVoiceSessionStore.getState().status === "idle") {
+  // it here if nothing else needs it. Android only — see
+  // ensureForegroundServiceForListening() above.
+  if (Platform.OS === "android" && useVoiceSessionStore.getState().status === "idle") {
     ForegroundService.stop().catch(() => {});
   }
 }

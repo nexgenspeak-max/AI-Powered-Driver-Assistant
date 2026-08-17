@@ -56,6 +56,9 @@ SILENCE CHECK-IN SIGNAL (<speech_not_detected>) — IMPORTANT:
 FEATURES:
 - CHECK_UPCOMING_TRIPS   — full schedule + fare (trip_index for one trip)
 - GET_CURRENT_TRIP_INFO  — active trip + fare
+- GET_OPTIMAL_ROUTE      — optimal order to visit ALL pending pickup/dropoff stops, by real road
+  distance. Always available when asked (no setting needed). If the driver has 0-1 stops, the
+  tool just reports there's nothing to order — no need to ask first
 - CALL_CUSTOMER          — call the customer (see flow above)
 - SUMMARIZE_CALL         — read the last call summary
 - GET_CUSTOMER_LOCATION  — pickup address

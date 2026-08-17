@@ -42,6 +42,31 @@ export interface Bonus {
   expires_at: string
 }
 
+export interface OptimizedRouteStop {
+  trip_id: string
+  kind: 'pickup' | 'dropoff'
+  address: string
+  customer_name: string
+  lat: number
+  lng: number
+  // Both measured from the PREVIOUS stop in this order (or from the
+  // driver's current location, for the first stop).
+  distance_m: number
+  eta_minutes: number
+}
+
+export interface OptimizedRoute {
+  stops: OptimizedRouteStop[]
+  source: 'goong_matrix' | 'haversine_fallback'
+  computed_at: string
+  driver_location: { lat: number; lng: number } | null
+  // Road-shaped path (driver location -> stop 1 -> stop 2 -> ...) decoded
+  // from each hop's real Direction polyline — draw this instead of
+  // connecting stops with straight lines. Empty if no hop's polyline could
+  // be fetched (fall back to straight lines between stops).
+  path: { lat: number; lng: number }[]
+}
+
 export interface DriverContext {
   driver: Driver
   driver_profile: DriverProfile
@@ -56,5 +81,8 @@ export interface DriverContext {
   // useAutoConnectOnNudge.ts, which opens a voice session to collect it.
   has_pending_nudge: boolean
   last_call: { call_id: string; summary?: string } | null
+  // Multi-stop optimized visiting order across ALL active stops. null when
+  // the driver has 0-1 active stops (nothing to order) or trips lack coords.
+  optimized_route: OptimizedRoute | null
   fetched_at: string
 }

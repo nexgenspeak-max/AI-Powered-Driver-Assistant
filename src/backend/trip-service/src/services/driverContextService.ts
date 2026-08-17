@@ -1,7 +1,10 @@
+import { config } from '../config';
 import * as driverService from './driverService';
 import * as tripService from './tripService';
 import * as earningsService from './earningsService';
-import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverPendingNudgeKey } from '../cache/redis';
+import * as driverSettingsService from './driverSettingsService';
+import * as routeOptimizationService from './routeOptimizationService';
+import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverOptimizedRouteKey, driverPendingNudgeKey } from '../cache/redis';
 import { phoneVariants } from '../utils/phone';
 
 interface DriverLiveLocation {
@@ -40,13 +43,14 @@ async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
 }
 
 export async function buildDriverContext(driverPhone: string) {
-  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge] = await Promise.all([
+  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings] = await Promise.all([
     driverService.get(driverPhone),
     tripsForDriver(driverPhone),
     earningsService.todayForDriver(driverPhone),
     cacheGet<{ call_id: string; summary?: string }>(driverLastCallKey(driverPhone)),
     cacheGet<DriverLiveLocation>(driverLiveLocationKey(driverPhone)),
     cacheGet<{ kind: string }>(driverPendingNudgeKey(driverPhone)),
+    driverSettingsService.getByPhone(driverPhone),
   ]);
 
   const upcoming = trips
@@ -57,6 +61,16 @@ export async function buildDriverContext(driverPhone: string) {
     .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
   const currentRaw = trips.find(t => IN_PROGRESS.has(t.status)) ?? null;
   const current = currentRaw ? earningsService.enrichTrip(currentRaw) : null;
+
+  // Depends on `trips`/`currentLocation` already resolved above, so it can't
+  // join the Promise.all — cached internally (routeOptimizationService.ts),
+  // so this is a no-op read on every call except right after a real
+  // active-stop-set change (see invalidateTripParties below).
+  const optimizedRoute = await routeOptimizationService.getOptimizedRoute(
+    driverPhone,
+    trips,
+    currentLocation ?? null,
+  );
 
   return {
     driver: driver ?? { phone: driverPhone, status: 'offline', name: '' },
@@ -77,6 +91,24 @@ export async function buildDriverContext(driverPhone: string) {
     // for where the actual nudge gets embedded into the new room.
     has_pending_nudge: pendingNudge !== null,
     last_call: lastCall,
+    // Feature toggles from auth-service's driver-settings table (hands_free_mode,
+    // notify_on_pickup_approach, auto_suggest_next_stop + their radii). All-false
+    // shape if the account/settings row can't be resolved, so callers (voice-agent's
+    // next_stop.py) can treat a missing row the same as an explicitly-off one.
+    driver_settings: driverSettings ?? {
+      hands_free_mode: false,
+      notify_on_pickup_approach: false,
+      notify_on_pickup_approach_radius_m: config.proximityAlertMeters,
+      auto_suggest_next_stop: false,
+      auto_suggest_next_stop_radius_m: config.nextStopAnnounceMeters,
+    },
+    // Multi-stop visiting order across ALL active stops (confirmed/
+    // arrived_pickup/picked_up), road-distance-based via Goong Distance
+    // Matrix with a haversine fallback. null when the driver has 0-1 active
+    // stops (nothing to order) or trips lack coords. Cached, invalidated on
+    // active-stop-set change (see invalidateTripParties below) — NOT
+    // recomputed on every GPS ping.
+    optimized_route: optimizedRoute,
     fetched_at: new Date().toISOString(),
   };
 }
@@ -136,7 +168,16 @@ export async function invalidateCustomerContext(customerPhone: string) {
 export async function invalidateTripParties(trip: tripService.Trip | null) {
   if (!trip) return;
   const tasks: Promise<void>[] = [];
-  if (trip.driver_phone) tasks.push(invalidateDriverContext(trip.driver_phone));
+  if (trip.driver_phone) {
+    tasks.push(invalidateDriverContext(trip.driver_phone));
+    // A status write can move a trip INTO or OUT OF the active-routing set
+    // (confirmed/arrived_pickup/picked_up) — always invalidate the cached
+    // optimized route alongside driver context; a stale route missing a
+    // newly-confirmed stop (or still including a completed one) is actively
+    // misleading, not just outdated. Cheap: this only deletes a cache key,
+    // actual recomputation happens lazily on the next context read.
+    tasks.push(cacheDel(...phoneVariants(trip.driver_phone).map(driverOptimizedRouteKey)));
+  }
   if (trip.customer_phone) tasks.push(invalidateCustomerContext(trip.customer_phone));
   await Promise.all(tasks);
 }

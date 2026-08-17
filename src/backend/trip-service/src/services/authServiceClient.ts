@@ -48,4 +48,5 @@ export const authServiceClient = {
       method: 'PATCH',
       body: JSON.stringify(fields),
     }),
+  getSettings: <T>(accountId: string) => request<T>(`/api/v1/settings/${encodeURIComponent(accountId)}`),
 };

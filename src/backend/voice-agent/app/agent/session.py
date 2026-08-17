@@ -43,7 +43,17 @@ from app.services.silence_tracker import SilenceTracker
 logger = logging.getLogger("voice-agent.session")
 
 # ── Room name patterns ─────────────────────────────────────────────────────────
-_DRIVER_RE   = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
+_DRIVER_RE      = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
+# Real inbound phone call: driver dials the Twilio number, LiveKit's SIP
+# dispatch rule (scripts/setup_sip.py, room_prefix="driver-call-") creates
+# something like "driver-call-_+84867347452_abc" (see README.md's own log
+# example). This never matched _DRIVER_RE, so every real inbound call fell
+# through to the generic fallback below with parts[1]=="call" (not digits)
+# -> phone=="" -> prefetch_processor.run_driver() got skipped entirely ->
+# the agent had zero trip/driver context for the whole call. Matched
+# separately here, ahead of the fallback, so real calls get the same phone
+# resolution (and therefore the same context) as in-app sessions.
+_DRIVER_CALL_RE = re.compile(r"^driver-call-_\+?(\d+)_")  # driver-call-_+84867347452_abc
 _CUSTOMER_RE = re.compile(r"^customer-(\d+)-\d+$")  # customer-84901234567-1748700000
 _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbound)
 _CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
@@ -64,6 +74,10 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     if m:
         return "driver", m.group(1)
 
+    m = _DRIVER_CALL_RE.match(room_name)
+    if m:
+        return "driver", m.group(1)
+
     m = _CUSTOMER_RE.match(room_name)
     if m:
         return "customer", m.group(1)
@@ -78,6 +92,22 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     parts = room_name.split("-")
     phone = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
     return "driver", phone
+
+
+def _is_telephony_room(room_name: str) -> bool:
+    """True for any room carrying real SIP/PSTN audio (phone network), as
+    opposed to in-app LiveKit WebRTC. Deliberately independent of `mode` —
+    `mode` gets reassigned "outbound" -> "driver" once trip metadata
+    resolves (see the `mode = "driver"` line below), which used to make
+    `mode == "outbound"` checks silently never fire for real calls. Checked
+    directly against the room name instead, computed once up front so nothing
+    downstream can mutate it away.
+    """
+    return (
+        room_name.startswith("driver-call-")     # inbound: driver phones the assistant
+        or _TRIP_RE.match(room_name) is not None      # outbound: assistant phones the driver
+        or _CUSTCALL_RE.match(room_name) is not None  # assistant phones a customer
+    )
 
 
 # ── Noise cancellation (optional plugin) ──────────────────────────────────────
@@ -121,7 +151,8 @@ async def entrypoint(ctx: JobContext) -> None:
     logger.info("connected | room=%s", room_name)
 
     mode, phone = _parse_room(room_name)
-    logger.info("room_mode=%s phone=%r", mode, phone)
+    is_telephony = _is_telephony_room(room_name)
+    logger.info("room_mode=%s phone=%r is_telephony=%s", mode, phone, is_telephony)
 
     # ── Resolve trip metadata ───────────────────────────────────────────────
     trip: dict | None = None
@@ -308,8 +339,15 @@ async def entrypoint(ctx: JobContext) -> None:
             # is actually set.
             max_silences_default = 3
 
-        # BVCTelephony is for SIP/phone audio — it can strip speech from mobile WebRTC mics.
-        noise_cancel = _NOISE_CANCEL if mode == "outbound" else None
+        # BVCTelephony is for SIP/phone audio — it can strip speech from mobile
+        # WebRTC mics, so it must only apply to real telephony rooms. Was
+        # keyed on `mode == "outbound"`, but `mode` gets reassigned
+        # "outbound" -> "driver" a few lines above the instant trip metadata
+        # resolves (the normal case for every real dispatched call) — so that
+        # check silently never matched in practice. `is_telephony` is computed
+        # once from the room name up top and never mutated, so it still says
+        # the right thing here regardless of how `mode` changed since.
+        noise_cancel = _NOISE_CANCEL if is_telephony else None
 
         await session.start(
             agent=agent,

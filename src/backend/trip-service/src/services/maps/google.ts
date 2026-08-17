@@ -1,7 +1,8 @@
-import type { RouteInfo } from './types';
+import type { RouteInfo, DistanceMatrixResult } from './types';
 import type { LatLng } from '../../utils/geo';
 
 const DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
+const DISTANCE_MATRIX_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
 export async function getRoute(
   pickup: string,
@@ -55,9 +56,48 @@ export async function getRoute(
       pickup_lng: leg.start_location?.lng,
       dropoff_lat: leg.end_location?.lat,
       dropoff_lng: leg.end_location?.lng,
+      polyline: route.overview_polyline?.points,
     };
   } catch {
     console.warn('Google Maps request failed');
     return {};
+  }
+}
+
+// Mirrors goong.ts's getDistanceMatrix — kept in sync for whoever flips
+// MAPS_PROVIDER=google, even though only goong is configured today.
+export async function getDistanceMatrix(
+  origins: LatLng[],
+  destinations: LatLng[],
+  apiKey: string,
+): Promise<DistanceMatrixResult | null> {
+  if (!apiKey || origins.length === 0 || destinations.length === 0) return null;
+
+  try {
+    const params = new URLSearchParams({
+      origins: origins.map(o => `${o.lat},${o.lng}`).join('|'),
+      destinations: destinations.map(d => `${d.lat},${d.lng}`).join('|'),
+      departure_time: 'now',
+      key: apiKey,
+    });
+    const resp = await fetch(`${DISTANCE_MATRIX_URL}?${params}`, { signal: AbortSignal.timeout(5000) });
+    const data = await resp.json() as Record<string, unknown>;
+
+    if (data.status !== 'OK' || !Array.isArray(data.rows)) {
+      console.warn(`Google DistanceMatrix status: ${data.status}`);
+      return null;
+    }
+
+    const rows = (data.rows as any[]).map(row =>
+      ((row.elements ?? []) as any[]).map(el => ({
+        distance_m: el.status === 'OK' ? (el.distance?.value ?? null) : null,
+        duration_s: el.status === 'OK' ? ((el.duration_in_traffic ?? el.duration)?.value ?? null) : null,
+      })),
+    );
+
+    return { origins, destinations, rows };
+  } catch {
+    console.warn('Google DistanceMatrix request failed');
+    return null;
   }
 }

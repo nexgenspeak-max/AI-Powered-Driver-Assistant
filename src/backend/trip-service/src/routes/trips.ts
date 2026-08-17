@@ -11,6 +11,7 @@ import { distanceMeters, type LatLng } from '../utils/geo';
 import { notifyDriver, notifyCustomer } from '../services/notify';
 import { maybeNotifyCustomerOfProximity, maybeNotifyCustomerOfDropoffProximity } from '../services/proximityService';
 import { reachDriver } from '../services/driverReachService';
+import * as driverSettingsService from '../services/driverSettingsService';
 
 const router = Router();
 
@@ -254,7 +255,11 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     // than trusting whatever this request's body had.
     if (config.enableNextStopNudge && updated?.driver_phone
         && (status === 'picked_up' || status === 'completed')) {
-      reachDriver(updated.driver_phone, 'suggest_next_stop', {}).catch(err => {
+      const driverPhone = updated.driver_phone;
+      driverSettingsService.getByPhone(driverPhone).then(settings => {
+        if (!settings?.auto_suggest_next_stop) return undefined;
+        return reachDriver(driverPhone, 'suggest_next_stop', {});
+      }).catch(err => {
         console.warn(`[trips] next-stop nudge failed for trip=${updated.trip_id}:`, err);
       });
     }

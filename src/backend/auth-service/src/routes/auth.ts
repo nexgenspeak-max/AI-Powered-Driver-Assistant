@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import * as userService from '../services/userService';
+import * as settingsService from '../services/settingsService';
 import {
   signAccessToken, signRefreshToken, verifyToken, hashToken, durationFromNow, TokenClaims,
 } from '../services/tokenService';
@@ -65,6 +66,7 @@ router.post('/register', async (req: Request, res: Response) => {
       const user = await userService.create({
         role, name, email, password_hash, permissions: DEFAULT_PERMISSIONS.admin,
       });
+      await settingsService.create(user.id);
       return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
     }
 
@@ -92,6 +94,7 @@ router.post('/register', async (req: Request, res: Response) => {
       role, name, phone, email, password_hash, permissions: DEFAULT_PERMISSIONS[role],
       ...(role === 'driver' ? { vehicle_type, vehicle_plate, vehicle_name } : {}),
     });
+    await settingsService.create(user.id);
     return res.status(201).json({ ...(await issueTokens(user)), user: sanitize(user) });
   } catch (err) {
     return res.status(500).json({ error: String(err) });

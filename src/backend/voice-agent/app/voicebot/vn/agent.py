@@ -16,6 +16,7 @@ from app.voicebot.vn.tools.check_upcoming_trips       import check_upcoming_trip
 from app.voicebot.vn.tools.refresh_latest_data        import refresh_latest_data
 from app.voicebot.vn.tools.get_current_trip_info      import get_current_trip_info
 from app.voicebot.vn.tools.suggest_next_stop          import suggest_next_stop
+from app.voicebot.vn.tools.get_optimal_route          import get_optimal_route
 from app.voicebot.vn.tools.get_trip_traffic           import get_trip_traffic
 from app.voicebot.vn.tools.update_trip_status         import update_trip_status
 from app.voicebot.vn.tools.call_customer              import call_customer
@@ -76,6 +77,7 @@ _DRIVER_INBOUND_TOOLS = [
     refresh_latest_data,
     get_current_trip_info,
     suggest_next_stop,
+    get_optimal_route,
     get_trip_traffic,
     confirm_trip,
     reject_trip,

@@ -128,6 +128,37 @@ def get_current_location(userdata: dict) -> dict | None:
     return None
 
 
+def get_driver_settings(userdata: dict) -> dict:
+    """Per-driver feature toggles from auth-service's driver-settings table
+    (hands_free_mode, notify_on_pickup_approach, auto_suggest_next_stop +
+    radii), passed through unchanged inside the /drivers/me/context payload.
+    All-false shape if missing so callers can treat a stale/failed prefetch
+    the same as an explicitly-off setting."""
+    settings = get(userdata, "driver_settings")
+    if isinstance(settings, dict):
+        return settings
+    return {
+        "hands_free_mode": False,
+        "notify_on_pickup_approach": False,
+        "auto_suggest_next_stop": False,
+    }
+
+
+def get_optimized_route(userdata: dict) -> dict | None:
+    """Multi-stop optimized visiting order across ALL the driver's active
+    stops, from trip-service's driverContextService.buildDriverContext
+    (routeOptimizationService.ts) — {stops: [...], source, computed_at,
+    driver_location}. None if the driver has 0-1 active stops (nothing to
+    order), the field wasn't populated (older cached context), or trip-service
+    computation was skipped/failed. Unlike get_driver_settings, there's no
+    meaningful all-empty stub shape for a route, so callers handle None as
+    "nothing to report" directly."""
+    route = get(userdata, "optimized_route")
+    if isinstance(route, dict) and isinstance(route.get("stops"), list):
+        return route
+    return None
+
+
 def get_upcoming_trips(userdata: dict) -> list[dict]:
     """Upcoming trips from prefetched driver context."""
     upcoming = get(userdata, "upcoming_trips")

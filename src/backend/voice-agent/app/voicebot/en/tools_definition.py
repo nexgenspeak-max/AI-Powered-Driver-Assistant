@@ -98,6 +98,24 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
+    "get_optimal_route": {
+        "type": "function",
+        "name": "get_optimal_route",
+        "description": (
+            "Gives the OPTIMAL ORDER to visit ALL currently pending pickup/dropoff stops, based "
+            "on real road distance (not straight-line). Use when the driver has 2 OR MORE pending "
+            "stops and asks 'what order should I go in', 'what's my optimal route', 'sort out my "
+            "stops for me', 'what's the fastest way to hit all these stops', 'how should I plan "
+            "my day'. ALWAYS available when asked, not gated by any setting. Different from "
+            "suggest_next_stop (only suggests the single NEAREST stop next, needs a setting "
+            "enabled for it to fire proactively, but still answers when asked directly) and "
+            "check_upcoming_trips (only lists trips by status, does NOT compute an optimal "
+            "distance/time-based order). If the driver has 0 or 1 pending stops, the tool will "
+            "just report there's nothing to order — no need to ask first."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_trip_traffic": {
         "type": "function",
         "name": "get_trip_traffic",

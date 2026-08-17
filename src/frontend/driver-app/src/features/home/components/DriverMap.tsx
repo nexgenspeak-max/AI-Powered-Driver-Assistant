@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View, Text, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Map, Camera, Marker, type LngLat, type LngLatBounds, type CameraRef } from '@maplibre/maplibre-react-native'
+import { Map, Camera, Marker, GeoJSONSource, Layer, type LngLat, type LngLatBounds, type CameraRef } from '@maplibre/maplibre-react-native'
 import { useDriverContext } from '../../dashboard/hooks/useDriverContext'
 import { useLiveDriverLocation } from '../hooks/useLiveDriverLocation'
+import { OptimizedRoutePanel } from './OptimizedRoutePanel'
 
 const DRIVER_VAN_ICON = require('../../../../assets/icons/driver-van.png')
 
@@ -75,7 +76,7 @@ function DriverMarker() {
   )
 }
 
-function StopMarker({ kind, name, color }: { kind: 'pickup' | 'dropoff'; name: string; color: string }) {
+function StopMarker({ kind, name, color, order }: { kind: 'pickup' | 'dropoff'; name: string; color: string; order?: number }) {
   return (
     <View
       style={{
@@ -91,6 +92,28 @@ function StopMarker({ kind, name, color }: { kind: 'pickup' | 'dropoff'; name: s
         maxWidth: 140,
       }}
     >
+      {/* Position in the optimized multi-stop route (routeOrderByKey in
+          DriverMap) — absent when there's no route to order against (0-1
+          active stops), same marker as before in that case. */}
+      {typeof order === 'number' && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -9,
+            left: -9,
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            backgroundColor: '#ffffff',
+            borderWidth: 1.5,
+            borderColor: color,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 10, fontWeight: '700', color }}>{order}</Text>
+        </View>
+      )}
       <Ionicons name={kind === 'pickup' ? 'location' : 'flag'} size={12} color="#ffffff" />
       <Text numberOfLines={1} style={{ color: '#ffffff', fontSize: 11, fontWeight: '600' }}>
         {name}
@@ -160,6 +183,50 @@ export function DriverMap() {
     for (const m of dropoffPoints) pts.push(m.point)
     return pts
   }, [driverPoint, pickupPoints, dropoffPoints])
+
+  // Same color-per-trip assignment the pickup/dropoff markers already use
+  // (colorForTrip keyed by position in active_trips) — looked up by trip_id
+  // instead of by route-stop index so a trip's color matches between the
+  // map markers and the route panel's numbered list.
+  const colorByTripId = useMemo(() => {
+    // Plain object, not the built-in Map class — this file already imports
+    // maplibre's <Map> component under that same identifier.
+    const byId: Record<string, string> = {}
+    trips.forEach((t, i) => { byId[t.trip_id] = colorForTrip(i) })
+    return byId
+  }, [trips])
+
+  // null whenever there are 0-1 active stops (nothing to order) — see
+  // routeOptimizationService.ts on the trip-service side.
+  const optimizedRoute = context?.optimized_route ?? null
+
+  // Position (1-based) of each pickup/dropoff marker within the optimized
+  // order, so StopMarker can show a number badge — keyed by kind+trip_id
+  // since a trip's pickup and dropoff are two separate stops that can each
+  // appear (or not) independently in the route.
+  const routeOrderByKey = useMemo(() => {
+    const byKey: Record<string, number> = {}
+    optimizedRoute?.stops.forEach((s, i) => { byKey[`${s.kind}-${s.trip_id}`] = i + 1 })
+    return byKey
+  }, [optimizedRoute])
+
+  // Road-shaped connector through every stop in optimized order, decoded
+  // server-side from real Direction polylines (routeOptimizationService.ts's
+  // `path`). Falls back to straight lines between stops only if trip-service
+  // couldn't fetch a road path for any hop (path empty) — still better than
+  // showing nothing.
+  const routeLineGeoJson = useMemo<GeoJSON.Feature<GeoJSON.LineString> | null>(() => {
+    if (!optimizedRoute || optimizedRoute.stops.length === 0) return null
+    const coords: [number, number][] =
+      optimizedRoute.path.length > 0
+        ? optimizedRoute.path.map(p => [p.lng, p.lat])
+        : [
+            ...(driverPoint ? [driverPoint] : []),
+            ...optimizedRoute.stops.map(s => [s.lng, s.lat] as [number, number]),
+          ]
+    if (coords.length < 2) return null
+    return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+  }, [optimizedRoute, driverPoint])
 
   const tripIdsKey = trips.map(t => t.trip_id).join(',')
   const hasDriverPoint = driverPoint !== null
@@ -231,6 +298,17 @@ export function DriverMap() {
       <Map style={{ flex: 1 }} mapStyle={GOONG_STYLE_URL} logo={false}>
         <Camera ref={cameraRef} initialViewState={{ center: driverPoint ?? DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
 
+        {routeLineGeoJson && (
+          <GeoJSONSource id="optimized-route-source" data={routeLineGeoJson}>
+            <Layer
+              id="optimized-route-line"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': DRIVER_COLOR, 'line-width': 3, 'line-dasharray': [1, 1.5], 'line-opacity': 0.85 }}
+            />
+          </GeoJSONSource>
+        )}
+
         {driverPoint && (
           <Marker id="driver" lngLat={driverPoint}>
             <DriverMarker />
@@ -238,15 +316,22 @@ export function DriverMap() {
         )}
         {pickupPoints.map(({ trip, point, color }) => (
           <Marker key={`pickup-${trip.trip_id}`} id={`pickup-${trip.trip_id}`} lngLat={point} anchor="bottom">
-            <StopMarker kind="pickup" name={trip.customer_name || 'Khách'} color={color} />
+            <StopMarker kind="pickup" name={trip.customer_name || 'Khách'} color={color} order={routeOrderByKey[`pickup-${trip.trip_id}`]} />
           </Marker>
         ))}
         {dropoffPoints.map(({ trip, point, color }) => (
           <Marker key={`dropoff-${trip.trip_id}`} id={`dropoff-${trip.trip_id}`} lngLat={point} anchor="bottom">
-            <StopMarker kind="dropoff" name={trip.customer_name || 'Khách'} color={color} />
+            <StopMarker kind="dropoff" name={trip.customer_name || 'Khách'} color={color} order={routeOrderByKey[`dropoff-${trip.trip_id}`]} />
           </Marker>
         ))}
       </Map>
+
+      {optimizedRoute && (
+        <OptimizedRoutePanel
+          route={optimizedRoute}
+          colorForTripId={tripId => colorByTripId[tripId] ?? DRIVER_COLOR}
+        />
+      )}
     </View>
   )
 }

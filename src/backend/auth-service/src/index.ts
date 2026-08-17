@@ -3,6 +3,7 @@ import cors from 'cors';
 import serverless from 'serverless-http';
 import authRouter from './routes/auth';
 import accountsRouter from './routes/accounts';
+import settingsRouter from './routes/settings';
 
 const corsOptions = {
   origin: true,
@@ -19,5 +20,6 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/accounts', accountsRouter);
+app.use('/api/v1/settings', settingsRouter);
 
 export const handler = serverless(app);

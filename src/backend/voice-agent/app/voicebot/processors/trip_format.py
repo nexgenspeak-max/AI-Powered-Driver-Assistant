@@ -31,6 +31,49 @@ def short_address(address: str, max_len: int = 48) -> str:
     return text[: max_len - 3].rstrip() + "..."
 
 
+def format_route_order(route: dict, lang: str = "vi") -> str:
+    """Spoken summary of a multi-stop optimized visiting order — WHERE to go
+    in what order, WHO at each stop, and the distance/ETA hop from the
+    previous stop. Mirrors format_trip_list's numbered-line cadence. route
+    is context_store.get_optimized_route()'s return shape; caller should
+    have already handled route is None (nothing to report) before calling."""
+    stops = route.get("stops") or []
+    if not stops:
+        return (
+            "Hiện anh/chị không có nhiều điểm dừng cần sắp xếp."
+            if lang != "en" else
+            "You don't have multiple stops to order right now."
+        )
+
+    lines = []
+    for i, s in enumerate(stops, 1):
+        is_pickup = s.get("kind") == "pickup"
+        addr = short_address(s.get("address", ""), 40)
+        customer = s.get("customer_name") or ("khách" if lang != "en" else "the customer")
+        dist_km = round((s.get("distance_m") or 0) / 1000, 1)
+        eta = s.get("eta_minutes")
+        if lang == "en":
+            verb = "pick up" if is_pickup else "drop off"
+            lines.append(f"{i}. {verb} {customer} at {addr} ({dist_km} km, about {eta} min from the previous stop)")
+        else:
+            verb = "đón" if is_pickup else "trả"
+            lines.append(f"{i}. {verb} khách {customer} tại {addr} ({dist_km} km, khoảng {eta} phút từ điểm trước)")
+
+    header = (
+        f"You have {len(stops)} stops, optimal order is"
+        if lang == "en" else
+        f"Anh/chị có {len(stops)} điểm dừng, thứ tự tối ưu là"
+    )
+    source_note = ""
+    if route.get("source") == "haversine_fallback":
+        source_note = (
+            " (estimated as-the-crow-flies, no live traffic data)"
+            if lang == "en" else
+            " (ước tính theo đường chim bay, chưa có dữ liệu giao thông thực tế)"
+        )
+    return header + ": " + "; ".join(lines) + "." + source_note
+
+
 def build_outbound_nav_info(trip: dict, lang: str) -> str:
     """Navigation/fare lines for outbound trip notification prompts."""
     lines: list[str] = []

@@ -31,6 +31,19 @@ aws dynamodb create-table \
   --profile <your-aws-profile> --region ap-southeast-1
 ```
 
+Also create the `driver-settings` table (one row per account — hands-free mode, pickup-approach
+notification, next-stop auto-suggest; keyed by `id_account`, no GSIs needed). A row is created
+automatically for every account at registration, with every toggle defaulted to `false`:
+
+```bash
+aws dynamodb create-table \
+  --table-name local-driver-assistant-driver-settings \
+  --attribute-definitions AttributeName=id_account,AttributeType=S \
+  --key-schema AttributeName=id_account,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --profile <your-aws-profile> --region ap-southeast-1
+```
+
 ### 2. Create `envs/.env.local`
 
 This file is gitignored — it won't come from `git pull`, you have to create it yourself:
@@ -41,6 +54,7 @@ AWS_REGION=ap-southeast-1
 AWS_PROFILE=<your-aws-profile>
 
 DYNAMODB_TABLE=local-driver-assistant-accounts
+DYNAMODB_SETTINGS_TABLE=local-driver-assistant-driver-settings
 JWT_SECRET=local-dev-secret
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=30d
@@ -94,6 +108,8 @@ curl http://localhost:8003/api/v1/auth/me -H "Authorization: Bearer <access_toke
 | `GET` | `/api/v1/accounts?role=driver` | Bearer | List accounts by role (used by trip-service to list/find drivers) |
 | `GET` | `/api/v1/accounts/phone/:phone` | Bearer | Look up one account by phone (any role) |
 | `PATCH` | `/api/v1/accounts/:id` | Bearer | Update profile fields and/or `status`. Self can set `online`/`offline` on their own account; only `role=admin` can set `locked` or edit someone else's account |
+| `GET` | `/api/v1/settings/:accountId` | Bearer | Read an account's feature settings (hands-free mode, pickup-approach notification + radius, next-stop auto-suggest + radius), row keyed by `id_account`. A row is created automatically at registration with every toggle `false`; if one is somehow missing (e.g. a pre-existing account), the same all-`false` defaults are returned instead of `null`/404 — so a fresh login or app reinstall always gets a consistent answer straight from the DB. Self or `role=admin` only |
+| `PATCH` | `/api/v1/settings/:accountId` | Bearer | Update one or more settings fields (`true`/`false` to turn a feature on/off, or a radius override). Self or `role=admin` only |
 
 ## Roles, status, tokens
 

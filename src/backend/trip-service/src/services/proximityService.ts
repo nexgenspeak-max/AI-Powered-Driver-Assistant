@@ -4,6 +4,7 @@
 import { config } from '../config';
 import * as tripService from '../services/tripService';
 import * as callService from '../services/callService';
+import * as driverSettingsService from './driverSettingsService';
 import { reachDriver } from './driverReachService';
 import {
   cacheSet,
@@ -25,8 +26,14 @@ export async function maybeNotifyCustomerOfProximity(
   if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
   if (!trip.driver_phone || !trip.customer_phone) return;
 
+  // Driver-level opt-in: off by default (see auth-service's driver-settings
+  // table) — a driver who never turned this on gets no proximity call at all,
+  // regardless of config.proximityAlertMeters.
+  const settings = await driverSettingsService.getByPhone(trip.driver_phone);
+  if (!settings?.notify_on_pickup_approach) return;
+
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
-  if (distance > config.proximityAlertMeters) return;
+  if (distance > (settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters)) return;
 
   const notifiedKey = tripProximityNotifiedKey(trip.trip_id);
   if (await cacheGet(notifiedKey)) return;
@@ -77,8 +84,13 @@ export async function maybeNotifyCustomerOfDropoffProximity(
   if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
   if (!trip.driver_phone || !trip.customer_phone) return;
 
+  // Same driver-level toggle as the pickup side above — one setting covers
+  // both ends of the trip, there's no separate dropoff-only column.
+  const settings = await driverSettingsService.getByPhone(trip.driver_phone);
+  if (!settings?.notify_on_pickup_approach) return;
+
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
-  if (distance > config.proximityAlertMeters) return;
+  if (distance > (settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters)) return;
 
   const notifiedKey = tripDropoffProximityNotifiedKey(trip.trip_id);
   if (await cacheGet(notifiedKey)) return;
@@ -128,8 +140,13 @@ export async function maybeAnnouncePickupArrivalNextStop(
   if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
   if (!trip.driver_phone) return;
 
+  // Driver-level opt-in: off by default — no auto-suggestion nudge unless
+  // the driver has explicitly turned this on.
+  const settings = await driverSettingsService.getByPhone(trip.driver_phone);
+  if (!settings?.auto_suggest_next_stop) return;
+
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
-  if (distance > config.nextStopAnnounceMeters) return;
+  if (distance > (settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters)) return;
 
   const announcedKey = tripArrivalAnnouncedKey(trip.trip_id);
   if (await cacheGet(announcedKey)) return;
@@ -160,8 +177,11 @@ export async function maybeAnnounceDropoffArrivalNextStop(
   if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
   if (!trip.driver_phone) return;
 
+  const settings = await driverSettingsService.getByPhone(trip.driver_phone);
+  if (!settings?.auto_suggest_next_stop) return;
+
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
-  if (distance > config.nextStopAnnounceMeters) return;
+  if (distance > (settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters)) return;
 
   const announcedKey = tripDropoffArrivalAnnouncedKey(trip.trip_id);
   if (await cacheGet(announcedKey)) return;
