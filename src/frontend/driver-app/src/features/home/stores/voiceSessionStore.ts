@@ -124,9 +124,19 @@ interface VoiceSessionState {
    * reports by publishing `active: false`) may end the session.
    */
   isCallActive: boolean
-  /** Which entry of `connectingCueAssets` (AssistantChatPanel.tsx) to play for the current/last connect — picked randomly once per connect() call so the delay below and the cue actually played always agree on the same file. */
+  /** Which entry of `connectingCueAssets` (AssistantChatPanel.tsx) to play for the current/last connect — picked randomly once per connect() call so the delay below and the cue actually played always agree on the same file. Meaningless while `silentConnect` is true (nothing plays). */
   connectingCueIndex: number
-  connect: (driverPhone: string) => Promise<void>
+  /**
+   * True while the in-flight connect was triggered automatically (a
+   * proactive nudge waiting — see useAutoConnectOnNudge.ts), not by the
+   * driver tapping the orb. Skips the connecting-cue audio AND the delay
+   * that normally holds off the real LiveKit connect until that cue
+   * finishes (see connect()'s `silent` option below) — the driver didn't
+   * just tap anything to "wait" on, so get the nudge to them as fast as
+   * possible instead. AssistantChatPanel.tsx reads this to skip playback.
+   */
+  silentConnect: boolean
+  connect: (driverPhone: string, opts?: { silent?: boolean }) => Promise<void>
   disconnect: () => void
   sendText: (text: string) => Promise<boolean>
 }
@@ -158,10 +168,10 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     await stopAudioSession()
     console.log('[voice-session] handleDisconnected: stopAudioSession done, setting idle')
     stopCallForegroundService()
-    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
+    set({ status: 'idle', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false, silentConnect: false })
   }
 
-  const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
+  const connectWithToken = async (getToken: () => Promise<{ token: string; livekit_url: string }>, silent: boolean) => {
     // Synchronous re-entrancy guard — see `connecting`'s own comment for why
     // the `room`-based staleness check below isn't enough on its own.
     if (connecting) {
@@ -170,13 +180,13 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     }
     connecting = true
     try {
-      await connectWithTokenLocked(getToken)
+      await connectWithTokenLocked(getToken, silent)
     } finally {
       connecting = false
     }
   }
 
-  const connectWithTokenLocked = async (getToken: () => Promise<{ token: string; livekit_url: string }>) => {
+  const connectWithTokenLocked = async (getToken: () => Promise<{ token: string; livekit_url: string }>, silent: boolean) => {
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
     // suspends WebRTC threads while the app isn't in the foreground) — treat
@@ -198,13 +208,16 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
 
     // Picked once per connect, not per render — AssistantChatPanel.tsx reads
     // this same index for which file to actually play, so the delay below
-    // and the cue on screen always agree.
+    // and the cue on screen always agree. Meaningless (never read) when silent.
     const cueIndex = Math.floor(Math.random() * CONNECTING_CUE_DURATIONS_MS.length)
 
     // `status` flips to 'connecting' first, immediately — the connecting-cue
     // audio (AssistantChatPanel.tsx) reacts to that and starts playing right
-    // away.
-    set({ status: 'connecting', isCallActive: false, agentSpeaking: false, connectingCueIndex: cueIndex })
+    // away, UNLESS `silentConnect` is set (auto-triggered by a pending
+    // nudge, not a driver tap — see useAutoConnectOnNudge.ts): no cue, no
+    // artificial wait, straight to connecting so the nudge reaches the
+    // driver as fast as possible.
+    set({ status: 'connecting', isCallActive: false, agentSpeaking: false, connectingCueIndex: cueIndex, silentConnect: silent })
     try {
       // Sequential, not overlapping: the actual LiveKit connect (and
       // whatever the AI says the instant it joins the room) must not start
@@ -213,8 +226,11 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       // so merely delaying when we *expose* 'connected' doesn't stop it
       // from overlapping the cue. Actually holding off the connect itself
       // is what does. `CONNECTING_CUE_DURATIONS_MS` must stay in sync with
-      // the cue files' real lengths (AssistantChatPanel.tsx).
-      await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATIONS_MS[cueIndex]))
+      // the cue files' real lengths (AssistantChatPanel.tsx). Skipped
+      // entirely when silent — there's no cue playing to wait out.
+      if (!silent) {
+        await new Promise(resolve => setTimeout(resolve, CONNECTING_CUE_DURATIONS_MS[cueIndex]))
+      }
       await startAudioSession()
       const { token, livekit_url } = await getToken()
       const r = new Room()
@@ -353,7 +369,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null
       await stopAudioSession()
       stopCallForegroundService()
-      set({ status: cancelled ? 'idle' : 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false })
+      set({ status: cancelled ? 'idle' : 'error', agentAudioLevel: 0, isCallActive: false, agentSpeaking: false, silentConnect: false })
     }
   }
 
@@ -363,8 +379,10 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     isCallActive: false,
     agentSpeaking: false,
     connectingCueIndex: 0,
+    silentConnect: false,
 
-    connect: (driverPhone: string) => connectWithToken(() => voiceService.getDriverToken(driverPhone)),
+    connect: (driverPhone: string, opts?: { silent?: boolean }) =>
+      connectWithToken(() => voiceService.getDriverToken(driverPhone), !!opts?.silent),
 
     // The AI orb on Home must gate its own hangup on `isCallActive`
     // before calling this — see AssistantChatPanel.tsx's handleOrbPress.

@@ -66,6 +66,46 @@ def is_stale(userdata: dict) -> bool:
     return age > STALE_SECONDS
 
 
+def age_seconds(userdata: dict) -> float:
+    ctx = userdata.get("context", {})
+    return _now() - ctx.get("fetched_at", _now())
+
+
+def format_age_note(userdata: dict, lang: str = "vi") -> str:
+    """Human-readable, speakable age of the cached context data."""
+    age = age_seconds(userdata)
+    if lang == "en":
+        if age < 60:
+            return "moments ago"
+        minutes = int(age // 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    if age < 60:
+        return "vài giây trước"
+    minutes = int(age // 60)
+    return f"{minutes} phút trước"
+
+
+def set_pending_refresh(userdata: dict, topic: str, args: dict | None = None) -> None:
+    """Remembers which cached-data topic a driver was just asked 'want the
+    latest?' about — a single slot, like set_last_nudge_trip below. If the
+    driver asks about a second topic before confirming the first, the new
+    topic simply overwrites it: a bare "yes" naturally answers whichever
+    question was asked most recently, not some earlier one."""
+    userdata.setdefault("context", {})["_pending_refresh"] = {
+        "topic": topic,
+        "args": args or {},
+    }
+
+
+def pop_pending_refresh(userdata: dict) -> tuple[str, dict]:
+    """One-shot read — cleared on read, mirrors pop_last_nudge_trip."""
+    ctx = userdata.setdefault("context", {})
+    pending = ctx.pop("_pending_refresh", None)
+    if not pending:
+        return "", {}
+    return pending.get("topic", ""), pending.get("args", {})
+
+
 def get(userdata: dict, key: str, default: Any = None) -> Any:
     return userdata.get("context", {}).get(key, default)
 
@@ -76,6 +116,47 @@ def set_context(userdata: dict, key: str, value: Any) -> None:
 
 def get_current_trip(userdata: dict) -> dict | None:
     return get(userdata, "current_trip")
+
+
+def get_current_location(userdata: dict) -> dict | None:
+    """Driver's last GPS ping (~every 10 min while online) — {lat, lng,
+    updated_at}, or None if they've never gone online. See
+    driverContextService.ts's `current_location` field."""
+    loc = get(userdata, "current_location")
+    if isinstance(loc, dict) and "lat" in loc and "lng" in loc:
+        return loc
+    return None
+
+
+def get_driver_settings(userdata: dict) -> dict:
+    """Per-driver feature toggles from auth-service's driver-settings table
+    (hands_free_mode, notify_on_pickup_approach, auto_suggest_next_stop +
+    radii), passed through unchanged inside the /drivers/me/context payload.
+    All-false shape if missing so callers can treat a stale/failed prefetch
+    the same as an explicitly-off setting."""
+    settings = get(userdata, "driver_settings")
+    if isinstance(settings, dict):
+        return settings
+    return {
+        "hands_free_mode": False,
+        "notify_on_pickup_approach": False,
+        "auto_suggest_next_stop": False,
+    }
+
+
+def get_optimized_route(userdata: dict) -> dict | None:
+    """Multi-stop optimized visiting order across ALL the driver's active
+    stops, from trip-service's driverContextService.buildDriverContext
+    (routeOptimizationService.ts) — {stops: [...], source, computed_at,
+    driver_location}. None if the driver has 0-1 active stops (nothing to
+    order), the field wasn't populated (older cached context), or trip-service
+    computation was skipped/failed. Unlike get_driver_settings, there's no
+    meaningful all-empty stub shape for a route, so callers handle None as
+    "nothing to report" directly."""
+    route = get(userdata, "optimized_route")
+    if isinstance(route, dict) and isinstance(route.get("stops"), list):
+        return route
+    return None
 
 
 def get_upcoming_trips(userdata: dict) -> list[dict]:
@@ -229,6 +310,25 @@ def patch_trip_by_id(userdata: dict, trip_id: str, **fields: Any) -> None:
 def set_last_call(userdata: dict, call_id: str, **fields: Any) -> None:
     ctx = userdata.setdefault("context", {})
     ctx["last_call"] = {"call_id": call_id, **fields}
+
+
+def set_last_nudge_trip(userdata: dict, trip_id: str) -> None:
+    """Remembers which trip a just-delivered proactive nudge
+    (proximity_pickup/dropoff) was about — see session.py's
+    `_speak_driver_nudge` and agent.py's `on_enter` proactive_nudge branch,
+    both call this right after speaking the nudge. Lets call_customer.py
+    resolve "gọi khách đó" without asking the driver to disambiguate again
+    when they simply say yes to the nudge's own question — the LLM
+    shouldn't have to re-derive which trip from the just-spoken sentence.
+    """
+    userdata.setdefault("context", {})["_last_nudge_trip_id"] = trip_id
+
+
+def pop_last_nudge_trip(userdata: dict) -> str:
+    """One-shot read — cleared on read so it only resolves the very next
+    call_customer, not some unrelated one much later in the conversation."""
+    ctx = userdata.setdefault("context", {})
+    return ctx.pop("_last_nudge_trip_id", "") or ""
 
 
 def patch_current_trip(userdata: dict, **fields: Any) -> None:

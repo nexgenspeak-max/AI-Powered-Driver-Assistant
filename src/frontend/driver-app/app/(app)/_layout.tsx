@@ -6,6 +6,8 @@ import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../s
 import { GlobalAssistantOrb } from '../../src/features/home/components/GlobalAssistantOrb'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
+import { useAutoConnectOnNudge } from '../../src/features/home/hooks/useAutoConnectOnNudge'
+import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptureVoiceMessages'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 
 // Light mode: flat, full-color icon set (assets/icons/light/) — fixed
@@ -66,6 +68,14 @@ export default function AppLayout() {
   // currently has open, not just while Dashboard is mounted.
   const { data: driver } = useCurrentUser()
   useDispatchSocket(driver?.status === 'online', driver?.phone)
+  // Lives here too (not dashboard.tsx) so a pending nudge gets delivered
+  // regardless of which tab the driver has open — same reasoning as the
+  // dispatch socket above.
+  useAutoConnectOnNudge()
+  // Always-on, independent of whether the chat overlay is currently open —
+  // see useCaptureVoiceMessages.ts for why this can't live inside
+  // AssistantChatPanel anymore.
+  useCaptureVoiceMessages()
 
   return (
     // Shares the `pageBlur` shared value between the tab bar (writer, on
@@ -128,6 +138,7 @@ export default function AppLayout() {
           <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
           <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
           <Tabs.Screen name="edit-profile" options={{ href: null, title: 'Edit Profile' }} />
+          <Tabs.Screen name="assistant-settings" options={{ href: null, title: 'Assistant Settings' }} />
           <Tabs.Screen name="add-delivery" options={{ href: null, title: 'Add Delivery' }} />
           <Tabs.Screen name="vehicle" options={{ href: null, title: 'Vehicle' }} />
           <Tabs.Screen name="bank-info" options={{ href: null, title: 'Bank Info' }} />

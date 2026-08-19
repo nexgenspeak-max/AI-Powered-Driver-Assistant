@@ -1,23 +1,31 @@
+import { config } from '../config';
 import * as driverService from './driverService';
 import * as tripService from './tripService';
 import * as earningsService from './earningsService';
-import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey } from '../cache/redis';
+import * as driverSettingsService from './driverSettingsService';
+import * as routeOptimizationService from './routeOptimizationService';
+import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverOptimizedRouteKey, driverPendingNudgeKey } from '../cache/redis';
 import { phoneVariants } from '../utils/phone';
+
+interface DriverLiveLocation {
+  lat: number;
+  lng: number;
+  updated_at: string;
+}
 
 // "Chuyến đang có" — chỉ chuyến THỰC SỰ còn đang diễn ra (chưa tới điểm đón hoặc đã đón
 // khách rồi). Loại hẳn cancelled/cancelled_by_driver/completed lẫn rejected/no_answer (tài
 // xế đã từ chối/không bắt máy — chuyến không còn thuộc tài xế này) và no_show (khách không
 // ra — coi như khép lại). Mirrors routes/drivers.ts's DRIVER_ACTIVE_STATUSES.
 const DRIVER_ACTIVE_STATUSES = new Set(['pending', 'notified', 'calling', 'confirmed', 'arrived_pickup', 'picked_up']);
-const ACTIVE = new Set(['confirmed', 'notified', 'calling', 'arrived_pickup', 'picked_up']);
-// Every trip the driver has actually accepted and is executing right now —
-// unlike ACTIVE above (which also matches notified/calling, used only to
-// pick a single `current_trip`), this covers arrived_pickup/picked_up too,
-// so a driver holding more than one accepted trip at once (e.g. wrapping up
-// one ride while already confirmed for the next pickup) doesn't lose the
-// other one: `current_trip` only ever surfaces a single trip, so anything
-// past confirmed that isn't picked as `current_trip` would otherwise never
-// appear in the response at all.
+// Every trip the driver has actually ACCEPTED and is executing right now.
+// `current_trip` below is picked from this same set — it used to also
+// match notified/calling (a trip offered but NOT YET accepted/confirmed by
+// the driver), which made get_current_trip_info answer "which trip am I
+// currently heading to" with a trip the driver hadn't even agreed to take
+// yet — confusing/wrong. A trip still awaiting the driver's own
+// confirm/reject isn't "current" in any meaningful sense; it belongs under
+// check_upcoming_trips(scope="awaiting_confirmation") instead.
 const IN_PROGRESS = new Set(['confirmed', 'arrived_pickup', 'picked_up']);
 
 async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
@@ -35,11 +43,14 @@ async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
 }
 
 export async function buildDriverContext(driverPhone: string) {
-  const [driver, trips, todayEarnings, lastCall] = await Promise.all([
+  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings] = await Promise.all([
     driverService.get(driverPhone),
     tripsForDriver(driverPhone),
     earningsService.todayForDriver(driverPhone),
     cacheGet<{ call_id: string; summary?: string }>(driverLastCallKey(driverPhone)),
+    cacheGet<DriverLiveLocation>(driverLiveLocationKey(driverPhone)),
+    cacheGet<{ kind: string }>(driverPendingNudgeKey(driverPhone)),
+    driverSettingsService.getByPhone(driverPhone),
   ]);
 
   const upcoming = trips
@@ -48,8 +59,18 @@ export async function buildDriverContext(driverPhone: string) {
   const inProgress = trips
     .filter(t => IN_PROGRESS.has(t.status))
     .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
-  const currentRaw = trips.find(t => ACTIVE.has(t.status)) ?? null;
+  const currentRaw = trips.find(t => IN_PROGRESS.has(t.status)) ?? null;
   const current = currentRaw ? earningsService.enrichTrip(currentRaw) : null;
+
+  // Depends on `trips`/`currentLocation` already resolved above, so it can't
+  // join the Promise.all — cached internally (routeOptimizationService.ts),
+  // so this is a no-op read on every call except right after a real
+  // active-stop-set change (see invalidateTripParties below).
+  const optimizedRoute = await routeOptimizationService.getOptimizedRoute(
+    driverPhone,
+    trips,
+    currentLocation ?? null,
+  );
 
   return {
     driver: driver ?? { phone: driverPhone, status: 'offline', name: '' },
@@ -59,7 +80,35 @@ export async function buildDriverContext(driverPhone: string) {
     upcoming_trips: upcoming.map(earningsService.enrichTrip),
     active_trips: inProgress.map(earningsService.enrichTrip),
     current_trip: current,
+    // From the ~10-min online GPS ping (POST /drivers/me/location) — used by
+    // voice-agent's suggest_next_stop tool to pick the nearest pending
+    // pickup/dropoff. null until the driver has gone online at least once.
+    current_location: currentLocation ?? null,
+    // True when reachDriver() couldn't push a nudge live (no session open —
+    // see driverReachService.ts) and saved it for later instead. driver-app
+    // polls this to auto-open a voice session ONLY when there's something
+    // waiting (never unconditionally on app open) — see POST /voice/token
+    // for where the actual nudge gets embedded into the new room.
+    has_pending_nudge: pendingNudge !== null,
     last_call: lastCall,
+    // Feature toggles from auth-service's driver-settings table (hands_free_mode,
+    // notify_on_pickup_approach, auto_suggest_next_stop + their radii). All-false
+    // shape if the account/settings row can't be resolved, so callers (voice-agent's
+    // next_stop.py) can treat a missing row the same as an explicitly-off one.
+    driver_settings: driverSettings ?? {
+      hands_free_mode: false,
+      notify_on_pickup_approach: false,
+      notify_on_pickup_approach_radius_m: config.proximityAlertMeters,
+      auto_suggest_next_stop: false,
+      auto_suggest_next_stop_radius_m: config.nextStopAnnounceMeters,
+    },
+    // Multi-stop visiting order across ALL active stops (confirmed/
+    // arrived_pickup/picked_up), road-distance-based via Goong Distance
+    // Matrix with a haversine fallback. null when the driver has 0-1 active
+    // stops (nothing to order) or trips lack coords. Cached, invalidated on
+    // active-stop-set change (see invalidateTripParties below) — NOT
+    // recomputed on every GPS ping.
+    optimized_route: optimizedRoute,
     fetched_at: new Date().toISOString(),
   };
 }
@@ -119,7 +168,16 @@ export async function invalidateCustomerContext(customerPhone: string) {
 export async function invalidateTripParties(trip: tripService.Trip | null) {
   if (!trip) return;
   const tasks: Promise<void>[] = [];
-  if (trip.driver_phone) tasks.push(invalidateDriverContext(trip.driver_phone));
+  if (trip.driver_phone) {
+    tasks.push(invalidateDriverContext(trip.driver_phone));
+    // A status write can move a trip INTO or OUT OF the active-routing set
+    // (confirmed/arrived_pickup/picked_up) — always invalidate the cached
+    // optimized route alongside driver context; a stale route missing a
+    // newly-confirmed stop (or still including a completed one) is actively
+    // misleading, not just outdated. Cheap: this only deletes a cache key,
+    // actual recomputation happens lazily on the next context read.
+    tasks.push(cacheDel(...phoneVariants(trip.driver_phone).map(driverOptimizedRouteKey)));
+  }
   if (trip.customer_phone) tasks.push(invalidateCustomerContext(trip.customer_phone));
   await Promise.all(tasks);
 }

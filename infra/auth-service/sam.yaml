@@ -33,6 +33,7 @@ Globals:
       Variables:
         ENV: !Ref Environment
         DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-accounts"
+        DYNAMODB_SETTINGS_TABLE: !Sub "${Environment}-${AppName}-driver-settings"
         JWT_SECRET: !Ref JwtSecret
         JWT_ACCESS_EXPIRES_IN: !Ref JwtAccessExpiresIn
         JWT_REFRESH_EXPIRES_IN: !Ref JwtRefreshExpiresIn
@@ -54,6 +55,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AccountsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DriverSettingsTable
       Events:
         Health:
           Type: Api
@@ -102,6 +105,18 @@ Resources:
           Properties:
             RestApiId: !Ref AuthServiceApi
             Path: /api/v1/accounts/{id}
+            Method: PATCH
+        GetAccountSettings:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/settings/{accountId}
+            Method: GET
+        UpdateAccountSettings:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthServiceApi
+            Path: /api/v1/settings/{accountId}
             Method: PATCH
     Metadata:
       BuildMethod: esbuild
@@ -160,6 +175,20 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  DriverSettingsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-driver-settings"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id_account
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id_account
+          KeyType: HASH
+
 Outputs:
   ApiUrl:
     Description: Auth Service API base URL — set as AUTH_SERVICE_URL in other services
@@ -170,3 +199,6 @@ Outputs:
 
   AccountsTableName:
     Value: !Ref AccountsTable
+
+  DriverSettingsTableName:
+    Value: !Ref DriverSettingsTable

@@ -34,7 +34,7 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
   no_show: { bg: '$red4', text: '$red11' },
 }
 
-export const PENDING_STATUSES: TripStatus[] = ['notified', 'calling']
+export const PENDING_STATUSES: TripStatus[] = ['pending', 'notified', 'calling']
 
 export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
   pending: 'Chờ lấy hàng',

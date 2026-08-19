@@ -23,12 +23,14 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from app.config.settings import get_settings
 from app.providers import get_stt, get_llm, get_tts
+from app.services import backend_api
 from app.voicebot import get_voicebot
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
 from app.voicebot.processors.call_state import CallAwareUserData
 from app.voicebot.processors.agent_state import publish_agent_state
 from app.voicebot.processors.handback import BACKGROUND_CALL_SUMMARY_TOPIC
+from app.voicebot.processors.nudge import DRIVER_NUDGE_TOPIC, build_nudge_message
 from app.voicebot.processors.sip_call_watch import (
     complete_isolated_call,
     register_customer_room_sip_watchers,
@@ -41,7 +43,17 @@ from app.services.silence_tracker import SilenceTracker
 logger = logging.getLogger("voice-agent.session")
 
 # ── Room name patterns ─────────────────────────────────────────────────────────
-_DRIVER_RE   = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
+_DRIVER_RE      = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
+# Real inbound phone call: driver dials the Twilio number, LiveKit's SIP
+# dispatch rule (scripts/setup_sip.py, room_prefix="driver-call-") creates
+# something like "driver-call-_+84867347452_abc" (see README.md's own log
+# example). This never matched _DRIVER_RE, so every real inbound call fell
+# through to the generic fallback below with parts[1]=="call" (not digits)
+# -> phone=="" -> prefetch_processor.run_driver() got skipped entirely ->
+# the agent had zero trip/driver context for the whole call. Matched
+# separately here, ahead of the fallback, so real calls get the same phone
+# resolution (and therefore the same context) as in-app sessions.
+_DRIVER_CALL_RE = re.compile(r"^driver-call-_\+?(\d+)_")  # driver-call-_+84867347452_abc
 _CUSTOMER_RE = re.compile(r"^customer-(\d+)-\d+$")  # customer-84901234567-1748700000
 _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbound)
 _CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
@@ -62,6 +74,10 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     if m:
         return "driver", m.group(1)
 
+    m = _DRIVER_CALL_RE.match(room_name)
+    if m:
+        return "driver", m.group(1)
+
     m = _CUSTOMER_RE.match(room_name)
     if m:
         return "customer", m.group(1)
@@ -76,6 +92,22 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     parts = room_name.split("-")
     phone = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
     return "driver", phone
+
+
+def _is_telephony_room(room_name: str) -> bool:
+    """True for any room carrying real SIP/PSTN audio (phone network), as
+    opposed to in-app LiveKit WebRTC. Deliberately independent of `mode` —
+    `mode` gets reassigned "outbound" -> "driver" once trip metadata
+    resolves (see the `mode = "driver"` line below), which used to make
+    `mode == "outbound"` checks silently never fire for real calls. Checked
+    directly against the room name instead, computed once up front so nothing
+    downstream can mutate it away.
+    """
+    return (
+        room_name.startswith("driver-call-")     # inbound: driver phones the assistant
+        or _TRIP_RE.match(room_name) is not None      # outbound: assistant phones the driver
+        or _CUSTCALL_RE.match(room_name) is not None  # assistant phones a customer
+    )
 
 
 # ── Noise cancellation (optional plugin) ──────────────────────────────────────
@@ -96,18 +128,39 @@ def prewarm(proc: JobProcess) -> None:
     proc.userdata["vad"] = silero.VAD.load()
 
 
+async def _register_driver_session_safe(phone: str, room_name: str) -> None:
+    try:
+        await backend_api.register_driver_session(phone, room_name)
+    except Exception:
+        logger.warning("register_driver_session failed | phone=%s", phone, exc_info=True)
+
+
+async def _clear_driver_session_safe(phone: str) -> None:
+    try:
+        await backend_api.clear_driver_session(phone)
+    except Exception:
+        logger.warning("clear_driver_session failed | phone=%s", phone, exc_info=True)
+
+
 # ── Entrypoint ─────────────────────────────────────────────────────────────────
 
 async def entrypoint(ctx: JobContext) -> None:
+    ctx.add_shutdown_callback(backend_api.aclose)
     await ctx.connect()
     room_name = ctx.room.name
     logger.info("connected | room=%s", room_name)
 
     mode, phone = _parse_room(room_name)
-    logger.info("room_mode=%s phone=%r", mode, phone)
+    is_telephony = _is_telephony_room(room_name)
+    logger.info("room_mode=%s phone=%r is_telephony=%s", mode, phone, is_telephony)
 
     # ── Resolve trip metadata ───────────────────────────────────────────────
     trip: dict | None = None
+    # Proactive nudge (ask-before-calling-customer, suggest-next-stop, ...)
+    # opened by trip-service's driverReachService.ts when the driver had no
+    # session open. `related_trip_id` is used instead of `trip_id` at the
+    # metadata top level on purpose — see the elif branch below.
+    proactive_nudge: dict | None = None
     lang = "vn"
     if mode == "custcall":
         try:
@@ -135,9 +188,29 @@ async def entrypoint(ctx: JobContext) -> None:
                     phone = raw.replace("+", "")
                     mode = "driver"  # treat as driver outbound
                 logger.info("trip found | trip_id=%s driver=%s", trip["trip_id"], phone)
+            elif meta.get("nudge_kind"):
+                # Deliberately keyed on `nudge_kind`, NOT `trip_id` — a room
+                # with `trip_id` set always becomes a "new trip offer" above
+                # (DriverAgent.__init__ switches to the 2-tool outbound set
+                # the instant `trip` is truthy). A nudge session must keep
+                # the full inbound toolset (call_customer, suggest_next_stop,
+                # ...), so it's routed through this separate branch instead.
+                proactive_nudge = {k: v for k, v in meta.items() if k != "driver_phone"}
+                if not phone:
+                    raw = meta.get("driver_phone", "")
+                    phone = raw.replace("+", "")
+                logger.info("nudge session | kind=%s driver=%s", proactive_nudge.get("nudge_kind"), phone)
             lang = meta.get("lang", "vn")
         except Exception:
             pass
+
+    # Fire-and-forget presence registration — lets trip-service's
+    # driverReachService.ts push a nudge into THIS room instead of dialing a
+    # new one, for as long as this session stays open. Never blocks session
+    # startup; a failure here just means nudges fall back to opening a new
+    # session for this driver, same as if they had no session at all.
+    if mode in ("driver", "outbound") and phone:
+        asyncio.create_task(_register_driver_session_safe(phone, room_name))
 
     conv_service = ConversationService(ctx)
     silence_tracker: SilenceTracker | None = None
@@ -247,22 +320,34 @@ async def entrypoint(ctx: JobContext) -> None:
             max_silences_default = 1
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
-            silence_seconds = 20.0   # customers may pause longer
+            silence_seconds = 60.0   # 60s x 3 = 3min total before hangup
             max_silences_default = 3
         else:
             context_hint = context_store.build_context_hint(
                 session_userdata, lang="en" if lang == "en" else "vi"
             )
             agent = voicebot.DriverAgent(
-                trip=trip, driver_phone=phone, context_hint=context_hint
+                trip=trip, driver_phone=phone, context_hint=context_hint,
+                proactive_nudge=proactive_nudge,
             )
-            silence_seconds = 15.0   # drivers on the road, faster cut-off
-            # One check-in nudge at 15s, then hang up at 30s of total silence
-            # — matches how a hands-free wake-word call should feel.
-            max_silences_default = 2
+            silence_seconds = 60.0
+            # Check-in nudges at 60s/120s, then hang up at 180s (3 min) of
+            # total silence — driver asked not to leave the session hanging
+            # open indefinitely once they've gone quiet. max_silences_default
+            # here matches the .env SILENCE_MAX_CONSECUTIVE default (3) on
+            # purpose, so the 3min total holds whether or not that env var
+            # is actually set.
+            max_silences_default = 3
 
-        # BVCTelephony is for SIP/phone audio — it can strip speech from mobile WebRTC mics.
-        noise_cancel = _NOISE_CANCEL if mode == "outbound" else None
+        # BVCTelephony is for SIP/phone audio — it can strip speech from mobile
+        # WebRTC mics, so it must only apply to real telephony rooms. Was
+        # keyed on `mode == "outbound"`, but `mode` gets reassigned
+        # "outbound" -> "driver" a few lines above the instant trip metadata
+        # resolves (the normal case for every real dispatched call) — so that
+        # check silently never matched in practice. `is_telephony` is computed
+        # once from the room name up top and never mutated, so it still says
+        # the right thing here regardless of how `mode` changed since.
+        noise_cancel = _NOISE_CANCEL if is_telephony else None
 
         await session.start(
             agent=agent,
@@ -315,16 +400,14 @@ async def entrypoint(ctx: JobContext) -> None:
         if mode == "custcall":
             # Isolated calls are deliberately NOT subject to the global
             # SILENCE_THRESHOLD_SECONDS/SILENCE_MAX_CONSECUTIVE/SILENCE_END_SESSION
-            # overrides (or the local/dev end_on_timeout=False dev-convenience
-            # override) below, unlike every other mode. Those env vars exist
-            # to tune how forgiving the DRIVER's own conversation is (and to
-            # stop the simulator from kicking a driver mid-test) — applying
-            # them here too silently broke this call's only hang-up backstop:
-            # with SILENCE_MAX_CONSECUTIVE=3 the isolated 5s/1-strike default
-            # got stretched to 3 rounds (~15s+, with the AI asking "are you
-            # there?" into what could already be an empty line), and in
-            # local/dev SILENCE_END_SESSION=false / env-based override meant
-            # this tracker never actually ended the call on silence at all —
+            # overrides below, unlike every other mode. Those env vars exist
+            # to tune how forgiving the DRIVER's own conversation is —
+            # applying them here too silently broke this call's only hang-up
+            # backstop: with SILENCE_MAX_CONSECUTIVE=3 the isolated 5s/1-strike
+            # default got stretched to 3 rounds (~15s+, with the AI asking
+            # "are you there?" into what could already be an empty line), and
+            # if SILENCE_END_SESSION were ever set false for driver sessions,
+            # this tracker would never end the call on silence at all —
             # so if the customer hung up and the room-level
             # `participant_disconnected` event was ever missed/delayed (SIP
             # trunks don't always propagate BYE as a prompt room leave), the
@@ -346,10 +429,16 @@ async def entrypoint(ctx: JobContext) -> None:
                 if settings.silence_max_consecutive > 0
                 else max_silences_default
             )
-            # Local dev / simulator: do not kick participants when there is no mic input.
+            # Driven entirely by SILENCE_END_SESSION now (see .env.local) —
+            # no more hardcoded local/dev override forcing this off. It used
+            # to always be disabled in local/dev regardless of config
+            # ("don't kick participants with no mic input mid-test"), but
+            # that made this exact feature (auto-hang-up after 2-3min of
+            # driver silence) impossible to test or use locally at all. If a
+            # future local session needs the old no-timeout behavior back,
+            # set SILENCE_END_SESSION=false in that env file instead of
+            # hardcoding it here.
             end_on_timeout = settings.silence_end_session
-            if settings.env in ("local", "dev"):
-                end_on_timeout = False
 
         if settings.silence_tracker_enabled:
             async def _on_isolated_silence_timeout() -> None:
@@ -391,6 +480,18 @@ async def entrypoint(ctx: JobContext) -> None:
                     )
                 await complete_isolated_call(session, session_userdata, summary)
 
+            # custcall has its own wrap-up path (_on_isolated_silence_timeout
+            # above generates a call summary) and isn't a live back-and-forth
+            # with a listening driver/customer, so it gets no spoken goodbye
+            # here — only driver/customer sessions do.
+            goodbye_message = None
+            if mode != "custcall":
+                goodbye_message = (
+                    "If there's nothing else, I'll go ahead and end the call here. Goodbye!"
+                    if lang == "en" else
+                    "Nếu anh/chị không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt anh/chị!"
+                )
+
             silence_tracker = SilenceTracker(
                 session=session,
                 ctx=ctx,
@@ -399,27 +500,47 @@ async def entrypoint(ctx: JobContext) -> None:
                 max_consecutive_silences=max_silences,
                 end_session_on_timeout=end_on_timeout,
                 on_timeout=_on_isolated_silence_timeout if mode == "custcall" else None,
+                goodbye_message=goodbye_message,
             )
 
             @session.on("conversation_item_added")
             def _on_conversation_item(ev) -> None:
                 item = ev.item
-                if isinstance(item, ChatMessage) and item.role == "user" and item.text_content:
-                    silence_tracker.reset_silence_timer()
+                if (
+                    isinstance(item, ChatMessage)
+                    and item.role == "user"
+                    and item.text_content
+                    # The tracker's own hidden nudge (<speech_not_detected>) is
+                    # injected as a role="user" ChatMessage too, so it fires this
+                    # same event — without this check it would reset_silence_timer()
+                    # right after every increment, permanently capping the
+                    # consecutive-silence count at 1 and making the ~2.5min
+                    # auto-hangup unreachable no matter how long the real silence.
+                    and item.text_content != silence_tracker.silence_message
+                ):
+                    silence_tracker.reset_silence_timer(source="conversation_item_added")
                     session_userdata["_customer_spoke"] = True
 
             @session.on("user_input_transcribed")
             def _on_user_transcribed(ev) -> None:
                 if ev.is_final and ev.transcript.strip():
-                    silence_tracker.reset_silence_timer()
+                    silence_tracker.reset_silence_timer(
+                        source=f"user_input_transcribed:{ev.transcript!r}"
+                    )
                     session_userdata["_customer_spoke"] = True
 
             @session.on("agent_state_changed")
             def _on_agent_state(ev) -> None:
+                ud = session.userdata
                 if ev.new_state in ("speaking", "thinking"):
                     silence_tracker.pause()
+                    if ud.get("customer_call_active"):
+                        # AI is talking — not silence. Cleared here so
+                        # end_customer_call's agent-mode backstop (below)
+                        # never counts the AI's own speech as part of the
+                        # "customer isn't responding" window.
+                        ud["_agent_call_quiet_since"] = None
                 elif ev.new_state in ("listening", "idle"):
-                    ud = session.userdata
                     if ud.get("isolated_call") and not ud.get("_isolated_call_answered"):
                         # Still just ringing (or dialing) — the agent settling
                         # into "listening/idle" here is not the customer
@@ -431,6 +552,14 @@ async def entrypoint(ctx: JobContext) -> None:
                         return
                     if not ud.get("customer_call_active") and not ud.get("bridge_call_active"):
                         silence_tracker.resume()
+                    elif ud.get("customer_call_active") and ud.get("_agent_call_answered"):
+                        # Real silence since the AI's last utterance during
+                        # THIS agent-mode call — gated on _agent_call_answered
+                        # (set once wait_for_sip_pickup confirms real pickup,
+                        # see customer_call_agent.py) so ring/dial time is
+                        # never counted either, mirroring the isolated-call
+                        # gate just above.
+                        ud["_agent_call_quiet_since"] = time.time()
 
             await silence_tracker.start()
             if mode == "custcall":
@@ -488,6 +617,46 @@ async def entrypoint(ctx: JobContext) -> None:
                 # rely on that. No text/behavior change for either call type.
                 session.say(text, allow_interruptions=True)
 
+            # Proactive nudge (ask-before-calling-customer proximity alert,
+            # suggest-next-stop, ...) — pushed by trip-service's
+            # driverReachService.ts straight into this room's data channel
+            # when this driver already has a session open at the moment the
+            # nudge fires. Mirrors the background-call-summary listener
+            # above; a session with NO nudge at all just never gets this event.
+            async def _speak_driver_nudge(nudge_kind: str, payload: dict) -> None:
+                text = await build_nudge_message(nudge_kind, payload, lang=lang, userdata=session.userdata)
+                if not text:
+                    logger.warning("driver_nudge: empty message for kind=%s", nudge_kind)
+                    return
+                # suggest_next_stop already sets this itself (see next_stop.py's
+                # build_next_stop_suggestion), targeting the ANNOUNCED next
+                # stop's trip — NOT payload's related_trip_id, which for this
+                # nudge_kind means something else (the trip to EXCLUDE from
+                # ranking, see proximityService.ts's 200m arrival trigger).
+                # Setting it again here from payload would silently overwrite
+                # that with the wrong trip.
+                if nudge_kind != "suggest_next_stop":
+                    related_trip_id = payload.get("related_trip_id", "")
+                    if related_trip_id:
+                        context_store.set_last_nudge_trip(session.userdata, related_trip_id)
+                session.say(text, allow_interruptions=True)
+
+            @ctx.room.on("data_received")
+            def _on_driver_nudge(packet) -> None:
+                if packet.topic != DRIVER_NUDGE_TOPIC:
+                    return
+                try:
+                    payload = json.loads(packet.data.decode("utf-8"))
+                except Exception:
+                    logger.warning("driver_nudge: bad payload", exc_info=True)
+                    return
+                nudge_kind = payload.pop("kind", "")
+                # data_received handlers are sync callbacks (mirrors
+                # _on_background_call_summary above) — build_nudge_message is
+                # async (suggest_next_stop needs a live re-fetch), so it must
+                # run as a background task rather than being awaited here.
+                asyncio.create_task(_speak_driver_nudge(nudge_kind, payload))
+
         logger.info(
             "session started | mode=%s phone=%s trip=%s",
             mode, phone, trip.get("trip_id") if trip else None,
@@ -515,3 +684,5 @@ async def entrypoint(ctx: JobContext) -> None:
             except Exception:
                 logger.error("silence_tracker.stop() failed", exc_info=True)
         await conv_service.finish()
+        if mode in ("driver", "outbound") and phone:
+            await _clear_driver_session_safe(phone)

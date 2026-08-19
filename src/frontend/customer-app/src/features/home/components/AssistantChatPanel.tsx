@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native'
+import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
 import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassSheen } from '../../../components/LiquidGlass'
@@ -8,20 +8,20 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
-import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
-import { AssistantAvatar } from './AssistantAvatar'
 
+// Connect/disconnect is driven by the draggable GlobalAssistantOrb now (see
+// that component, mounted once at the (app) layout level) — this label just
+// reflects its status, matching driver-app's chat panel.
 const MIC_LABEL = {
-  idle: 'Bấm để nói chuyện với AI',
+  idle: 'Chạm vào quả cầu để kết nối với trợ lý',
   connecting: 'Đang kết nối...',
-  connected: 'Đang trong phiên thoại — bấm để ngắt',
+  connected: 'Đang trong phiên thoại — chạm vào quả cầu để ngắt',
   error: 'Kết nối lỗi, thử lại',
 }
 
 export function AssistantChatPanel() {
-  const { data: customer } = useCurrentUser()
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()
@@ -64,26 +64,6 @@ export function AssistantChatPanel() {
     }
   }
 
-  const handleMicPress = () => {
-    if (voice.status === 'connected' || voice.status === 'connecting') {
-      // A real SIP-dialed call (bridge/agent-mediated/background) is in
-      // progress — the mic button must not be able to end the session while
-      // that's true; only the underlying phone call ending (backend then
-      // publishes isCallActive: false) may end it.
-      if (voice.isCallActive) {
-        Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
-        return
-      }
-      voice.disconnect()
-      return
-    }
-    if (!customer?.phone) {
-      setError('Không tìm thấy số điện thoại của bạn.')
-      return
-    }
-    voice.connect(customer.phone)
-  }
-
   return (
     // Follows the app-wide light/dark toggle now (previously always forced
     // dark, regardless of the user's setting). Chat bubble colors below are
@@ -97,8 +77,11 @@ export function AssistantChatPanel() {
       keyboardVerticalOffset={60}
     >
       <View width="100%" paddingTop={insets.top}>
-        <AssistantAvatar status={voice.status} />
-        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2">
+        {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
+            the (app) layout level as a small draggable bubble on every tab
+            (Home included) — no more full-size 360px canvas reserved here,
+            matching driver-app's chat panel. */}
+        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2" paddingTop="$2">
           {voice.status === 'connected' && voice.isCallActive
             ? 'Đang trong cuộc gọi — không thể tắt'
             : MIC_LABEL[voice.status]}
@@ -112,8 +95,9 @@ export function AssistantChatPanel() {
       >
         {chats.map((chat, i) =>
           chat.who === 'me' ? (
-            // User bubble: purple gradient, black text in light mode (white
-            // in dark, where black text on this same gradient reads poorly).
+            // User bubble: purple gradient, always white text regardless of
+            // theme — the gradient itself doesn't change with light/dark,
+            // so the text shouldn't need to either.
             <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
               <LinearGradient
                 colors={['#7C5B9C', '#A855F7']}
@@ -121,23 +105,26 @@ export function AssistantChatPanel() {
                 end={{ x: 1, y: 1 }}
                 style={{ paddingHorizontal: 16, paddingVertical: 10 }}
               >
-                <Text color={isLight ? '#000000' : '$textInverse'}>{chat.msg}</Text>
+                <Text color="#ffffff">{chat.msg}</Text>
               </LinearGradient>
             </View>
           ) : (
-            // AI bubble: fixed black background + white text in light mode
-            // (so it stays legible against the now-white screen background);
-            // dark mode keeps the theme-derived $accent/$textPrimary pair.
+            // AI bubble: light card + dark text in light mode, matching the
+            // rest of the light-mode UI (glass cards, dark $textPrimary) —
+            // was a hardcoded black bubble/white text even in light mode,
+            // which read as broken/out of place against an otherwise white
+            // screen. Dark mode keeps the theme-derived $accent/$textPrimary
+            // pair, unchanged.
             <View
               key={i}
               maxWidth="80%"
               alignSelf="flex-start"
-              backgroundColor={isLight ? '#000000' : '$accent'}
+              backgroundColor={isLight ? '$surfaceElevated' : '$accent'}
               borderRadius="$bubble"
               paddingHorizontal={16}
               paddingVertical={10}
             >
-              <Text color={isLight ? '#ffffff' : '$textPrimary'}>{chat.msg}</Text>
+              <Text color="$textPrimary">{chat.msg}</Text>
             </View>
           ),
         )}
@@ -168,21 +155,6 @@ export function AssistantChatPanel() {
         shadowRadius={18}
       >
         <GlassSheen borderRadius={24} />
-        <TouchableOpacity onPress={handleMicPress} style={{ padding: 8 }}>
-          <Ionicons
-            name="mic"
-            size={20}
-            color={
-              voice.status === 'connected'
-                ? '#35a4f3'
-                : voice.status === 'connecting'
-                  ? '#f5a623'
-                  : voice.status === 'error'
-                    ? '#e05252'
-                    : isLight ? '#1a1a1a' : '#fff'
-            }
-          />
-        </TouchableOpacity>
         <TextInput
           value={msg}
           onChangeText={setMsg}
@@ -195,7 +167,7 @@ export function AssistantChatPanel() {
           // #8B5CF6) since a highlight needs more contrast against a dark
           // field than a light one.
           selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
-          style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff' }}
+          style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff', paddingLeft: 8 }}
         />
         <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
           <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />

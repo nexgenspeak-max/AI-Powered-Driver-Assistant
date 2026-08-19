@@ -15,7 +15,19 @@ from app.config.settings import get_settings
 
 logger = logging.getLogger("voice-agent.conversation")
 
-_ROOM_RE = re.compile(r"^driver-(\d+)-\d+$")
+_ROOM_RE = re.compile(r"^driver-(\d+)-\d+$")  # in-app WebRTC: driver-84867347452-1748700000
+# Real inbound phone call (LiveKit SIP dispatch rule, room_prefix="driver-call-"
+# in scripts/setup_sip.py): driver-call-_+84867347452_abc. Duplicated from
+# app/agent/session.py's _DRIVER_CALL_RE — this module can't import from
+# session.py (session.py imports ConversationService, so importing back would
+# be circular) — keep both in sync if the SIP room-naming ever changes.
+# Without this, `self.caller` fell through to the "unknown"/first-fallback
+# branch below and every real-phone-call record got saved with
+# caller="call" (the literal word, from splitting "driver-call-..." on "-")
+# instead of the actual phone number — the record itself still landed in
+# local-driver-assistant-call-records same as any app session, just with a
+# wrong `caller` value that made it unfindable by driver phone number.
+_DRIVER_CALL_RE = re.compile(r"^driver-call-_\+?(\d+)_")
 
 
 class ConversationService:
@@ -24,7 +36,7 @@ class ConversationService:
         self.turns: list[dict] = []
         self.started_at = datetime.now(timezone.utc).isoformat()
 
-        m = _ROOM_RE.match(ctx.room.name)
+        m = _ROOM_RE.match(ctx.room.name) or _DRIVER_CALL_RE.match(ctx.room.name)
         self.caller = m.group(1) if m else ctx.room.name.split("-")[1] if "-" in ctx.room.name else "unknown"
         # Overridden in attach() for isolated (custcall) rooms — see there for
         # why the driver-room-shaped defaults above don't apply to those.

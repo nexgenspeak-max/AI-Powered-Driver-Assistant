@@ -49,7 +49,7 @@ uniform float specularScale;
 // cheap way to get a "rounded top, square bottom" sheet without a full
 // 4-corner SDF. The two halves' formulas only disagree deep in the box's
 // interior (SDF very negative there regardless), never near either edge, so
-// there's no visible seam at the y=0 split — see the `sheet=true` usage
+// there's no visible seam at the y=0 split — see the \`sheet=true\` usage
 // below for why (topRadius != bottomRadius there; every other caller
 // passes them equal, which reduces to the original uniform-radius shader
 // exactly).

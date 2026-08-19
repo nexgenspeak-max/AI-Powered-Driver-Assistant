@@ -47,10 +47,27 @@ export default function DashboardScreen() {
       driversService.update(driver!.phone, {
         status: online ? "online" : "offline",
       }),
+    // Flips the switch immediately instead of waiting on the PATCH round
+    // trip — without this the Switch (a controlled component bound to
+    // ['me']) only visually moves once the response comes back, which reads
+    // as laggy/unresponsive. Rolled back on failure via the snapshot below.
+    onMutate: async (online) => {
+      await qc.cancelQueries({ queryKey: ["me"] });
+      const previous = qc.getQueryData(["me"]);
+      qc.setQueryData(["me"], (old: typeof driver) =>
+        old ? { ...old, status: online ? "online" : "offline" } : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _online, context) => {
+      if (context?.previous) qc.setQueryData(["me"], context.previous);
+    },
     onSuccess: (d) => {
       // Updates the same ['me'] cache useCurrentUser() reads from, in place
       // — no separate driver-profile store to keep in sync anymore.
       qc.setQueryData(["me"], d);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["driverContext"] });
     },
   });
@@ -62,8 +79,10 @@ export default function DashboardScreen() {
   const active = context?.active_trips ?? [];
   const isOnline = driver?.status === "online";
   // Called unconditionally, above the `!driver` early return below — hooks
-  // can't be called after a conditional return (Rules of Hooks).
-  useProximityTracking(active);
+  // can't be called after a conditional return (Rules of Hooks). Tracks
+  // for as long as the driver is online, regardless of trip status (see
+  // useProximityTracking.ts).
+  useProximityTracking(isOnline);
 
   if (!driver) return null;
   const pending =

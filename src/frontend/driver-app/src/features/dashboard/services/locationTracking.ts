@@ -11,28 +11,28 @@ export interface DriverCoords {
   lng: number
 }
 
-type LocationUpdateHandler = (tripId: string, coords: DriverCoords) => void
+type LocationUpdateHandler = (coords: DriverCoords) => void
 
-// Default is a visible no-op (not a silent swallow) so step-2 manual device
-// testing has something to observe before step 4 wires the real API call in
-// via setLocationUpdateHandler().
-let onUpdate: LocationUpdateHandler = (tripId, coords) => {
-  console.log(`[locationTracking] ${tripId} ->`, coords)
+// Default is a visible no-op (not a silent swallow) so manual device testing
+// has something to observe before setLocationUpdateHandler() wires the real
+// API call in.
+let onUpdate: LocationUpdateHandler = (coords) => {
+  console.log('[locationTracking] ->', coords)
 }
-let activeTripId: string | null = null
+let tracking = false
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
     console.warn('[locationTracking] task error', error.message)
     return
   }
-  if (!activeTripId) return
+  if (!tracking) return
 
   const { locations } = (data ?? {}) as { locations?: Location.LocationObject[] }
   const last = locations?.[locations.length - 1]
   if (!last) return
 
-  onUpdate(activeTripId, { lat: last.coords.latitude, lng: last.coords.longitude })
+  onUpdate({ lat: last.coords.latitude, lng: last.coords.longitude })
 })
 
 export function setLocationUpdateHandler(handler: LocationUpdateHandler): void {
@@ -52,34 +52,50 @@ async function ensurePermission(): Promise<boolean> {
   return bg.granted ? true : (await Location.requestBackgroundPermissionsAsync()).granted
 }
 
-// Starts (or re-targets) background GPS tracking for the given trip. Safe to
-// call repeatedly — a no-op if already tracking the same trip.
-export async function startTracking(tripId: string): Promise<boolean> {
+// Starts (or keeps running) background GPS tracking for as long as the
+// driver is online — NOT tied to any specific trip (unlike the old
+// per-trip version of this module). Safe to call repeatedly.
+export async function startTracking(): Promise<boolean> {
   const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
-  if (alreadyRunning && activeTripId === tripId) return true
-
-  const granted = await ensurePermission()
-  if (!granted) return false
-
-  activeTripId = tripId
 
   if (!alreadyRunning) {
-    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-      accuracy: Location.Accuracy.Balanced,
-      timeInterval: 15000,
-      distanceInterval: 50,
-      foregroundService: {
-        notificationTitle: 'Czen Driver đang theo dõi vị trí',
-        notificationBody: 'Giúp báo cho khách hàng khi bạn sắp đến điểm đón.',
-      },
-    })
+    const granted = await ensurePermission()
+    if (!granted) return false
   }
+
+  tracking = true
+
+  // Fires one immediate fix on every call (including the "already running"
+  // path below) — without this, going online, or reopening the app while
+  // the background task was still registered from an earlier session, left
+  // the driver absent from the map for up to `timeInterval` (10 min), since
+  // startLocationUpdatesAsync's first callback only lands after that much
+  // time or that much movement. Best-effort: a failure here (e.g. GPS still
+  // warming up) just means the periodic task covers it instead.
+  Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+    .then(loc => onUpdate({ lat: loc.coords.latitude, lng: loc.coords.longitude }))
+    .catch(() => {})
+
+  if (alreadyRunning) return true
+
+  // Purely time-based (10 min) — distanceInterval: 0 means "don't also
+  // trigger early on movement", so the driver's live-location cadence stays
+  // predictable regardless of how far/fast they drive between pings.
+  await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+    accuracy: Location.Accuracy.Balanced,
+    timeInterval: 600000,
+    distanceInterval: 0,
+    foregroundService: {
+      notificationTitle: 'Czen Driver đang theo dõi vị trí',
+      notificationBody: 'Giúp báo cho khách hàng khi bạn sắp đến điểm đón.',
+    },
+  })
 
   return true
 }
 
 export async function stopTracking(): Promise<void> {
-  activeTripId = null
+  tracking = false
   const running = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
   if (running) {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME)

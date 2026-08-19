@@ -33,6 +33,7 @@ class SilenceTracker:
         max_consecutive_silences: int = 3,
         end_session_on_timeout: bool = True,
         on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
+        goodbye_message: Optional[str] = None,
     ) -> None:
         self.session = session
         self.ctx = ctx
@@ -41,12 +42,14 @@ class SilenceTracker:
         self.max_consecutive_silences = max_consecutive_silences
         self.end_session_on_timeout = end_session_on_timeout
         self.on_timeout = on_timeout
+        self.goodbye_message = goodbye_message
 
         self._last_speech_time: Optional[float] = None
         self._silence_task: Optional[asyncio.Task] = None
         self._is_active = False
         self._is_paused = False
         self._consecutive_silence_count = 0
+        self._check_seq = 0  # TEMP DEBUG — see _check_silence()
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -80,10 +83,18 @@ class SilenceTracker:
                 pass
         logger.info("SilenceTracker stopped")
 
-    def reset_silence_timer(self) -> None:
+    def reset_silence_timer(self, source: str = "unknown") -> None:
         """Reset on any user / conversation activity."""
         if not self._is_active or self._is_paused:
             return
+        # TEMP DEBUG: this call was previously silent whenever
+        # _consecutive_silence_count was already 0 (the common case — no
+        # timeout has fired yet this session), which made it impossible to
+        # tell from logs whether the 60s clock was being reset by real user
+        # speech or by something else (e.g. STT firing on background noise)
+        # before it ever reached the threshold. Unconditional now so every
+        # reset is visible; remove the `source` plumbing once confirmed.
+        logger.info("SilenceTracker reset_silence_timer | source=%s", source)
         self._last_speech_time = time.time()
         if self._consecutive_silence_count > 0:
             logger.debug(
@@ -102,7 +113,7 @@ class SilenceTracker:
         self._is_paused = True
         if self._silence_task and not self._silence_task.done():
             self._silence_task.cancel()
-        logger.debug("SilenceTracker paused")
+        logger.info("SilenceTracker paused")
 
     def resume(self) -> None:
         """Resume after the assistant has finished speaking."""
@@ -111,7 +122,7 @@ class SilenceTracker:
         self._is_paused = False
         self._last_speech_time = time.time()
         self._schedule_silence_check()
-        logger.debug("SilenceTracker resumed")
+        logger.info("SilenceTracker resumed")
 
     # ── Properties ───────────────────────────────────────────────────────────
 
@@ -131,18 +142,60 @@ class SilenceTracker:
 
     def _schedule_silence_check(self) -> None:
         if not self._is_active or self._is_paused:
+            logger.info(
+                "SilenceTracker _schedule_silence_check | SKIPPED (is_active=%s is_paused=%s)",
+                self._is_active,
+                self._is_paused,
+            )
             return
-        self._silence_task = asyncio.create_task(self._check_silence())
+        self._check_seq += 1
+        seq = self._check_seq
+        logger.info("SilenceTracker _schedule_silence_check | creating check #%d", seq)
+        self._silence_task = asyncio.create_task(self._check_silence(seq))
 
-    async def _check_silence(self) -> None:
+    # TEMP DEBUG: `seq` + the two log lines below (entry right after waking
+    # from sleep, and the guard's actual values on early-return) exist purely
+    # to catch a reproduced-but-unexplained bug: a scheduled check silently
+    # never fires at all (no log of any kind — not even a cancellation), no
+    # exception/traceback anywhere, and the process is provably still alive
+    # and responsive throughout (confirmed via later log activity). Remove
+    # once the cause is confirmed.
+    async def _check_silence(self, seq: int = 0) -> None:
         try:
+            logger.info("SilenceTracker _check_silence #%d | sleeping %.0fs", seq, self.silence_threshold_seconds)
             await asyncio.sleep(self.silence_threshold_seconds)
+            logger.info("SilenceTracker _check_silence #%d | woke up", seq)
 
             if not (self._is_active and not self._is_paused and self._last_speech_time):
+                logger.info(
+                    "SilenceTracker _check_silence #%d | guard failed, returning "
+                    "(is_active=%s is_paused=%s last_speech_time=%s)",
+                    seq,
+                    self._is_active,
+                    self._is_paused,
+                    self._last_speech_time,
+                )
                 return
 
             silence_duration = time.time() - self._last_speech_time
-            if silence_duration < self.silence_threshold_seconds:
+            # 1s tolerance: asyncio.sleep() above waits on the event loop's
+            # internal monotonic clock, while silence_duration is computed
+            # from time.time() (wall clock) — the two aren't perfectly
+            # synchronized, so a task that genuinely slept the full
+            # threshold can still measure a duration a few milliseconds
+            # *under* it. Without this tolerance that hit this early-return
+            # (meant for a genuine reset mid-sleep, which already gets a
+            # replacement task scheduled by reset_silence_timer() itself)
+            # even though no reset happened here — silently dropping the
+            # reschedule and killing the whole silence-detection loop after
+            # this task. Confirmed in production logs: a task that slept
+            # exactly 60s measured "60.0s" here and still took this branch.
+            if silence_duration < self.silence_threshold_seconds - 1.0:
+                logger.info(
+                    "SilenceTracker _check_silence #%d | woke early, only %.1fs since last speech — returning",
+                    seq,
+                    silence_duration,
+                )
                 return
 
             self._consecutive_silence_count += 1
@@ -163,16 +216,41 @@ class SilenceTracker:
                         "end_session_on_timeout disabled, keeping session alive"
                     )
                     self._consecutive_silence_count = 0
-                    await self._send_silence_notification()
+                    # Scheduled BEFORE awaiting the notification below — see
+                    # the `else` branch's comment just below for why.
                     self._schedule_silence_check()
+                    await self._send_silence_notification()
             else:
-                await self._send_silence_notification()
+                # Next cycle is scheduled BEFORE awaiting the notification,
+                # not after. `self.session.run(...)` inside
+                # _send_silence_notification() below makes the LLM react to
+                # the injected nudge, which typically flips agent_state to
+                # "thinking"/"speaking" — and that state change calls
+                # pause(), which cancels whatever task `self._silence_task`
+                # currently points to. If the *next* task weren't created
+                # until after this await, `self._silence_task` would still
+                # be pointing at THIS running task while it awaited, so
+                # pause() would cancel this very coroutine mid-flight —
+                # raising CancelledError right here and skipping the
+                # reschedule below entirely. That silently killed the whole
+                # silence-detection loop after exactly one cycle (confirmed
+                # in production logs: "60.0s silence detected (1/3)" fires
+                # once, then nothing ever again). Scheduling first means
+                # `self._silence_task` already points at the *new* task by
+                # the time pause() can possibly fire, so a cancellation
+                # there just cancels that fresh task cleanly — resume() (via
+                # the same agent_state_changed handler, once the AI finishes
+                # asking "still there?") reschedules it again from a clean
+                # timer, which is the semantically correct behavior anyway
+                # (measure silence from when the AI stops talking, not from
+                # when it started responding to its own nudge).
                 self._schedule_silence_check()
+                await self._send_silence_notification()
 
         except asyncio.CancelledError:
-            pass
+            logger.info("SilenceTracker _check_silence #%d | cancelled", seq)
         except Exception as exc:
-            logger.error("SilenceTracker error: %s", exc)
+            logger.error("SilenceTracker _check_silence #%d error: %s", seq, exc, exc_info=True)
 
     async def _send_silence_notification(self) -> None:
         try:
@@ -184,6 +262,12 @@ class SilenceTracker:
     async def _end_session(self) -> None:
         try:
             await self.stop()
+
+            if self.goodbye_message:
+                try:
+                    await self.session.say(self.goodbye_message, allow_interruptions=False)
+                except Exception:
+                    logger.error("SilenceTracker | failed to say goodbye message", exc_info=True)
 
             if self.on_timeout:
                 try:

@@ -151,38 +151,34 @@ export function BookingLanding() {
           backgroundColor={isLight ? CARD_BACKGROUND.light : CARD_BACKGROUND.dark}
           style={{ borderRadius: 16, padding: 20, overflow: 'visible' }}
         >
-          <View style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <Controller
-              name="customer_name"
-              control={control}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <GlassBookingInput
-                  label="Your name"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.customer_name?.message}
-                />
-              )}
-            />
-          </View>
+          <Controller
+            name="customer_name"
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <GlassBookingInput
+                label="Your name"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.customer_name?.message}
+              />
+            )}
+          />
 
-          <View style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <Controller
-              name="customer_phone"
-              control={control}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <GlassBookingInput
-                  label="Phone number"
-                  keyboardType="phone-pad"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.customer_phone?.message}
-                />
-              )}
-            />
-          </View>
+          <Controller
+            name="customer_phone"
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <GlassBookingInput
+                label="Phone number"
+                keyboardType="phone-pad"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.customer_phone?.message}
+              />
+            )}
+          />
 
           <Controller
             name="pickup_address"
@@ -227,23 +223,21 @@ export function BookingLanding() {
             )}
           />
 
-          <View style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <Controller
-              name="note"
-              control={control}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <GlassBookingInput
-                  label="Note (optional)"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  multiline
-                  numberOfLines={3}
-                  style={{ minHeight: 80, textAlignVertical: 'top' }}
-                />
-              )}
-            />
-          </View>
+          <Controller
+            name="note"
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <GlassBookingInput
+                label="Note (optional)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 80, textAlignVertical: 'top' }}
+              />
+            )}
+          />
 
           <View gap="$2">
             <Text fontSize="$2" fontWeight="600" color="$textSecondary">

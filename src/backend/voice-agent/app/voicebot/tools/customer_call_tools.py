@@ -67,6 +67,16 @@ async def _say_goodbye_and_wait(context: RunContext, lang: str) -> None:
 # customer has actually said something at least once.
 _MIN_ISOLATED_CALL_SECONDS = 20.0
 
+# Same problem, agent-mode calls (dialed into the driver's own room, driver
+# listens live) — confirmed in production: the call was reported "done"
+# (end_customer_call called) within ~1-2s of dialing, before the driver's
+# own message to the customer was even spoken, let alone before the
+# customer said a word. Unlike isolated calls this branch had NO backstop
+# at all. Per explicit product requirement: never end an agent-mode call on
+# the LLM's own initiative until either the customer has said something, or
+# this many silent seconds have passed since the call actually connected.
+_MIN_AGENT_CALL_SECONDS = 10.0
+
 
 async def _finish_isolated_call(context: RunContext, summary: str) -> str:
     driver_phone = context.userdata.get("driver_phone", "")
@@ -115,7 +125,12 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
     name="end_customer_call",
     description=(
         "End the customer call and save a summary for the driver. "
-        "Call when the conversation is finished or the customer hung up."
+        "Call when the conversation is finished or the customer hung up. "
+        "For an agent-mode call (customer dialed into the driver's room): do NOT call this "
+        "until you have delivered whatever the driver asked you to convey AND the customer has "
+        "confirmed they have no more questions, OR the customer hasn't said anything for a "
+        "while — this tool will refuse and tell you how long to keep waiting if you try too "
+        "early."
     ),
 )
 async def end_customer_call(context: RunContext, summary: str):
@@ -143,6 +158,34 @@ async def end_customer_call(context: RunContext, summary: str):
             logger.error("end_customer_call (isolated) failed", exc_info=True)
             raise
         return f"Background call completed. Summary: {summary}"
+
+    call_meta = context.userdata.get("customer_call") or {}
+    if call_meta.get("mode") == "agent" and not context.userdata.get("_customer_spoke"):
+        # _agent_call_quiet_since (session.py's agent_state_changed handler)
+        # is the moment the AI last stopped talking, gated to only start
+        # counting after real pickup (never during ring/dial) — so this
+        # elapsed value already excludes both ring time and the AI's own
+        # speaking time, counting ONLY genuine silence from the customer's
+        # side, per explicit product requirement.
+        quiet_since = context.userdata.get("_agent_call_quiet_since")
+        elapsed = (time.time() - quiet_since) if quiet_since else 0.0
+        if elapsed < _MIN_AGENT_CALL_SECONDS:
+            logger.info(
+                "end_customer_call refused | mode=agent customer_spoke=False quiet_elapsed=%.1fs "
+                "attempted_summary=%s",
+                elapsed,
+                summary[:120],
+            )
+            return (
+                "Refused: the customer has not said a word yet and it's only been "
+                f"{elapsed:.0f}s of actual silence since you last finished speaking (ringing "
+                "time and your own speaking time don't count toward this). Do NOT conclude the "
+                "call is done or the customer isn't responding this early. If you haven't "
+                "delivered the driver's message yet, do that now. Otherwise wait silently; only "
+                "call end_customer_call again once the customer actually speaks, or once at "
+                f"least {_MIN_AGENT_CALL_SECONDS:.0f}s of real silence have passed since you "
+                "stopped talking."
+            )
 
     lang = context.userdata.get("lang", "vn")
     try:

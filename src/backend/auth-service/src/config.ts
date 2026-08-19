@@ -10,6 +10,7 @@ if (existsSync(envPath)) {
 export const config = {
   env,
   dynamodbTable: process.env.DYNAMODB_TABLE || 'local-driver-assistant-accounts',
+  dynamodbSettingsTable: process.env.DYNAMODB_SETTINGS_TABLE || 'local-driver-assistant-driver-settings',
   awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
 
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me',

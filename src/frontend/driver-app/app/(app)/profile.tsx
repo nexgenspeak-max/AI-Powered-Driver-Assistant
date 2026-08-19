@@ -1,10 +1,11 @@
-import { ScrollView, TouchableOpacity, Switch, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
-import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
+import { ScrollView, TouchableOpacity, StyleSheet, Image, type ImageSourcePropType } from 'react-native'
+import { View, XStack, Text, useTheme, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
+import { useMutation } from '@tanstack/react-query'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
 import { ProfileCard } from '../../src/features/profile/components/ProfileCard'
 import { SectionTitle } from '../../src/features/profile/components/SectionTitle'
@@ -12,8 +13,8 @@ import { GlassSurface } from '../../src/components/GlassSurface'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
 import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
-import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { driversService } from '../../src/services/api/drivers'
 
 // Literal per-screen background — same treatment as customer-app's Profile
 // screen (app/(app)/profile.tsx there), locked to the exact reference hex
@@ -69,12 +70,22 @@ export default function ProfileScreen() {
   // here is the network round trip, not "logged in or not".
   const { data: driver } = useCurrentUser()
   const logout = useAuthStore(s => s.logout)
+  // Best-effort: goes offline server-side before clearing tokens so a
+  // driver who forgets to flip the dashboard switch first doesn't keep
+  // showing as available for dispatch after logging out. Never blocks the
+  // logout itself — a failed/slow request (no network, server down) still
+  // falls through to `logout()` via `onSettled`.
+  const { mutate: logoutAndGoOffline } = useMutation({
+    mutationFn: async () => {
+      if (driver && driver.status === 'online') {
+        await driversService.update(driver.phone, { status: 'offline' }).catch(() => {})
+      }
+    },
+    onSettled: () => logout(),
+  })
   const { data: context, isLoading } = useDriverContext()
-  const wakeWordEnabled = useWakeWordSettingsStore(s => s.enabled)
-  const setWakeWordEnabled = useWakeWordSettingsStore(s => s.setEnabled)
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
-  const theme = useTheme()
   const isLight = useThemeName() === 'light'
   const isDark = !isLight
   const insets = useSafeAreaInsets()
@@ -154,38 +165,12 @@ export default function ProfileScreen() {
 
       <GlassSurface cornerRadius={20}>
         <SectionTitle>Cài đặt</SectionTitle>
-        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
-          <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
-            <Image
-              source={isDark ? DARK_ICONS.voiceAssistant : ICONS.voiceAssistant}
-              style={{ width: isDark ? 20 : 24, height: isDark ? 20 : 24, tintColor: isDark ? '#ffffff' : undefined }}
-              resizeMode="contain"
-            />
-            <YStack flex={1}>
-              <Text color="$textPrimary" fontWeight="500">
-                Trợ lý rảnh tay
-              </Text>
-              <Text color="$textSecondary" fontSize={11} marginTop="$1">
-                Nghe từ khoá đánh thức ở chế độ nền, kể cả khi đang dùng app khác
-              </Text>
-            </YStack>
-          </XStack>
-          <Switch
-            value={wakeWordEnabled}
-            onValueChange={setWakeWordEnabled}
-            // Default OS colors left this switch nearly invisible in light
-            // mode (a pale system gray track against the screen's own light
-            // gradient) — explicit brand colors here match the purple used
-            // everywhere else (ThemeToggle's gradient, Button's primary
-            // shadow) and a track dark enough to actually read against the
-            // light background. Dark mode already reads fine unstyled, but
-            // themed anyway so both states are visibly deliberate, not a
-            // sudden discontinuity.
-            trackColor={{ false: isLight ? '#B8BCC8' : theme.borderStrong.val, true: '#8B5CF6' }}
-            thumbColor="#ffffff"
-            ios_backgroundColor={isLight ? '#B8BCC8' : theme.borderStrong.val}
-          />
-        </XStack>
+        <MenuRow
+          icon={isDark ? DARK_ICONS.voiceAssistant : ICONS.voiceAssistant}
+          isDark={isDark}
+          label="Cài đặt trợ lý"
+          onPress={() => router.push('/assistant-settings')}
+        />
         <View height={1} backgroundColor="$border" />
         <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
           <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
@@ -221,7 +206,7 @@ export default function ProfileScreen() {
           label="Đăng xuất"
           labelColor="$danger"
           showChevron={false}
-          onPress={() => logout()}
+          onPress={() => logoutAndGoOffline()}
         />
       </GlassSurface>
 
