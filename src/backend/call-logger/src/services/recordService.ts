@@ -27,7 +27,12 @@ export interface CallRecord {
   turns: Turn[];
   summary: string;
   stt_provider?: string;
+  llm_provider?: string;
   llm_model?: string;
+  // Unix epoch seconds — DynamoDB's native TTL (enabled on this exact
+  // attribute name in infra/call-logger/sam.yaml) auto-deletes the item once
+  // this passes. Optional: a record without it is kept forever.
+  ttl?: number;
 }
 
 export async function save(record: CallRecord): Promise<void> {

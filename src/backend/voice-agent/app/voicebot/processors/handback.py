@@ -137,6 +137,11 @@ def build_customer_agent(userdata: dict, summary: str = ""):
 
 
 async def store_call_summary(userdata: dict, summary: str, mode: str) -> None:
+    if mode == "agent":
+        from app.voicebot.processors.agent_call_silence import cancel_agent_call_silence_watch
+
+        cancel_agent_call_silence_watch(userdata)
+
     call_meta = userdata.get("customer_call") or {}
     call_id = call_meta.get("call_id", "")
     if call_id:

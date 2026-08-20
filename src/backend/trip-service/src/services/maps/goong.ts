@@ -1,4 +1,4 @@
-import type { RouteInfo, DistanceMatrixResult } from './types';
+import type { RouteInfo, RouteStep, DistanceMatrixResult } from './types';
 import type { LatLng } from '../../utils/geo';
 
 const GEOCODE_URL = 'https://rsapi.goong.io/geocode';
@@ -15,6 +15,25 @@ async function geocode(address: string, apiKey: string): Promise<string | null> 
   const location = (data.results as any[])[0]?.geometry?.location;
   if (!location) return null;
   return `${location.lat},${location.lng}`;
+}
+
+// Confirmed by a real call against the live API (not just the docs' trivial
+// 5m example, which showed an empty steps array): Goong's steps carry the
+// same fields as Google's — html_instructions (plain Vietnamese text, no
+// actual HTML tags seen in practice, but stripped defensively below just in
+// case), maneuver, distance/duration, start/end_location, and a per-step
+// polyline.
+function mapSteps(rawSteps: unknown): RouteStep[] | undefined {
+  if (!Array.isArray(rawSteps)) return undefined;
+  return rawSteps.map((s: any) => ({
+    instruction: String(s.html_instructions ?? '').replace(/<[^>]+>/g, ''),
+    maneuver: s.maneuver ?? '',
+    distance_m: s.distance?.value ?? 0,
+    duration_s: s.duration?.value ?? 0,
+    start_location: { lat: s.start_location?.lat, lng: s.start_location?.lng },
+    end_location: { lat: s.end_location?.lat, lng: s.end_location?.lng },
+    polyline: s.polyline?.points,
+  }));
 }
 
 // Goong Direction requires lat,lng — unlike Google it does not accept free-text addresses,
@@ -80,6 +99,7 @@ export async function getRoute(
       dropoff_lat: dropoffLat,
       dropoff_lng: dropoffLng,
       polyline: route.overview_polyline?.points,
+      steps: mapSteps(leg.steps),
     };
   } catch {
     console.warn('Goong Maps request failed');

@@ -175,11 +175,19 @@ raw_schema = {
             "Sau khi tài xế đã chọn đúng chuyến (nếu cần) VÀ đúng chế độ, mới gọi tool này với "
             "đủ mode (và trip_index nếu có nhiều chuyến).\n"
             "SAU KHI AI VỪA CHỦ ĐỘNG HỎI TÀI XẾ 'có muốn tôi gọi báo khách không' (nudge sắp đến "
-            "điểm đón/trả) và tài xế đồng ý: gọi THẲNG mode='agent' KÈM message đúng nội dung cần "
-            "truyền đạt (vd 'Anh/chị ra điểm đón giúp tài xế nhé, tài xế sắp tới rồi' cho điểm "
+            "điểm đón/trả) và tài xế đồng ý: gọi THẲNG mode='background' KÈM message đúng nội dung "
+            "cần truyền đạt (vd 'Anh/chị ra điểm đón giúp tài xế nhé, tài xế sắp tới rồi' cho điểm "
             "đón, hoặc 'Anh/chị chuẩn bị hành lý, sắp đến nơi rồi' cho điểm trả) — KHÔNG hỏi lại "
             "chế độ, KHÔNG gọi mà thiếu message trong tình huống này, vì nếu thiếu thì AI sẽ nói "
-            "chuyện chung chung với khách mà không nêu rõ lý do gọi."
+            "chuyện chung chung với khách mà không nêu rõ lý do gọi. Đây LUÔN LUÔN là mode="
+            "'background' (tài xế không cần nghe trực tiếp cuộc gọi thông báo này) — KHÔNG dùng "
+            "mode='agent' cho tình huống tự động thông báo <1km này.\n"
+            "SAU KHI gọi tool này (mode='agent' hoặc 'bridge'): KHÔNG được nói thêm BẤT KỲ câu "
+            "nào với tài xế, kể cả những câu nghe có vẻ hợp lý như 'Đã gọi xong cho khách' hay "
+            "'anh/chị cần gì nữa không' — cuộc gọi CHỈ VỪA MỚI BẮT ĐẦU quay số/đổ chuông, hệ "
+            "thống đã tự đọc 'Đang gọi...' trước đó rồi, nói thêm bất kỳ điều gì ngụ ý cuộc gọi "
+            "đã xong là SAI và gây hiểu lầm cho tài xế. Với mode='background', hệ thống tự trả "
+            "về câu xác nhận 'đang gọi ở chế độ nền' — cũng không cần nói thêm gì khác."
         ),
         "parameters": {
             "type": "object",

@@ -257,10 +257,22 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     route => StyleSheet.flatten(descriptors[route.key].options.tabBarItemStyle)?.display !== 'none',
   )
   const selectedKey = state.routes[state.index]?.key
-  const selectedIndex = Math.max(
-    0,
-    visibleRoutes.findIndex(route => route.key === selectedKey),
-  )
+  const foundVisibleIndex = visibleRoutes.findIndex(route => route.key === selectedKey)
+  // Falls back to whichever visible tab was last active, NOT tab 0 — a
+  // hidden route (assistant-settings, edit-profile, vehicle, ...) isn't in
+  // visibleRoutes at all, so foundVisibleIndex is -1 while one of those is
+  // focused. Defaulting to 0 there meant every hidden screen highlighted
+  // "Home" on the bar regardless of which tab it was actually pushed from —
+  // e.g. Profile -> "Cài đặt trợ lý" lit up Home instead of staying on
+  // Profile. lastVisibleIndexRef is updated in the effect below, always
+  // AFTER commit, so by the time a hidden route's render runs, it already
+  // holds whatever tab was visible right before navigating away from it.
+  const lastVisibleIndexRef = useRef(0)
+  const selectedIndex = foundVisibleIndex !== -1 ? foundVisibleIndex : lastVisibleIndexRef.current
+
+  useEffect(() => {
+    if (foundVisibleIndex !== -1) lastVisibleIndexRef.current = foundVisibleIndex
+  }, [foundVisibleIndex])
 
   const [barWidth, setBarWidth] = useState(0)
   // The label color's own source of truth — deliberately NOT derived from

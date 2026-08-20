@@ -1,24 +1,33 @@
-import { useEffect, useRef, useState } from 'react'
-import { ScrollView, TextInput, TouchableOpacity, Keyboard } from 'react-native'
-import { View, XStack, Text, Theme, useTheme } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { GlassSheen } from '../../../components/LiquidGlass'
-import { KeyboardSafeView } from '../../../components/KeyboardSafeView'
-import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { StatusBar } from 'expo-status-bar'
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio'
-import { useAssistantChatStore } from '../stores/assistantChatStore'
-import { useVoiceSessionStore } from '../stores/voiceSessionStore'
-import { useThemeStore } from '../../../stores/themeStore'
-import { getAssistantReply } from '../../../services/api/assistant'
+import { useEffect, useRef, useState } from "react";
+import {
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Keyboard,
+} from "react-native";
+import { View, XStack, Text, Theme, useTheme } from "tamagui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GlassSheen } from "../../../components/LiquidGlass";
+import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import {
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  setAudioModeAsync,
+} from "expo-audio";
+import { useAssistantChatStore } from "../stores/assistantChatStore";
+import { useVoiceSessionStore } from "../stores/voiceSessionStore";
+import { useThemeStore } from "../../../stores/themeStore";
+import { getAssistantReply } from "../../../services/api/assistant";
 
 const MIC_LABEL = {
-  idle: 'Chạm vào quả cầu để kết nối với trợ lý',
-  connecting: 'Đang kết nối...',
-  connected: 'Đang trong phiên thoại — chạm vào quả cầu để ngắt',
-  error: 'Kết nối lỗi, thử lại',
-}
+  idle: "Chạm vào quả cầu để kết nối với trợ lý",
+  connecting: "Đang kết nối...",
+  connected: "Đang trong phiên thoại — chạm vào quả cầu để ngắt",
+  error: "Kết nối lỗi, thử lại",
+};
 
 // Recorded audio cues (not device TTS) played while connecting — see the
 // effect below for why. One is picked at random per connect by
@@ -26,41 +35,47 @@ const MIC_LABEL = {
 // LiveKit connect by that same file's length (`CONNECTING_CUE_DURATIONS_MS`)
 // — index here must line up with that array.
 const connectingCueAssets = [
-  require('../../../../assets/audio/connecting-cue.mp3'),
-  require('../../../../assets/audio/connecting-cue-2.mp3'),
-  require('../../../../assets/audio/connecting-cue-3.mp3'),
-]
+  require("../../../../assets/audio/connecting-cue.mp3"),
+  require("../../../../assets/audio/connecting-cue-2.mp3"),
+  require("../../../../assets/audio/connecting-cue-3.mp3"),
+];
 
 interface Props {
   // Set when rendered as the tap-to-open overlay on Home (see index.tsx) —
   // shows a close (X) button next to the status label. Omitted wherever this
   // might still be rendered as permanent full-screen content instead.
-  onClose?: () => void
+  onClose?: () => void;
 }
 
 export function AssistantChatPanel({ onClose }: Props = {}) {
-  const themeMode = useThemeStore(s => s.mode)
-  const isLight = themeMode === 'light'
-  const theme = useTheme()
-  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
-  const voice = useVoiceSessionStore()
-  const [msg, setMsg] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [stubLoading, setStubLoading] = useState(false)
-  const scrollRef = useRef<ScrollView>(null)
-  const insets = useSafeAreaInsets()
-  const connectingCuePlayer = useAudioPlayer(connectingCueAssets[voice.connectingCueIndex])
-  const connectingCueStatus = useAudioPlayerStatus(connectingCuePlayer)
+  const themeMode = useThemeStore((s) => s.mode);
+  const isLight = themeMode === "light";
+  const theme = useTheme();
+  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore();
+  const voice = useVoiceSessionStore();
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [stubLoading, setStubLoading] = useState(false);
+  const sendingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  const connectingCuePlayer = useAudioPlayer(
+    connectingCueAssets[voice.connectingCueIndex],
+  );
+  const connectingCueStatus = useAudioPlayerStatus(connectingCuePlayer);
 
   // TEMP DEBUG: prints whether the asset actually loaded and what the
   // player thinks its own state is. Remove once resolved.
   useEffect(() => {
-    console.log('[connecting-cue] status:', JSON.stringify(connectingCueStatus))
-  }, [connectingCueStatus])
+    console.log(
+      "[connecting-cue] status:",
+      JSON.stringify(connectingCueStatus),
+    );
+  }, [connectingCueStatus]);
 
   useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true })
-  }, [chats])
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [chats]);
 
   // Recorded audio cue (not device TTS — LiveKit hasn't connected yet at
   // this point, and a spoken phrase doesn't cover a slow connect: token
@@ -80,10 +95,10 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     // nonzero and a real seek-back is needed. Guarding on currentTime skips
     // the redundant/risky seek exactly for that first-ever play.
     const resetToStart = () => {
-      if (connectingCuePlayer.currentTime !== 0) connectingCuePlayer.seekTo(0)
-    }
+      if (connectingCuePlayer.currentTime !== 0) connectingCuePlayer.seekTo(0);
+    };
 
-    console.log('[connecting-cue] voice.status changed to', voice.status)
+    console.log("[connecting-cue] voice.status changed to", voice.status);
 
     // Only a genuine abort (error, or back to idle) cuts the cue off — a
     // fast connect succeeding (status -> 'connected') lets it finish
@@ -91,19 +106,19 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     // a quick connect the only cost is a brief overlap with the AI's first
     // words — the alternative (reported) was the cue getting chopped down
     // to 1-2 words every time the connect happened to be fast.
-    if (voice.status === 'idle' || voice.status === 'error') {
-      connectingCuePlayer.pause()
-      resetToStart()
-      return
+    if (voice.status === "idle" || voice.status === "error") {
+      connectingCuePlayer.pause();
+      resetToStart();
+      return;
     }
-    if (voice.status !== 'connecting') return
+    if (voice.status !== "connecting") return;
     // Auto-triggered by a pending nudge (useAutoConnectOnNudge.ts), not a
     // driver tap — connect() already skips its own artificial delay for
     // this case, and playing a "connecting..." cue the driver never asked
     // for would just add a spoken-content collision with the nudge itself.
-    if (voice.silentConnect) return
-    let cancelled = false
-    ;(async () => {
+    if (voice.silentConnect) return;
+    let cancelled = false;
+    (async () => {
       try {
         // Drivers commonly keep the phone on silent/vibrate — without this
         // the cue would be muted exactly when it matters most (a hands-free,
@@ -119,18 +134,26 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         // playback even on a transient/"may duck" loss; requesting no focus
         // at all (Android-only effect per the docs) sidesteps that entirely
         // — there's nothing for LiveKit's request to take away.
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' })
-        console.log('[connecting-cue] audio mode set, cancelled=', cancelled)
-        if (cancelled) return
-        connectingCuePlayer.loop = false
-        connectingCuePlayer.volume = 1.0
-        resetToStart()
-        connectingCuePlayer.play()
-        console.log('[connecting-cue] play() called | isLoaded=', connectingCuePlayer.isLoaded, 'duration=', connectingCuePlayer.duration)
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: "mixWithOthers",
+        });
+        console.log("[connecting-cue] audio mode set, cancelled=", cancelled);
+        if (cancelled) return;
+        connectingCuePlayer.loop = false;
+        connectingCuePlayer.volume = 1.0;
+        resetToStart();
+        connectingCuePlayer.play();
+        console.log(
+          "[connecting-cue] play() called | isLoaded=",
+          connectingCuePlayer.isLoaded,
+          "duration=",
+          connectingCuePlayer.duration,
+        );
       } catch (err) {
-        console.error('[connecting-cue] failed to play', err)
+        console.error("[connecting-cue] failed to play", err);
       }
-    })()
+    })();
     // No forced pause here — this cleanup fires on *any* status change away
     // from 'connecting', including a successful 'connected', and pausing
     // unconditionally is exactly what was cutting the cue down to 1-2 words
@@ -139,9 +162,9 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     // effect) is what actually stops sound for a real abort. True unmounts
     // are handled by the separate effect below.
     return () => {
-      cancelled = true
-    }
-  }, [voice.status, connectingCuePlayer])
+      cancelled = true;
+    };
+  }, [voice.status, connectingCuePlayer]);
 
   // Stops the cue if the screen itself unmounts while it's still
   // playing/pending — the status-driven effect above intentionally no
@@ -159,40 +182,44 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
   // whichever player is current, so true unmount still pauses the right
   // one; the try/catch is a last-resort guard for the same race (player
   // swapped/released between the ref read and the pause() call).
-  const connectingCuePlayerRef = useRef(connectingCuePlayer)
-  connectingCuePlayerRef.current = connectingCuePlayer
+  const connectingCuePlayerRef = useRef(connectingCuePlayer);
+  connectingCuePlayerRef.current = connectingCuePlayer;
   useEffect(() => {
     return () => {
       try {
-        connectingCuePlayerRef.current.pause()
+        connectingCuePlayerRef.current.pause();
       } catch {
         // already released — nothing to clean up
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const handleSend = async () => {
-    Keyboard.dismiss()
+    Keyboard.dismiss();
+    if (sendingRef.current) return;
     if (!msg.trim()) {
-      setError('Bạn chưa nhập nội dung.')
-      return
+      setError("Bạn chưa nhập nội dung.");
+      return;
     }
-    const text = msg
-    setMsg('')
-    addUserMessage(text)
+    sendingRef.current = true;
+    const text = msg;
+    setMsg("");
+    setError(null);
+    addUserMessage(text);
 
-    if (voice.status === 'connected' && (await voice.sendText(text))) {
-      return
-    }
-
-    setStubLoading(true)
     try {
-      const reply = await getAssistantReply(text)
-      addBotMessage(reply)
+      if (voice.status === "connected" && (await voice.sendText(text))) {
+        return;
+      }
+
+      setStubLoading(true);
+      const reply = await getAssistantReply(text);
+      addBotMessage(reply);
     } finally {
-      setStubLoading(false)
+      setStubLoading(false);
+      sendingRef.current = false;
     }
-  }
+  };
 
   return (
     // Follows the app-wide light/dark toggle now (previously always forced
@@ -200,118 +227,139 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     // still fixed on purpose, not theme tokens: AI = white text on black,
     // user = black text on purple, in light mode specifically.
     <Theme name={themeMode}>
-    <StatusBar style={isLight ? 'dark' : 'light'} />
-    <KeyboardSafeView
-      style={{ backgroundColor: theme.surface.val }}
-      keyboardVerticalOffset={60}
-    >
-      <View width="100%" paddingTop={insets.top} position="relative">
-        {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
+      <StatusBar style={isLight ? "dark" : "light"} />
+      <KeyboardSafeView
+        style={{ backgroundColor: theme.surface.val }}
+        keyboardVerticalOffset={60}
+      >
+        <View width="100%" paddingTop={insets.top} position="relative">
+          {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
             the (app) layout level as a small draggable bubble on every tab
             (Home included) — no more full-size 360px canvas reserved here,
             so the chat list below gets the full screen instead of being
             pushed down/covered by it. */}
-        <Text textAlign="center" color="$textSecondary" fontSize="$1" marginTop="$2" paddingTop="$2">
-          {voice.status === 'connected' && voice.isCallActive
-            ? 'Đang trong cuộc gọi — không thể tắt'
-            : MIC_LABEL[voice.status]}
-        </Text>
-        {onClose && (
-          <TouchableOpacity
-            onPress={onClose}
-            style={{ position: 'absolute', right: 20, top: insets.top + 4, padding: 8 }}
+          <Text
+            textAlign="center"
+            color="$textSecondary"
+            fontSize="$1"
+            marginTop="$2"
+            paddingTop="$2"
           >
-            <Ionicons name="close" size={22} color={theme.textPrimary.val} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1, paddingHorizontal: 20, marginTop: 16 }}
-        contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
-      >
-        {chats.map((chat, i) =>
-          chat.who === 'me' ? (
-            // User bubble: purple gradient, always white text regardless of
-            // theme — the gradient itself doesn't change with light/dark,
-            // so the text shouldn't need to either.
-            <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
-              <LinearGradient
-                colors={['#7C5B9C', '#A855F7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ paddingHorizontal: 16, paddingVertical: 10 }}
-              >
-                <Text color="#ffffff">{chat.msg}</Text>
-              </LinearGradient>
-            </View>
-          ) : (
-            // AI bubble: light card + dark text in light mode, matching the
-            // rest of the light-mode UI (glass cards, dark $textPrimary) —
-            // was a hardcoded black bubble/white text even in light mode,
-            // which read as broken/out of place against an otherwise white
-            // screen. Dark mode keeps the theme-derived $accent/$textPrimary
-            // pair, unchanged.
-            <View
-              key={i}
-              maxWidth="80%"
-              alignSelf="flex-start"
-              backgroundColor={isLight ? '$surfaceElevated' : '$accent'}
-              borderRadius="$bubble"
-              paddingHorizontal={16}
-              paddingVertical={10}
+            {voice.status === "connected" && voice.isCallActive
+              ? "Đang trong cuộc gọi — không thể tắt"
+              : MIC_LABEL[voice.status]}
+          </Text>
+          {onClose && (
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                position: "absolute",
+                right: 20,
+                top: insets.top + 4,
+                padding: 8,
+              }}
             >
-              <Text color="$textPrimary">{chat.msg}</Text>
-            </View>
-          ),
-        )}
-        {stubLoading && (
-          <Text color="$textSecondary" fontSize="$1" paddingHorizontal="$1">
-            Đang trả lời...
-          </Text>
-        )}
-        {error && (
-          <Text color="$danger" fontSize="$1" paddingHorizontal="$1">
-            {error}
-          </Text>
-        )}
-      </ScrollView>
+              <Ionicons name="close" size={22} color={theme.textPrimary.val} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-      <XStack
-        alignItems="center"
-        gap="$2"
-        marginHorizontal={20}
-        marginBottom={100}
-        paddingHorizontal="$2"
-        height={48}
-        borderRadius="$pill"
-        backgroundColor="$surfaceElevated"
-        shadowColor="#000"
-        shadowOffset={{ width: 0, height: 8 }}
-        shadowOpacity={0.35}
-        shadowRadius={18}
-      >
-        <GlassSheen borderRadius={24} />
-        <TextInput
-          value={msg}
-          onChangeText={setMsg}
-          onSubmitEditing={handleSend}
-          placeholder="Nói gì đó..."
-          placeholderTextColor={theme.textMuted.val}
-          // Highlighted-text (select-all) color — was left at the OS
-          // default (a generic blue), which clashed against this app's
-          // purple-branded glass fields. Brighter in dark mode (#C084FC vs
-          // #8B5CF6) since a highlight needs more contrast against a dark
-          // field than a light one.
-          selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
-          style={{ flex: 1, color: theme.textPrimary.val, paddingLeft: 8 }}
-        />
-        <TouchableOpacity onPress={handleSend} style={{ padding:8 }}>
-          <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />
-        </TouchableOpacity>
-      </XStack>
-    </KeyboardSafeView>
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1, paddingHorizontal: 20, marginTop: 16 }}
+          contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
+        >
+          {chats.map((chat, i) =>
+            chat.who === "me" ? (
+              // User bubble: purple gradient, always white text regardless of
+              // theme — the gradient itself doesn't change with light/dark,
+              // so the text shouldn't need to either.
+              <View
+                key={i}
+                maxWidth="80%"
+                alignSelf="flex-end"
+                borderRadius="$bubble"
+                overflow="hidden"
+              >
+                <LinearGradient
+                  colors={["#7C5B9C", "#A855F7"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                >
+                  <Text color="#ffffff">{chat.msg}</Text>
+                </LinearGradient>
+              </View>
+            ) : (
+              // AI bubble: light card + dark text in light mode, matching the
+              // rest of the light-mode UI (glass cards, dark $textPrimary) —
+              // was a hardcoded black bubble/white text even in light mode,
+              // which read as broken/out of place against an otherwise white
+              // screen. Dark mode keeps the theme-derived $accent/$textPrimary
+              // pair, unchanged.
+              <View
+                key={i}
+                maxWidth="80%"
+                alignSelf="flex-start"
+                backgroundColor={isLight ? "$surfaceElevated" : "$accent"}
+                borderRadius="$bubble"
+                paddingHorizontal={16}
+                paddingVertical={10}
+              >
+                <Text color="$textPrimary">{chat.msg}</Text>
+              </View>
+            ),
+          )}
+          {stubLoading && (
+            <Text color="$textSecondary" fontSize="$1" paddingHorizontal="$1">
+              Đang trả lời...
+            </Text>
+          )}
+          {error && (
+            <Text color="$danger" fontSize="$1" paddingHorizontal="$1">
+              {error}
+            </Text>
+          )}
+        </ScrollView>
+
+        <XStack
+          alignItems="center"
+          gap="$2"
+          marginHorizontal={20}
+          marginBottom={100}
+          paddingHorizontal="$2"
+          height={48}
+          borderRadius="$pill"
+          backgroundColor="$surfaceElevated"
+          shadowColor="#000"
+          shadowOffset={{ width: 0, height: 8 }}
+          shadowOpacity={0.35}
+          shadowRadius={18}
+        >
+          <GlassSheen borderRadius={24} />
+          <TextInput
+            value={msg}
+            onChangeText={setMsg}
+            onSubmitEditing={handleSend}
+            placeholder="Nói gì đó..."
+            placeholderTextColor={theme.textMuted.val}
+            // Highlighted-text (select-all) color — was left at the OS
+            // default (a generic blue), which clashed against this app's
+            // purple-branded glass fields. Brighter in dark mode (#C084FC vs
+            // #8B5CF6) since a highlight needs more contrast against a dark
+            // field than a light one.
+            selectionColor={isLight ? "#8B5CF6" : "#C084FC"}
+            style={{ flex: 1, color: theme.textPrimary.val, paddingLeft: 8 }}
+          />
+          <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
+            <Ionicons
+              name="send"
+              size={18}
+              color={isLight ? "#1a1a1a" : "#fff"}
+            />
+          </TouchableOpacity>
+        </XStack>
+      </KeyboardSafeView>
     </Theme>
-  )
+  );
 }

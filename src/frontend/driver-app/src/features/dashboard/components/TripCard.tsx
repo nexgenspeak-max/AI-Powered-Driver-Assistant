@@ -5,6 +5,7 @@ import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { InfoRow } from "./InfoRow";
 import { tripsService } from "../../../services/api/trips";
+import { pushImmediateLocation } from "../../../services/location/pushImmediateLocation";
 import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
@@ -22,7 +23,11 @@ export function TripCard({
     qc.invalidateQueries({ queryKey: ["driverContext"] });
 
   const { mutate: accept, isPending: accepting } = useMutation({
-    mutationFn: () => tripsService.accept(trip.trip_id),
+    mutationFn: () => {
+      // Fired in parallel, not awaited — see pushImmediateLocation.ts.
+      pushImmediateLocation();
+      return tripsService.accept(trip.trip_id);
+    },
     onSuccess: invalidate,
   });
   const { mutate: reject, isPending: rejecting } = useMutation({

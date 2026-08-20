@@ -67,6 +67,24 @@ export interface OptimizedRoute {
   path: { lat: number; lng: number }[]
 }
 
+export interface RouteStep {
+  instruction: string
+  maneuver: string
+  distance_m: number
+  duration_s: number
+  start_location: { lat: number; lng: number }
+  end_location: { lat: number; lng: number }
+  polyline?: string
+}
+
+export interface NavigationRoute {
+  distance_km: number | null
+  eta_minutes: number | null
+  traffic_note: string
+  polyline: string
+  steps: RouteStep[]
+}
+
 export interface DriverContext {
   driver: Driver
   driver_profile: DriverProfile

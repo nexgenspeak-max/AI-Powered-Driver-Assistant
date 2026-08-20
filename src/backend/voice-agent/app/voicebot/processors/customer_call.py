@@ -135,6 +135,10 @@ def _save_call_context(
         if sip_identity:
             room_io.set_participant(sip_identity)
 
+        from app.voicebot.processors.agent_call_silence import schedule_agent_call_silence_watch
+
+        schedule_agent_call_silence_watch(context.session, context.userdata)
+
     if mode == "bridge":
         context.userdata["bridge_call_active"] = True
         context.userdata["customer_call_active"] = False

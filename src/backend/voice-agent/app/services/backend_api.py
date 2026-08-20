@@ -244,7 +244,39 @@ async def get_latest_call_record(driver_phone: str) -> dict:
         timeout=10,
     )
     r.raise_for_status()
-    return r.json()
+    record = r.json()
+
+    # trip-service's cache is just a pointer (call_id/status) now — the
+    # actual transcript+summary lives in call-logger's DynamoDB table
+    # (local-driver-assistant-call-records), saved by ConversationService
+    # when the call ends. Fetch it here, once, so every caller of this
+    # function (check_call_status, summarize_last_call, ...) still sees a
+    # populated `summary` without each needing to know about this extra hop.
+    # Skipped while still in_progress — the call hasn't ended, so
+    # call-logger has no record for it yet.
+    if record.get("status") != "in_progress" and not record.get("summary"):
+        call_id = record.get("call_id")
+        if call_id:
+            record["summary"] = await _fetch_summary_by_call_id(call_id)
+
+    return record
+
+
+async def _fetch_summary_by_call_id(call_id: str) -> str:
+    c = _get_client()
+    try:
+        r = await c.post(
+            f"{_trip_base()}/api/v1/calls/{call_id}/summary",
+            headers=auth_headers(),
+            timeout=10,
+        )
+        if r.status_code == 404:
+            return ""
+        r.raise_for_status()
+        return r.json().get("summary", "")
+    except Exception:
+        logger.warning("failed to fetch call summary | call_id=%s", call_id, exc_info=True)
+        return ""
 
 
 async def complete_background_call(
@@ -265,25 +297,13 @@ async def complete_background_call(
 
 
 async def get_latest_call_summary(driver_phone: str) -> str:
+    # get_latest_call_record already resolves the call-logger fallback by
+    # call_id — this is now just a thin convenience wrapper.
     try:
         call = await get_latest_call_record(driver_phone)
     except Exception:
         return ""
-    if call.get("summary"):
-        return call["summary"]
-    call_id = call.get("call_id") or call.get("id")
-    if not call_id:
-        return ""
-    c = _get_client()
-    r = await c.post(
-        f"{_trip_base()}/api/v1/calls/{call_id}/summary",
-        headers=auth_headers(),
-        timeout=10,
-    )
-    if r.status_code == 404:
-        return ""
-    r.raise_for_status()
-    return r.json().get("summary", "")
+    return call.get("summary", "")
 
 
 # ── Reminders ─────────────────────────────────────────────────────────────────

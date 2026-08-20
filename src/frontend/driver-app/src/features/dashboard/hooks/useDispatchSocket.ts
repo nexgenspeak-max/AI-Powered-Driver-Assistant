@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTripOfferStore } from '../../../stores/tripOfferStore'
+import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
 
 // Same wss://.../ws?role=driver&id=<phone> protocol on both environments —
 // see trip-service's notify/local.ts (dev, plain `ws`) and
@@ -63,6 +64,22 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
             // (visible once they open Dashboard), this just makes it
             // impossible to miss.
             if (msg.data?.trip_id) useTripOfferStore.getState().show(msg.data.trip_id)
+          }
+          // Pushed by trip-service's PATCH /trips/:id the instant a trip
+          // (this driver's, via the app button OR voice-agent's
+          // confirm_trip) becomes confirmed — fires the same fresh-GPS push
+          // TripCard/TripOfferBanner already do on tap, so a
+          // voice-confirmed trip gets the same near-zero-latency treatment.
+          // usePushLocationOnNewTrip.ts's 5s-poll diffing stays as the
+          // fallback if this socket message is ever missed/dropped.
+          if (msg.event === 'trip_confirmed') {
+            pushImmediateLocation()
+          }
+          // Pushed by POST /drivers/me/location/live once it's rebuilt the
+          // optimized route with a fresh fix (see drivers.ts) — refetch now
+          // instead of waiting on the 5s poll to pick up the new order.
+          if (msg.event === 'schedule_updated') {
+            qc.invalidateQueries({ queryKey: ['driverContext'] })
           }
         } catch {
           // Malformed message — ignore, don't drop the connection over it.

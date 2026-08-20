@@ -1,5 +1,4 @@
 import { Alert } from "react-native";
-import * as Location from "expo-location";
 import { XStack, YStack, View, Text } from "tamagui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GlassSurface } from "../../../components/GlassSurface";
@@ -9,6 +8,7 @@ import { TripProgressStepper } from "./TripProgressStepper";
 import { tripsService } from "../../../services/api/trips";
 import { confirmDestructive } from "../../../utils/confirmDialog";
 import { formatCurrency, formatDate } from "../../../utils/format";
+import { getCurrentCoords } from "../../../utils/currentLocation";
 import type { Trip } from "../../../types";
 
 // Backend rejects arrived_pickup/picked_up/completed (409) with a
@@ -21,32 +21,6 @@ function arrivalErrorMessage(err: unknown): string {
   return detail || "Không thể xác nhận, vui lòng thử lại.";
 }
 
-// Foreground permission should already be granted by the time these are
-// pressed (useProximityTracking requests it as soon as the trip becomes
-// `confirmed`), but ask again here too — cheap no-op if already granted, and
-// this is the only thing standing between the driver and a stuck button if
-// that earlier request was ever missed or revoked.
-//
-// getCurrentPositionAsync always blocks on a brand-new GPS fix (can take
-// several seconds indoors/cold GPS). useProximityTracking's background task
-// already pings a fix every ~15s while this trip is being tracked, so try
-// that cached fix first — maxAge/requiredAccuracy keep it safe: anything
-// stale or too imprecise is rejected and we fall back to the old
-// getCurrentPositionAsync path unchanged, so the backend's arrival-radius
-// check never sees a worse location than before, only a faster one.
-async function getCurrentCoords(): Promise<{ lat: number; lng: number }> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== "granted") {
-    throw new Error("Cần quyền vị trí để xác nhận trạng thái này");
-  }
-  const cached = await Location.getLastKnownPositionAsync({
-    maxAge: 20000,
-    requiredAccuracy: 100,
-  });
-  const position = cached ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
-  return { lat: position.coords.latitude, lng: position.coords.longitude };
-}
-
 const NEXT_ACTION: Record<
   string,
   { label: string; variant: "outline" | "success" }
@@ -54,6 +28,12 @@ const NEXT_ACTION: Record<
   confirmed: { label: "Arrived at Pickup", variant: "outline" },
   arrived_pickup: { label: "Picked Up Customer", variant: "outline" },
   picked_up: { label: "Complete Trip", variant: "success" },
+  // Card briefly still renders with this status in the window between
+  // "Complete Trip" succeeding and the invalidated driverContext refetch
+  // actually removing it from active_trips — without an entry here, `action`
+  // fell through to undefined and the button just vanished (looked like the
+  // label disappeared) instead of showing a clear completed state.
+  completed: { label: "Trip Completed", variant: "outline" },
 };
 
 export function ActiveTripCard({
@@ -109,6 +89,7 @@ export function ActiveTripCard({
   const avatarLetter =
     trip.customer_name?.trim().charAt(0).toUpperCase() || "D";
 
+  const isCompleted = trip.status === "completed";
   const action = NEXT_ACTION[trip.status];
   const onAction =
     trip.status === "confirmed"
@@ -120,8 +101,11 @@ export function ActiveTripCard({
   // Mirrors the backend's CANCEL_RULES.cancelled_by_driver window (trips.ts)
   // — once the customer is actually in the vehicle, cancelling isn't a valid
   // move anymore (only "Complete Trip" is); the server enforces this
-  // independently, this just avoids showing a button that would 409.
-  const canCancel = trip.status !== "picked_up";
+  // independently, this just avoids showing a button that would 409. Also
+  // excludes "completed" — same transient-render window as the comment on
+  // NEXT_ACTION above, and there's obviously nothing left to cancel once the
+  // trip is actually done.
+  const canCancel = trip.status !== "picked_up" && !isCompleted;
 
   return (
     <GlassSurface style={{ width: "100%" }}>
@@ -178,6 +162,7 @@ export function ActiveTripCard({
             variant={action.variant}
             onPress={onAction}
             loading={actionPending}
+            disabled={isCompleted}
             full
           />
         )}

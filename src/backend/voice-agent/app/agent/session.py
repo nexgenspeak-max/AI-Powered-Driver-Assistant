@@ -248,6 +248,14 @@ async def entrypoint(ctx: JobContext) -> None:
             # agent_state_changed "idle/listening -> resume" handler below so
             # it can't resume the silence tracker during ring time.
             "_isolated_call_answered": False,
+            # Mirrors _agent_call_quiet_since below, but for isolated
+            # (background/proximity-notify) calls — set to "now" every time
+            # the AI stops talking during an answered isolated call, cleared
+            # while it's talking. end_customer_call's isolated branch uses
+            # this to require real silence since the closing question before
+            # it accepts ending the call, instead of trusting the LLM's own
+            # (unreliable) sense that the customer had nothing more to say.
+            "_isolated_call_quiet_since": None,
         })
 
         if mode == "custcall" and trip:
@@ -314,10 +322,20 @@ async def entrypoint(ctx: JobContext) -> None:
             # explicitly paused right after being started below and only
             # resumed once CustomerCallAgent's isolated flow confirms actual
             # pickup (see wait_for_sip_pickup in _run_isolated_answer_flow) —
-            # so these 5s only ever measure silence in a call that's actually
-            # connected, never ring time.
-            silence_seconds = 5.0
-            max_silences_default = 1
+            # so these seconds only ever measure silence in a call that's
+            # actually connected, never ring time.
+            #
+            # Was 5.0s / 1 strike — too tight for real response latency: a
+            # real customer was cut off after exactly 5.0s of "silence" when
+            # their actual answer's transcript landed just 1s later (STT
+            # processing + normal think time before answering a spoken
+            # question routinely lands in the 5-16s range, confirmed from
+            # real call logs). 8s / 2 strikes gives up to ~16s of cumulative
+            # patience — matching that observed range — while still ending
+            # a genuinely abandoned call well short of driver/customer mode's
+            # much longer 60s x 3 (background calls should stay efficient).
+            silence_seconds = 8.0
+            max_silences_default = 2
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 60.0   # 60s x 3 = 3min total before hangup
@@ -457,27 +475,18 @@ async def entrypoint(ctx: JobContext) -> None:
                 # actively wrong in that case: the driver got told the
                 # customer never answered/said anything, even when they'd
                 # already answered every question and the AI had confirmed
-                # their details. Branch on whether the customer actually
-                # spoke (_customer_spoke) and, if so, use the real
-                # transcript-based summary (conv_service already buffered
-                # every turn) instead of the canned no-contact message.
-                if session_userdata.get("_customer_spoke"):
-                    try:
-                        summary = await conv_service.generate_summary()
-                    except Exception:
-                        summary = ""
-                    if not summary:
-                        summary = (
-                            "Cuộc gọi với khách đã kết thúc (im lặng kéo dài cuối cuộc gọi)."
-                            if lang != "en" else
-                            "The call with the customer ended (prolonged silence at the end)."
-                        )
-                else:
-                    summary = (
-                        "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
-                        if lang != "en" else
-                        "Could not reach the customer (no answer or prolonged silence)."
-                    )
+                # their details. Just pass the generic no-contact message as
+                # a fallback here — complete_isolated_call itself already
+                # branches on _customer_spoke and swaps in the real,
+                # transcript-based summary (generating + persisting it via
+                # conv_service.finish_and_get_summary()) whenever the
+                # customer actually spoke, so doing that same generation
+                # here too would just be a redundant second LLM call.
+                summary = (
+                    "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
+                    if lang != "en" else
+                    "Could not reach the customer (no answer or prolonged silence)."
+                )
                 await complete_isolated_call(session, session_userdata, summary)
 
             # custcall has its own wrap-up path (_on_isolated_silence_timeout
@@ -534,12 +543,28 @@ async def entrypoint(ctx: JobContext) -> None:
                 ud = session.userdata
                 if ev.new_state in ("speaking", "thinking"):
                     silence_tracker.pause()
-                    if ud.get("customer_call_active"):
-                        # AI is talking — not silence. Cleared here so
-                        # end_customer_call's agent-mode backstop (below)
-                        # never counts the AI's own speech as part of the
-                        # "customer isn't responding" window.
-                        ud["_agent_call_quiet_since"] = None
+                    # Only a genuine new utterance ("speaking") clears the
+                    # quiet-since clocks below — NOT "thinking". A customer
+                    # confirming "no more requests" makes the LLM correctly
+                    # try to call end_customer_call to wrap up, but
+                    # "thinking" (the LLM merely DECIDING whether to end the
+                    # call) was itself clearing the clock to None right
+                    # before the tool's own gate checked it — so the gate
+                    # always saw 0.0s elapsed and refused, no matter how long
+                    # the real silence had been, trapping the call in a
+                    # "ask again" loop that could never satisfy its own
+                    # condition. Only clear on actual speech, when the AI has
+                    # something new to say.
+                    if ev.new_state == "speaking":
+                        if ud.get("customer_call_active"):
+                            # AI is talking — not silence. Cleared here so
+                            # end_customer_call's agent-mode backstop (below)
+                            # never counts the AI's own speech as part of the
+                            # "customer isn't responding" window.
+                            ud["_agent_call_quiet_since"] = None
+                        if ud.get("isolated_call"):
+                            # Same reasoning, isolated (background) calls.
+                            ud["_isolated_call_quiet_since"] = None
                 elif ev.new_state in ("listening", "idle"):
                     if ud.get("isolated_call") and not ud.get("_isolated_call_answered"):
                         # Still just ringing (or dialing) — the agent settling
@@ -560,6 +585,8 @@ async def entrypoint(ctx: JobContext) -> None:
                         # never counted either, mirroring the isolated-call
                         # gate just above.
                         ud["_agent_call_quiet_since"] = time.time()
+                    if ud.get("isolated_call") and ud.get("_isolated_call_answered"):
+                        ud["_isolated_call_quiet_since"] = time.time()
 
             await silence_tracker.start()
             if mode == "custcall":

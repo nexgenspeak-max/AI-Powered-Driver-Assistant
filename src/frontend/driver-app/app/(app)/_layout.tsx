@@ -6,6 +6,7 @@ import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../s
 import { GlobalAssistantOrb } from '../../src/features/home/components/GlobalAssistantOrb'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
+import { usePushLocationOnNewTrip } from '../../src/features/dashboard/hooks/usePushLocationOnNewTrip'
 import { useAutoConnectOnNudge } from '../../src/features/home/hooks/useAutoConnectOnNudge'
 import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptureVoiceMessages'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
@@ -72,6 +73,9 @@ export default function AppLayout() {
   // regardless of which tab the driver has open — same reasoning as the
   // dispatch socket above.
   useAutoConnectOnNudge()
+  // Catches trip confirmations that happen outside TripCard/TripOfferBanner's
+  // own tap handler (voice-agent's confirm_trip tool) — see the hook.
+  usePushLocationOnNewTrip()
   // Always-on, independent of whether the chat overlay is currently open —
   // see useCaptureVoiceMessages.ts for why this can't live inside
   // AssistantChatPanel anymore.

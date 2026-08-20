@@ -1,5 +1,24 @@
 import type { LatLng } from '../../utils/geo';
 
+// One turn-by-turn instruction within a leg — same shape Google/Goong's
+// Directions API both return (Goong mirrors Google's response format), so
+// a single RouteStep type covers both providers without per-provider
+// variants. `maneuver` is the provider's own vocabulary (e.g. "left",
+// "right", "straight", "uturn", "roundabout-left", or "" when the provider
+// doesn't classify a step) — callers map it to an icon, unknown values
+// should fall back to a generic arrow rather than erroring.
+export interface RouteStep {
+  instruction: string;
+  maneuver: string;
+  distance_m: number;
+  duration_s: number;
+  start_location: LatLng;
+  end_location: LatLng;
+  // Encoded polyline for just this one step — undefined if the provider's
+  // response omitted it for this step.
+  polyline?: string;
+}
+
 export interface RouteInfo {
   distance_km: number;
   eta_minutes: number;
@@ -13,6 +32,13 @@ export interface RouteInfo {
   // encoding, precision 5) — undefined if the provider's response omitted
   // it. Decode with utils/polyline.ts's decodePolyline().
   polyline?: string;
+  // Turn-by-turn steps for the leg, in order — undefined if the provider's
+  // response omitted them (older responses / a provider that doesn't
+  // support it). Used by the driver-app's turn-by-turn navigation HUD; NOT
+  // fetched/needed for routeOptimizationService.ts's own getRoute() calls
+  // (those only ever use `polyline`), so leaving this undefined there costs
+  // nothing.
+  steps?: RouteStep[];
 }
 
 // `pickupCoords`/`dropoffCoords` are optional — when the caller already has

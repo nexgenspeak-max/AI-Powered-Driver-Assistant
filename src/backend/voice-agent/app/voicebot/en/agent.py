@@ -92,6 +92,9 @@ class DriverAgent(SpeechTextFixMixin, Agent):
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return PRONUNCIATIONS
 
+    def _speech_lang(self) -> str:
+        return "en"
+
     def __init__(
         self,
         trip: dict | None = None,
@@ -165,6 +168,9 @@ class CustomerAgent(SpeechTextFixMixin, Agent):
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return PRONUNCIATIONS
+
+    def _speech_lang(self) -> str:
+        return "en"
 
     def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone

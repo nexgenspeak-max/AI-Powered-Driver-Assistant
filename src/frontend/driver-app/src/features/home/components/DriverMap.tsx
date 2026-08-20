@@ -1,10 +1,21 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { StyleSheet, View, Text, Image } from 'react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { StyleSheet, View, Text, Image, Pressable } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { Map, Camera, Marker, GeoJSONSource, Layer, type LngLat, type LngLatBounds, type CameraRef } from '@maplibre/maplibre-react-native'
 import { useDriverContext } from '../../dashboard/hooks/useDriverContext'
 import { useLiveDriverLocation } from '../hooks/useLiveDriverLocation'
+import { useTurnByTurnNavigation } from '../hooks/useTurnByTurnNavigation'
 import { OptimizedRoutePanel } from './OptimizedRoutePanel'
+import { NavigationHud } from './NavigationHud'
+import { decodePolyline } from '../../../utils/polyline'
+import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
+import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
+
+// OptimizedRoutePanel's collapsed-state height (header row only) — the
+// floating nav button sits just above it when that panel is showing, same
+// relative gap as before insets/tab-bar clearance were factored in.
+const OPTIMIZED_ROUTE_PANEL_COLLAPSED_HEIGHT = 72
 
 const DRIVER_VAN_ICON = require('../../../../assets/icons/driver-van.png')
 
@@ -24,6 +35,12 @@ const DEFAULT_ZOOM = 12
 const DRIVER_INITIAL_ZOOM = 15
 const SINGLE_POINT_ZOOM = 14
 const FIT_PADDING = { top: 100, right: 60, bottom: 60, left: 60 }
+// Driving-mode camera: closer + tilted + rotated to heading, like Google
+// Maps/Be's navigation view — vs. the flat top-down DRIVER_INITIAL_ZOOM used
+// the rest of the time.
+const NAV_ZOOM = 17.5
+const NAV_PITCH = 45
+const NAV_LINE_COLOR = '#2563eb'
 
 const DRIVER_COLOR = '#8B5CF6'
 // One color per trip (pickup AND dropoff of the same trip share a color) so
@@ -123,14 +140,18 @@ function StopMarker({ kind, name, color, order }: { kind: 'pickup' | 'dropoff'; 
 }
 
 export function DriverMap() {
+  const insets = useSafeAreaInsets()
   const { data: context } = useDriverContext()
   // Local GPS stream, updates every few seconds straight off the phone —
   // takes priority over the backend's current_location (only refreshed by
   // the ~10-min proximity ping and possibly several minutes stale even then,
   // see driverContextService.ts) whenever it's available. That backend value
   // is only a fallback for the brief window before this device's own GPS has
-  // produced a first fix (e.g. right after opening the app).
-  const live = useLiveDriverLocation()
+  // produced a first fix (e.g. right after opening the app). Also pushes
+  // this device's GPS to the backend (throttled) while online, so
+  // driverLiveLocationKey/route-optimization always has a real fix instead
+  // of depending solely on the background task's ~10-min ping.
+  const live = useLiveDriverLocation(context?.driver.status === 'online')
 
   const driverPoint: LngLat | null = live
     ? [live.lng, live.lat]
@@ -200,6 +221,49 @@ export function DriverMap() {
   // routeOptimizationService.ts on the trip-service side.
   const optimizedRoute = context?.optimized_route ?? null
 
+  // Where "Bắt đầu chỉ đường" points at: the nearest stop in the optimized
+  // multi-stop order when one exists, else the current single trip's
+  // pickup/dropoff (mirrors routeOptimizationService.ts's
+  // candidatesFromTrips: picked_up -> dropoff, otherwise -> pickup) — covers
+  // the one case optimized_route itself comes back null for (exactly one
+  // active trip already picked up, nothing left to optimize against).
+  const navigationTarget = useMemo(() => {
+    if (optimizedRoute?.stops[0]) return { lat: optimizedRoute.stops[0].lat, lng: optimizedRoute.stops[0].lng }
+    const trip = context?.current_trip
+    if (!trip) return null
+    const lat = trip.status === 'picked_up' ? trip.dropoff_lat : trip.pickup_lat
+    const lng = trip.status === 'picked_up' ? trip.dropoff_lng : trip.pickup_lng
+    return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null
+  }, [optimizedRoute, context?.current_trip])
+
+  const [navActive, setNavActive] = useState(false)
+  // Stabilized by value (not a fresh object every render) — useTurnByTurn
+  // Navigation's internal effects key off this reference, and DriverMap
+  // re-renders on every 5s context poll regardless of whether the GPS fix
+  // actually moved.
+  const navOrigin = useMemo(() => (live ? { lat: live.lat, lng: live.lng } : null), [live?.lat, live?.lng])
+  const nav = useTurnByTurnNavigation(navActive, navOrigin, navigationTarget)
+  // Auto-exits once close enough to the target that the driver should be
+  // using the "Đã đến điểm đón"/"Đã đón khách" button (ActiveTripCard) to
+  // actually progress the trip — the HUD never triggers that status change
+  // itself, it's purely a visual/informational overlay.
+  useEffect(() => {
+    if (navActive && nav.arrived) setNavActive(false)
+  }, [navActive, nav.arrived])
+  // Also exits if the target the driver was navigating to disappears out
+  // from under them (trip cancelled/reassigned mid-navigation, or the whole
+  // active-stop set emptied) rather than silently navigating nowhere.
+  useEffect(() => {
+    if (navActive && !navigationTarget) setNavActive(false)
+  }, [navActive, navigationTarget])
+
+  const navRouteGeoJson = useMemo<GeoJSON.Feature<GeoJSON.LineString> | null>(() => {
+    if (!navActive || !nav.polyline) return null
+    const coords = decodePolyline(nav.polyline).map(p => [p.lng, p.lat] as [number, number])
+    if (coords.length < 2) return null
+    return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+  }, [navActive, nav.polyline])
+
   // Position (1-based) of each pickup/dropoff marker within the optimized
   // order, so StopMarker can show a number badge — keyed by kind+trip_id
   // since a trip's pickup and dropoff are two separate stops that can each
@@ -264,7 +328,7 @@ export function DriverMap() {
   // `updated_at`, not on every poll tick, so this only actually moves the
   // camera when a genuinely new reading lands.
   useEffect(() => {
-    if (!hasFitOnceRef.current || !driverPoint) return
+    if (!hasFitOnceRef.current || !driverPoint || navActive) return
     if (!hasCenteredOnDriverRef.current) {
       // First real fix arriving after the initial placement already fell
       // back to a trip-bounds view (no GPS yet at that point) — zoom in on
@@ -276,14 +340,15 @@ export function DriverMap() {
     }
     cameraRef.current?.easeTo({ center: driverPoint, duration: 800 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverUpdatedAt])
+  }, [driverUpdatedAt, navActive])
 
   // Re-fits when the SET of trips changes — not on every 5s poll tick, and
   // not fighting the driver-follow effect above (same "already placed once"
   // guard) — a driver manually panning/zooming shouldn't get yanked back on
-  // an unrelated poll either.
+  // an unrelated poll either. Skipped during navigation — the nav-follow
+  // effect below owns the camera then.
   useEffect(() => {
-    if (!hasFitOnceRef.current || allPoints.length === 0) return
+    if (!hasFitOnceRef.current || allPoints.length === 0 || navActive) return
     if (allPoints.length === 1) {
       cameraRef.current?.easeTo({ center: allPoints[0], zoom: SINGLE_POINT_ZOOM, duration: 500 })
     } else {
@@ -291,20 +356,61 @@ export function DriverMap() {
       if (bounds) cameraRef.current?.fitBounds(bounds, { padding: FIT_PADDING, duration: 500 })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripIdsKey])
+  }, [tripIdsKey, navActive])
+
+  // Driving-mode camera: while navigating, follow the driver tightly with
+  // the map rotated to their heading and tilted — like Google Maps/Be's
+  // navigation view — instead of the flat north-up follow above. Falls back
+  // to no rotation when heading is unknown (stationary/no compass fix yet)
+  // rather than snapping to a stale/wrong bearing.
+  useEffect(() => {
+    if (!navActive || !driverPoint) return
+    cameraRef.current?.easeTo({
+      center: driverPoint,
+      zoom: NAV_ZOOM,
+      pitch: NAV_PITCH,
+      ...(live?.heading != null ? { bearing: live.heading } : {}),
+      duration: 500,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navActive, driverUpdatedAt])
+
+  // Restores the flat top-down view on exit — otherwise the map would stay
+  // tilted/rotated from the last nav frame even after leaving nav mode.
+  useEffect(() => {
+    if (navActive || !driverPoint) return
+    cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, pitch: 0, bearing: 0, duration: 500 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navActive])
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <Map style={{ flex: 1 }} mapStyle={GOONG_STYLE_URL} logo={false}>
+      {/* compass={false}: MapLibre's built-in compass control auto-hides at
+          bearing 0 (compassHiddenFacingNorth defaults true) but reappears —
+          as a plain circular puck, right over the nav HUD — the moment the
+          driving-mode camera rotates to heading. We don't offer a
+          tap-to-reset-north gesture, so there's no reason to show it. */}
+      <Map style={{ flex: 1 }} mapStyle={GOONG_STYLE_URL} logo={false} compass={false}>
         <Camera ref={cameraRef} initialViewState={{ center: driverPoint ?? DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
 
-        {routeLineGeoJson && (
+        {!navActive && routeLineGeoJson && (
           <GeoJSONSource id="optimized-route-source" data={routeLineGeoJson}>
             <Layer
               id="optimized-route-line"
               type="line"
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-              paint={{ 'line-color': DRIVER_COLOR, 'line-width': 3, 'line-dasharray': [1, 1.5], 'line-opacity': 0.85 }}
+              paint={{ 'line-color': DRIVER_COLOR, 'line-width': 3, 'line-opacity': 0.85 }}
+            />
+          </GeoJSONSource>
+        )}
+
+        {navActive && navRouteGeoJson && (
+          <GeoJSONSource id="nav-route-source" data={navRouteGeoJson}>
+            <Layer
+              id="nav-route-line"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': NAV_LINE_COLOR, 'line-width': 6, 'line-opacity': 0.9 }}
             />
           </GeoJSONSource>
         )}
@@ -326,11 +432,61 @@ export function DriverMap() {
         ))}
       </Map>
 
-      {optimizedRoute && (
-        <OptimizedRoutePanel
-          route={optimizedRoute}
-          colorForTripId={tripId => colorByTripId[tripId] ?? DRIVER_COLOR}
+      {navActive ? (
+        <NavigationHud
+          loading={nav.loading}
+          error={nav.error}
+          step={nav.steps[nav.currentStepIndex] ?? null}
+          distanceToManeuverM={nav.distanceToManeuverM}
+          remainingKm={nav.remainingKm}
+          remainingMin={nav.remainingMin}
+          arrived={nav.arrived}
+          onExit={() => setNavActive(false)}
+          onRefresh={nav.refresh}
         />
+      ) : (
+        <>
+          {optimizedRoute && (
+            <OptimizedRoutePanel
+              route={optimizedRoute}
+              colorForTripId={tripId => colorByTripId[tripId] ?? DRIVER_COLOR}
+            />
+          )}
+          {navigationTarget && (
+            <Pressable
+              onPress={() => {
+                // Same fire-and-forget pattern as accepting a trip
+                // (TripCard.tsx/TripOfferBanner.tsx) — pushes a fresh fix to
+                // driverLiveLocationKey right as navigation starts, not just
+                // used for the from/to steps fetch itself (that call never
+                // persists the origin server-side on its own).
+                pushImmediateLocation()
+                setNavActive(true)
+              }}
+              style={{
+                position: 'absolute',
+                right: 16,
+                bottom:
+                  insets.bottom +
+                  MAP_OVERLAY_BOTTOM_CLEARANCE +
+                  (optimizedRoute ? OPTIMIZED_ROUTE_PANEL_COLLAPSED_HEIGHT : 0),
+                width: 52,
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: DRIVER_COLOR,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+                elevation: 5,
+              }}
+            >
+              <Ionicons name="navigate" size={24} color="#ffffff" />
+            </Pressable>
+          )}
+        </>
       )}
     </View>
   )

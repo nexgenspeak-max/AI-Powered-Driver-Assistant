@@ -22,6 +22,7 @@ import { Badge } from '../../../components/Badge'
 import { Button } from '../../../components/Button'
 import { InfoRow } from './InfoRow'
 import { tripsService } from '../../../services/api/trips'
+import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
 import { useTripOfferStore } from '../../../stores/tripOfferStore'
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '../../../constants/status'
@@ -102,7 +103,11 @@ export function TripOfferBanner() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['driverContext'] })
   const { mutate: accept, isPending: accepting } = useMutation({
-    mutationFn: () => tripsService.accept(tripId!),
+    mutationFn: () => {
+      // Fired in parallel, not awaited — see pushImmediateLocation.ts.
+      pushImmediateLocation()
+      return tripsService.accept(tripId!)
+    },
     onSuccess: () => {
       invalidate()
       dismiss()
