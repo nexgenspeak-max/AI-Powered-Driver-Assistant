@@ -19,9 +19,13 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Alert, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native'
+import { AccessibilityInfo, Alert, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native'
 import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedProps,
   useAnimatedStyle,
+  useFrameCallback,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -29,7 +33,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Text } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg'
+import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg'
 import { usePathname } from 'expo-router'
 import { GlassMaterial } from './LiquidGlass'
 import { useVoiceSessionStore, type VoiceSessionStatus } from '../features/home/stores/voiceSessionStore'
@@ -47,17 +51,59 @@ const EXPANDED_TEXT_MS = 4500
 const CARD_WIDTH = 220
 const CARD_MARGIN = 8
 
+// --- The orb's own edge undulates ---------------------------------------
+// While connecting/connected the disc is drawn as a <Path> whose radius
+// ripples via a sum of sine harmonics with a slowly drifting phase (the
+// 0→2π `phase` clock) — the button's own outline flows, there is no extra
+// ring. `level` (a slow envelope on voice.agentAudioLevel) lifts the ripple
+// while the AI is talking; it is heavily smoothed so the motion reads as
+// "assistant is speaking", not a twitch on every word.
+const AnimatedPath = Animated.createAnimatedComponent(Path)
+
+const ORB_BOX = BUTTON_SIZE + 40
+const ORB_C = ORB_BOX / 2
+const ORB_BASE_R = BUTTON_SIZE / 2 - 1
+
+// `spd` (the phase multiplier) values are whole numbers, so every harmonic
+// returns to its start when the phase clock wraps 2π→0 — seamless loop.
+// Only low modes (k = 2, 3) with a tiny magnitude, so the outline keeps
+// reading as a circle — it just breathes at the edge, never a blob.
+const ORB_WAVE: { k: number; mag: number; spd: number }[] = [
+  { k: 2, mag: 1.1, spd: 1 },
+  { k: 3, mag: 0.7, spd: -2 },
+]
+
+function buildOrbPath(phase: number, amp: number) {
+  'worklet'
+  const STEPS = 64
+  const maxR = ORB_C - 2
+  let d = 'M'
+  for (let i = 0; i <= STEPS; i++) {
+    const ang = (i / STEPS) * Math.PI * 2
+    let r = ORB_BASE_R
+    for (let h = 0; h < ORB_WAVE.length; h++) {
+      const w = ORB_WAVE[h]
+      r += w.mag * amp * Math.sin(w.k * ang + phase * w.spd)
+    }
+    if (r > maxR) r = maxR
+    const x = ORB_C + r * Math.cos(ang)
+    const y = ORB_C + r * Math.sin(ang)
+    d += (i === 0 ? '' : 'L') + x + ' ' + y + ' '
+  }
+  return d + 'Z'
+}
+
 // idle's bright/dark ends are the exact brand pair requested — #C084FC /
 // #6D28D9 — with a mid stop interpolated between them for the radial fill.
 const STATUS_GRADIENT: Record<VoiceSessionStatus, [string, string, string]> = {
   idle: ['#C084FC', '#9333EA', '#6D28D9'],
-  connecting: ['#fde68a', '#f59e0b', '#7c2d12'],
+  connecting: ['#ede9fe', '#a855f7', '#5b21b6'],
   connected: ['#e9d5ff', '#a855f7', '#4c1d95'],
   error: ['#fecaca', '#e05252', '#7f1d1d'],
 }
 const STATUS_GLOW_COLOR: Record<VoiceSessionStatus, string> = {
   idle: '#9333EA',
-  connecting: '#f59e0b',
+  connecting: '#a855f7',
   connected: '#a855f7',
   error: '#e05252',
 }
@@ -73,13 +119,14 @@ const STATUS_ACCESSIBILITY_LABEL: Record<VoiceSessionStatus, string> = {
   connected: 'Trợ lý giọng nói, đang kết nối. Nhấn để tắt.',
   error: 'Trợ lý giọng nói, đã xảy ra lỗi.',
 }
-// Icon swaps with connection state instead of a fixed mic glyph — makes
-// what tapping the button will DO explicit (start vs end), not just what
-// it currently is (the color/glow already carries that).
+// Icon swaps with connection state instead of a fixed glyph — makes what
+// tapping the button will DO explicit (start vs end), not just what it
+// currently is (the color/glow already carries that). The "AI" states use a
+// sparkles mark (matches the assistant's brand art) rather than a mic.
 const STATUS_ICON: Record<VoiceSessionStatus, keyof typeof Ionicons.glyphMap> = {
-  idle: 'mic-outline', // not connected — tap to connect
-  connecting: 'mic', // connecting — solid mic, glow's pulse carries "in progress"
-  connected: 'close', // connected — tap to disconnect
+  idle: 'sparkles-outline', // not connected — tap to connect
+  connecting: 'sparkles', // connecting — solid mark, glow's pulse carries "in progress"
+  connected: 'sparkles', // connected — the breathing/beat carries "live"; tap to disconnect
   error: 'refresh', // failed — tap to retry
 }
 
@@ -116,6 +163,40 @@ export function AssistantTabButton({
   const lastChatCountRef = useRef(chats.length)
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pulse = useSharedValue(0)
+  // `phase`: seamless 0→2π clock driving the gentle circular breathing.
+  // `level`: frame-smoothed AI voice loudness driving the speaker "beat".
+  // `targetLevel`: raw beat target the frame loop chases. `enter`: 0→1 settle
+  // replayed on every status change so colour/shape swaps never hard-cut.
+  const phase = useSharedValue(0)
+  const level = useSharedValue(0)
+  const targetLevel = useSharedValue(0)
+  const enter = useSharedValue(1)
+
+  // Honour the OS "reduce motion" switch — no looping breathing / beat /
+  // pulse; the button then only changes colour + icon per state.
+  const [reduceMotion, setReduceMotion] = useState(false)
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion)
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)
+    return () => sub.remove()
+  }, [])
+
+  // Only the fully-connected state animates; "connecting" stays a still disc
+  // (the glow's fast pulse already signals "working").
+  const rippleOn = voice.status === 'connected' && !reduceMotion
+  const beatOn = voice.status === 'connected' && !reduceMotion
+
+  // Upsample LiveKit's ~5 Hz agentAudioLevel to 60 fps: chase the target each
+  // frame with a snappy attack / quicker release, so the orb pumps once per
+  // word of the AI's speech.
+  const frame = useFrameCallback(() => {
+    'worklet'
+    const t = targetLevel.value
+    const l = level.value
+    const k = t > l ? 0.6 : 0.14
+    const next = l + (t - l) * k
+    level.value = Math.abs(next - t) < 0.001 ? t : next
+  }, false)
 
   const handlePress = () => {
     if (voice.status === 'connecting') return
@@ -138,13 +219,50 @@ export function AssistantTabButton({
   // "connecting" (visibly working), a slow breathe for "connected" (calm,
   // still alive), settled/still for idle and error.
   useEffect(() => {
+    if (reduceMotion) {
+      cancelAnimation(pulse)
+      pulse.value = withTiming(0.3, { duration: 200 })
+      return
+    }
     const duration = PULSE_DURATION[voice.status]
     if (duration > 0) {
       pulse.value = withRepeat(withSequence(withTiming(1, { duration }), withTiming(0, { duration })), -1, true)
     } else {
       pulse.value = withTiming(0.3, { duration: 400 })
     }
-  }, [voice.status, pulse])
+  }, [voice.status, pulse, reduceMotion])
+
+  // Start/stop the gentle circular breathing with the connected state.
+  useEffect(() => {
+    if (rippleOn) {
+      phase.value = withRepeat(withTiming(Math.PI * 2, { duration: 7000, easing: Easing.linear }), -1, false)
+    } else {
+      cancelAnimation(phase)
+      phase.value = 0
+    }
+  }, [rippleOn, phase])
+
+  // Short opacity/scale settle on every status change — perceptually a soft
+  // cross-fade so the colour + shape swap never reads as a hard flip.
+  useEffect(() => {
+    if (reduceMotion) {
+      enter.value = 1
+      return
+    }
+    enter.value = 0
+    enter.value = withTiming(1, { duration: 240, easing: Easing.out(Easing.quad) })
+  }, [voice.status, enter, reduceMotion])
+
+  // Hand the (amplified, clamped) beat target to the frame loop; it does the
+  // smoothing. Run the loop only while it can move.
+  useEffect(() => {
+    targetLevel.value = beatOn ? Math.min(1, voice.agentAudioLevel * 2.4) : 0
+  }, [voice.agentAudioLevel, beatOn, targetLevel])
+
+  useEffect(() => {
+    frame.setActive(beatOn)
+    if (!beatOn) level.value = withTiming(0, { duration: 250 })
+  }, [beatOn, frame, level])
 
   // Pops the AI's latest reply up as a text card while off the Home tab
   // (Home already shows the full chat), then auto-collapses.
@@ -169,8 +287,22 @@ export function AssistantTabButton({
   }, [])
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.25 + pulse.value * 0.45,
-    transform: [{ scale: 0.85 + pulse.value * 0.25 }],
+    opacity: (0.25 + pulse.value * 0.45 + level.value * 0.16) * (0.6 + 0.4 * enter.value),
+    transform: [{ scale: 0.85 + pulse.value * 0.25 + level.value * 0.2 }],
+  }))
+
+  // The disc outline: a gentle, constant circular breathing — its amplitude
+  // does NOT track the voice (the speaker "beat" below carries that).
+  const orbPathProps = useAnimatedProps(() => {
+    const amp = 0.6 + 0.1 * Math.sin(phase.value)
+    return { d: buildOrbPath(phase.value, amp) }
+  })
+
+  // While the AI talks the whole orb pumps like a speaker cone, once per word
+  // (~+12% max). The `enter` term folds in the status-change settle.
+  const orbBeatStyle = useAnimatedStyle(() => ({
+    opacity: 0.7 + 0.3 * enter.value,
+    transform: [{ scale: (0.985 + 0.015 * enter.value) * (1 + Math.min(0.12, level.value * 0.16)) }],
   }))
 
   if (barWidth <= 0) return null
@@ -224,12 +356,8 @@ export function AssistantTabButton({
           </Svg>
         </Animated.View>
 
-        <View style={styles.buttonClip}>
-          {/* Opaque dark backing — guarantees the gradient disc above it
-              reads clearly regardless of what's behind the button or which
-              app theme is active. */}
-          <View style={[StyleSheet.absoluteFillObject, styles.buttonBacking]} />
-          <Svg width={BUTTON_SIZE} height={BUTTON_SIZE} style={StyleSheet.absoluteFill}>
+        <Animated.View style={[styles.buttonClip, orbBeatStyle]}>
+          <Svg width={ORB_BOX} height={ORB_BOX} style={styles.orbSvg}>
             <Defs>
               <RadialGradient id="tabAiFill" cx="35%" cy="30%" r="75%">
                 <Stop offset="0%" stopColor={bright} />
@@ -237,13 +365,39 @@ export function AssistantTabButton({
                 <Stop offset="100%" stopColor={dark} />
               </RadialGradient>
             </Defs>
-            <Circle cx="50%" cy="50%" r="50%" fill="url(#tabAiFill)" />
+            {rippleOn ? (
+              <>
+                {/* Opaque backing, gradient fill and rim all trace the SAME
+                    breathing outline — the button's edge is what moves. The
+                    opaque backing keeps the disc readable on any theme. */}
+                <AnimatedPath animatedProps={orbPathProps} fill="#0f0720" />
+                <AnimatedPath animatedProps={orbPathProps} fill="url(#tabAiFill)" />
+                <AnimatedPath
+                  animatedProps={orbPathProps}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.25)"
+                  strokeWidth={1}
+                />
+              </>
+            ) : (
+              <>
+                <Circle cx={ORB_C} cy={ORB_C} r={ORB_BASE_R} fill="#0f0720" />
+                <Circle cx={ORB_C} cy={ORB_C} r={ORB_BASE_R} fill="url(#tabAiFill)" />
+                <Circle
+                  cx={ORB_C}
+                  cy={ORB_C}
+                  r={ORB_BASE_R}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.25)"
+                  strokeWidth={1}
+                />
+              </>
+            )}
           </Svg>
-          <View style={[StyleSheet.absoluteFillObject, styles.buttonRim]} pointerEvents="none" />
           <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
             <Ionicons name={STATUS_ICON[voice.status]} size={22} color="#ffffff" style={styles.buttonIcon} />
           </View>
-        </View>
+        </Animated.View>
       </Pressable>
 
       <Text
@@ -277,16 +431,15 @@ const styles = StyleSheet.create({
   },
   buttonClip: {
     flex: 1,
-    borderRadius: BUTTON_SIZE / 2,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonBacking: {
-    backgroundColor: '#0f0720',
-  },
-  buttonRim: {
-    borderRadius: BUTTON_SIZE / 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+  // The wave path box is bigger than the button so ripple crests aren't
+  // clipped; centre it over the 56pt button.
+  orbSvg: {
+    position: 'absolute',
+    left: (BUTTON_SIZE - ORB_BOX) / 2,
+    top: (BUTTON_SIZE - ORB_BOX) / 2,
   },
   buttonIcon: {
     flex: 1,
