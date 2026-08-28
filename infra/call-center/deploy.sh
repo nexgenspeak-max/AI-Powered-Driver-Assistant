@@ -4,6 +4,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$SCRIPT_DIR/../lib/common.sh"
+
 TARGET_ENV="${1:-dev}"
 ENV_FILE="$SCRIPT_DIR/../../src/backend/call-center/envs/.env.$TARGET_ENV"
 
@@ -81,7 +84,7 @@ if [[ "$DEPLOYED_BASE_URL" != "${BASE_URL:-}" ]]; then
   echo "→ Updating BASE_URL → $DEPLOYED_BASE_URL"
   # Persist into .env file so next deploy skips this step
   if grep -q "^BASE_URL=" "$ENV_FILE"; then
-    sed -i '' "s|^BASE_URL=.*|BASE_URL=$DEPLOYED_BASE_URL|" "$ENV_FILE"
+    sed_inplace "s|^BASE_URL=.*|BASE_URL=$DEPLOYED_BASE_URL|" "$ENV_FILE"
   else
     echo "BASE_URL=$DEPLOYED_BASE_URL" >> "$ENV_FILE"
   fi

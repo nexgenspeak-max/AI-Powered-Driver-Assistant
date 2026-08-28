@@ -5,7 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ENV="${1:-dev}"
-ENV_FILE="$SCRIPT_DIR/../../src/call-center/envs/.env.$TARGET_ENV"
+ENV_FILE="$SCRIPT_DIR/../../src/backend/call-center/envs/.env.$TARGET_ENV"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "❌ Env file not found: $ENV_FILE"
@@ -26,10 +26,12 @@ echo " call-center — Teardown"
 echo " Stack  : $STACK_NAME"
 echo " Region : $REGION"
 echo "======================================"
-read -p "⚠️  Delete stack '$STACK_NAME'? (yes/no): " confirm
-if [[ "$confirm" != "yes" ]]; then
-  echo "Aborted."
-  exit 0
+if [[ "${TEARDOWN_AUTO_YES:-}" != "1" ]]; then
+  read -p "⚠️  Delete stack '$STACK_NAME'? (yes/no): " confirm
+  if [[ "$confirm" != "yes" ]]; then
+    echo "Aborted."
+    exit 0
+  fi
 fi
 
 aws cloudformation delete-stack \

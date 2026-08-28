@@ -7,7 +7,7 @@ ENV_FILE="$SCRIPT_DIR/../../src/backend/auth-service/envs/.env.$TARGET_ENV"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "❌ Env file not found: $ENV_FILE"
-  echo "   Usage: ./deploy.sh [dev|prod]"
+  echo "   Usage: ./deploy.sh [dev|uat|prod]"
   exit 1
 fi
 

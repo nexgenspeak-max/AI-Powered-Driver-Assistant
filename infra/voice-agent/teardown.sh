@@ -5,7 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ENV="${1:-dev}"
-ENV_FILE="$SCRIPT_DIR/../../src/voice-agent/envs/.env.$TARGET_ENV"
+ENV_FILE="$SCRIPT_DIR/../../src/backend/voice-agent/envs/.env.$TARGET_ENV"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "❌ Env file not found: $ENV_FILE"
@@ -26,10 +26,12 @@ echo " voice-agent — Teardown"
 echo " Stack  : $STACK_NAME"
 echo " Region : $REGION"
 echo "======================================"
-read -p "⚠️  Delete stack '$STACK_NAME'? (yes/no): " confirm
-if [[ "$confirm" != "yes" ]]; then
-  echo "Aborted."
-  exit 0
+if [[ "${TEARDOWN_AUTO_YES:-}" != "1" ]]; then
+  read -p "⚠️  Delete stack '$STACK_NAME'? (yes/no): " confirm
+  if [[ "$confirm" != "yes" ]]; then
+    echo "Aborted."
+    exit 0
+  fi
 fi
 
 # Scale down ECS service to 0 before deleting (avoids stuck deletions)
@@ -43,11 +45,19 @@ SERVICE=$(aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs[?OutputKey=='ECSServiceName'].OutputValue" \
   --output text 2>/dev/null || echo "")
 
-if [[ -n "$CLUSTER" && -n "$SERVICE" ]]; then
-  echo "→ Scaling ECS service to 0..."
-  aws ecs update-service \
-    --cluster "$CLUSTER" --service "$SERVICE" \
-    --desired-count 0 --region "$REGION" $PROFILE > /dev/null
+VISION_SERVICE=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
+  --query "Stacks[0].Outputs[?OutputKey=='VisionApiServiceName'].OutputValue" \
+  --output text 2>/dev/null || echo "")
+
+if [[ -n "$CLUSTER" ]]; then
+  for SVC in "$SERVICE" "$VISION_SERVICE"; do
+    [[ -n "$SVC" && "$SVC" != "None" ]] || continue
+    echo "→ Scaling $SVC to 0..."
+    aws ecs update-service \
+      --cluster "$CLUSTER" --service "$SVC" \
+      --desired-count 0 --region "$REGION" $PROFILE > /dev/null
+  done
 fi
 
 # Delete ECR images so the repo can be deleted

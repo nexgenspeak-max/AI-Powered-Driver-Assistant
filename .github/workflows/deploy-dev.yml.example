@@ -1,0 +1,24 @@
+# Manual deploy to AWS dev — run from GitHub Actions tab when ready.
+# Requires: AWS OIDC role, Secrets Manager (see claude/docs/deploy/00_PLAN.md)
+#
+# name: Deploy Dev
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches: [develop]
+#
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     environment: dev
+#     permissions:
+#       id-token: write
+#       contents: read
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+#           aws-region: ap-southeast-1
+#       - run: bash infra/deploy-all.sh dev --skip voice-agent
+#       # Add voice-agent job with docker build when OIDC + ECR ready
