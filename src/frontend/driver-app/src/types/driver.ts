@@ -67,6 +67,24 @@ export interface OptimizedRoute {
   path: { lat: number; lng: number }[]
 }
 
+export interface RouteStep {
+  instruction: string
+  maneuver: string
+  distance_m: number
+  duration_s: number
+  start_location: { lat: number; lng: number }
+  end_location: { lat: number; lng: number }
+  polyline?: string
+}
+
+export interface NavigationRoute {
+  distance_km: number | null
+  eta_minutes: number | null
+  traffic_note: string
+  polyline: string
+  steps: RouteStep[]
+}
+
 export interface DriverContext {
   driver: Driver
   driver_profile: DriverProfile
@@ -74,6 +92,8 @@ export interface DriverContext {
   active_bonuses: Bonus[]
   upcoming_trips: (import('./trip').Trip & { estimated_fare: number })[]
   active_trips: (import('./trip').Trip & { estimated_fare: number })[]
+  // "Đã hoàn thành" tab on Dashboard — completed status only, most recent first.
+  completed_trips: (import('./trip').Trip & { estimated_fare: number })[]
   current_trip: (import('./trip').Trip & { estimated_fare: number }) | null
   current_location: { lat: number; lng: number; updated_at: string } | null
   // True when the assistant has a proactive nudge waiting (proximity alert,

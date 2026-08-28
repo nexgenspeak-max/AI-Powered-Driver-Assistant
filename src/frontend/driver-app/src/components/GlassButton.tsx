@@ -3,13 +3,15 @@ import { TouchableOpacity, ActivityIndicator, StyleSheet, View as RNView } from 
 import { Text, useThemeName } from 'tamagui'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia'
+import { CTA_GRADIENT } from './LiquidGlass'
 
 const BUTTON_HEIGHT = 52
 // Purple CTA exception: the gradient fill itself never changes between
 // themes — only the glass cues layered on top of it do (see THEME_PARAMS
 // below and the shader's comment for why the fill and the glass overlay
-// are two separate layers).
-const DEFAULT_GRADIENT_COLORS = ['#6D28D9', '#A855F7'] as const
+// are two separate layers). One shared pair now (was a local copy of
+// `['#6D28D9', '#A855F7']`).
+const DEFAULT_GRADIENT_COLORS = CTA_GRADIENT
 const DISABLED_COLOR = '#4A4552'
 
 // Outer drop shadow — X-offset locked to 0, no spread (RN's shadow props

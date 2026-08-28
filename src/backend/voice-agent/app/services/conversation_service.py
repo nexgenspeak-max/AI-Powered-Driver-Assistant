@@ -2,6 +2,8 @@
 ConversationService — records every turn, generates a Vietnamese summary,
 and POSTs the call record to call-logger when the session ends.
 """
+import asyncio
+import json
 import logging
 import time
 import re
@@ -14,6 +16,13 @@ from livekit.agents.llm import ChatMessage
 from app.config.settings import get_settings
 
 logger = logging.getLogger("voice-agent.conversation")
+
+# _post_record retry: call-logger being briefly unreachable (still starting
+# up, a network blip) used to mean the record was gone for good — one warning
+# log and nothing else, no second attempt. These are short/local backoffs
+# (not meant to survive a genuinely down service for minutes), just enough
+# to ride out a transient hiccup instead of silently losing the transcript.
+_POST_RECORD_RETRY_DELAYS_SECONDS = (1.0, 3.0)
 
 _ROOM_RE = re.compile(r"^driver-(\d+)-\d+$")  # in-app WebRTC: driver-84867347452-1748700000
 # Real inbound phone call (LiveKit SIP dispatch rule, room_prefix="driver-call-"
@@ -42,6 +51,15 @@ class ConversationService:
         # why the driver-room-shaped defaults above don't apply to those.
         self._call_id = ctx.room.name
         self._is_customer_call = False
+        # Set once finish()/finish_and_get_summary() has actually persisted a
+        # record — guards against saving (and re-generating a summary via a
+        # second, possibly differently-worded LLM call) twice for the same
+        # call: isolated-call callers save early via finish_and_get_summary()
+        # (see its own docstring) so the driver hears a summary that's
+        # guaranteed to match what's actually in DynamoDB; session.py's own
+        # finish() still runs later during job teardown regardless, and would
+        # silently duplicate that work without this flag.
+        self._finished = False
 
     def attach(self, session: AgentSession) -> None:
         userdata = session.userdata
@@ -84,7 +102,12 @@ class ConversationService:
             label = "USER" if item.role == "user" else "BOT "
             logger.info("  [%s] %s", label, text[:120])
 
-    async def finish(self) -> None:
+    async def _build_and_save_record(self) -> str:
+        """Generates the transcript-based summary, saves the full record to
+        call-logger, and returns the summary that was actually saved. Shared
+        by finish() and finish_and_get_summary() — see the latter for why a
+        caller would want the summary back before the job/room is fully torn
+        down."""
         ended_at    = datetime.now(timezone.utc).isoformat()
         started_ts  = datetime.fromisoformat(self.started_at.replace("Z", "+00:00")).timestamp()
         ended_ts    = datetime.fromisoformat(ended_at.replace("Z", "+00:00")).timestamp()
@@ -106,7 +129,41 @@ class ConversationService:
         if record["summary"]:
             logger.info("  [summary] %s", record["summary"])
 
-        await self._post_record(record, log_label=self.ctx.room.name)
+        # log_label must be the actual call_id being saved, NOT the bare
+        # room name — for isolated (custcall) calls these differ (self._call_id
+        # is room+sip_identity, e.g. "custcall-xxx-sip_identity", set in
+        # attach() from room metadata), so logging the room name here made the
+        # "[saved]" log line print a value that didn't exist as a key in
+        # DynamoDB at all — looked like a saved-but-unfindable record when
+        # cross-checking, when the save had actually succeeded correctly.
+        await self._post_record(record, log_label=self._call_id)
+        self._finished = True
+        return record["summary"]
+
+    async def finish(self) -> None:
+        if self._finished:
+            return
+        await self._build_and_save_record()
+
+    async def finish_and_get_summary(self) -> str:
+        """Isolated (background) calls only: saves the record EARLY (right
+        when the call itself ends, not later at job teardown — see
+        session.py's finally: block, which is often several seconds after
+        this) and returns the summary that was actually written.
+
+        Root cause this fixes: the driver used to be told a summary the LLM
+        itself composed in the moment (via end_customer_call's `summary`
+        argument) — confirmed wrong in production (said "customer didn't
+        answer" right after a real 58s conversation had just happened,
+        because the LLM got confused by the trailing silence-check nudge).
+        Meanwhile the record actually saved to DynamoDB via finish() used the
+        transcript-based summary and was correct — just arrived too late and
+        wasn't what got spoken. Callers should use THIS method's return value
+        for whatever they tell the driver, so what's said always matches
+        what call-logger holds under this exact call_id, not a separate,
+        possibly-wrong value the live conversation happened to produce.
+        """
+        return await self._build_and_save_record()
 
     async def save_subcall(
         self,
@@ -155,32 +212,69 @@ class ConversationService:
         record.setdefault("stt_provider", s.stt_provider)
         record.setdefault("llm_provider", s.llm_provider)
         record.setdefault("llm_model", s.llm_model)
+        # call-logger's DynamoDB table has TTL enabled on this exact attribute
+        # name (see infra/call-logger/sam.yaml) — without it, records never
+        # expire despite the infra being configured to expire them.
+        if s.call_record_ttl_days > 0:
+            record.setdefault("ttl", int(time.time()) + s.call_record_ttl_days * 86400)
 
         if not s.call_logger_url:
-            logger.warning("CALL_LOGGER_URL not set — call record not saved")
+            # No DynamoDB write is even possible here — dump the full record
+            # (not just "not saved") so the transcript+summary is at least
+            # recoverable from the log instead of gone with no trace.
+            logger.error(
+                "CALL_LOGGER_URL not set — call record NOT saved to DynamoDB | "
+                "call_id=%s | full record: %s",
+                log_label,
+                json.dumps(record, ensure_ascii=False),
+            )
             return
 
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    f"{s.call_logger_url}/api/v1/records", json=record
+        attempts = len(_POST_RECORD_RETRY_DELAYS_SECONDS) + 1
+        last_exc: Exception | None = None
+        for attempt in range(1, attempts + 1):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(
+                        f"{s.call_logger_url}/api/v1/records", json=record
+                    )
+                    r.raise_for_status()
+                logger.info(
+                    "  [saved] call_id=%s attempt=%d/%d turns=%d",
+                    log_label, attempt, attempts, len(record.get("turns", [])),
                 )
-                r.raise_for_status()
-                logger.info("  [saved] call_id=%s", log_label)
-        except httpx.ConnectError:
-            logger.warning(
-                "call-logger unreachable at %s — record not saved "
-                "(start call-logger on :8001 or set CALL_LOGGER_URL= in env)",
-                s.call_logger_url,
-            )
-        except httpx.HTTPStatusError as exc:
-            logger.error(
-                "call-logger rejected record: %s %s",
-                exc.response.status_code,
-                exc.response.text[:200],
-            )
-        except Exception:
-            logger.error("failed to save call record", exc_info=True)
+                return
+            except httpx.ConnectError as exc:
+                last_exc = exc
+                logger.warning(
+                    "call-logger unreachable at %s (attempt %d/%d) | call_id=%s",
+                    s.call_logger_url, attempt, attempts, log_label,
+                )
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                logger.warning(
+                    "call-logger rejected record (attempt %d/%d) | call_id=%s status=%s body=%s",
+                    attempt, attempts, log_label, exc.response.status_code, exc.response.text[:200],
+                )
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "failed to save call record (attempt %d/%d) | call_id=%s",
+                    attempt, attempts, log_label, exc_info=True,
+                )
+
+            if attempt <= len(_POST_RECORD_RETRY_DELAYS_SECONDS):
+                await asyncio.sleep(_POST_RECORD_RETRY_DELAYS_SECONDS[attempt - 1])
+
+        # Every attempt failed — the transcript+summary would otherwise be
+        # lost with no way to recover it. Dump the full record at ERROR level
+        # so it's at least visible/greppable in the logs.
+        logger.error(
+            "call-logger save FAILED after %d attempts — record lost from DynamoDB | "
+            "call_id=%s | full record: %s",
+            attempts, log_label, json.dumps(record, ensure_ascii=False),
+            exc_info=last_exc,
+        )
 
     async def generate_summary(self) -> str:
         """Public entry point — also used mid-call by session.py's isolated

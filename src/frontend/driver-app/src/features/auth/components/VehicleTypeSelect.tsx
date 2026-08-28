@@ -1,6 +1,7 @@
-import { XStack, YStack, Text, useTheme } from 'tamagui'
+import { XStack, YStack, useTheme } from 'tamagui'
 import { Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { AppText } from '../../../components/AppText'
 
 const OPTIONS = [
   { value: 'motorbike', label: 'Xe máy' },
@@ -20,9 +21,9 @@ export function VehicleTypeSelect({ value, onChange, error }: Props) {
 
   return (
     <YStack gap="$1">
-      <Text fontSize="$2" fontWeight="500" color="$textSecondary">
-        Vehicle type
-      </Text>
+      <AppText variant="label" color="$textSecondary">
+        Loại xe
+      </AppText>
       <XStack flexWrap="wrap" gap="$2">
         {OPTIONS.map(opt => {
           const selected = value === opt.value
@@ -37,13 +38,15 @@ export function VehicleTypeSelect({ value, onChange, error }: Props) {
             <Pressable
               key={opt.value}
               onPress={() => onChange(opt.value)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
               style={({ pressed }) => ({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
-                borderRadius: 12,
+                borderRadius: 999,
                 borderWidth: selected ? 2 : 1,
                 borderColor: selected ? theme.primary.val : theme.border.val,
                 backgroundColor: selected ? theme.primary.val : theme.surfaceElevated.val,
@@ -55,17 +58,20 @@ export function VehicleTypeSelect({ value, onChange, error }: Props) {
               })}
             >
               {selected && <Ionicons name="checkmark-circle" size={15} color="#ffffff" />}
-              <Text color={selected ? '$textInverse' : '$textSecondary'} fontWeight={selected ? '700' : '400'}>
+              <AppText
+                variant={selected ? 'label' : 'body'}
+                color={selected ? '$textInverse' : '$textSecondary'}
+              >
                 {opt.label}
-              </Text>
+              </AppText>
             </Pressable>
           )
         })}
       </XStack>
       {error && (
-        <Text fontSize="$1" color="$danger">
+        <AppText variant="caption" color="$danger">
           {error}
-        </Text>
+        </AppText>
       )}
     </YStack>
   )

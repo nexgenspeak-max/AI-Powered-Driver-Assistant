@@ -4,7 +4,15 @@ import {
   SipClient,
 } from 'livekit-server-sdk';
 import { config } from '../config';
-import { cacheSet, driverLastCallKey } from '../cache/redis';
+import { cacheGet, cacheSet, driverLastCallKey } from '../cache/redis';
+
+// How long "tóm tắt cuộc gọi" stays answerable from cache after a call ends.
+// Was 1 hour — too short for a driver to still ask about a call from earlier
+// in a long/overnight shift. DynamoDB (call-logger) has no working fallback
+// lookup by driver phone right now (records are indexed by customer phone,
+// not driver phone), so this cache is the only path back to a call's summary
+// once the in-session context is gone — 24h comfortably covers a full shift.
+const DRIVER_LAST_CALL_TTL_SECONDS = 24 * 60 * 60;
 
 function normalizePhone(phone: string): string {
   let p = phone.trim().replace(/[\s\-()]/g, '');
@@ -97,17 +105,32 @@ export interface CallRecord {
 export async function completeCustomerCall(
   driverPhone: string,
   callId: string,
-  summary: string,
+  _summary: string,
 ): Promise<void> {
+  // Cache is just a pointer (call_id) to the driver's most recent call, not
+  // a copy of its content — the actual transcript+summary already lives in
+  // call-logger's DynamoDB table (saved by voice-agent when the call ends),
+  // looked up by this exact call_id (GET /calls/:callId/summary below).
+  // `_summary` is accepted (and ignored) only because callers already pass
+  // it — call-logger is the single source of truth, so nothing here needs
+  // to duplicate it into Redis.
+  //
+  // Guard against a late completion: if the driver already placed a second
+  // call in the ~1-2 minutes since this one started (each call's own start
+  // overwrites this same key with its own call_id), this call's completion
+  // can arrive AFTER that second call_id is already the cached "latest" —
+  // blindly overwriting here would revert the pointer back to this older,
+  // no-longer-relevant call. Only write if we're still the one being
+  // pointed at (or nothing is cached at all).
+  const current = await cacheGet<{ call_id?: string }>(driverLastCallKey(driverPhone));
+  if (current?.call_id && current.call_id !== callId) {
+    return;
+  }
+
   await cacheSet(
     driverLastCallKey(driverPhone),
-    {
-      call_id: callId,
-      status: 'completed',
-      mode: 'background',
-      summary,
-    },
-    3600,
+    { call_id: callId, status: 'completed' },
+    DRIVER_LAST_CALL_TTL_SECONDS,
   );
 }
 
@@ -168,13 +191,18 @@ export async function startCustomerCall(opts: {
       trip_id: opts.tripId,
       mode: 'background',
       status: 'in_progress',
-      summary: '',
       dialed_number: dialTo,
       livekit_room: bgRoom,
       sip_identity: lk.sipIdentity,
     };
 
-    await cacheSet(driverLastCallKey(opts.driverPhone), record, 3600);
+    // Cache only the pointer (call_id/status) — see completeCustomerCall's
+    // comment above for why the content itself doesn't belong here.
+    await cacheSet(
+      driverLastCallKey(opts.driverPhone),
+      { call_id: record.call_id, status: record.status },
+      DRIVER_LAST_CALL_TTL_SECONDS,
+    );
 
     return {
       ...record,
@@ -200,13 +228,18 @@ export async function startCustomerCall(opts: {
     trip_id: opts.tripId,
     mode: opts.mode,
     status: 'in_progress',
-    summary: '',
     dialed_number: dialTo,
     livekit_room: opts.roomName.trim(),
     sip_identity: lk.sipIdentity,
   };
 
-  await cacheSet(driverLastCallKey(opts.driverPhone), record, 3600);
+  // Cache only the pointer (call_id/status) — see completeCustomerCall's
+  // comment above for why the content itself doesn't belong here.
+  await cacheSet(
+    driverLastCallKey(opts.driverPhone),
+    { call_id: record.call_id, status: record.status },
+    DRIVER_LAST_CALL_TTL_SECONDS,
+  );
 
   return {
     call_id: callId,

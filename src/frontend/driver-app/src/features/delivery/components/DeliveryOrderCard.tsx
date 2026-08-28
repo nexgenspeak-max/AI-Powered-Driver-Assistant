@@ -1,11 +1,12 @@
 import { XStack, YStack, View, Text } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { GlassSurface } from '../../../components/GlassSurface'
+import { Surface } from '../../../components/Surface'
 import { Badge } from '../../../components/Badge'
 import { Button } from '../../../components/Button'
 import { InfoRow } from '../../dashboard/components/InfoRow'
 import { formatDate } from '../../../utils/format'
+import { confirmDestructive } from '../../../utils/confirmDialog'
 import { deliveryOrdersService } from '../../../services/api/deliveryOrders'
 import { DELIVERY_ORDER_STATUS_LABELS, DELIVERY_ORDER_STATUS_COLORS } from '../../../constants/status'
 import type { DeliveryOrder, DeliveryOrderStatus } from '../../../types'
@@ -35,8 +36,23 @@ export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
   const secondary = SECONDARY_ACTION[order.status]
   const statusColor = DELIVERY_ORDER_STATUS_COLORS[order.status]
 
+  const onSecondaryPress = () => {
+    if (!secondary) return
+    if (secondary.target === 'returned') {
+      confirmDestructive({
+        title: 'Trả hàng?',
+        message: 'Đơn hàng sẽ được đánh dấu là đã trả lại, không thể hoàn tác.',
+        cancelLabel: 'Huỷ',
+        confirmLabel: 'Trả hàng',
+        onConfirm: () => setStatus(secondary.target),
+      })
+    } else {
+      setStatus(secondary.target)
+    }
+  }
+
   return (
-    <GlassSurface style={{ width: '100%' }}>
+    <Surface clip borderRadius={24} width="100%">
       <YStack padding="$4" gap="$3">
         <XStack alignItems="center" gap="$3">
           <View
@@ -47,7 +63,7 @@ export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
             alignItems="center"
             justifyContent="center"
           >
-            <Ionicons name="cube" size={22} color="#7C5B9C" />
+            <Ionicons name="cube" size={22} color="#8B5CF6" />
           </View>
 
           <YStack flex={1} gap="$1">
@@ -79,12 +95,15 @@ export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
             fontSize={13}
             fontWeight="600"
             textAlign="center"
-            onPress={() => setStatus(secondary.target)}
+            paddingVertical="$2"
+            hitSlop={10}
+            accessibilityRole="button"
+            onPress={onSecondaryPress}
           >
             {secondary.label}
           </Text>
         )}
       </YStack>
-    </GlassSurface>
+    </Surface>
   )
 }

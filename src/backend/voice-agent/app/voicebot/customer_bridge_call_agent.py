@@ -30,6 +30,9 @@ class CustomerBridgeCallAgent(SpeechTextFixMixin, Agent):
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return pronunciations_for_lang(self._lang)
 
+    def _speech_lang(self) -> str:
+        return self._lang
+
     async def on_enter(self) -> None:
         from app.voicebot.processors.customer_bridge_timeout import schedule_customer_bridge_timeout
 

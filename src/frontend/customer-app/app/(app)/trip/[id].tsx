@@ -1,41 +1,37 @@
 import { useLocalSearchParams, router } from "expo-router";
-import { ActivityIndicator } from "react-native";
-import { View, Text, useThemeName } from "tamagui";
-import { BackButton } from "../../../src/components/BackButton";
+import { Screen } from "../../../src/components/Screen";
+import { AppBar } from "../../../src/components/AppBar";
+import { AppText } from "../../../src/components/AppText";
+import { Skeleton } from "../../../src/components/Skeleton";
 import { TripStatusCard } from "../../../src/features/trips/components/TripStatusCard";
 import { useTripStatus } from "../../../src/features/trips/hooks/useTripStatus";
 
 export default function TripStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const themeName = useThemeName();
   const { data: trip, isLoading, isError } = useTripStatus(id ?? null);
-  const isLight = themeName === "light";
 
   return (
-    // Matches TripStatusCard's own screen background exactly (its styles.screen
-    // + ScrollView background) — this outer View is only actually visible
-    // during the loading/error states below, before that component mounts.
-    <View flex={1} backgroundColor={isLight ? "#F5F4F8" : "#110D1B"}>
-      {/* `router.back()` doesn't work here either — see BackButton.tsx's
-          comment: hidden tabs inside the same Tabs navigator have no real
-          push/pop history to pop, so it fell back to Home. This screen is
-          only ever reached from the Trips list, so that's the fixed
-          destination — matches BackButton's own default for every other
-          (Profile-only) screen. */}
-      <BackButton onPress={() => router.replace("/trips")} />
+    <Screen
+      scroll
+      header={
+        <AppBar
+          title="Trạng thái chuyến"
+          onBack={() => router.replace("/trips")}
+        />
+      }
+    >
       {isLoading ? (
-        <View flex={1} alignItems="center" justifyContent="center">
-          <ActivityIndicator size="large" color="#8B5CF6" />
-        </View>
+        <>
+          <Skeleton width={140} height={26} />
+          <Skeleton height={200} radius={24} />
+        </>
       ) : isError || !trip ? (
-        <View flex={1} alignItems="center" justifyContent="center" padding="$6">
-          <Text color="$danger" fontSize="$4" fontWeight="500">
-            Không tìm thấy chuyến đi.
-          </Text>
-        </View>
+        <AppText variant="title" color="$danger">
+          Không tìm thấy chuyến đi.
+        </AppText>
       ) : (
         <TripStatusCard trip={trip} />
       )}
-    </View>
+    </Screen>
   );
 }

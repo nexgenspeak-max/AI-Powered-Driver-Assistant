@@ -78,6 +78,14 @@ class Settings(BaseSettings):
     trip_service_url: str = ""   # http://localhost:8002
     jwt_secret: str = ""         # must match auth-service/trip-service JWT_SECRET
 
+    # Call-record retention — call-logger's DynamoDB table has TTL enabled on
+    # its `ttl` attribute (see infra/call-logger/sam.yaml), but nothing ever
+    # populated that attribute, so records piled up forever despite the infra
+    # being configured to expire them. <=0 disables TTL (keep forever) — kept
+    # off by default for now per explicit product decision; set
+    # CALL_RECORD_TTL_DAYS to a positive number when auto-expiry is wanted.
+    call_record_ttl_days: int = 0
+
     # ── FAQ RAG (LlamaIndex playbook) ─────────────────────────────────────────
     faq_rag_enabled: bool = True
     faq_knowledge_dir: str = "requirements/knowledge"

@@ -3,7 +3,8 @@ import { View, YStack, XStack, Text } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 
 const EMERGENCY_NUMBERS = [
   { label: 'Công an', number: '113' },
@@ -28,11 +29,11 @@ export default function SafetyScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Trung tâm an toàn
-        </Text>
+        </AppText>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <YStack padding="$4" gap="$1">
             <Text color="$textSecondary" fontSize={12} fontWeight="700" marginBottom="$2">
               Gọi khẩn cấp
@@ -48,9 +49,9 @@ export default function SafetyScreen() {
               </View>
             ))}
           </YStack>
-        </GlassSurface>
+        </Surface>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <YStack padding="$4" gap="$3">
             <Text color="$textSecondary" fontSize={12} fontWeight="700">
               Mẹo an toàn khi lái xe
@@ -64,7 +65,7 @@ export default function SafetyScreen() {
               </XStack>
             ))}
           </YStack>
-        </GlassSurface>
+        </Surface>
       </ScrollView>
     </View>
   )
@@ -72,7 +73,7 @@ export default function SafetyScreen() {
 
 function TouchableRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} accessibilityRole="button">
       <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3">
         <XStack alignItems="center" gap="$3" flex={1}>
           <Ionicons name="call" size={18} color="#ef4444" />

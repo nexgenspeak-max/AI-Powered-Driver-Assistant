@@ -3,24 +3,18 @@ import { TouchableOpacity, View as RNView, StyleSheet } from "react-native";
 import { useTheme, useThemeName } from "tamagui";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import { randomSpecularVariation, degToRad } from "../utils/glassSpecular";
+import { getElevation } from "../theme/elevation";
 
 const DEFAULT_CORNER_RADIUS = 18;
 
-// Outer drop shadow — X-offset locked to 0, no spread (RN's shadow props
-// don't have one). Same recipe as GlassTripCard/GlassBookingInput's local
-// shadow helpers in the customer-app, generalized here since this is now
-// the third or fourth place applying the exact same "finalized" formula.
+// Outer drop shadow — now the shared `boxShadow`-based elevation scale
+// (theme/elevation.ts) instead of the legacy `shadow*` props, which rendered
+// as a hard grey outline on real Android devices (that bug is exactly why the
+// shadow got disabled here — `showShadow` below). GlassSurface itself is being
+// retired in favour of <Surface>/<GlassPanel>; this keeps the screens still on
+// it looking right during the transition.
 function getSurfaceOuterShadow(isLight: boolean) {
-  return {
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: isLight ? 12 : 6 },
-    // Light mode carries *all* of the card's elevation cue now that its
-    // inner top shadow is gone (removed per spec) — bumped further than
-    // before (0.22->0.28, 20->26) to compensate for that lost definition.
-    shadowOpacity: isLight ? 0.28 : 0.2,
-    shadowRadius: isLight ? 26 : 18,
-    elevation: isLight ? 7 : 4,
-  } as const;
+  return getElevation("md", isLight);
 }
 
 // SkSL glass-surface shader — the finalized card recipe shared by
@@ -242,12 +236,11 @@ export function GlassSurface({
       height: e.nativeEvent.layout.height,
     });
 
-  // TEMP: disabled per report — on real Android devices this drop shadow
-  // (shadowColor/shadowOpacity/shadowRadius) doesn't render as a soft blur
-  // like it does on iOS/simulators; it shows up as a hard, visible gray
-  // outline tracing the card's whole silhouette. Flip back to
-  // `!outline || isLight` to restore it once that's addressed.
-  const showShadow = false;
+  // Re-enabled: the old hard-grey-outline bug on Android was the legacy
+  // `shadow*` props; `getSurfaceOuterShadow` now returns a `boxShadow` string
+  // (theme/elevation.ts) which renders as a real soft blur on Android too.
+  // `outline` variant still opts out (its 1px border carries the definition).
+  const showShadow = !outline;
 
   // `outline` skips the wash/shader canvas entirely — no fill of any
   // opacity, matching the outline Button's genuinely transparent interior

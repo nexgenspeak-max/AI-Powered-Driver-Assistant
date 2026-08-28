@@ -5,6 +5,13 @@ import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { TamaguiProvider, Theme, View } from 'tamagui'
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter'
 import tamaguiConfig from '../tamagui.config'
 import { QueryProvider } from '../src/providers/QueryProvider'
 import { useAuthStore } from '../src/stores/authStore'
@@ -39,6 +46,12 @@ function AppShell() {
 export default function RootLayout() {
   const hasHydrated = useAuthStore(s => s.hasHydrated)
   const themeMode = useThemeStore(s => s.mode)
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  })
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -51,7 +64,11 @@ export default function RootLayout() {
                   the old MMKV-backed store — reads async, so routing waits here
                   rather than risking a flash of the login screen for an
                   already-logged-in driver while that read is still in flight. */}
-              {hasHydrated ? <AppShell /> : <View flex={1} backgroundColor="$surface" />}
+              {hasHydrated && fontsLoaded ? (
+                <AppShell />
+              ) : (
+                <View flex={1} backgroundColor="$surface" />
+              )}
             </QueryProvider>
           </Theme>
         </TamaguiProvider>

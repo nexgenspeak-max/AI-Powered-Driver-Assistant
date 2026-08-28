@@ -27,6 +27,9 @@
  * Metro/React Native picks this file over LiquidGlassTabBar.tsx on web
  * automatically (platform-extension resolution) — same three exports,
  * same props, so `_layout.tsx` doesn't need to know which one loaded.
+ *
+ * Also carries the same raised center "Trợ lý" button as the native
+ * version — see AssistantTabButton.tsx.
  */
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
@@ -47,6 +50,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated'
+import { AssistantTabButton, BUTTON_SIZE, BUTTON_RISE } from './AssistantTabButton'
 
 // =========================================================================
 // 1. CONTEXT — identical to the native version (no Skia involved here)
@@ -104,11 +108,21 @@ export function PageBlurOverlay({ children }: { children: ReactNode }) {
 // exactly (see driver-app's app/(app)/_layout.tsx, untouched) — same
 // height/radius/margins/shadow, so restyling this away and back didn't
 // leave the placement/shape any different from before this experiment.
-const CONTENT_HEIGHT = 76
+// Was 76 — a bit taller per request.
+const CONTENT_HEIGHT = 84
 const BAR_RADIUS = 30
-const BAR_SIDE_MARGIN = 20
+// Was 20 — widened per request so the bar spans more of the screen (also
+// gives each tab's own slot a bit more room now that a 5th slot is shared
+// with the AI button). Matches the same reduction on the native tab bar.
+const BAR_SIDE_MARGIN = 10
 const BAR_BOTTOM_MARGIN = 16
-const PILL_MARGIN = 6
+// Zero — the pill exactly matches each tab's own measured layout width (see
+// `moveTo`/`onTabLayout` below), the widest it can be without overlapping
+// the neighboring tab. The AI button's own slot makes every real tab's slot
+// narrower than before it existed, and even a small margin (4px each side)
+// was still cutting into long labels like "Trang chủ" (reported: the
+// "t"/"u" ends sat outside the purple background).
+const PILL_MARGIN = 0
 
 const LEADING_SPRING = { damping: 14, stiffness: 220, mass: 0.6 }
 const TRAILING_SPRING = { damping: 18, stiffness: 120, mass: 0.9 }
@@ -151,6 +165,15 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     0,
     visibleRoutes.findIndex(route => route.key === selectedKey),
   )
+
+  // The AI button takes up its own slot in the row (so the real tabs shift
+  // over to make room for it, evenly re-spacing) — inserted at the middle
+  // slot, e.g. 4 routes -> [route0, route1, AI, route2, route3]. Real routes
+  // keep their own indices for `tabLayouts`/`indexAtX`/`moveTo` below (all
+  // keyed by route position, unaffected by the spacer) — only the row's
+  // render loop and the pill's own width math need to know about the slot.
+  const aiSlotIndex = Math.floor(visibleRoutes.length / 2)
+  const slotCount = visibleRoutes.length + 1
 
   const [barWidth, setBarWidth] = useState(0)
   const tabLayouts = useRef<{ x: number; width: number }[]>([])
@@ -310,13 +333,19 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
   const pillHeight = useDerivedValue(() => {
     const width = rightEdge.value - leftEdge.value
-    const baseWidth = barWidth > 0 ? barWidth / Math.max(visibleRoutes.length, 1) - PILL_MARGIN * 2 : width
+    const baseWidth = barWidth > 0 ? barWidth / slotCount - PILL_MARGIN * 2 : width
     const stretchRatio = baseWidth > 0 ? width / baseWidth : 1
     const squash = 1 - Math.min(Math.max(stretchRatio - 1, 0), 0.4) * 0.25
     return CONTENT_HEIGHT * 0.7 * squash
   })
 
   const pillTop = useDerivedValue(() => (CONTENT_HEIGHT - pillHeight.value) / 2)
+
+  // Approximate uniform-width center (real tabs are `flex: 1` across
+  // `slotCount` slots, AI slot included) — doesn't need the same
+  // measured-layout precision the pill uses, just a reasonable anchor for
+  // the button to sit at.
+  const aiCenterX = barWidth > 0 ? aiSlotIndex * (barWidth / slotCount) + barWidth / slotCount / 2 : 0
 
   // No refraction here (that's the native shader's job) — just blur + a
   // translucent fill whose opacity tracks `rimIntensity`, plus a bright
@@ -342,43 +371,62 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     <View style={{ position: 'absolute', left: BAR_SIDE_MARGIN, right: BAR_SIDE_MARGIN, bottom: BAR_BOTTOM_MARGIN }}>
       <View style={[{ borderRadius: BAR_RADIUS }, getBarShadow()]}>
         <View
-          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS, overflow: 'hidden' }}
+          style={{ height: CONTENT_HEIGHT, borderRadius: BAR_RADIUS }}
           onLayout={e => setBarWidth(e.nativeEvent.layout.width)}
         >
-          {/* Real frosted background, the exact GlassMaterial recipe
-              (BlurView + a top-bright/bottom-dim wash + a brighter top
-              border) — not GlassMaterial itself, since its children slot
-              forces `alignItems/justifyContent: center`, which would
-              shrink-wrap and center the tab row instead of letting it
-              stretch full-width. Same visual result, just laid out by
-              this component instead of delegated to it. */}
-          <BlurView tint={isLight ? 'light' : 'dark'} intensity={60} style={StyleSheet.absoluteFill} />
-          <LinearGradient
-            colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
-            locations={[0, 0.35, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: BAR_RADIUS,
-                borderWidth: 1,
-                borderColor: isLight ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)',
-                borderTopWidth: 1.5,
-                borderTopColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)',
-              },
-            ]}
-            pointerEvents="none"
-          />
+          {/* Visual-only layer, clipped to the rounded shape — split out
+              from the touch row (and the AI button) below so `overflow:
+              'hidden'` on a shared ancestor can't clip either (pointer
+              events on web, or the button's own rise above the bar's top
+              edge). */}
+          <View style={[StyleSheet.absoluteFill, { borderRadius: BAR_RADIUS, overflow: 'hidden' }]} pointerEvents="none">
+            {/* Real frosted background, the exact GlassMaterial recipe
+                (BlurView + a top-bright/bottom-dim wash + a brighter top
+                border) — not GlassMaterial itself, since its children slot
+                forces `alignItems/justifyContent: center`, which would
+                shrink-wrap and center the tab row instead of letting it
+                stretch full-width. Same visual result, just laid out by
+                this component instead of delegated to it. */}
+            <BlurView tint={isLight ? 'light' : 'dark'} intensity={60} style={StyleSheet.absoluteFill} />
+            <LinearGradient
+              colors={isLight ? ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.03)'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.015)']}
+              locations={[0, 0.35, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderRadius: BAR_RADIUS,
+                  borderWidth: 1,
+                  borderColor: isLight ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)',
+                  borderTopWidth: 1.5,
+                  borderTopColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)',
+                },
+              ]}
+              pointerEvents="none"
+            />
 
-          <Animated.View style={[styles.pill, pillStyle]} pointerEvents="none" />
+            <Animated.View style={[styles.pill, pillStyle]} pointerEvents="none" />
+          </View>
 
+          {/* Deliberately NOT inside the clipped view above — see the
+              comment on that view for why. */}
           <GestureDetector gesture={panGesture}>
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
-              {visibleRoutes.map((route, index) => {
+              {Array.from({ length: slotCount }).map((_, slot) => {
+                if (slot === aiSlotIndex) {
+                  // Empty spacer — reserves the AI button's slot width so
+                  // the real tabs around it space out correctly (and so
+                  // `indexAtX`'s touch mapping doesn't resolve a tap here to
+                  // a real tab). The button itself renders below, outside
+                  // this row, positioned at `aiCenterX`.
+                  return <View key="ai-slot" pointerEvents="none" style={styles.tab} />
+                }
+                const index = slot < aiSlotIndex ? slot : slot - 1
+                const route = visibleRoutes[index]
                 const { options } = descriptors[route.key]
                 const isFocused = selectedIndex === index
                 const label = options.title ?? route.name
@@ -396,6 +444,13 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               })}
             </View>
           </GestureDetector>
+
+          <AssistantTabButton
+            centerX={aiCenterX}
+            barWidth={barWidth}
+            labelColor={isLight ? '#7C3AED' : '#C4B5FD'}
+            labelTop={BUTTON_SIZE - BUTTON_RISE + 4}
+          />
         </View>
       </View>
     </View>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
 import { View, XStack, Text, Theme, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { GlassSheen } from '../../../components/LiquidGlass'
+import { GlassSheen, CTA_GRADIENT } from '../../../components/LiquidGlass'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -10,6 +10,15 @@ import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useThemeStore } from '../../../stores/themeStore'
 import { getAssistantReply } from '../../../services/api/assistant'
+import { BUTTON_RISE } from '../../../components/AssistantTabButton'
+
+// Tab bar's own bottom margin (16) + its tallest content height across
+// native/web (84, the web variant's — used as the safe upper bound for
+// both) + how far the raised center "Trợ lý" button pokes above the bar's
+// own top edge (`BUTTON_RISE`) + a small gap. Mirrors driver-app's
+// MAP_OVERLAY_BOTTOM_CLEARANCE (constants/layout.ts) — this app has no
+// shared constants module for it, so computed inline here instead.
+const CHAT_INPUT_BOTTOM_CLEARANCE = 16 + 84 + BUTTON_RISE + 12
 
 // Connect/disconnect is driven by the draggable GlobalAssistantOrb now (see
 // that component, mounted once at the (app) layout level) — this label just
@@ -21,7 +30,14 @@ const MIC_LABEL = {
   error: 'Kết nối lỗi, thử lại',
 }
 
-export function AssistantChatPanel() {
+interface Props {
+  // Set when rendered as the tap-to-open overlay on Home (see index.tsx) —
+  // shows a close (X) button next to the status label. Omitted wherever this
+  // might still be rendered as permanent full-screen content instead.
+  onClose?: () => void
+}
+
+export function AssistantChatPanel({ onClose }: Props = {}) {
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()
@@ -76,7 +92,7 @@ export function AssistantChatPanel() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={60}
     >
-      <View width="100%" paddingTop={insets.top}>
+      <View width="100%" paddingTop={insets.top} position="relative">
         {/* The orb itself now lives in GlobalAssistantOrb, mounted once at
             the (app) layout level as a small draggable bubble on every tab
             (Home included) — no more full-size 360px canvas reserved here,
@@ -86,6 +102,17 @@ export function AssistantChatPanel() {
             ? 'Đang trong cuộc gọi — không thể tắt'
             : MIC_LABEL[voice.status]}
         </Text>
+        {onClose && (
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng"
+            style={{ position: 'absolute', right: 20, top: insets.top + 4, padding: 12 }}
+          >
+            <Ionicons name="close" size={22} color={theme.textPrimary.val} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -100,7 +127,7 @@ export function AssistantChatPanel() {
             // so the text shouldn't need to either.
             <View key={i} maxWidth="80%" alignSelf="flex-end" borderRadius="$bubble" overflow="hidden">
               <LinearGradient
-                colors={['#7C5B9C', '#A855F7']}
+                colors={CTA_GRADIENT}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{ paddingHorizontal: 16, paddingVertical: 10 }}
@@ -144,7 +171,11 @@ export function AssistantChatPanel() {
         alignItems="center"
         gap="$2"
         marginHorizontal={20}
-        marginBottom={100}
+        // Was a hardcoded 100 — didn't account for the tab bar's raised
+        // center "Trợ lý" button, which floats above the bar's own top edge
+        // and could sit low enough to cover this composer once the
+        // bar/button geometry changed.
+        marginBottom={insets.bottom + CHAT_INPUT_BOTTOM_CLEARANCE}
         paddingHorizontal="$2"
         height={48}
         borderRadius="$pill"
@@ -169,7 +200,13 @@ export function AssistantChatPanel() {
           selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
           style={{ flex: 1, color: isLight ? '#1a1a1a' : '#fff', paddingLeft: 8 }}
         />
-        <TouchableOpacity onPress={handleSend} style={{ padding: 8 }}>
+        <TouchableOpacity
+          onPress={handleSend}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Gửi"
+          style={{ padding: 12 }}
+        >
           <Ionicons name="send" size={18} color={isLight ? '#1a1a1a' : '#fff'} />
         </TouchableOpacity>
       </XStack>

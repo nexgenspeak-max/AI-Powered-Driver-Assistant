@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { ScrollView, Alert } from 'react-native'
-import { View, YStack, Text } from 'tamagui'
+import { View, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 import { Input } from '../../src/components/Input'
 import { Button } from '../../src/components/Button'
+import { VehicleTypeSelect } from '../../src/features/auth/components/VehicleTypeSelect'
 import { authService } from '../../src/services/api/auth'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 
@@ -47,17 +49,17 @@ export default function VehicleScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Quản lý xe
-        </Text>
+        </AppText>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <YStack padding="$4" gap="$4">
-            <Input label="Loại xe" value={vehicleType} onChangeText={setVehicleType} placeholder="VD: Sedan, SUV, Xe máy" />
+            <VehicleTypeSelect value={vehicleType} onChange={setVehicleType} />
             <Input label="Tên xe" value={vehicleName} onChangeText={setVehicleName} placeholder="VD: Toyota Vios" />
             <Input label="Biển số" value={vehiclePlate} onChangeText={setVehiclePlate} placeholder="VD: 36B6-36363" autoCapitalize="characters" />
           </YStack>
-        </GlassSurface>
+        </Surface>
 
         <Button label="Lưu thay đổi" onPress={() => save()} loading={isPending} disabled={!canSave} full />
       </ScrollView>

@@ -4,7 +4,7 @@ import { View as RNView, ActivityIndicator, StyleSheet, type LayoutChangeEvent }
 import { GestureDetector } from 'react-native-gesture-handler'
 import Animated from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
-import { GlassSheen, GlowOverlay, getGlassShadow, useGlassPress } from './LiquidGlass'
+import { CTA_GRADIENT, GlassSheen, GlowOverlay, getGlassShadow, useGlassPress } from './LiquidGlass'
 
 // Same purple-tinted outer shadow as GlassButton (the "Bắt đầu" CTA) —
 // duplicated rather than imported since GlassButton doesn't export it, but
@@ -178,7 +178,7 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
               // poking out right at the pill's tightest curve (the left/right
               // end-caps).
               <LinearGradient
-                colors={['#6D28D9', '#A855F7']}
+                colors={CTA_GRADIENT}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[StyleSheet.absoluteFillObject, { borderRadius: 999 }]}

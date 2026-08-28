@@ -1,10 +1,12 @@
-import { XStack, YStack, View, Text, useTheme } from "tamagui";
+import { XStack, YStack, View, useTheme } from "tamagui";
+import { Ionicons } from "@expo/vector-icons";
+import { AppText } from "../../../components/AppText";
 import type { TripStatus } from "../../../types";
 
 const STEPS: { status: TripStatus; label: string }[] = [
-  { status: "confirmed", label: "Confirmed" },
-  { status: "arrived_pickup", label: "Arrived" },
-  { status: "picked_up", label: "Picked Up" },
+  { status: "confirmed", label: "Đã nhận" },
+  { status: "arrived_pickup", label: "Đã đến" },
+  { status: "picked_up", label: "Đón khách" },
 ];
 
 export function TripProgressStepper({ status }: { status: TripStatus }) {
@@ -12,28 +14,25 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
   const currentIndex = STEPS.findIndex((s) => s.status === status);
 
   return (
-    <XStack alignItems="flex-start" width="96.5%">
+    <XStack alignItems="flex-start" width="100%">
       {STEPS.map((step, i) => {
         const isDone = i < currentIndex;
         const isCurrent = i === currentIndex;
-        // Line segment after this step is only "filled" once the *next*
-        // step has been reached (i.e. this step is done, not just current) —
-        // otherwise the current step's own line reads as already progressed
-        // past it.
+        // The segment after this step only fills once the *next* step is
+        // reached (this step is done, not merely current).
         const lineColor = isDone ? theme.success.val : theme.border.val;
 
         return (
-          <XStack key={step.status} flex={i === STEPS.length - 1 ? 0 : 1} alignItems="flex-start">
-            {/* `flexShrink={0}` pins this column to its own width — without
-                it, the two flex:1 siblings' line segments can squeeze this
-                below 56px in some layouts (seen clipping "Picked Up" to
-                "Pic" on a wide/web viewport), since a plain `width` alone
-                doesn't stop a flex child from shrinking. */}
-            <YStack alignItems="center" gap="$1" width={50} flexShrink={0}>
+          <XStack
+            key={step.status}
+            flex={i === STEPS.length - 1 ? 0 : 1}
+            alignItems="flex-start"
+          >
+            <YStack alignItems="center" gap="$1" width={56} flexShrink={0}>
               <View
-                width={16}
-                height={16}
-                borderRadius={8}
+                width={18}
+                height={18}
+                borderRadius={9}
                 alignItems="center"
                 justifyContent="center"
                 backgroundColor={isDone ? theme.success.val : "transparent"}
@@ -41,27 +40,23 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
                 borderColor={isCurrent ? theme.success.val : theme.borderStrong.val}
               >
                 {isDone && (
-                  <Text fontSize={9} fontWeight="700" color={theme.textInverse.val}>
-                    ✓
-                  </Text>
+                  <Ionicons name="checkmark" size={11} color={theme.textInverse.val} />
                 )}
                 {isCurrent && (
                   <View width={6} height={6} borderRadius={3} backgroundColor={theme.success.val} />
                 )}
               </View>
-              <Text
-                fontSize={9}
-                fontWeight={isCurrent ? "700" : "500"}
+              <AppText
+                variant="caption"
                 color={isCurrent ? "$textPrimary" : "$textSecondary"}
                 textAlign="center"
                 numberOfLines={1}
-                ellipsizeMode="tail"
               >
                 {step.label}
-              </Text>
+              </AppText>
             </YStack>
             {i < STEPS.length - 1 && (
-              <View flex={1} height={2} marginTop={7} backgroundColor={lineColor}  />
+              <View flex={1} height={2} marginTop={8} backgroundColor={lineColor} />
             )}
           </XStack>
         );

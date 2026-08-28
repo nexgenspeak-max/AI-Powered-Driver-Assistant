@@ -4,8 +4,14 @@ import { Text, View, XStack, YStack, useThemeName } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
 import { GlassSurface } from '../../../components/GlassSurface'
+import { SegmentedControl } from '../../../components/SegmentedControl'
 
 export type ScheduleMode = 'now' | 'later'
+
+const SCHEDULE_MODE_OPTIONS = [
+  { value: 'now' as const, label: 'Đặt xe ngay' },
+  { value: 'later' as const, label: 'Hẹn giờ đón' },
+]
 
 interface Props {
   mode: ScheduleMode
@@ -57,10 +63,7 @@ export function PickupTimeField({ mode, onModeChange, pickupAt, onPickupAtChange
 
   return (
     <YStack gap="$2">
-      <XStack gap="$2">
-        <SegmentButton label="Đặt xe ngay" active={mode === 'now'} onPress={() => onModeChange('now')} />
-        <SegmentButton label="Hẹn giờ đón" active={mode === 'later'} onPress={() => onModeChange('later')} />
-      </XStack>
+      <SegmentedControl options={SCHEDULE_MODE_OPTIONS} value={mode} onChange={onModeChange} />
 
       {mode === 'later' && (
         <>
@@ -125,23 +128,5 @@ export function PickupTimeField({ mode, onModeChange, pickupAt, onPickupAtChange
         </Modal>
       )}
     </YStack>
-  )
-}
-
-function SegmentButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  const isLight = useThemeName() === 'light'
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1 }}>
-      <View
-        borderRadius={999}
-        paddingVertical="$2.5"
-        alignItems="center"
-        backgroundColor={active ? '#8B5CF6' : isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'}
-      >
-        <Text fontSize="$2" fontWeight="700" color={active ? '#ffffff' : '$textSecondary'}>
-          {label}
-        </Text>
-      </View>
-    </TouchableOpacity>
   )
 }

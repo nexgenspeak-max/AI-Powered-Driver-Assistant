@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
-import { XStack, Text } from 'tamagui'
+import { XStack, useTheme } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated'
-import { GlassSurface } from '../../../components/GlassSurface'
+import { GlassPanel } from '../../../components/GlassPanel'
+import { AppText } from '../../../components/AppText'
 import { useTripNotificationStore } from '../../../stores/tripNotificationStore'
 
 const AUTO_DISMISS_MS = 6000
@@ -28,6 +29,7 @@ const COPY = {
 // picked answers, not necessarily staring at the trip status screen.
 export function TripNotificationBanner() {
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
   const notification = useTripNotificationStore(s => s.notification)
   const dismiss = useTripNotificationStore(s => s.dismiss)
 
@@ -49,17 +51,17 @@ export function TripNotificationBanner() {
           router.push(`/trip/${notification.tripId}`)
         }}
       >
-        <GlassSurface cornerRadius={16} style={{ width: '100%' }}>
+        <GlassPanel borderRadius={20} style={{ width: '100%' }}>
           <XStack alignItems="center" gap="$3" padding="$3">
             <Ionicons name={copy.icon} size={24} color={copy.color} />
-            <Text flex={1} fontSize="$3" fontWeight="600" color="$textPrimary">
+            <AppText variant="bodyStrong" flex={1}>
               {copy.text}
-            </Text>
-            <TouchableOpacity onPress={dismiss} hitSlop={10}>
-              <Ionicons name="close" size={18} color="#9CA3AF" />
+            </AppText>
+            <TouchableOpacity onPress={dismiss} hitSlop={10} accessibilityLabel="Đóng">
+              <Ionicons name="close" size={18} color={theme.textMuted.val} />
             </TouchableOpacity>
           </XStack>
-        </GlassSurface>
+        </GlassPanel>
       </TouchableOpacity>
     </Animated.View>
   )

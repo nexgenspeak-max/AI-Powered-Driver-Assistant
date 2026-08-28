@@ -1,118 +1,64 @@
-import { Image, View, type ImageSourcePropType } from 'react-native'
+import { View } from 'react-native'
 import { Tabs } from 'expo-router'
-import { useTheme } from 'tamagui'
-import { useThemeStore } from '../../src/stores/themeStore'
-import { LiquidGlassProvider, PageBlurOverlay, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
-import { GlobalAssistantOrb } from '../../src/features/home/components/GlobalAssistantOrb'
+import { Ionicons } from '@expo/vector-icons'
+import { LiquidGlassProvider, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
 
-// Light mode: flat, full-color icon set (assets/icons/light/) — fixed
-// palette raster images, not tintable, so active/inactive is opacity there.
-// Dark mode: single-color silhouette set (assets/icons/dark/) — tintable,
-// so active/inactive is a white-vs-purple tintColor instead (see TabIcon).
-const ICONS = {
-  home: require('../../assets/icons/light/house.png') as ImageSourcePropType,
-  booking: require('../../assets/icons/light/car.png') as ImageSourcePropType,
-  trips: require('../../assets/icons/light/route-map.png') as ImageSourcePropType,
-  profile: require('../../assets/icons/light/profile.png') as ImageSourcePropType,
+// One vector icon set (Ionicons) for both themes — replaces the two raster
+// PNG sets. `color` / `size` come from LiquidGlassTabBar (focused → `$primary`).
+type TabRoute = 'index' | 'booking' | 'trips' | 'profile'
+const TAB_ICON: Record<TabRoute, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
+  index: { on: 'home', off: 'home-outline' },
+  booking: { on: 'car-sport', off: 'car-sport-outline' },
+  trips: { on: 'time', off: 'time-outline' },
+  profile: { on: 'person', off: 'person-outline' },
 }
-const DARK_ICONS = {
-  home: require('../../assets/icons/dark/house.png') as ImageSourcePropType,
-  booking: require('../../assets/icons/dark/car.png') as ImageSourcePropType,
-  trips: require('../../assets/icons/dark/route-map.png') as ImageSourcePropType,
-  profile: require('../../assets/icons/dark/profile.png') as ImageSourcePropType,
-}
-const ACTIVE_PURPLE = '#8B5CF6'
-// Dark-mode silhouette set reads visually "bigger" than the light set's flat
-// illustrations at the same box size, so it's rendered a bit smaller.
-const DARK_ICON_SCALE = 0.82
 
-function TabIcon({
-  source,
-  darkSource,
-  size,
-  focused,
-  isDark,
-}: {
-  source: ImageSourcePropType
-  darkSource: ImageSourcePropType
-  size: number
-  focused: boolean
-  isDark: boolean
-}) {
-  if (isDark) {
-    const darkSize = size * DARK_ICON_SCALE
-    return (
-      <Image
-        source={darkSource}
-        style={{ width: darkSize, height: darkSize, tintColor: focused ? ACTIVE_PURPLE : '#ffffff' }}
-        resizeMode="contain"
-      />
-    )
-  }
-  return <Image source={source} style={{ width: size, height: size, opacity: focused ? 1 : 0.45 }} resizeMode="contain" />
+function TabIcon({ route, size, color, focused }: { route: TabRoute; size: number; color: string; focused: boolean }) {
+  const g = TAB_ICON[route]
+  return <Ionicons name={focused ? g.on : g.off} size={size} color={color} />
 }
 
 export default function AppLayout() {
-  const theme = useTheme()
-  const themeMode = useThemeStore(s => s.mode)
-  const isLight = themeMode !== 'dark'
-  const isDark = !isLight
-
   return (
-    // Shares the `pageBlur` shared value between the tab bar (writer, on
-    // long-press) and PageBlurOverlay (reader, wrapping each screen below).
     <LiquidGlassProvider>
       <View style={{ flex: 1 }}>
         <Tabs
-          // Wraps each screen's own content only — not the tab bar itself, so
-          // long-pressing a tab blurs the page behind it while the tab bar +
-          // its glass pill stay sharp.
-          screenLayout={({ children }) => <PageBlurOverlay>{children}</PageBlurOverlay>}
           tabBar={props => <LiquidGlassTabBar {...props} />}
-          screenOptions={{
-            headerShown: false,
-            // Brand purple for the selected tab in both themes — matches the
-            // rest of the app's CTA/accent color instead of the old
-            // black/white split (that was tuned for GlassTabButton's own
-            // dark-mode purple pill background, which LiquidGlassTabBar
-            // doesn't have; the active tab needs its own color cue now).
-            tabBarActiveTintColor: ACTIVE_PURPLE,
-            tabBarInactiveTintColor: theme.textMuted.val,
-          }}
+          screenOptions={{ headerShown: false }}
         >
           <Tabs.Screen
             name="index"
             options={{
-              title: 'Home',
-              tabBarIcon: ({ size, focused }) => (
-                <TabIcon source={ICONS.home} darkSource={DARK_ICONS.home} size={size} focused={focused} isDark={isDark} />
+              title: 'Trang chủ',
+              tabBarIcon: ({ size, focused, color }) => (
+                <TabIcon route="index" size={size} focused={focused} color={color} />
               ),
             }}
           />
           <Tabs.Screen
             name="booking"
             options={{
-              title: 'Booking',
-              tabBarIcon: ({ size, focused }) => (
-                <TabIcon source={ICONS.booking} darkSource={DARK_ICONS.booking} size={size} focused={focused} isDark={isDark} />
+              title: 'Đặt xe',
+              tabBarIcon: ({ size, focused, color }) => (
+                <TabIcon route="booking" size={size} focused={focused} color={color} />
               ),
             }}
           />
           <Tabs.Screen
             name="trips"
             options={{
-              title: 'Trips',
-              tabBarIcon: ({ size, focused }) => (
-                <TabIcon source={ICONS.trips} darkSource={DARK_ICONS.trips} size={size} focused={focused} isDark={isDark} />
+              title: 'Chuyến',
+              tabBarIcon: ({ size, focused, color }) => (
+                <TabIcon route="trips" size={size} focused={focused} color={color} />
               ),
             }}
           />
           <Tabs.Screen
             name="profile"
             options={{
-              title: 'Profile',
-              tabBarIcon: ({ size, focused }) => (
-                <TabIcon source={ICONS.profile} darkSource={DARK_ICONS.profile} size={size} focused={focused} isDark={isDark} />
+              title: 'Cá nhân',
+              tabBarIcon: ({ size, focused, color }) => (
+                <TabIcon route="profile" size={size} focused={focused} color={color} />
               ),
             }}
           />
@@ -128,7 +74,6 @@ export default function AppLayout() {
           <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
           <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
         </Tabs>
-        <GlobalAssistantOrb />
       </View>
     </LiquidGlassProvider>
   )

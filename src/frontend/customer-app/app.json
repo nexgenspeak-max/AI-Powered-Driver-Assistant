@@ -63,7 +63,8 @@
         {
           "locationWhenInUsePermission": "Czen needs your location to suggest your pickup point when booking a ride."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "scheme": "customer-app"
   }

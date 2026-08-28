@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { ScrollView, Alert } from 'react-native'
-import { View, YStack, Text } from 'tamagui'
+import { View, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 import { GlossyAvatar } from '../../src/features/profile/components/GlossyAvatar'
 import { Input } from '../../src/components/Input'
 import { Button } from '../../src/components/Button'
@@ -38,27 +39,25 @@ export default function EditProfileScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
-          Chỉnh sửa hồ sơ
-        </Text>
+        <AppText variant="h1">Chỉnh sửa hồ sơ</AppText>
 
         <YStack alignItems="center" gap="$2">
           <GlossyAvatar letter={(trimmedName || customer.name).charAt(0).toUpperCase()} size={88} />
           {/* No upload endpoint on the backend yet — avatar is always the
               name's first letter, so there's nothing to change here besides
               typing a new name above. */}
-          <Text color="$textMuted" fontSize={12}>
+          <AppText variant="caption" color="$textMuted">
             Ảnh đại diện lấy theo chữ cái đầu của tên
-          </Text>
+          </AppText>
         </YStack>
 
-        <GlassSurface cornerRadius={20}>
+        <Surface>
           <YStack padding="$4" gap="$4">
             <Input label="Tên hiển thị" value={name} onChangeText={setName} placeholder="Nhập tên của bạn" />
             <Input label="Số điện thoại" value={customer.phone} editable={false} />
             {!!customer.email && <Input label="Email" value={customer.email} editable={false} />}
           </YStack>
-        </GlassSurface>
+        </Surface>
 
         <Button label="Lưu thay đổi" onPress={() => save()} loading={isPending} disabled={!canSave} full />
       </ScrollView>

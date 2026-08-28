@@ -7,14 +7,18 @@ import { config as configV3 } from '@tamagui/config/v3'
 // primary/gradient — the accent color itself does NOT change between themes
 // (a deliberate, unchanged brand anchor per the design-system spec).
 const brand = {
-  primary: '#7C5B9C',
-  primaryPress: '#63447d',
-  primaryMuted: 'rgba(124,91,156,0.16)',
-  gradientStart: '#7C5B9C',
+  // Single brand accent — one violet everywhere (was three: this token at
+  // #7C5B9C, a #8B5CF6 literal scattered across tab bar / nav / badges, and a
+  // #6D28D9→#A855F7 CTA gradient). #8B5CF6 is the most-used of the three, so it
+  // wins; press/gradient darken toward #7C3AED.
+  primary: '#8B5CF6',
+  primaryPress: '#7C3AED',
+  primaryMuted: 'rgba(139,92,246,0.16)',
+  gradientStart: '#7C3AED',
   gradientEnd: '#A855F7',
   dark: '#121212',
   accent: '#232325',
-  accentLight: '#c3aee0',
+  accentLight: '#c4b5fd',
   textInverse: '#ffffff',
 }
 
@@ -45,8 +49,8 @@ const light = {
   outlineVariant: '#EDE8F2',
   divider: 'rgba(17,24,39,0.08)',
   // Primary / secondary containers (tonal, not just tints of white)
-  primaryContainer: '#F1EBF7',
-  onPrimaryContainer: '#4A3563',
+  primaryContainer: '#EDE9FE',
+  onPrimaryContainer: '#4C1D95',
   secondary: '#A855F7',
   secondaryContainer: '#F3E8FF',
   onSecondaryContainer: '#5B21B6',
@@ -66,15 +70,15 @@ const light = {
   // Component-specific surfaces
   card: '#ffffff',
   chip: '#EEE9F3',
-  chipSelected: '#F1EBF7',
+  chipSelected: '#EDE9FE',
   inputBackground: '#ffffff',
   inputBorder: '#D9D2E3',
   disabledBackground: 'rgba(17,24,39,0.08)',
   disabledText: 'rgba(17,24,39,0.38)',
   // Interaction-state overlays (painted at these opacities over whatever's underneath)
-  pressedOverlay: 'rgba(124,91,156,0.12)',
-  hoverOverlay: 'rgba(124,91,156,0.08)',
-  rippleOverlay: 'rgba(124,91,156,0.16)',
+  pressedOverlay: 'rgba(139,92,246,0.12)',
+  hoverOverlay: 'rgba(139,92,246,0.08)',
+  rippleOverlay: 'rgba(139,92,246,0.16)',
   // Chrome surfaces
   navigationBar: 'rgba(255,255,255,0.7)',
   bottomSheet: '#ffffff',
@@ -105,8 +109,8 @@ const dark = {
   outline: 'rgba(255,255,255,0.16)',
   outlineVariant: 'rgba(255,255,255,0.06)',
   divider: 'rgba(255,255,255,0.06)',
-  primaryContainer: '#2D2438',
-  onPrimaryContainer: '#E4D9F0',
+  primaryContainer: '#2E2250',
+  onPrimaryContainer: '#DDD6FE',
   secondary: '#C084FC',
   secondaryContainer: '#3B2A52',
   onSecondaryContainer: '#EAD9FB',
@@ -124,14 +128,14 @@ const dark = {
   onInfoContainer: '#93C5FD',
   card: '#241D2C',
   chip: '#2E2438',
-  chipSelected: 'rgba(124,91,156,0.24)',
+  chipSelected: 'rgba(139,92,246,0.24)',
   inputBackground: '#241D2C',
   inputBorder: 'rgba(255,255,255,0.14)',
   disabledBackground: 'rgba(255,255,255,0.08)',
   disabledText: 'rgba(255,255,255,0.38)',
-  pressedOverlay: 'rgba(124,91,156,0.20)',
-  hoverOverlay: 'rgba(124,91,156,0.12)',
-  rippleOverlay: 'rgba(124,91,156,0.28)',
+  pressedOverlay: 'rgba(139,92,246,0.20)',
+  hoverOverlay: 'rgba(139,92,246,0.12)',
+  rippleOverlay: 'rgba(139,92,246,0.28)',
   // Purple-tinted (not neutral gray) so the blur behind the floating tab bar
   // reads as a lit glass panel rather than plain dark smoked glass.
   navigationBar: 'rgba(90,60,120,0.42)',
@@ -148,7 +152,7 @@ const tamaguiConfig = createTamagui({
     // Static fallback (used only outside a <Theme> context) — dark values
     // since that's the app's default theme.
     color: { ...configV3.tokens.color, ...dark },
-    radius: { ...configV3.tokens.radius, card: 24, control: 12, button: 999, pill: 999, bubble: 22, chip: 999 },
+    radius: { ...configV3.tokens.radius, card: 24, control: 14, button: 999, pill: 999, bubble: 22, chip: 999 },
     // 4/8pt spacing scale, aliased onto Tamagui's existing $1.."$10 tokens so
     // every screen already using e.g. `padding="$4"` picks this up automatically.
     space: {

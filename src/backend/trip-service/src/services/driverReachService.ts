@@ -37,6 +37,36 @@ interface DriverSession {
   room_name: string;
 }
 
+interface PendingNudge {
+  kind: NudgeKind;
+  payload: Record<string, unknown>;
+}
+
+// The pending-nudge slot holds a LIST now, not one object — two proximity
+// features (1km notify + 200m suggest) can each call reachDriver() before the
+// driver opens a session, and the old single-slot cacheSet silently clobbered
+// whichever fired first. Capped so a runaway loop can't grow it unbounded;
+// deduped by kind (newest payload wins).
+const MAX_PENDING_NUDGES = 3;
+
+function mergePendingNudge(
+  existing: unknown,
+  kind: NudgeKind,
+  payload: Record<string, unknown>,
+): PendingNudge[] {
+  let list: PendingNudge[] = [];
+  if (existing && typeof existing === 'object') {
+    const e = existing as { nudges?: unknown; kind?: unknown; payload?: unknown };
+    if (Array.isArray(e.nudges)) {
+      list = e.nudges as PendingNudge[];
+    } else if (typeof e.kind === 'string') {
+      // Legacy single-object value still in Redis from before this change.
+      list = [{ kind: e.kind as NudgeKind, payload: (e.payload as Record<string, unknown>) ?? {} }];
+    }
+  }
+  return [...list.filter((n) => n.kind !== kind), { kind, payload }].slice(-MAX_PENDING_NUDGES);
+}
+
 export async function reachDriver(
   driverPhone: string,
   kind: NudgeKind,
@@ -67,11 +97,17 @@ export async function reachDriver(
     }
   }
 
-  await cacheSet(driverPendingNudgeKey(driverPhone), { kind, payload }, PENDING_NUDGE_TTL_SECONDS);
+  const existing = await cacheGet<unknown>(driverPendingNudgeKey(driverPhone));
+  const nudges = mergePendingNudge(existing, kind, payload);
+  await cacheSet(driverPendingNudgeKey(driverPhone), { nudges }, PENDING_NUDGE_TTL_SECONDS);
   // driver-app's context poll (has_pending_nudge) reads a SEPARATELY cached
   // snapshot (driverContextKey, up to config.cacheTtlSeconds stale) — without
   // this, the app could miss the pending nudge for up to that long even
   // though the key above is already set.
   await invalidateDriverContext(driverPhone);
-  console.log(`[driverReach] no open session — saved as pending | driver=${driverPhone} kind=${kind}`);
+  console.log(
+    `[driverReach] no open session — saved as pending | driver=${driverPhone} kind=${kind} queue=${nudges
+      .map((n) => n.kind)
+      .join(',')}`,
+  );
 }

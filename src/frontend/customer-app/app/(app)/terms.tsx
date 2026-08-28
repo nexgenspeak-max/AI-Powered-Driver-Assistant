@@ -2,6 +2,7 @@ import { ScrollView } from 'react-native'
 import { View, YStack, Text } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
+import { AppText } from '../../src/components/AppText'
 
 const SECTIONS = [
   {
@@ -36,15 +37,15 @@ export default function TermsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary" marginBottom="$3">
+        <AppText variant="h1" marginBottom="$3">
           Điều khoản sử dụng & Chính sách bảo mật
-        </Text>
+        </AppText>
         <YStack gap="$4">
           {SECTIONS.map(section => (
             <YStack key={section.title} gap="$1">
-              <Text color="$textPrimary" fontWeight="700" fontSize="$3">
+              <AppText variant="h2" color="$textPrimary">
                 {section.title}
-              </Text>
+              </AppText>
               <Text color="$textSecondary" lineHeight={22}>
                 {section.body}
               </Text>

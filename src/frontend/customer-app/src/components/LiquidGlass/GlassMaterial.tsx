@@ -42,6 +42,23 @@ export const GLASS_SHADOW = {
   elevation: 14,
 } as const;
 
+// Single source of truth for every "kính" (frosted glass) surface's border
+// color — Card/Badge/SearchInput/Input (via GlassSheen), Button's non-primary
+// variants and the tab bar (LiquidGlassTabBar) all rendered the exact same
+// rgba values as separate hardcoded literals before, which only stayed in
+// sync by coincidence. Centralized here so they can't drift apart again.
+// Uniform on all four sides — a brighter top edge was tried as a "light
+// reflection" cue but read as an unbalanced/lopsided border, so the
+// top-vs-rest split was removed. Deliberately NOT used by the purple/green/
+// red CTA buttons (GlassButton, Button's primary/success/danger) or
+// GlassSurface's flat `outline` mode — those are each a different, already-
+// documented "shadow/border matches this element's own fill color" language,
+// not generic glass.
+export const GLASS_BORDER_COLOR = {
+  light: "rgba(255, 255, 255, 0.35)",
+  dark: "rgba(255, 255, 255, 0.1)",
+} as const;
+
 // Static top-left corner glint removed per spec (was light-mode-only,
 // randomized position/size via randomSpecularVariation) — every card/badge/
 // input/button using GlassSheen or GlassMaterial no longer shows it.

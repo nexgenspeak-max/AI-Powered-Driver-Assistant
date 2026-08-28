@@ -2,7 +2,8 @@ import { ScrollView, Share } from 'react-native'
 import { View, YStack, Text } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 import { Button } from '../../src/components/Button'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 
@@ -32,24 +33,22 @@ export default function ReferralScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
-          Giới thiệu bạn bè
-        </Text>
+        <AppText variant="h1">Giới thiệu bạn bè</AppText>
         <Text color="$textSecondary" lineHeight={20}>
           Chia sẻ mã của bạn với bạn bè — ưu đãi cho người giới thiệu và người được giới thiệu sẽ sớm ra mắt.
         </Text>
 
-        <GlassSurface cornerRadius={20}>
+        <Surface>
           <YStack alignItems="center" gap="$3" padding="$6">
-            <Text color="$textSecondary" fontSize={12} fontWeight="700">
+            <AppText variant="caption" color="$textSecondary">
               MÃ GIỚI THIỆU CỦA BẠN
-            </Text>
-            <Text color="$textPrimary" fontSize={32} fontWeight="800" letterSpacing={4} selectable>
+            </AppText>
+            <AppText variant="display" color="$textPrimary" letterSpacing={4} selectable>
               {code}
-            </Text>
+            </AppText>
             <Button label="Chia sẻ mã" onPress={share} />
           </YStack>
-        </GlassSurface>
+        </Surface>
       </ScrollView>
     </View>
   )

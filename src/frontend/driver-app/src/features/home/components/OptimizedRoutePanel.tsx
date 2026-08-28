@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { ScrollView } from 'react-native'
+import { Pressable, ScrollView } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { View, XStack, YStack, Text } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import { GlassSurface } from '../../../components/GlassSurface'
+import { SolidCard } from '../../../components/SolidCard'
+import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
 import type { OptimizedRoute } from '../../../types'
 
 function formatDistance(meters: number): string {
@@ -17,22 +19,29 @@ export function OptimizedRoutePanel({ route, colorForTripId }: {
 }) {
   const [expanded, setExpanded] = useState(false)
   const stops = route.stops
+  const insets = useSafeAreaInsets()
 
   return (
-    <GlassSurface
+    <SolidCard
       cornerRadius={20}
-      onPress={() => setExpanded(v => !v)}
-      style={{ position: 'absolute', left: 16, right: 16, bottom: 16 }}
+      style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE }}
     >
-      <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$3">
-        <XStack alignItems="center" gap="$2" flex={1}>
-          <Ionicons name="navigate" size={18} color="#8B5CF6" />
-          <Text color="$textPrimary" fontWeight="600">
-            Lộ trình tối ưu · {stops.length} điểm dừng
-          </Text>
+      {/* onPress lives on just the header row now, not the whole card — it
+          used to wrap the ScrollView below too, and a TouchableOpacity
+          spanning the same area as a nested ScrollView fights it for the
+          drag gesture (worst on Android), which is why scrolling the stop
+          list didn't work. */}
+      <Pressable onPress={() => setExpanded(v => !v)}>
+        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$3">
+          <XStack alignItems="center" gap="$2" flex={1}>
+            <Ionicons name="navigate" size={18} color="#8B5CF6" />
+            <Text color="$textPrimary" fontWeight="600">
+              Lộ trình tối ưu · {stops.length} điểm dừng
+            </Text>
+          </XStack>
+          <Ionicons name={expanded ? 'chevron-down' : 'chevron-up'} size={18} color="#8B5CF6" />
         </XStack>
-        <Ionicons name={expanded ? 'chevron-down' : 'chevron-up'} size={18} color="#8B5CF6" />
-      </XStack>
+      </Pressable>
 
       {route.source === 'haversine_fallback' && (
         <Text color="$textSecondary" fontSize={11} paddingHorizontal="$4" paddingBottom={expanded ? 0 : '$3'}>
@@ -41,7 +50,12 @@ export function OptimizedRoutePanel({ route, colorForTripId }: {
       )}
 
       {expanded && (
-        <ScrollView style={{ maxHeight: 260 }} contentContainerStyle={{ paddingBottom: 12 }}>
+        <ScrollView
+          style={{ maxHeight: 260 }}
+          contentContainerStyle={{ paddingBottom: 12 }}
+          showsVerticalScrollIndicator
+          persistentScrollbar
+        >
           <YStack paddingHorizontal="$4" gap="$3">
             {stops.map((stop, i) => (
               <XStack key={`${stop.trip_id}-${stop.kind}`} alignItems="center" gap="$3">
@@ -70,6 +84,6 @@ export function OptimizedRoutePanel({ route, colorForTripId }: {
           </YStack>
         </ScrollView>
       )}
-    </GlassSurface>
+    </SolidCard>
   )
 }

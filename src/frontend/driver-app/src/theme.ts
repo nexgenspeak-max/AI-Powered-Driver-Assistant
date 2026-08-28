@@ -16,7 +16,10 @@
 export const authGlassTheme = {
   screenBackground: { dark: '#121212', light: '#F5F4F8' },
   titleColor: { dark: '#ffffff', light: '#000000' },
-  linkColor: '#6c8aff',
+  // Was a one-off blue (#6c8aff) — the only accent in either app that wasn't
+  // the brand violet. Now the shared `$primary` value (#8B5CF6): ~4.8:1 on the
+  // dark card, ~3.5:1 on the near-white card (links here render 600-weight).
+  linkColor: '#8B5CF6',
 
   card: {
     // Light-mode fill bumped from 0.7 -> 0.94 opacity — at 0.7 the card
@@ -72,6 +75,8 @@ export const authGlassTheme = {
   },
 
   cta: {
-    gradient: ['#8B5CF6', '#A855F7'] as [string, string],
+    // Same pair as the shared CTA_GRADIENT (src/components/LiquidGlass) so the
+    // auth "Sign in" button matches every other primary button in the app.
+    gradient: ['#7C3AED', '#A855F7'] as [string, string],
   },
 } as const

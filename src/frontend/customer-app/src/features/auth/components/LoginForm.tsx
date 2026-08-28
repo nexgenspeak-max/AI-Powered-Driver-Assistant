@@ -1,4 +1,4 @@
-import { YStack, Text, useThemeName } from 'tamagui'
+import { YStack, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
@@ -8,13 +8,14 @@ import { router, Link } from 'expo-router'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
+import { AppText } from '../../../components/AppText'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
 import { authGlassTheme } from '../../../theme'
 
 const schema = z.object({
-  phone: z.string().min(8, 'Valid phone required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  phone: z.string().min(8, 'Số điện thoại chưa hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -54,12 +55,15 @@ export function LoginForm() {
         gap="$6"
       >
         <YStack alignItems="center" gap="$2">
-          <Text color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark} fontSize="$7" fontWeight="800">
-            Welcome back
-          </Text>
-          <Text color="$textSecondary" fontSize="$3">
-            Log in to book your next ride
-          </Text>
+          <AppText
+            variant="display"
+            color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
+          >
+            Chào mừng trở lại
+          </AppText>
+          <AppText variant="body" color="$textSecondary">
+            Đăng nhập để đặt chuyến tiếp theo
+          </AppText>
         </YStack>
 
         <Card
@@ -67,30 +71,29 @@ export function LoginForm() {
           maxWidth={authGlassTheme.card.maxWidth}
           gap="$4"
           shadowIntensity="strong"
-          borderRadius={28}
           backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
         >
           <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
+            <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
               value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
           )} />
           <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Password" secureTextEntry
+            <GlassAuthInput label="Mật khẩu" secureTextEntry
               value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
           )} />
 
           {isError && (
-            <Text color="$danger" fontSize="$1">
-              Login failed. Check your details.
-            </Text>
+            <AppText variant="caption" color="$danger">
+              Đăng nhập thất bại. Kiểm tra lại thông tin.
+            </AppText>
           )}
 
           <GlassButton label="Đăng nhập" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
 
-          <Text textAlign="center" color="$textSecondary" fontSize="$3">
-            Don't have an account?{' '}
-            <Link href="/register" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Sign up</Link>
-          </Text>
+          <AppText variant="body" textAlign="center" color="$textSecondary">
+            Chưa có tài khoản?{' '}
+            <Link href="/register" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng ký</Link>
+          </AppText>
         </Card>
       </YStack>
     </>

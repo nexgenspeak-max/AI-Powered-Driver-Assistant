@@ -16,27 +16,48 @@ import {
 } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
 
+// All four functions below return whether they actually fired a nudge this
+// call (vs. skipped for any reason: out of range, already deduped, feature
+// off) — callers (runProximityChecks in drivers.ts) use this to stop after
+// the first one that fires per check cycle. driverReachService.ts's pending-
+// nudge storage is a SINGLE overwritable slot, not a queue: if two of these
+// fire back to back (e.g. two different trips both within the 1km radius,
+// or a trip close enough to trigger both the 1km notify AND the 200m
+// suggest in the same pass), the second call's reachDriver() silently
+// clobbers the first one's pending nudge before it's ever delivered — a real
+// driver saw exactly this: the farther of two in-range pickups (766m) ended
+// up as the delivered nudge instead of the nearer one (314m) that fired
+// first, because it fired second and overwrote it moments later.
+
 // Fires the "driver is close to pickup" call at most once per trip — the
 // dedupe flag is what makes this safe to call on every single GPS ping
 // without spamming the customer.
 export async function maybeNotifyCustomerOfProximity(
   trip: tripService.Trip,
   driverCoords: LatLng,
-): Promise<void> {
-  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
-  if (!trip.driver_phone || !trip.customer_phone) return;
+): Promise<boolean> {
+  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return false;
+  if (!trip.driver_phone || !trip.customer_phone) return false;
 
   // Driver-level opt-in: off by default (see auth-service's driver-settings
   // table) — a driver who never turned this on gets no proximity call at all,
   // regardless of config.proximityAlertMeters.
   const settings = await driverSettingsService.getByPhone(trip.driver_phone);
-  if (!settings?.notify_on_pickup_approach) return;
+  if (!settings?.notify_on_pickup_approach) return false;
 
+  const radius = settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
-  if (distance > (settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters)) return;
+  if (distance > radius) {
+    console.log(`[proximity] pickup-notify skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    return false;
+  }
 
   const notifiedKey = tripProximityNotifiedKey(trip.trip_id);
-  if (await cacheGet(notifiedKey)) return;
+  if (await cacheGet(notifiedKey)) {
+    console.log(`[proximity] pickup-notify skip (already notified) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    return false;
+  }
+  console.log(`[proximity] pickup-notify FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
   // Set the flag before acting (not after) so two near-simultaneous pings
   // can't both pass the cacheGet check above and double-dial/double-ask.
   await cacheSet(notifiedKey, true, 3600);
@@ -58,7 +79,7 @@ export async function maybeNotifyCustomerOfProximity(
     } catch (err) {
       console.warn(`[proximity] pickup call failed for trip=${trip.trip_id}:`, err);
     }
-    return;
+    return true;
   }
 
   try {
@@ -70,6 +91,7 @@ export async function maybeNotifyCustomerOfProximity(
   } catch (err) {
     console.warn(`[proximity] pickup nudge failed for trip=${trip.trip_id}:`, err);
   }
+  return true;
 }
 
 // Mirrors maybeNotifyCustomerOfProximity above but for the DROPOFF point —
@@ -79,21 +101,29 @@ export async function maybeNotifyCustomerOfProximity(
 export async function maybeNotifyCustomerOfDropoffProximity(
   trip: tripService.Trip,
   driverCoords: LatLng,
-): Promise<void> {
-  if (trip.status !== 'picked_up') return;
-  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
-  if (!trip.driver_phone || !trip.customer_phone) return;
+): Promise<boolean> {
+  if (trip.status !== 'picked_up') return false;
+  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return false;
+  if (!trip.driver_phone || !trip.customer_phone) return false;
 
   // Same driver-level toggle as the pickup side above — one setting covers
   // both ends of the trip, there's no separate dropoff-only column.
   const settings = await driverSettingsService.getByPhone(trip.driver_phone);
-  if (!settings?.notify_on_pickup_approach) return;
+  if (!settings?.notify_on_pickup_approach) return false;
 
+  const radius = settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
-  if (distance > (settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters)) return;
+  if (distance > radius) {
+    console.log(`[proximity] dropoff-notify skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    return false;
+  }
 
   const notifiedKey = tripDropoffProximityNotifiedKey(trip.trip_id);
-  if (await cacheGet(notifiedKey)) return;
+  if (await cacheGet(notifiedKey)) {
+    console.log(`[proximity] dropoff-notify skip (already notified) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    return false;
+  }
+  console.log(`[proximity] dropoff-notify FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
   await cacheSet(notifiedKey, true, 3600);
 
   if (!config.enableProximityAsk) {
@@ -109,7 +139,7 @@ export async function maybeNotifyCustomerOfDropoffProximity(
     } catch (err) {
       console.warn(`[proximity] dropoff call failed for trip=${trip.trip_id}:`, err);
     }
-    return;
+    return true;
   }
 
   try {
@@ -121,6 +151,7 @@ export async function maybeNotifyCustomerOfDropoffProximity(
   } catch (err) {
     console.warn(`[proximity] dropoff nudge failed for trip=${trip.trip_id}:`, err);
   }
+  return true;
 }
 
 // Closer checkpoint (~200m, config.nextStopAnnounceMeters) than the 1km
@@ -135,21 +166,29 @@ export async function maybeNotifyCustomerOfDropoffProximity(
 export async function maybeAnnouncePickupArrivalNextStop(
   trip: tripService.Trip,
   driverCoords: LatLng,
-): Promise<void> {
-  if (!config.enableNextStopNudge) return;
-  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return;
-  if (!trip.driver_phone) return;
+): Promise<boolean> {
+  if (!config.enableNextStopNudge) return false;
+  if (typeof trip.pickup_lat !== 'number' || typeof trip.pickup_lng !== 'number') return false;
+  if (!trip.driver_phone) return false;
 
   // Driver-level opt-in: off by default — no auto-suggestion nudge unless
   // the driver has explicitly turned this on.
   const settings = await driverSettingsService.getByPhone(trip.driver_phone);
-  if (!settings?.auto_suggest_next_stop) return;
+  if (!settings?.auto_suggest_next_stop) return false;
 
+  const radius = settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
-  if (distance > (settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters)) return;
+  if (distance > radius) {
+    console.log(`[proximity] pickup-suggest skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    return false;
+  }
 
   const announcedKey = tripArrivalAnnouncedKey(trip.trip_id);
-  if (await cacheGet(announcedKey)) return;
+  if (await cacheGet(announcedKey)) {
+    console.log(`[proximity] pickup-suggest skip (already announced) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    return false;
+  }
+  console.log(`[proximity] pickup-suggest FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
   await cacheSet(announcedKey, true, 3600);
 
   try {
@@ -165,26 +204,35 @@ export async function maybeAnnouncePickupArrivalNextStop(
   } catch (err) {
     console.warn(`[proximity] pickup arrival next-stop nudge failed for trip=${trip.trip_id}:`, err);
   }
+  return true;
 }
 
 // Mirrors maybeAnnouncePickupArrivalNextStop above but for the DROPOFF point.
 export async function maybeAnnounceDropoffArrivalNextStop(
   trip: tripService.Trip,
   driverCoords: LatLng,
-): Promise<void> {
-  if (!config.enableNextStopNudge) return;
-  if (trip.status !== 'picked_up') return;
-  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return;
-  if (!trip.driver_phone) return;
+): Promise<boolean> {
+  if (!config.enableNextStopNudge) return false;
+  if (trip.status !== 'picked_up') return false;
+  if (typeof trip.dropoff_lat !== 'number' || typeof trip.dropoff_lng !== 'number') return false;
+  if (!trip.driver_phone) return false;
 
   const settings = await driverSettingsService.getByPhone(trip.driver_phone);
-  if (!settings?.auto_suggest_next_stop) return;
+  if (!settings?.auto_suggest_next_stop) return false;
 
+  const radius = settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
-  if (distance > (settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters)) return;
+  if (distance > radius) {
+    console.log(`[proximity] dropoff-suggest skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    return false;
+  }
 
   const announcedKey = tripDropoffArrivalAnnouncedKey(trip.trip_id);
-  if (await cacheGet(announcedKey)) return;
+  if (await cacheGet(announcedKey)) {
+    console.log(`[proximity] dropoff-suggest skip (already announced) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    return false;
+  }
+  console.log(`[proximity] dropoff-suggest FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
   await cacheSet(announcedKey, true, 3600);
 
   try {
@@ -192,4 +240,5 @@ export async function maybeAnnounceDropoffArrivalNextStop(
   } catch (err) {
     console.warn(`[proximity] dropoff arrival next-stop nudge failed for trip=${trip.trip_id}:`, err);
   }
+  return true;
 }

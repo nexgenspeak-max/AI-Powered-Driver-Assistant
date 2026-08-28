@@ -35,7 +35,7 @@ async def wait_for_sip_pickup(
     *,
     answer_timeout: float = 20.0,
     post_answer_delay: float = 3.0,
-) -> None:
+) -> bool:
     """Wait until the dialed party's SIP leg is actually answered before the
     caller speaks — used by BridgeCallAgent/CustomerCallAgent's `on_enter()`.
 
@@ -45,19 +45,28 @@ async def wait_for_sip_pickup(
     start of it. `post_answer_delay` gives them a beat after pickup to
     actually get the phone to their ear before the agent starts talking.
 
-    Best-effort: if the SIP identity/room/answer signal aren't available for
-    any reason, this just returns (speak immediately, today's behavior) —
-    `answer_timeout` bounds the worst case the same way, so a plumbing issue
-    here can never silently mute the agent forever.
+    Returns True only once pickup is genuinely confirmed (and
+    `post_answer_delay` has elapsed) — False for every other case: no SIP
+    identity/room available, the participant disconnected first, OR the wait
+    simply timed out with the call still just ringing. That last case used
+    to be conflated with "confirmed answered" here (a real phone can easily
+    ring 20-30s+ before voicemail, well past a short answer_timeout) — a
+    caller that pressed ahead and spoke as soon as this returned ended up
+    greeting a customer who hadn't picked up yet, followed moments later by
+    the SIP leg's own genuine no-answer disconnect reporting "call ended" to
+    the driver, which looked like the call had barely started ringing before
+    being called finished. Callers MUST treat a False return as "pickup was
+    never confirmed" and hold off acting like the customer is on the line —
+    not as license to proceed anyway.
     """
     sip_identity = (userdata.get("customer_call") or {}).get("sip_identity", "")
     if not sip_identity:
-        return
+        return False
 
     try:
         room = get_job_context().room
     except RuntimeError:
-        return
+        return False
 
     try:
         await asyncio.wait_for(
@@ -71,12 +80,13 @@ async def wait_for_sip_pickup(
         )
     except Exception:
         logger.debug(
-            "wait_for_sip_pickup: answer wait failed/timed out — speaking anyway",
+            "wait_for_sip_pickup: answer wait failed/timed out — pickup not confirmed",
             exc_info=True,
         )
-        return
+        return False
 
     await asyncio.sleep(post_answer_delay)
+    return True
 
 
 def _run_logged(coro, *, name: str) -> None:
@@ -109,7 +119,44 @@ def _is_driver_sip_participant(participant: rtc.RemoteParticipant, userdata: dic
     return pid.startswith("driver-")
 
 
-def _disconnect_summary(lang: str, mode: str) -> str:
+def _was_answered(participant: rtc.RemoteParticipant) -> bool:
+    """True if this SIP leg's own `sip.callStatus` ever reached "active" —
+    i.e. the other side genuinely picked up at some point before this
+    disconnect, as opposed to still just ringing (declined, no answer,
+    voicemail, ring timeout, carrier reject: all of these end the SIP leg
+    the same way a real hangup does, but the callee never actually heard
+    anything). `participant.attributes` is kept live-synced by the SDK from
+    `participant_attributes_changed` events (see wait_for_participant_attribute
+    above), so the last-known value is still readable here even though the
+    participant is already on its way out."""
+    return participant.attributes.get(_SIP_CALL_STATUS_ATTR) == _SIP_CALL_STATUS_ACTIVE
+
+
+def _disconnect_summary(lang: str, mode: str, *, answered: bool) -> str:
+    if not answered:
+        # Never actually reached "active" — this is a failed/unanswered dial
+        # (declined, no answer, voicemail, ring timeout), NOT a real hangup.
+        # Reporting this to the driver as "khách cúp máy" implied a
+        # conversation happened and the customer ended it, which is
+        # misleading when in fact nobody ever picked up.
+        if mode == "bridge":
+            return (
+                "Could not reach the customer — no answer. Bridge call cancelled."
+                if lang == "en"
+                else "Không kết nối được với khách — khách không bắt máy. Cuộc gọi kết nối trực tiếp đã hủy."
+            )
+        if mode == "background":
+            return (
+                "Could not reach the customer — no answer or the call was declined."
+                if lang == "en"
+                else "Không gọi được cho khách — khách không bắt máy hoặc đã từ chối cuộc gọi."
+            )
+        return (
+            "Could not reach the customer before the conversation began."
+            if lang == "en"
+            else "Không kết nối được với khách trước khi cuộc trò chuyện bắt đầu."
+        )
+
     if mode == "bridge":
         return (
             "Customer hung up. Bridge call ended."
@@ -137,13 +184,62 @@ async def complete_isolated_call(session: AgentSession, userdata: dict, summary:
     call must go through here so the driver's "tóm tắt cuộc gọi" query never
     gets stuck on status=in_progress.
     """
+    # _handback_in_progress alone only guards against two OVERLAPPING calls —
+    # it resets to False once the first one finishes, so a second, later
+    # caller (e.g. the SIP disconnect watcher and the SilenceTracker timeout
+    # both firing for the same hangup within the same second) still sails
+    # through and redundantly re-runs the whole thing: pushes the same
+    # summary to the driver's room a second time, then fails its own
+    # disconnect/delete_room calls against a room that's already gone
+    # (confirmed in production — back-to-back identical "Cuộc gọi nền đã kết
+    # thúc..." announcements, followed by 404s tearing down an already-torn-
+    # down room). This flag persists across separate calls, not just
+    # concurrent ones.
+    if userdata.get("_isolated_call_done"):
+        return
     if userdata.get("_handback_in_progress"):
         return
     userdata["_handback_in_progress"] = True
+    userdata["_isolated_call_done"] = True
     try:
         driver_phone = userdata.get("driver_phone", "")
         call_id = (userdata.get("customer_call") or {}).get("call_id", "")
+
+        # Prefer the real, transcript-based summary over the generic
+        # disconnect-reason text above whenever the customer actually said
+        # something before hanging up — a bare "khách cúp máy" tells the
+        # driver nothing about what was discussed. Persist it now and read it
+        # straight back via this exact call_id, same reasoning as
+        # customer_call_tools.py::_finish_isolated_call: the driver should
+        # only ever hear something verifiably already saved under this call,
+        # not a value that might not match what's actually in
+        # local-driver-assistant-call-records.
+        conv_service = userdata.get("_conv_service")
+        if userdata.get("_customer_spoke") and conv_service is not None:
+            try:
+                generated = await conv_service.finish_and_get_summary()
+                if generated:
+                    summary = generated
+            except Exception:
+                logger.error(
+                    "finish_and_get_summary failed — using disconnect-reason summary",
+                    exc_info=True,
+                )
+
         await backend_api.complete_background_call(driver_phone, call_id, summary)
+
+        if driver_phone and call_id:
+            try:
+                confirmed = await backend_api.get_latest_call_record(driver_phone)
+                if confirmed.get("call_id") == call_id and confirmed.get("summary"):
+                    summary = confirmed["summary"]
+            except Exception:
+                logger.warning(
+                    "failed to confirm persisted summary via cache/call_id lookup — "
+                    "using the disconnect-reason summary instead",
+                    exc_info=True,
+                )
+
         # Proactively tell the driver's own room the result, right after
         # marking it complete — the driver doesn't have to ask "tóm tắt cuộc
         # gọi" first.
@@ -190,7 +286,7 @@ def register_sip_call_watchers(
                 )
                 return
             lang = userdata.get("lang", "vn")
-            summary = _disconnect_summary(lang, "background")
+            summary = _disconnect_summary(lang, "background", answered=_was_answered(participant))
             _run_logged(
                 complete_isolated_call(session, userdata, summary),
                 name="auto_complete_isolated",
@@ -217,11 +313,13 @@ def register_sip_call_watchers(
 
         lang = userdata.get("lang", "vn")
         mode = (userdata.get("customer_call") or {}).get("mode", "agent")
-        summary = _disconnect_summary(lang, mode)
+        answered = _was_answered(participant)
+        summary = _disconnect_summary(lang, mode, answered=answered)
         logger.info(
-            "customer SIP disconnected | identity=%s mode=%s",
+            "customer SIP disconnected | identity=%s mode=%s answered=%s",
             participant.identity,
             mode,
+            answered,
         )
 
         _run_logged(
@@ -264,12 +362,19 @@ def register_customer_room_sip_watchers(
             return
 
         lang = userdata.get("lang", "vn")
-        summary = (
-            "Driver hung up. Bridge call ended."
-            if lang == "en"
-            else "Tài xế đã cúp máy. Cuộc gọi kết nối trực tiếp đã kết thúc."
-        )
-        logger.info("driver SIP disconnected | identity=%s", participant.identity)
+        if _was_answered(participant):
+            summary = (
+                "Driver hung up. Bridge call ended."
+                if lang == "en"
+                else "Tài xế đã cúp máy. Cuộc gọi kết nối trực tiếp đã kết thúc."
+            )
+        else:
+            summary = (
+                "Could not reach the driver — no answer. Bridge call cancelled."
+                if lang == "en"
+                else "Không kết nối được với tài xế — tài xế không bắt máy. Cuộc gọi kết nối trực tiếp đã hủy."
+            )
+        logger.info("driver SIP disconnected | identity=%s answered=%s", participant.identity, _was_answered(participant))
 
         _run_logged(
             handback_to_customer(

@@ -1,4 +1,21 @@
-import type { RouteInfo, DistanceMatrixResult } from './types';
+import type { RouteInfo, RouteStep, DistanceMatrixResult } from './types';
+
+// Mirrors goong.ts's mapSteps — Google's Directions API step shape is the
+// one Goong's own response format was modeled on, so this is nearly
+// identical (Google's html_instructions can contain real `<b>`/`<div>` tags
+// for bold street names, hence the strip here too).
+function mapSteps(rawSteps: unknown): RouteStep[] | undefined {
+  if (!Array.isArray(rawSteps)) return undefined;
+  return rawSteps.map((s: any) => ({
+    instruction: String(s.html_instructions ?? '').replace(/<[^>]+>/g, ''),
+    maneuver: s.maneuver ?? '',
+    distance_m: s.distance?.value ?? 0,
+    duration_s: s.duration?.value ?? 0,
+    start_location: { lat: s.start_location?.lat, lng: s.start_location?.lng },
+    end_location: { lat: s.end_location?.lat, lng: s.end_location?.lng },
+    polyline: s.polyline?.points,
+  }));
+}
 import type { LatLng } from '../../utils/geo';
 
 const DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
@@ -57,6 +74,7 @@ export async function getRoute(
       dropoff_lat: leg.end_location?.lat,
       dropoff_lng: leg.end_location?.lng,
       polyline: route.overview_polyline?.points,
+      steps: mapSteps(leg.steps),
     };
   } catch {
     console.warn('Google Maps request failed');

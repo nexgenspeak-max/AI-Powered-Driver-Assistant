@@ -68,6 +68,9 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return pronunciations_for_lang(self._lang)
 
+    def _speech_lang(self) -> str:
+        return self._lang
+
     async def on_enter(self) -> None:
         logger.info("CustomerCallAgent active | lang=%s isolated=%s", self._lang, self._isolated)
         if self._isolated:
@@ -76,7 +79,19 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
 
         from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
 
-        await wait_for_sip_pickup(self.session.userdata)
+        answered = await wait_for_sip_pickup(self.session.userdata)
+        if not answered:
+            # Never confirmed real pickup within the wait window — most
+            # likely the phone is still just ringing (a real phone can ring
+            # well past this), not a broken signal. Do NOT address a customer
+            # who may not even be on the line yet: stay silent here. STT is
+            # already retargeted to their SIP leg (see
+            # customer_call.py::_save_call_context), so if they genuinely
+            # pick up and say something, normal turn-taking picks it up from
+            # there; if they never do, sip_call_watch.py's disconnect handler
+            # reports the honest "could not connect" outcome on its own.
+            logger.info("agent-mode call: pickup not confirmed within wait window — staying silent")
+            return
 
         # Same resume-on-pickup as _run_isolated_answer_flow below — without
         # this, the tracker (paused right before dialing, see
@@ -162,7 +177,15 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
         # comment). Best-effort like every other use of wait_for_sip_pickup:
         # if the signal is unavailable or times out, this still proceeds
         # (speak/resume anyway) rather than silently stalling the call.
-        await wait_for_sip_pickup(self.session.userdata)
+        answered = await wait_for_sip_pickup(self.session.userdata)
+        if not answered:
+            # Never confirmed real pickup — same reasoning as the agent-mode
+            # branch in on_enter() above: could just still be ringing. Stay
+            # silent rather than state the message to a customer who may not
+            # be there; the SIP disconnect handler still reports an honest
+            # "could not connect" outcome if they truly never answer.
+            logger.info("isolated call: pickup not confirmed within wait window — staying silent")
+            return
         self.session.userdata["_isolated_call_answered"] = True
         tracker = self.session.userdata.get("_silence_tracker")
         if tracker:

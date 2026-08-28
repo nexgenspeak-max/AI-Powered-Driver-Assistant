@@ -3,7 +3,8 @@ import { View, YStack, XStack, Text } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 import { Badge } from '../../src/components/Badge'
 
 const DOCUMENTS = [
@@ -22,23 +23,24 @@ export default function DocumentsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Giấy tờ xác minh
-        </Text>
+        </AppText>
         <Text color="$textSecondary" lineHeight={20}>
           Tải lên giấy tờ để được xác minh và tiếp tục nhận chuyến. Tính năng tải ảnh giấy tờ đang được phát triển.
         </Text>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <YStack padding="$2">
             {DOCUMENTS.map((doc, i) => (
               <View key={doc.key}>
                 <TouchableOpacity
                   onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng tải lên giấy tờ sẽ sớm khả dụng.')}
+                  accessibilityRole="button"
                 >
                   <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingHorizontal="$2" paddingVertical="$3">
                     <XStack alignItems="center" gap="$3" flex={1}>
-                      <Ionicons name="document-attach-outline" size={20} color="#7C5B9C" />
+                      <Ionicons name="document-attach-outline" size={20} color="#8B5CF6" />
                       <Text color="$textPrimary" fontWeight="500" flexShrink={1} numberOfLines={1}>
                         {doc.label}
                       </Text>
@@ -50,7 +52,7 @@ export default function DocumentsScreen() {
               </View>
             ))}
           </YStack>
-        </GlassSurface>
+        </Surface>
       </ScrollView>
     </View>
   )

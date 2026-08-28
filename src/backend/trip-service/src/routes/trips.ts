@@ -6,7 +6,7 @@ import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
-import { cacheSet, driverLocationKey } from '../cache/redis';
+import { cacheSet, driverLocationKey, driverLiveLocationKey } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
 import { notifyDriver, notifyCustomer } from '../services/notify';
 import { maybeNotifyCustomerOfProximity, maybeNotifyCustomerOfDropoffProximity } from '../services/proximityService';
@@ -242,6 +242,36 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     if (updated && (status === 'confirmed' || status === 'rejected')) {
       const customerId = updated.id_account || updated.customer_phone;
       if (customerId) await notifyCustomer(customerId, status === 'confirmed' ? 'trip_confirmed' : 'trip_rejected', { trip_id: updated.trip_id });
+    }
+    // Same event name/shape as the customer-facing one above but to the
+    // DRIVER's own socket — this is what driver-app's useDispatchSocket.ts
+    // listens for to immediately push a fresh GPS fix (POST
+    // /drivers/me/location/live) right as a trip lands in the routing-active
+    // set, rather than waiting on useLiveDriverLocation's own ~30s cadence.
+    // Fires for both the driver-app "Accept" button and voice-agent's
+    // confirm_trip tool, since both PATCH through this exact handler.
+    if (updated && status === 'confirmed' && updated.driver_phone) {
+      await notifyDriver(updated.driver_phone, 'trip_confirmed', { trip_id: updated.trip_id });
+    }
+    // arrived_pickup/picked_up/completed all already carry a fresh,
+    // just-validated GPS fix (see the arrival-radius check above) — cache it
+    // as this driver's live location right now (skips waiting on the next
+    // ~30s useLiveDriverLocation tick) and tell the driver their stop order
+    // needs a refetch. invalidateTripParties above already cleared the
+    // cached route, and completing/progressing a stop always changes which
+    // points are still in it: dropped entirely once `completed`, pickup ->
+    // dropoff once `picked_up` — see routeOptimizationService.ts's
+    // candidatesFromTrips, which reads each trip's CURRENT status to decide
+    // what it still contributes, so a completed/progressed trip is excluded
+    // on the very next rebuild without any separate "visited" list to
+    // maintain — status IS that list.
+    if (updated?.driver_phone && (status === 'arrived_pickup' || status === 'picked_up' || status === 'completed')) {
+      const driverLat = Number(req.body.lat);
+      const driverLng = Number(req.body.lng);
+      if (Number.isFinite(driverLat) && Number.isFinite(driverLng)) {
+        await cacheSet(driverLiveLocationKey(updated.driver_phone), { lat: driverLat, lng: driverLng, updated_at: new Date().toISOString() }, 1200);
+      }
+      await notifyDriver(updated.driver_phone, 'schedule_updated', {});
     }
     // Proactive "what should I do next" nudge — fires right when the driver
     // just picked up (status=picked_up) or just dropped off (status=

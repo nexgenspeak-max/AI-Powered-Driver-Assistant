@@ -10,7 +10,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 import { GlassAuthInput } from '../../src/components/GlassAuthInput'
 import { GlassButton } from '../../src/components/GlassButton'
 import { deliveryOrdersService } from '../../src/services/api/deliveryOrders'
@@ -96,12 +97,12 @@ export default function AddDeliveryScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Thêm đơn giao hàng
-        </Text>
+        </AppText>
 
         <TouchableOpacity onPress={handleCapture} activeOpacity={0.85} disabled={isScanning}>
-          <GlassSurface cornerRadius={20} style={{ minHeight: 160 }}>
+          <Surface style={{ minHeight: 160 }}>
             <YStack flex={1} alignItems="center" justifyContent="center" padding="$4" gap="$2">
               {photoUri && (
                 <Image source={{ uri: photoUri }} style={{ width: '100%', height: 160, borderRadius: 14 }} resizeMode="cover" />
@@ -135,7 +136,7 @@ export default function AddDeliveryScreen() {
                     justifyContent="center"
                     backgroundColor="$primaryMuted"
                   >
-                    <Ionicons name="camera" size={26} color="#7C5B9C" />
+                    <Ionicons name="camera" size={26} color="#8B5CF6" />
                   </View>
                   <Text fontWeight="700" color="$textPrimary" fontSize="$3">
                     Chụp ảnh đơn hàng
@@ -146,17 +147,23 @@ export default function AddDeliveryScreen() {
                 </>
               )}
             </YStack>
-          </GlassSurface>
+          </Surface>
         </TouchableOpacity>
         {photoUri && !isScanning && (
-          <TouchableOpacity onPress={() => setPhotoUri(undefined)} style={{ alignSelf: 'center' }}>
+          <TouchableOpacity
+            onPress={() => setPhotoUri(undefined)}
+            style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 4 }}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Chụp lại ảnh"
+          >
             <Text color="$danger" fontSize={13} fontWeight="600">
               Chụp lại
             </Text>
           </TouchableOpacity>
         )}
 
-        <GlassSurface cornerRadius={20}>
+        <Surface>
           <YStack padding="$4" gap="$4">
             <Text fontWeight="700" color="$textPrimary" fontSize="$4">
               Người gửi
@@ -191,9 +198,9 @@ export default function AddDeliveryScreen() {
               )}
             />
           </YStack>
-        </GlassSurface>
+        </Surface>
 
-        <GlassSurface cornerRadius={20}>
+        <Surface>
           <YStack padding="$4" gap="$4">
             <Text fontWeight="700" color="$textPrimary" fontSize="$4">
               Người nhận
@@ -228,7 +235,7 @@ export default function AddDeliveryScreen() {
               )}
             />
           </YStack>
-        </GlassSurface>
+        </Surface>
 
         <GlassButton label="Thêm đơn hàng" onPress={handleSubmit(onSubmit)} loading={isSaving} />
       </ScrollView>

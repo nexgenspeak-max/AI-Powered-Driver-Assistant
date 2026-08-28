@@ -118,6 +118,10 @@ async def start_agent_call_to_contact(
     if sip_identity:
         room_io.set_participant(sip_identity)
 
+    from app.voicebot.processors.agent_call_silence import schedule_agent_call_silence_watch
+
+    schedule_agent_call_silence_watch(context.session, context.userdata)
+
     tracker = context.userdata.get("_silence_tracker")
     if tracker:
         tracker.pause()
