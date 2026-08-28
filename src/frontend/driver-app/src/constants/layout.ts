@@ -1,4 +1,5 @@
 import { CHAT_TOGGLE_BUTTON_SIZE } from '../features/home/components/ChatToggleButton'
+import { BUTTON_RISE } from '../components/AssistantTabButton'
 
 // ChatToggleButton (Home screen only) sits at `insets.top + 12`, is
 // CHAT_TOGGLE_BUTTON_SIZE tall — anything else top-anchored on that same
@@ -7,16 +8,18 @@ import { CHAT_TOGGLE_BUTTON_SIZE } from '../features/home/components/ChatToggleB
 export const TOP_CLEARANCE_BELOW_CHAT_BUTTON = 12 + CHAT_TOGGLE_BUTTON_SIZE + 12
 
 // LiquidGlassTabBar.tsx is a "floating island" that renders ON TOP of screen
-// content instead of reserving layout space for itself (bottom: 16, content
-// height 76 — see that file's own comment on why) — anything bottom-anchored
-// in a tab screen has to clear that whole footprint itself, or it gets
-// visually buried under the tab bar. Add to `insets.bottom`.
+// content instead of reserving layout space for itself — anything
+// bottom-anchored in a tab screen has to clear its whole footprint itself,
+// or it gets visually buried under (or, worse, behind/under) the raised
+// center "Trợ lý" button, which pokes up an extra `BUTTON_RISE` above the
+// bar's own top edge — the actual tallest point of the bar's silhouette.
+// Add to `insets.bottom`.
 //
-// Named distinctly from GlobalAssistantOrb.tsx's own local (unexported)
-// `TAB_BAR_CLEARANCE = 120` — that one is a looser drag-bound buffer for a
-// freely-draggable bubble, tuned independently for that purpose; this one is
-// the precise tab-bar footprint used to sit map overlay cards flush just
-// above it. Same underlying concern, deliberately different constants — the
-// distinct name is so a future "these should obviously be the same value"
-// cleanup doesn't quietly break either one's tuning.
-export const MAP_OVERLAY_BOTTOM_CLEARANCE = 16 + 76 + 12
+// 84 is the web tab bar's own content height (LiquidGlassTabBar.web.tsx's
+// CONTENT_HEIGHT) — taller than native's 72, used here as the safe upper
+// bound since this one constant covers both platforms. `BUTTON_RISE` is
+// imported (not copied) so this stays correct if the button's rise is ever
+// retuned. Reported bug this fixes: OptimizedRoutePanel (the "N điểm dừng"
+// stop list) sat low enough that the AI button's own poked-up top clipped
+// into/behind its bottom edge.
+export const MAP_OVERLAY_BOTTOM_CLEARANCE = 16 + 84 + BUTTON_RISE + 12

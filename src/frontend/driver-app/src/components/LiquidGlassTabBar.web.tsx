@@ -37,6 +37,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GLASS_BORDER_COLOR } from './LiquidGlass'
+import { AssistantTabButton, BUTTON_SIZE, BUTTON_RISE } from './AssistantTabButton'
 import Animated, {
   Easing,
   runOnJS,
@@ -105,11 +106,21 @@ export function PageBlurOverlay({ children }: { children: ReactNode }) {
 // exactly (see driver-app's app/(app)/_layout.tsx, untouched) — same
 // height/radius/margins/shadow, so restyling this away and back didn't
 // leave the placement/shape any different from before this experiment.
-const CONTENT_HEIGHT = 76
+// Was 76 — a bit taller per request.
+const CONTENT_HEIGHT = 84
 const BAR_RADIUS = 30
-const BAR_SIDE_MARGIN = 20
+// Was 20 — widened per request so the bar spans more of the screen (also
+// gives each tab's own slot a bit more room now that a 5th slot is shared
+// with the AI button). Matches the same reduction on the native tab bar.
+const BAR_SIDE_MARGIN = 10
 const BAR_BOTTOM_MARGIN = 16
-const PILL_MARGIN = 6
+// Zero — the pill exactly matches each tab's own measured layout width (see
+// `moveTo`/`onTabLayout` below), the widest it can be without overlapping
+// the neighboring tab. The AI button's own slot makes every real tab's slot
+// narrower than before it existed, and even a small margin (4px each side)
+// was still cutting into long labels like "Trang chủ" (reported: the
+// "t"/"u" ends sat outside the purple background).
+const PILL_MARGIN = 0
 
 const LEADING_SPRING = { damping: 14, stiffness: 220, mass: 0.6 }
 const TRAILING_SPRING = { damping: 18, stiffness: 120, mass: 0.9 }
@@ -152,6 +163,15 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     0,
     visibleRoutes.findIndex(route => route.key === selectedKey),
   )
+
+  // The AI button takes up its own slot in the row (so the real tabs shift
+  // over to make room for it, evenly re-spacing) — inserted at the middle
+  // slot, e.g. 4 routes -> [route0, route1, AI, route2, route3]. Real routes
+  // keep their own indices for `tabLayouts`/`indexAtX`/`moveTo` below (all
+  // keyed by route position, unaffected by the spacer) — only the row's
+  // render loop and the pill's own width math need to know about the slot.
+  const aiSlotIndex = Math.floor(visibleRoutes.length / 2)
+  const slotCount = visibleRoutes.length + 1
 
   const [barWidth, setBarWidth] = useState(0)
   // The label color's own source of truth — see the native
@@ -376,11 +396,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
   const pillHeight = useDerivedValue(() => {
     const width = rightEdge.value - leftEdge.value
-    const baseWidth = barWidth > 0 ? barWidth / Math.max(visibleRoutes.length, 1) - PILL_MARGIN * 2 : width
+    const baseWidth = barWidth > 0 ? barWidth / slotCount - PILL_MARGIN * 2 : width
     const stretchRatio = baseWidth > 0 ? width / baseWidth : 1
     const squash = 1 - Math.min(Math.max(stretchRatio - 1, 0), 0.4) * 0.25
     return CONTENT_HEIGHT * 0.7 * squash
   })
+
+  // Approximate uniform-width center (real tabs are `flex: 1` across
+  // `slotCount` slots, AI slot included) — doesn't need the same
+  // measured-layout precision the pill uses, just a reasonable anchor for
+  // the button to sit at.
+  const aiCenterX = barWidth > 0 ? aiSlotIndex * (barWidth / slotCount) + barWidth / slotCount / 2 : 0
 
   const pillTop = useDerivedValue(() => (CONTENT_HEIGHT - pillHeight.value) / 2)
 
@@ -475,7 +501,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               comment on that view for why. */}
           <GestureDetector gesture={panGesture}>
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
-              {visibleRoutes.map((route, index) => {
+              {Array.from({ length: slotCount }).map((_, slot) => {
+                if (slot === aiSlotIndex) {
+                  // Empty spacer — reserves the AI button's slot width so
+                  // the real tabs around it space out correctly (and so
+                  // `indexAtX`'s touch mapping doesn't resolve a tap here to
+                  // a real tab). The button itself renders below, outside
+                  // this row, positioned at `aiCenterX`.
+                  return <View key="ai-slot" pointerEvents="none" style={styles.tab} />
+                }
+                const index = slot < aiSlotIndex ? slot : slot - 1
+                const route = visibleRoutes[index]
                 const { options } = descriptors[route.key]
                 const isFocused = visualIndex === index
                 const label = options.title ?? route.name
@@ -493,6 +529,16 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
               })}
             </View>
           </GestureDetector>
+
+          {/* Deliberately NOT inside the clipped view above either — same
+              reasoning as the row, plus it needs to rise above the bar's
+              own top edge, which a clip would cut off. */}
+          <AssistantTabButton
+            centerX={aiCenterX}
+            barWidth={barWidth}
+            labelColor={isLight ? '#7C3AED' : '#C4B5FD'}
+            labelTop={BUTTON_SIZE - BUTTON_RISE + 4}
+          />
         </View>
       </View>
     </View>

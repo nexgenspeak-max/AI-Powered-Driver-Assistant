@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { GlassSheen, getGlassShadow } from './LiquidGlass'
 
 const HEIGHT = 40
-const RADIUS = 12
+const RADIUS = 14
 const GLASS_BG_LIGHT = 'rgba(255,255,255,0.55)'
 const GLASS_BG_DARK = 'rgba(36,29,44,0.72)'
 

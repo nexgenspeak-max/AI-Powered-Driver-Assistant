@@ -1,11 +1,13 @@
-import { ScrollView, Switch } from 'react-native'
+import { ScrollView } from 'react-native'
 import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
+import { Toggle } from '../../src/components/Toggle'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 import { useWakeWordSettingsStore } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { settingsService, type AccountSettings } from '../../src/services/api/settings'
@@ -93,14 +95,14 @@ export default function AssistantSettingsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Cài đặt trợ lý
-        </Text>
+        </AppText>
         <Text color="$textSecondary" fontSize={13}>
           Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.
         </Text>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <ToggleRow
             iconName="mic-outline"
             label="Chế độ rảnh tay"
@@ -130,7 +132,7 @@ export default function AssistantSettingsScreen() {
             isLight={isLight}
             theme={theme}
           />
-        </GlassSurface>
+        </Surface>
       </ScrollView>
     </View>
   )
@@ -180,23 +182,20 @@ function ToggleRow({
           <Ionicons name={iconName} size={20} color={theme.textSecondary.val} />
         </View>
         <YStack flex={1}>
-          <Text color="$textPrimary" fontWeight="500">
-            {label}
-          </Text>
-          <Text color="$textSecondary" fontSize={11} marginTop="$1">
+          <AppText variant="body">{label}</AppText>
+          <AppText variant="caption" color="$textSecondary" marginTop="$1">
             {description}
-          </Text>
+          </AppText>
         </YStack>
       </XStack>
-      <Switch
+      <Toggle
         value={displayValue}
         onValueChange={v => {
           setDisplayValue(v)
           onValueChange(v)
         }}
-        trackColor={{ false: isLight ? '#B8BCC8' : theme.borderStrong.val, true: '#8B5CF6' }}
-        thumbColor="#ffffff"
-        ios_backgroundColor={isLight ? '#B8BCC8' : theme.borderStrong.val}
+        onColor={theme.primary.val}
+        accessibilityLabel={label}
       />
     </XStack>
   )

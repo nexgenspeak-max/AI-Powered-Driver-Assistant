@@ -103,3 +103,55 @@ async def build_nudge_message(
 
     logger.warning("build_nudge_message: unhandled nudge_kind=%s", nudge_kind)
     return ""
+
+
+# proximity_* is said before suggest_next_stop: "anh/chị sắp đến điểm đón X"
+# then "điểm kế tiếp là Y" reads in the right order, and the proximity line is
+# guaranteed non-empty so the driver always hears *something* even if the
+# suggestion can't be computed.
+_NUDGE_ORDER = {
+    "proximity_pickup": 0,
+    "proximity_dropoff": 0,
+    "debug_ping": 1,
+    "suggest_next_stop": 2,
+}
+
+
+async def speak_nudges(
+    session, nudges: list[dict], *, lang: str = "vi", userdata: dict | None = None,
+) -> bool:
+    """Render + speak every deliverable nudge in `nudges`, in a sensible order.
+
+    Each item: {"nudge_kind": str, ...payload}. Used by DriverAgent.on_enter for
+    the no-open-session delivery path, where trip-service can now hand over more
+    than one pending nudge at once (1km "gần điểm đón" + 200m "gợi ý điểm kế" —
+    they used to share one overwritable Redis slot, so only the last one
+    survived). Nudges that render empty (e.g. suggest_next_stop with no rankable
+    stop) are skipped, NOT turned into a fallback greeting.
+
+    Returns True if at least one line was spoken.
+    """
+    from app.voicebot.processors import context_store
+
+    ordered = sorted(
+        (n for n in nudges if isinstance(n, dict) and n.get("nudge_kind")),
+        key=lambda n: _NUDGE_ORDER.get(n["nudge_kind"], 9),
+    )
+    said = False
+    for n in ordered:
+        kind = n.get("nudge_kind", "")
+        payload = {k: v for k, v in n.items() if k != "nudge_kind"}
+        text = await build_nudge_message(kind, payload, lang=lang, userdata=userdata)
+        if not text:
+            logger.info("speak_nudges: nothing to say for kind=%s — skipped", kind)
+            continue
+        # Same guard as session.py's live-push _speak_driver_nudge: for
+        # suggest_next_stop, payload.related_trip_id is the trip to EXCLUDE, not
+        # the announced one — next_stop.py sets last_nudge_trip itself there.
+        if kind != "suggest_next_stop" and userdata is not None:
+            related_trip_id = payload.get("related_trip_id", "")
+            if related_trip_id:
+                context_store.set_last_nudge_trip(userdata, related_trip_id)
+        await session.say(text, allow_interruptions=False)
+        said = True
+    return said

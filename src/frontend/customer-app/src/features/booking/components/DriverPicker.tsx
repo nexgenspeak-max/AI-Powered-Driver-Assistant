@@ -28,7 +28,14 @@ export function DriverPicker({ selected, onSelect, error }: Props) {
         <Text fontSize="$2" fontWeight="600" color="$textSecondary">
           Chọn tài xế
         </Text>
-        <TouchableOpacity onPress={() => refetch()} disabled={isRefetching}>
+        <TouchableOpacity
+          onPress={() => refetch()}
+          disabled={isRefetching}
+          hitSlop={12}
+          style={{ padding: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Làm mới danh sách tài xế"
+        >
           {isRefetching ? (
             <ActivityIndicator size="small" color="#8B5CF6" />
           ) : (

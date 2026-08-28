@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { ScrollView } from 'react-native'
-import { YStack, Text, useThemeName } from 'tamagui'
+import { YStack, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
@@ -13,6 +13,7 @@ import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Button } from '../../../components/Button'
 import { Card } from '../../../components/Card'
+import { AppText } from '../../../components/AppText'
 import { useAuthStore } from '../../../stores/authStore'
 import { authService } from '../../../services/api/auth'
 import { authGlassTheme } from '../../../theme'
@@ -20,13 +21,13 @@ import { VehicleTypeSelect } from './VehicleTypeSelect'
 import type { Driver } from '../../../types'
 
 const schema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().min(8, 'Valid phone required'),
-  email: z.string().email('Valid email required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  vehicle_type: z.string().min(1, 'Select a vehicle type'),
-  vehicle_plate: z.string().min(3, 'Valid plate number required'),
-  vehicle_name: z.string().min(2, 'Vehicle name required'),
+  name: z.string().min(2, 'Tên tối thiểu 2 ký tự'),
+  phone: z.string().min(8, 'Số điện thoại chưa hợp lệ'),
+  email: z.string().email('Email chưa hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
+  vehicle_type: z.string().min(1, 'Chọn loại xe'),
+  vehicle_plate: z.string().min(3, 'Biển số chưa hợp lệ'),
+  vehicle_name: z.string().min(2, 'Nhập tên xe'),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -86,12 +87,15 @@ export function RegisterForm() {
           keyboardShouldPersistTaps="handled"
         >
           <YStack alignItems="center" gap="$2">
-            <Text color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark} fontSize="$7" fontWeight="800">
-              Become a Driver
-            </Text>
-            <Text color="$textSecondary" fontSize="$3">
-              Sign up to start earning with Czen
-            </Text>
+            <AppText
+              variant="display"
+              color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
+            >
+              Trở thành tài xế
+            </AppText>
+            <AppText variant="body" color="$textSecondary">
+              Đăng ký để bắt đầu kiếm tiền cùng Czen
+            </AppText>
           </YStack>
 
           <Card
@@ -99,15 +103,14 @@ export function RegisterForm() {
             maxWidth={authGlassTheme.card.maxWidth}
             gap="$4"
             shadowIntensity="strong"
-            borderRadius={28}
             backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
           >
             <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Full name" placeholder="Nguyễn Văn A"
+              <GlassAuthInput label="Họ và tên" placeholder="Nguyễn Văn A"
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
             )} />
             <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Phone number" placeholder="+84901234567" keyboardType="phone-pad"
+              <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
             )} />
             <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
@@ -115,34 +118,34 @@ export function RegisterForm() {
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.email?.message} />
             )} />
             <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Password" secureTextEntry
+              <GlassAuthInput label="Mật khẩu" secureTextEntry
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
             )} />
             <Controller name="vehicle_type" control={control} render={({ field: { onChange, value } }) => (
               <VehicleTypeSelect value={value} onChange={onChange} error={errors.vehicle_type?.message} />
             )} />
             <Controller name="vehicle_plate" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Vehicle plate" placeholder="36C1-36363"
+              <GlassAuthInput label="Biển số xe" placeholder="36C1-36363"
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_plate?.message} />
             )} />
             <Controller name="vehicle_name" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Vehicle name" placeholder="Honda Wave"
+              <GlassAuthInput label="Tên xe" placeholder="Honda Wave"
                 value={value} onChangeText={onChange} onBlur={onBlur} error={errors.vehicle_name?.message} />
             )} />
 
             {isError && !axios.isCancel(error) && (
-              <Text color="$danger" fontSize="$1">
-                Registration failed. Check your details.
-              </Text>
+              <AppText variant="caption" color="$danger">
+                Đăng ký thất bại. Kiểm tra lại thông tin.
+              </AppText>
             )}
 
             <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
-            {isPending && <Button label="Hủy" variant="outline" onPress={onCancel} />}
+            {isPending && <Button label="Huỷ" variant="outline" onPress={onCancel} />}
 
-            <Text textAlign="center" color="$textSecondary" fontSize="$3">
-              Already have an account?{' '}
-              <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Log in</Link>
-            </Text>
+            <AppText variant="body" textAlign="center" color="$textSecondary">
+              Đã có tài khoản?{' '}
+              <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng nhập</Link>
+            </AppText>
           </Card>
         </ScrollView>
       </KeyboardSafeView>

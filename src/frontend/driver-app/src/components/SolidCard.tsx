@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { TouchableOpacity, View } from 'react-native'
-import { useTheme } from 'tamagui'
+import { useTheme, useThemeName } from 'tamagui'
+import { getElevation } from '../theme/elevation'
 
 // Plain solid card — deliberately NOT GlassSurface's glassmorphism wash.
 // Same minimal prop shape as GlassSurface (cornerRadius/onPress/style/
@@ -21,15 +22,12 @@ export function SolidCard({
   children?: ReactNode
 }) {
   const theme = useTheme()
+  const isLight = useThemeName() === 'light'
   const cardStyle = [
     {
       backgroundColor: theme.surfaceElevated.val,
       borderRadius: cornerRadius,
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 12,
-      elevation: 6,
+      ...getElevation('lg', isLight),
     },
     style,
   ]

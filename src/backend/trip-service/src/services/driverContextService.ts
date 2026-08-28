@@ -59,6 +59,12 @@ export async function buildDriverContext(driverPhone: string) {
   const inProgress = trips
     .filter(t => IN_PROGRESS.has(t.status))
     .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at));
+  // Driver-app's "Đã hoàn thành" tab — deliberately `completed` only (not
+  // cancelled/rejected/no_answer/no_show too): those never made it onto the
+  // driver's plate as a real trip they ran, so they don't belong in a list
+  // that's meant to read as "trips I've done". `trips` is already this
+  // driver's most recent 50 (tripsForDriver above), newest first.
+  const completed = trips.filter(t => t.status === 'completed');
   const currentRaw = trips.find(t => IN_PROGRESS.has(t.status)) ?? null;
   const current = currentRaw ? earningsService.enrichTrip(currentRaw) : null;
 
@@ -79,6 +85,7 @@ export async function buildDriverContext(driverPhone: string) {
     active_bonuses: earningsService.activeBonuses(),
     upcoming_trips: upcoming.map(earningsService.enrichTrip),
     active_trips: inProgress.map(earningsService.enrichTrip),
+    completed_trips: completed.map(earningsService.enrichTrip),
     current_trip: current,
     // From the ~10-min online GPS ping (POST /drivers/me/location) — used by
     // voice-agent's suggest_next_stop tool to pick the nearest pending
@@ -135,15 +142,38 @@ export async function invalidateDriverContext(driverPhone: string) {
   await cacheDel(...phoneVariants(driverPhone).map(driverContextKey));
 }
 
+// Trip actually has a driver en route (accepted, not just offered) — a
+// pending/notified/calling trip hasn't been confirmed by anyone yet, so
+// there's no live position to show for it. Mirrors driver-side IN_PROGRESS
+// above, just named separately since it's evaluated against a customer's
+// own trip list, not a driver's.
+const CUSTOMER_DRIVER_EN_ROUTE_STATUSES = new Set(['confirmed', 'arrived_pickup', 'picked_up']);
+
 export async function buildCustomerContext(customerPhone: string) {
   const trips = await tripService.listByCustomerPhone(customerPhone, 20);
   const active = trips.filter(
     t => !['completed', 'rejected', 'no_answer', 'cancelled', 'cancelled_by_driver'].includes(t.status),
   );
+  // Last known position of whichever active trip's driver is actually en
+  // route — same driverLiveLocationKey cache driver-app's own GET
+  // /drivers/me/context reads as current_location (populated by
+  // useLiveDriverLocation's throttled push plus the arrival-radius-checked
+  // pushes on arrived_pickup/picked_up/completed in routes/trips.ts). null
+  // until that driver has gone online/moved at least once, or while the
+  // trip is still awaiting the driver's own accept.
+  const enRouteTrip = active.find(t => CUSTOMER_DRIVER_EN_ROUTE_STATUSES.has(t.status) && t.driver_phone) ?? null;
+  const driverLocation = enRouteTrip?.driver_phone
+    ? await cacheGet<DriverLiveLocation>(driverLiveLocationKey(enRouteTrip.driver_phone))
+    : null;
   return {
     customer_phone: customerPhone,
     trips,
     active_trip: active[0] ?? null,
+    // Full non-terminal trip list (not just the first one) — customer-app's
+    // home map draws a pickup/dropoff pin per entry here, same spatial-
+    // overview idea as driver-app's own DriverMap over active_trips.
+    active_trips: active,
+    driver_location: driverLocation ?? null,
     fetched_at: new Date().toISOString(),
   };
 }

@@ -161,6 +161,11 @@ async def entrypoint(ctx: JobContext) -> None:
     # session open. `related_trip_id` is used instead of `trip_id` at the
     # metadata top level on purpose — see the elif branch below.
     proactive_nudge: dict | None = None
+    # Multi-nudge form: trip-service can now hand over more than one pending
+    # nudge in one session (1km "gần điểm đón" + 200m "gợi ý điểm kế" used to
+    # share one overwritable Redis slot). `proactive_nudge` above stays as the
+    # first/primary one for anything still reading the singular.
+    proactive_nudges: list[dict] = []
     lang = "vn"
     if mode == "custcall":
         try:
@@ -188,18 +193,35 @@ async def entrypoint(ctx: JobContext) -> None:
                     phone = raw.replace("+", "")
                     mode = "driver"  # treat as driver outbound
                 logger.info("trip found | trip_id=%s driver=%s", trip["trip_id"], phone)
-            elif meta.get("nudge_kind"):
-                # Deliberately keyed on `nudge_kind`, NOT `trip_id` — a room
-                # with `trip_id` set always becomes a "new trip offer" above
-                # (DriverAgent.__init__ switches to the 2-tool outbound set
-                # the instant `trip` is truthy). A nudge session must keep
+            elif meta.get("nudge_kind") or meta.get("nudges"):
+                # Deliberately keyed on `nudge_kind`/`nudges`, NOT `trip_id` — a
+                # room with `trip_id` set always becomes a "new trip offer"
+                # above (DriverAgent.__init__ switches to the 2-tool outbound
+                # set the instant `trip` is truthy). A nudge session must keep
                 # the full inbound toolset (call_customer, suggest_next_stop,
                 # ...), so it's routed through this separate branch instead.
-                proactive_nudge = {k: v for k, v in meta.items() if k != "driver_phone"}
+                proactive_nudge = {
+                    k: v for k, v in meta.items() if k not in ("driver_phone", "nudges")
+                }
+                _raw_nudges = meta.get("nudges")
+                if isinstance(_raw_nudges, list) and _raw_nudges:
+                    # New shape from voice.ts: [{kind, payload}, ...]
+                    proactive_nudges = [
+                        {"nudge_kind": n.get("kind", ""), **(n.get("payload") or {})}
+                        for n in _raw_nudges
+                        if isinstance(n, dict) and n.get("kind")
+                    ]
+                elif proactive_nudge.get("nudge_kind"):
+                    # Legacy single-nudge metadata — one-element list.
+                    proactive_nudges = [proactive_nudge]
                 if not phone:
                     raw = meta.get("driver_phone", "")
                     phone = raw.replace("+", "")
-                logger.info("nudge session | kind=%s driver=%s", proactive_nudge.get("nudge_kind"), phone)
+                logger.info(
+                    "nudge session | kinds=%s driver=%s",
+                    ",".join(n.get("nudge_kind", "") for n in proactive_nudges) or "-",
+                    phone,
+                )
             lang = meta.get("lang", "vn")
         except Exception:
             pass
@@ -310,7 +332,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 isolated=True,
             )
             # This is now the ONE rule that ends an isolated call on silence —
-            # 5 real seconds of neither the AI nor the customer saying
+            # 10 real seconds of neither the AI nor the customer saying
             # anything. It must NOT start counting from here, though: the
             # isolated job starts dialing+dispatching in parallel (see
             # trip-service callService.ts startCustomerCall), so this clock
@@ -325,17 +347,19 @@ async def entrypoint(ctx: JobContext) -> None:
             # so these seconds only ever measure silence in a call that's
             # actually connected, never ring time.
             #
-            # Was 5.0s / 1 strike — too tight for real response latency: a
-            # real customer was cut off after exactly 5.0s of "silence" when
-            # their actual answer's transcript landed just 1s later (STT
-            # processing + normal think time before answering a spoken
-            # question routinely lands in the 5-16s range, confirmed from
-            # real call logs). 8s / 2 strikes gives up to ~16s of cumulative
-            # patience — matching that observed range — while still ending
-            # a genuinely abandoned call well short of driver/customer mode's
-            # much longer 60s x 3 (background calls should stay efficient).
-            silence_seconds = 8.0
-            max_silences_default = 2
+            # 10s single strike, measured from when the AI last stopped talking
+            # (the tracker is paused while the AI speaks and resumed on finish,
+            # so this only ever counts genuine post-answer silence). Per
+            # explicit product decision: once the AI has finished a turn and the
+            # customer stays silent past 10s, end the call right away with a
+            # brief goodbye — no "anh/chị còn đó không?" round, no dragging it
+            # out. (Was briefly 8s/2 strikes ≈ 16s to absorb slow STT on a
+            # customer still formulating an answer; 10s/1 keeps most of that
+            # patience while making the wrap-up crisper.
+            # `_on_isolated_silence_timeout` below speaks the goodbye when a
+            # real conversation happened.)
+            silence_seconds = 10.0
+            max_silences_default = 1
         elif mode == "customer":
             agent = voicebot.CustomerAgent(customer_phone=phone)
             silence_seconds = 60.0   # 60s x 3 = 3min total before hangup
@@ -347,6 +371,7 @@ async def entrypoint(ctx: JobContext) -> None:
             agent = voicebot.DriverAgent(
                 trip=trip, driver_phone=phone, context_hint=context_hint,
                 proactive_nudge=proactive_nudge,
+                proactive_nudges=proactive_nudges,
             )
             silence_seconds = 60.0
             # Check-in nudges at 60s/120s, then hang up at 180s (3 min) of
@@ -421,7 +446,7 @@ async def entrypoint(ctx: JobContext) -> None:
             # overrides below, unlike every other mode. Those env vars exist
             # to tune how forgiving the DRIVER's own conversation is —
             # applying them here too silently broke this call's only hang-up
-            # backstop: with SILENCE_MAX_CONSECUTIVE=3 the isolated 5s/1-strike
+            # backstop: with SILENCE_MAX_CONSECUTIVE=3 the isolated 10s/1-strike
             # default got stretched to 3 rounds (~15s+, with the AI asking
             # "are you there?" into what could already be an empty line), and
             # if SILENCE_END_SESSION were ever set false for driver sessions,
@@ -467,7 +492,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 # just force-removed participants and shut the job down with no
                 # backend call at all).
                 #
-                # This fires on ANY 5s mutual silence, including right at the
+                # This fires on ANY 10s mutual silence, including right at the
                 # natural end of a call that actually happened in full (both
                 # sides just went quiet, or the LLM was simply slow to call
                 # end_customer_call itself) — using the generic "couldn't
@@ -482,6 +507,26 @@ async def entrypoint(ctx: JobContext) -> None:
                 # conv_service.finish_and_get_summary()) whenever the
                 # customer actually spoke, so doing that same generation
                 # here too would just be a redundant second LLM call.
+                # A real conversation happened, then 10s of mutual silence after
+                # the AI's last turn — treat that as the call being over and
+                # say a brief goodbye before hanging up (per product ask:
+                # ">10s im lặng sau khi AI nói xong -> chào tạm biệt + ngắt
+                # luôn"). No goodbye when the customer never spoke — that's a
+                # "couldn't reach them" teardown, nobody's on the line to hear
+                # it. The 3s grace lets the line finish playing before
+                # complete_isolated_call tears the room down.
+                if session_userdata.get("_customer_spoke"):
+                    try:
+                        await session.say(
+                            "Vâng, cảm ơn anh/chị nhé, tạm biệt ạ."
+                            if lang != "en" else
+                            "Alright, thank you, goodbye!",
+                            allow_interruptions=False,
+                        )
+                        await asyncio.sleep(3.0)
+                    except Exception:
+                        logger.warning("isolated silence-timeout goodbye failed", exc_info=True)
+
                 summary = (
                     "Không thể trò chuyện với khách (không bắt máy hoặc im lặng kéo dài)."
                     if lang != "en" else
@@ -512,13 +557,21 @@ async def entrypoint(ctx: JobContext) -> None:
                 goodbye_message=goodbye_message,
             )
 
+            # Farewell phrases in the AI's own speech that mean "the call is
+            # over" — background calls hang up automatically when the AI says
+            # one of these (see _on_conversation_item below). Kept to explicit
+            # sign-offs only, never a bare "cảm ơn" (that's said mid-call all
+            # the time when confirming details).
+            _GOODBYE_MARKERS = ("tạm biệt", "goodbye", "kết thúc cuộc gọi", "xin phép kết thúc")
+
             @session.on("conversation_item_added")
             def _on_conversation_item(ev) -> None:
                 item = ev.item
+                if not isinstance(item, ChatMessage) or not item.text_content:
+                    return
+
                 if (
-                    isinstance(item, ChatMessage)
-                    and item.role == "user"
-                    and item.text_content
+                    item.role == "user"
                     # The tracker's own hidden nudge (<speech_not_detected>) is
                     # injected as a role="user" ChatMessage too, so it fires this
                     # same event — without this check it would reset_silence_timer()
@@ -529,6 +582,44 @@ async def entrypoint(ctx: JobContext) -> None:
                 ):
                     silence_tracker.reset_silence_timer(source="conversation_item_added")
                     session_userdata["_customer_spoke"] = True
+                    return
+
+                # Background (isolated) customer calls only: when the AI itself
+                # says goodbye, hang up automatically a few seconds later —
+                # don't leave the line open waiting for the LLM to also call
+                # end_customer_call (it often just speaks the farewell and
+                # stops) or for the 10s silence timer to catch it.
+                if (
+                    item.role == "assistant"
+                    and session_userdata.get("isolated_call")
+                    and session_userdata.get("_customer_spoke")
+                    and not session_userdata.get("_isolated_call_done")
+                ):
+                    text_lc = item.text_content.lower()
+                    if any(marker in text_lc for marker in _GOODBYE_MARKERS):
+                        logger.info("isolated call | AI said goodbye — auto hang-up after grace")
+
+                        async def _hangup_after_goodbye() -> None:
+                            try:
+                                # Let the farewell line finish playing before
+                                # complete_isolated_call deletes the room.
+                                await asyncio.sleep(4.0)
+                                if session_userdata.get("_isolated_call_done"):
+                                    return
+                                fallback = (
+                                    "Cuộc gọi đã kết thúc."
+                                    if lang != "en" else
+                                    "Call ended."
+                                )
+                                await complete_isolated_call(
+                                    session, session_userdata, fallback
+                                )
+                            except Exception:
+                                logger.error(
+                                    "auto hang-up after AI goodbye failed", exc_info=True
+                                )
+
+                        asyncio.create_task(_hangup_after_goodbye())
 
             @session.on("user_input_transcribed")
             def _on_user_transcribed(ev) -> None:
@@ -570,7 +661,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         # Still just ringing (or dialing) — the agent settling
                         # into "listening/idle" here is not the customer
                         # actually being reachable yet, so this generic
-                        # auto-resume must not start the 5s silence clock
+                        # auto-resume must not start the 10s silence clock
                         # this early (see the custcall silence_seconds
                         # comment above). wait_for_sip_pickup resumes it
                         # explicitly once pickup is confirmed.

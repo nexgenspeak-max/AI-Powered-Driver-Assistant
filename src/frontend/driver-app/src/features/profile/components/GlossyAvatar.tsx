@@ -61,7 +61,7 @@ if (!effect) {
 
 const COLOR_TOP: [number, number, number] = [1, 1, 1]
 const COLOR_MID: [number, number, number] = [0.91, 0.47, 0.98] // #e879f9
-const COLOR_BOTTOM: [number, number, number] = [0.486, 0.357, 0.612] // #7C5B9C
+const COLOR_BOTTOM: [number, number, number] = [0.545, 0.361, 0.965] // #8B5CF6
 
 export interface GlossyAvatarProps {
   letter: string

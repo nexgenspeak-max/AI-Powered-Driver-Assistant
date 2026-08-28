@@ -21,10 +21,20 @@ router.post('/start', async (req: Request, res: Response) => {
     if (tripId) {
       const { get } = await import('../services/tripService');
       const trip = await get(tripId as string);
-      if (trip?.customer_phone) phone = trip.customer_phone;
+      // A call tied to a trip ALWAYS dials the phone entered when the trip was
+      // booked (trip.customer_phone) — never the caller-supplied `phoneNumber`,
+      // and never the customer's account/login phone. Those routinely differ:
+      // someone books a ride for another person, or from an account whose
+      // login number isn't the passenger's. Hard-fail rather than silently
+      // fall back to whatever the client sent.
+      if (!trip) return res.status(404).json({ detail: `Trip ${tripId} not found` });
+      if (!trip.customer_phone) {
+        return res.status(400).json({ detail: `Trip ${tripId} has no customer phone on file` });
+      }
+      phone = trip.customer_phone;
     }
 
-    if (!phone) return res.status(400).json({ detail: 'phoneNumber is required' });
+    if (!phone) return res.status(400).json({ detail: 'tripId or phoneNumber is required' });
 
     const result = await callService.startCustomerCall({
       driverPhone: driverId as string,

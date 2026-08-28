@@ -96,6 +96,8 @@ export function GlassAuthInput({ label, error, style, secureTextEntry, ...props 
             <TouchableOpacity
               onPress={() => setVisible(v => !v)}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               style={{ position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' }}
             >
               <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.textMuted.val} />

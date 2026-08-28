@@ -1,29 +1,49 @@
-import { FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
-import { View, Text, useThemeName } from 'tamagui'
+import { FlatList, RefreshControl } from 'react-native'
+import { View, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
+import { useTheme } from 'tamagui'
 import { useTripHistory } from '../hooks/useTripHistory'
 import { TripHistoryItem } from './TripHistoryItem'
+import { AppText } from '../../../components/AppText'
+import { Skeleton } from '../../../components/Skeleton'
+import { SegmentedControl } from '../../../components/SegmentedControl'
+import { PENDING_STATUSES, IN_PROGRESS_STATUSES } from '../../../constants/status'
+import type { Trip } from '../../../types'
 
-// Literal per-screen background — deliberately not the shared `$surface`
-// token (#1A1420 dark / #f4f6fb light). This screen's glass cards
-// (GlassTripCard) were tuned against this exact pair, picked off the
-// reference mockup, so it stays hardcoded here rather than following any
-// future global theme retune. Light is a gradient per the Shutterstock
-// reference (#F4F4F6 -> #E2E2E6), dark stays the flat original.
-const SCREEN_BACKGROUND_DARK = '#15111F'
-const SCREEN_BACKGROUND_LIGHT_GRADIENT = ['#F4F4F6', '#E2E2E6'] as const
+type TripStatusTab = 'pending' | 'active' | 'completed'
+
+const EMPTY_COPY: Record<TripStatusTab, string> = {
+  pending: 'Không có chuyến nào đang chờ xác nhận.',
+  active: 'Không có chuyến nào đang chạy.',
+  completed: 'Chưa có chuyến nào hoàn thành.',
+}
 
 export function TripHistoryList() {
   const { data: trips, isLoading, isError } = useTripHistory()
   const queryClient = useQueryClient()
+  const theme = useTheme()
   const [refreshing, setRefreshing] = useState(false)
-  const isLight = useThemeName() === 'light'
+  const [tab, setTab] = useState<TripStatusTab>('active')
   const insets = useSafeAreaInsets()
+
+  // Trip status → tab, matching driver-app's own Dashboard split (kept in
+  // sync across both apps): chưa xác nhận → đang chạy → đã hoàn thành.
+  // Cancelled/rejected/no_answer/no_show trips intentionally sit outside all
+  // 3 tabs — same scope decision as the driver side.
+  const grouped = useMemo(() => {
+    const all = trips ?? []
+    return {
+      pending: all.filter(t => (PENDING_STATUSES as string[]).includes(t.status)),
+      active: all.filter(t => (IN_PROGRESS_STATUSES as string[]).includes(t.status)),
+      completed: all.filter(t => t.status === 'completed'),
+    }
+  }, [trips])
+
+  const visibleTrips: Trip[] = grouped[tab]
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -31,56 +51,69 @@ export function TripHistoryList() {
     setRefreshing(false)
   }, [queryClient])
 
-  // Screen background as its own layer (not FlatList's own backgroundColor,
-  // which can only be a flat color) — a gradient in light mode, a flat
-  // color in dark, with content rendered transparent on top.
-  const screenBackground = isLight ? (
-    <LinearGradient colors={SCREEN_BACKGROUND_LIGHT_GRADIENT} style={StyleSheet.absoluteFillObject} />
-  ) : (
-    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: SCREEN_BACKGROUND_DARK }]} />
-  )
-
   if (isLoading) {
     return (
-      <View flex={1} alignItems="center" justifyContent="center">
-        {screenBackground}
-        <ActivityIndicator size="large" color="#6c8aff" />
+      <View flex={1} backgroundColor="$background" style={{ padding: 20, paddingTop: insets.top + 16, gap: 16 }}>
+        <AppText variant="h1" marginBottom="$1">
+          Chuyến của tôi
+        </AppText>
+        <Skeleton height={110} radius={24} />
+        <Skeleton height={110} radius={24} />
+        <Skeleton height={110} radius={24} />
       </View>
     )
   }
 
   if (isError) {
     return (
-      <View flex={1} alignItems="center" justifyContent="center" padding="$6">
-        {screenBackground}
-        <Text color="$danger" fontSize="$4" fontWeight="500">
-          Could not load trip history.
-        </Text>
+      <View flex={1} backgroundColor="$background" alignItems="center" justifyContent="center" padding="$6">
+        <AppText variant="title" color="$danger">
+          Không tải được lịch sử chuyến.
+        </AppText>
       </View>
     )
   }
 
   return (
-    <View flex={1}>
-      {screenBackground}
+    <View flex={1} backgroundColor="$background">
       <FlatList
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 20 }}
-        data={trips ?? []}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 104, gap: 16 }}
+        data={visibleTrips}
         keyExtractor={item => item.trip_id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6c8aff']} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary.val]}
+            tintColor={theme.primary.val}
+          />
+        }
         ListHeaderComponent={
-          <Text fontSize="$7" fontWeight="800" color="$textPrimary" marginBottom="$1">
-            My Trips
-          </Text>
+          <YStack gap="$3" marginBottom="$2">
+            <AppText variant="h1">Chuyến của tôi</AppText>
+            {/* Short labels, no icons — 3 segments is already tight; an icon
+                + "Chưa xác nhận (12)" wrapped to 2 lines inside the
+                control's fixed height and visually overlapped the
+                neighboring segment. */}
+            <SegmentedControl<TripStatusTab>
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'pending', label: `Chờ xác nhận (${grouped.pending.length})` },
+                { value: 'active', label: `Đang chạy (${grouped.active.length})` },
+                { value: 'completed', label: `Hoàn thành (${grouped.completed.length})` },
+              ]}
+            />
+          </YStack>
         }
         ListEmptyComponent={
-          <View alignItems="center" gap="$2" paddingVertical="$10">
-            <Ionicons name="time-outline" size={40} color="#c3aee0" />
-            <Text color="$textSecondary" fontSize="$3">
-              You have no trips yet.
-            </Text>
-          </View>
+          <YStack alignItems="center" gap="$2" paddingVertical="$10">
+            <Ionicons name="time-outline" size={40} color={theme.textMuted.val} />
+            <AppText variant="body" color="$textSecondary">
+              {trips && trips.length > 0 ? EMPTY_COPY[tab] : 'Bạn chưa có chuyến nào.'}
+            </AppText>
+          </YStack>
         }
         renderItem={({ item }) => (
           <TripHistoryItem trip={item} onPress={() => router.push(`/trip/${item.trip_id}`)} />

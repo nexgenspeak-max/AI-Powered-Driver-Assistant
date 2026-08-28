@@ -15,11 +15,13 @@
   },
   "dependencies": {
     "@config-plugins/react-native-webrtc": "^13.0.0",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@hookform/resolvers": "^5.2.2",
     "@livekit/react-native": "^2.11.1",
     "@livekit/react-native-expo-plugin": "^1.0.2",
     "@livekit/react-native-webrtc": "^144.1.1",
+    "@maplibre/maplibre-react-native": "^11.3.6",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-masked-view/masked-view": "0.3.2",
@@ -34,7 +36,9 @@
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.23",
+    "expo-font": "~14.0.12",
     "expo-gl": "~16.0.10",
+    "expo-haptics": "~15.0.8",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.12",
     "expo-location": "~19.0.8",
@@ -70,7 +74,8 @@
     "typescript": "~5.9.2"
   },
   "overrides": {
-    "expo-font": "~14.0.11"
+    "expo-font": "~14.0.12",
+    "expo-asset": "~12.0.13"
   },
   "private": true
 }

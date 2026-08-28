@@ -5,7 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ENV="${1:-dev}"
-ENV_FILE="$SCRIPT_DIR/../../src/voice-agent/envs/.env.$TARGET_ENV"
+ENV_FILE="$SCRIPT_DIR/../../src/backend/voice-agent/envs/.env.$TARGET_ENV"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "❌ Env file not found: $ENV_FILE"
@@ -71,7 +71,7 @@ aws ecr get-login-password --region "$REGION" $PROFILE \
   | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
 echo "→ Building Docker image..."
-docker build -t "$IMAGE_URI" "$SCRIPT_DIR/../../src/voice-agent/"
+docker build -t "$IMAGE_URI" "$SCRIPT_DIR/../../src/backend/voice-agent/"
 
 echo "→ Pushing image to ECR..."
 docker push "$IMAGE_URI"

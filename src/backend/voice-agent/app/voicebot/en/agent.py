@@ -8,8 +8,6 @@ from app.voicebot.en.tools_mapping import TOOLS_MAPPING_PROMPT
 from app.voicebot.en.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
-from app.voicebot.processors.nudge import build_nudge_message
-from app.voicebot.processors import context_store
 
 from app.voicebot.en.tools.check_upcoming_trips       import check_upcoming_trips
 from app.voicebot.en.tools.get_current_trip_info      import get_current_trip_info
@@ -102,11 +100,16 @@ class DriverAgent(SpeechTextFixMixin, Agent):
         context_hint: str = "",
         resume_summary: str = "",
         proactive_nudge: dict | None = None,
+        proactive_nudges: list[dict] | None = None,
     ) -> None:
         self._trip            = trip
         self._driver_phone    = driver_phone
         self._resume_summary  = resume_summary
         self._proactive_nudge = proactive_nudge
+        # Multi-nudge form — see the vn/ DriverAgent for the full reasoning.
+        self._proactive_nudges = proactive_nudges or (
+            [proactive_nudge] if proactive_nudge else []
+        )
 
         if trip:
             instructions = build_outbound_prompt(trip, lang="en") + "\n" + TOOLS_MAPPING_PROMPT
@@ -127,23 +130,16 @@ class DriverAgent(SpeechTextFixMixin, Agent):
                 allow_interruptions=False,
             )
             return
-        if not self._trip and self._proactive_nudge:
-            nudge_kind = self._proactive_nudge.get("nudge_kind", "")
-            payload = {k: v for k, v in self._proactive_nudge.items() if k != "nudge_kind"}
-            text = await build_nudge_message(nudge_kind, payload, lang="en", userdata=self.session.userdata)
-            if text:
-                # suggest_next_stop sets this itself (see next_stop.py) —
-                # payload's related_trip_id means something else for that
-                # kind (trip to EXCLUDE from ranking), see session.py's
-                # identical guard for the full reasoning.
-                if nudge_kind != "suggest_next_stop":
-                    related_trip_id = payload.get("related_trip_id", "")
-                    if related_trip_id:
-                        context_store.set_last_nudge_trip(self.session.userdata, related_trip_id)
-                await self.session.say(text, allow_interruptions=False)
-                return
-            # Unrecognized nudge_kind — fall through to the normal inbound
-            # greeting rather than saying nothing at all.
+        if not self._trip and self._proactive_nudges:
+            from app.voicebot.processors.nudge import speak_nudges
+
+            await speak_nudges(
+                self.session, self._proactive_nudges,
+                lang="en", userdata=self.session.userdata,
+            )
+            # Opened FOR these nudges — if none rendered, stay quiet and let the
+            # silence tracker close it, don't drop into the generic greeting.
+            return
         msg = self._build_outbound_greeting() if self._trip else GREETING_INBOUND
         await self.session.say(msg, allow_interruptions=False)
 

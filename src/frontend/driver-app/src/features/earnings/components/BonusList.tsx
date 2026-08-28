@@ -1,18 +1,17 @@
-import { View as RNView } from 'react-native'
-import { YStack, XStack, Text, useThemeName } from 'tamagui'
+import { YStack, XStack, useThemeName } from 'tamagui'
+import { AppText } from '../../../components/AppText'
+import { getElevation } from '../../../theme/elevation'
 import type { Bonus } from '../../../types'
 
-// Distinct promo/warning tone — deliberately NOT run through GlassSurface's
-// neutral-white wash + specular shader (per spec: applying the white
-// specular streak would wash out this card's characteristic olive-amber
-// color). Outer shadow removed — same real-device issue as GlassSurface's
-// own shadow (renders as a hard gray outline on Android instead of a soft
-// blur, see GlassSurface.tsx's note).
-const BONUS_RADIUS = 16
+// Keeps its own olive-amber promo tone (deliberately not a neutral Surface —
+// the white wash would wash the colour out). Radius matches the app-wide
+// card standard ($card token, 24) so it doesn't read as a different shape
+// from every other card on the Earnings screen.
+const BONUS_RADIUS = 24
 
 const THEME_COLORS = {
   dark: { background: '#5C4A1E', title: '#F5F0E0', subtitle: '#C9BD98', amount: '#FFCB47' },
-  light: { background: '#E4D6A0', title: '#3D3319', subtitle: '#7A6B45', amount: '#8A5A00' },
+  light: { background: '#F0E4B0', title: '#3D3319', subtitle: '#7A6B45', amount: '#8A5A00' },
 }
 
 export function BonusList({ bonuses }: { bonuses: Bonus[] }) {
@@ -22,32 +21,31 @@ export function BonusList({ bonuses }: { bonuses: Bonus[] }) {
   if (bonuses.length === 0) return null
   return (
     <YStack gap="$3">
-      <Text fontSize="$1" fontWeight="600" color="$textPrimary" textTransform="uppercase" letterSpacing={0.5}>
-        Active bonuses
-      </Text>
+      <AppText variant="h2">Thưởng đang áp dụng</AppText>
       {bonuses.map((bonus, i) => (
-        <RNView key={i} style={{ borderRadius: BONUS_RADIUS }}>
-          <XStack
-            alignItems="center"
-            justifyContent="space-between"
-            backgroundColor={colors.background}
-            borderRadius={BONUS_RADIUS}
-            overflow="hidden"
-            padding="$4"
-          >
-            <YStack flex={1} paddingRight="$2">
-              <Text color={colors.title} fontWeight="500">
-                {bonus.description}
-              </Text>
-              <Text color={colors.subtitle} fontSize="$1" marginTop="$1">
-                Expires {bonus.expires_at}
-              </Text>
-            </YStack>
-            <Text color={colors.amount} fontWeight="700" fontSize="$5">
-              {bonus.amount}
-            </Text>
-          </XStack>
-        </RNView>
+        <XStack
+          key={i}
+          alignItems="center"
+          justifyContent="space-between"
+          backgroundColor={colors.background}
+          borderRadius={BONUS_RADIUS}
+          overflow="hidden"
+          padding="$4"
+          gap="$3"
+          style={getElevation('sm', isLight)}
+        >
+          <YStack flex={1}>
+            <AppText variant="bodyStrong" style={{ color: colors.title }}>
+              {bonus.description}
+            </AppText>
+            <AppText variant="caption" style={{ color: colors.subtitle }} marginTop={2}>
+              Hết hạn {bonus.expires_at}
+            </AppText>
+          </YStack>
+          <AppText variant="h2" style={{ color: colors.amount }}>
+            {bonus.amount}
+          </AppText>
+        </XStack>
       ))}
     </YStack>
   )

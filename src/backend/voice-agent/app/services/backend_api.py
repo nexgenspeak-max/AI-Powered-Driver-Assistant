@@ -2,6 +2,7 @@
 Thin async HTTP client for trip-service and call-center APIs.
 All methods raise httpx.HTTPStatusError on non-2xx — callers handle it.
 """
+import asyncio
 import logging
 import httpx
 from app.config.settings import get_settings
@@ -11,29 +12,45 @@ logger = logging.getLogger("voice-agent.backend-api")
 
 # Shared, pooled client — reused across every call in this module instead of
 # opening (and immediately closing) a brand new TCP/TLS connection per
-# request. Scoped to this process's lifetime (one LiveKit job/subprocess per
-# conversation — see JobProcExecutor), so this never gets shared across
-# unrelated calls/participants; it just avoids re-handshaking on every tool
-# invocation within the SAME session. Lazily created on first use since it
-# must be instantiated inside a running event loop.
+# request, so tool invocations within the SAME session don't re-handshake.
+#
+# BUT a LiveKit job process is reused for multiple sequential jobs, each on a
+# fresh event loop. httpx's connection pool binds anyio locks/events to the
+# loop that was running when a connection was first opened — reusing this
+# client from a later job's loop then raises "Event is bound to a different
+# event loop". So the client is pinned to the loop it was built on and
+# transparently rebuilt whenever a different running loop is seen.
 _client: httpx.AsyncClient | None = None
+_client_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _new_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=20),
+    )
 
 
 def _get_client() -> httpx.AsyncClient:
-    global _client
-    if _client is None:
-        _client = httpx.AsyncClient(
-            limits=httpx.Limits(max_keepalive_connections=20, max_connections=20),
-        )
+    global _client, _client_loop
+    loop = asyncio.get_running_loop()
+    if _client is None or _client.is_closed or _client_loop is not loop:
+        # Stale client from a previous job's (now-dead) event loop, or none
+        # yet. Can't aclose() the old one — its loop is gone — just drop the
+        # reference and let GC reap its sockets.
+        _client = _new_client()
+        _client_loop = loop
     return _client
 
 
 async def aclose() -> None:
     """Close the shared client — call from the job's shutdown callback."""
-    global _client
-    if _client is not None:
-        await _client.aclose()
-        _client = None
+    global _client, _client_loop
+    client, _client, _client_loop = _client, None, None
+    if client is not None:
+        try:
+            await client.aclose()
+        except Exception:
+            logger.debug("backend_api client aclose failed (ignored)", exc_info=True)
 
 
 def _trip_base() -> str:

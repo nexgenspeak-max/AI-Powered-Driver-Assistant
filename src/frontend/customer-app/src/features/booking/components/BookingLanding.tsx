@@ -1,32 +1,28 @@
 import { useState } from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
-import { View, Text, useThemeName } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { View } from 'tamagui'
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import * as Location from 'expo-location'
 import { GlassBookingInput } from './GlassBookingInput'
 import { AddressAutocompleteInput } from './AddressAutocompleteInput'
 import { PickupTimeField, type ScheduleMode } from './PickupTimeField'
 import { DriverPicker } from './DriverPicker'
 import { GlassButton } from '../../../components/GlassButton'
-import { Card } from '../../../components/Card'
+import { Screen } from '../../../components/Screen'
+import { Surface } from '../../../components/Surface'
+import { AppText } from '../../../components/AppText'
 import { useBookTrip } from '../../trips/hooks/useBookTrip'
 import { placesService } from '../../../services/api/places'
+import { haptics } from '../../../utils/haptics'
 import type { Driver } from '../../../types'
 
-const DARK_SCREEN_BACKGROUND = '#15111F'
-const LIGHT_SCREEN_GRADIENT = ['#F4F4F6', '#E2E2E6'] as const
-const CARD_BACKGROUND = { dark: 'rgba(255,255,255,0.03)', light: 'rgba(255,255,255,0.6)' }
-
 const schema = z.object({
-  customer_name: z.string().min(2, 'Name required'),
-  customer_phone: z.string().min(8, 'Valid phone required'),
-  pickup_address: z.string().min(5, 'Pickup address required'),
-  dropoff_address: z.string().min(5, 'Dropoff address required'),
+  customer_name: z.string().min(2, 'Vui lòng nhập tên'),
+  customer_phone: z.string().min(8, 'Số điện thoại chưa hợp lệ'),
+  pickup_address: z.string().min(5, 'Vui lòng nhập điểm đón'),
+  dropoff_address: z.string().min(5, 'Vui lòng nhập điểm đến'),
   note: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
@@ -35,9 +31,6 @@ type FormValues = z.infer<typeof schema>
 // GPS pickup + note + schedule) is the only booking flow now (the old
 // "Gọi tài xế theo yêu cầu" quick-request shortcut was removed by request).
 export function BookingLanding() {
-  const isLight = useThemeName() === 'light'
-  const insets = useSafeAreaInsets()
-
   const { mutate: book, isPending, isError } = useBookTrip()
   const { control, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -107,6 +100,7 @@ export function BookingLanding() {
       },
       {
         onSuccess: trip => {
+          haptics.success()
           // Blank the form back out once booked — the driver-app card and
           // GET /trip/[id] screen (pushed to below) are now the record of
           // this trip; this screen is only ever for starting the *next* one.
@@ -126,37 +120,21 @@ export function BookingLanding() {
   }
 
   return (
-    <View flex={1}>
-      {isLight ? (
-        <LinearGradient colors={LIGHT_SCREEN_GRADIENT} style={StyleSheet.absoluteFillObject} />
-      ) : (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DARK_SCREEN_BACKGROUND }]} />
-      )}
-      <ScrollView
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 16, paddingBottom: 100, gap: 20 }}
-      >
+    <Screen scroll>
         <View>
-          <Text fontSize="$7" fontWeight="800" color={isLight ? '#000000' : '$textPrimary'}>
-            Book a Ride
-          </Text>
-          <Text color="$textSecondary" fontSize="$3" marginTop="$1">
+          <AppText variant="h1">Đặt xe</AppText>
+          <AppText variant="body" color="$textSecondary" marginTop="$1">
             Yêu cầu tài xế đến đón bạn chỉ với một chạm
-          </Text>
+          </AppText>
         </View>
 
-        <Card
-          gap="$4"
-          backgroundColor={isLight ? CARD_BACKGROUND.light : CARD_BACKGROUND.dark}
-          style={{ borderRadius: 16, padding: 20, overflow: 'visible' }}
-        >
+        <Surface gap="$4" padding={20}>
           <Controller
             name="customer_name"
             control={control}
             render={({ field: { onChange, onBlur, value } }) => (
               <GlassBookingInput
-                label="Your name"
+                label="Họ tên"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -170,7 +148,7 @@ export function BookingLanding() {
             control={control}
             render={({ field: { onChange, onBlur, value } }) => (
               <GlassBookingInput
-                label="Phone number"
+                label="Số điện thoại"
                 keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
@@ -185,7 +163,7 @@ export function BookingLanding() {
             control={control}
             render={({ field: { onChange, value } }) => (
               <AddressAutocompleteInput
-                label="Pickup address"
+                label="Điểm đón"
                 value={value}
                 onChangeText={text => {
                   onChange(text)
@@ -208,7 +186,7 @@ export function BookingLanding() {
             control={control}
             render={({ field: { onChange, value } }) => (
               <AddressAutocompleteInput
-                label="Dropoff address"
+                label="Điểm đến"
                 value={value}
                 onChangeText={text => {
                   onChange(text)
@@ -228,7 +206,7 @@ export function BookingLanding() {
             control={control}
             render={({ field: { onChange, onBlur, value } }) => (
               <GlassBookingInput
-                label="Note (optional)"
+                label="Ghi chú (không bắt buộc)"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -240,9 +218,9 @@ export function BookingLanding() {
           />
 
           <View gap="$2">
-            <Text fontSize="$2" fontWeight="600" color="$textSecondary">
+            <AppText variant="label" color="$textSecondary">
               Thời gian đón
-            </Text>
+            </AppText>
             <PickupTimeField
               mode={scheduleMode}
               onModeChange={setScheduleMode}
@@ -258,14 +236,13 @@ export function BookingLanding() {
           <DriverPicker selected={selectedDriver} onSelect={setSelectedDriver} error={driverError} />
 
           {isError && (
-            <Text color="$danger" fontSize="$1">
-              Failed to book. Please try again.
-            </Text>
+            <AppText variant="caption" color="$danger">
+              Đặt xe thất bại. Vui lòng thử lại.
+            </AppText>
           )}
 
-          <GlassButton label="Book Now" onPress={handleSubmit(onSubmit)} loading={isPending} />
-        </Card>
-      </ScrollView>
-    </View>
+          <GlassButton label="Đặt xe" onPress={handleSubmit(onSubmit)} loading={isPending} />
+        </Surface>
+    </Screen>
   )
 }

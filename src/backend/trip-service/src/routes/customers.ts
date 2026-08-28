@@ -14,7 +14,15 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.get('/me/context', async (req: Request, res: Response) => {
   try {
-    const customerPhone = req.headers['x-customer-phone'] as string;
+    const headerPhone = req.headers['x-customer-phone'] as string | undefined;
+    // voice-agent's backend_api calls this as a service caller acting on
+    // behalf of whichever phone the call session resolved (not its own
+    // bearer identity), so the explicit header still wins when present.
+    // customer-app's own home-screen map instead calls this authenticated
+    // as the real customer (no header) — falls back to the phone on their
+    // JWT in that case.
+    const jwtPhone = req.user?.role === 'customer' ? req.user.phone : undefined;
+    const customerPhone = headerPhone || jwtPhone;
     if (!customerPhone) return res.status(400).json({ detail: 'X-Customer-Phone header required' });
     const fresh = req.query.fresh === 'true';
     return res.json(await driverContextService.getCustomerContext(customerPhone, fresh));

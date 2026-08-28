@@ -1,6 +1,7 @@
-import { View, YStack, Text } from 'tamagui'
+import { View, YStack, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import { GlassSurface } from './GlassSurface'
+import { Surface } from './Surface'
+import { AppText } from './AppText'
 import { Button } from './Button'
 
 interface Props {
@@ -11,25 +12,31 @@ interface Props {
   onAction?: () => void
 }
 
-// Shared "not built yet" card for profile sub-screens that have no backend
-// support (bank/payout info, document verification, ...) — same visual
-// language as the rest of the profile (GlassSurface + Button) instead of a
-// bare "coming soon" text dump.
+// Shared empty / "not built yet" card — same visual language as the rest of
+// the app (Surface + Button).
 export function EmptyState({ icon, title, message, actionLabel, onAction }: Props) {
+  const theme = useTheme()
   return (
-    <GlassSurface cornerRadius={20} outline>
+    <Surface level="none" borderWidth={1} borderColor="$border">
       <YStack alignItems="center" gap="$3" padding="$6">
-        <View width={64} height={64} borderRadius={32} backgroundColor="$primaryMuted" alignItems="center" justifyContent="center">
-          <Ionicons name={icon} size={28} color="#7C5B9C" />
+        <View
+          width={64}
+          height={64}
+          borderRadius={32}
+          backgroundColor="$primaryMuted"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Ionicons name={icon} size={28} color={theme.primary.val} />
         </View>
-        <Text fontWeight="700" fontSize="$4" color="$textPrimary" textAlign="center">
+        <AppText variant="title" textAlign="center">
           {title}
-        </Text>
-        <Text color="$textSecondary" textAlign="center" fontSize={13} lineHeight={19}>
+        </AppText>
+        <AppText variant="body" color="$textSecondary" textAlign="center">
           {message}
-        </Text>
+        </AppText>
         {actionLabel && <Button label={actionLabel} variant="outline" onPress={onAction} />}
       </YStack>
-    </GlassSurface>
+    </Surface>
   )
 }

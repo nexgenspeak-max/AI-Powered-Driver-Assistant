@@ -137,7 +137,7 @@ export function AddressAutocompleteInput({
           <TouchableOpacity
             onPress={onPressAction}
             disabled={actionLoading}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 12 }}
           >
             {actionLoading ? (
               <ActivityIndicator size="small" color="#8B5CF6" />

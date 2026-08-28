@@ -57,7 +57,14 @@ export const config = {
   callCenterUrl: process.env.CALL_CENTER_URL || 'http://localhost:8000',
   callLoggerUrl: process.env.CALL_LOGGER_URL || 'http://localhost:8001',
   twilioVerifiedTo: process.env.TWILIO_VERIFIED_TO || '',
-  callForceVerifiedTo: process.env.CALL_FORCE_VERIFIED_TO !== 'false',
+  // Opt-IN, not opt-out. When true, EVERY outbound customer/driver call is
+  // redirected to TWILIO_VERIFIED_TO regardless of the real trip phone — a
+  // Twilio-trial workaround (trial accounts can only dial verified numbers).
+  // It used to default on (`!== 'false'`), which silently routed real calls
+  // to the one verified test number whenever TWILIO_VERIFIED_TO was set —
+  // e.g. a trip booked with 0888887798 still rang 0382759152. Now it only
+  // ever redirects when explicitly set: CALL_FORCE_VERIFIED_TO=true.
+  callForceVerifiedTo: process.env.CALL_FORCE_VERIFIED_TO === 'true',
 
   redisUrl: process.env.REDIS_URL || '',
   cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 120),

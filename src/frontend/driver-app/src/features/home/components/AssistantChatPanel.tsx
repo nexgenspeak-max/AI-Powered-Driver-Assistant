@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { View, XStack, Text, Theme, useTheme } from "tamagui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GlassSheen } from "../../../components/LiquidGlass";
+import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,6 +21,7 @@ import { useAssistantChatStore } from "../stores/assistantChatStore";
 import { useVoiceSessionStore } from "../stores/voiceSessionStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { getAssistantReply } from "../../../services/api/assistant";
+import { MAP_OVERLAY_BOTTOM_CLEARANCE } from "../../../constants";
 
 const MIC_LABEL = {
   idle: "Chạm vào quả cầu để kết nối với trợ lý",
@@ -282,7 +283,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                 overflow="hidden"
               >
                 <LinearGradient
-                  colors={["#7C5B9C", "#A855F7"]}
+                  colors={CTA_GRADIENT}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{ paddingHorizontal: 16, paddingVertical: 10 }}
@@ -326,7 +327,12 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
           alignItems="center"
           gap="$2"
           marginHorizontal={20}
-          marginBottom={100}
+          // Was a hardcoded 100 — didn't account for the tab bar's raised
+          // center "Trợ lý" button, which floats above the bar's own top
+          // edge and could sit low enough to cover this composer once the
+          // bar/button geometry changed. Same clearance constant the map
+          // overlay cards (OptimizedRoutePanel, NavigationHud) already use.
+          marginBottom={insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE}
           paddingHorizontal="$2"
           height={48}
           borderRadius="$pill"

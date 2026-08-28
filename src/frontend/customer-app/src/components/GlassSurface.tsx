@@ -3,26 +3,16 @@ import { TouchableOpacity, View as RNView, StyleSheet } from "react-native";
 import { useThemeName } from "tamagui";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import { randomSpecularVariation, degToRad } from "../utils/glassSpecular";
+import { getElevation } from "../theme/elevation";
 
 const DEFAULT_CORNER_RADIUS = 18;
 
-// Outer drop shadow — X-offset locked to 0, no spread (RN's shadow props
-// don't have one). Same recipe as GlassTripCard/GlassBookingInput's local
-// shadow helpers, generalized here since this is now the third or fourth
-// place applying the exact same "finalized" formula.
+// Outer drop shadow — now the shared `boxShadow`-based elevation scale
+// (theme/elevation.ts) instead of the legacy `shadow*` props (hard grey
+// outline on real Android). GlassSurface is being retired for <Surface>/
+// <GlassPanel>; this keeps screens still on it consistent in the meantime.
 function getSurfaceOuterShadow(isLight: boolean) {
-  return {
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: isLight ? 12 : 6 },
-    // Light mode carries *all* of the card's elevation cue now that its
-    // inner top shadow is gone (removed per spec — light mode reads
-    // "floating above the page" via outer shadow only, not "carved into
-    // it" via an inner concave lip) — bumped further than before (0.22->
-    // 0.28, 20->26) to compensate for that lost definition.
-    shadowOpacity: isLight ? 0.28 : 0.2,
-    shadowRadius: isLight ? 26 : 18,
-    elevation: isLight ? 7 : 4,
-  } as const;
+  return getElevation("md", isLight);
 }
 
 // SkSL glass-surface shader — the finalized card recipe shared by

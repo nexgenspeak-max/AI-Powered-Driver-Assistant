@@ -38,6 +38,14 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
 
 export const DISPATCHABLE_STATUSES: TripStatus[] = ['pending', 'no_answer', 'rejected']
 
+// Trip history tabs (TripHistoryList.tsx) — mirrors driver-app's own
+// PENDING_STATUSES/IN_PROGRESS split in its constants/status.ts, kept in
+// sync across both apps. "Đã hoàn thành" is deliberately `completed` only —
+// cancelled/rejected/no_answer/no_show trips don't appear in any of the 3
+// tabs (same choice made on the driver side).
+export const PENDING_STATUSES: TripStatus[] = ['pending', 'notified', 'calling']
+export const IN_PROGRESS_STATUSES: TripStatus[] = ['confirmed', 'arrived_pickup', 'picked_up']
+
 // Light mode: flat, full-color status icons (assets/icons/light/) for the
 // trips list — replaces the plain Ionicons "car" glyph GlassTripCard used
 // for every status alike. Covered so far: confirmed/picked_up read as "trip

@@ -12,6 +12,10 @@ export interface Trip {
   customer_phone: string
   pickup_address: string
   dropoff_address: string
+  pickup_lat?: number
+  pickup_lng?: number
+  dropoff_lat?: number
+  dropoff_lng?: number
   pickup_time: string
   booked_via: string
   distance_km: number

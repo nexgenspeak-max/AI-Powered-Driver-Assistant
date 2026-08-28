@@ -11,6 +11,19 @@ interface PendingNudge {
   kind: string;
   payload: Record<string, unknown>;
 }
+
+// The pending-nudge slot is `{ nudges: PendingNudge[] }` now (see
+// driverReachService.ts). Still tolerates the legacy single-object shape for
+// any value written before that change and not yet expired (30min TTL).
+function readPendingNudges(value: unknown): PendingNudge[] {
+  if (!value || typeof value !== 'object') return [];
+  const v = value as { nudges?: unknown; kind?: unknown; payload?: unknown };
+  if (Array.isArray(v.nudges)) return v.nudges as PendingNudge[];
+  if (typeof v.kind === 'string') {
+    return [{ kind: v.kind, payload: (v.payload as Record<string, unknown>) ?? {} }];
+  }
+  return [];
+}
 async function dispatchAgent(roomName: string, agentName: string): Promise<void> {
   try {
     const client = new AgentDispatchClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
@@ -74,8 +87,9 @@ router.post('/token', async (req: Request, res: Response) => {
     // pending nudge when it found NO open session, so if we just found one
     // above, this should already be empty in the normal case.
     if (!existingSession) {
-      const pending = await cacheGet<PendingNudge>(driverPendingNudgeKey(phone));
-      if (pending) {
+      const pending = await cacheGet<unknown>(driverPendingNudgeKey(phone));
+      const nudges = readPendingNudges(pending);
+      if (nudges.length) {
         await cacheDel(driverPendingNudgeKey(phone));
         // Flip has_pending_nudge back to false for the app's next context poll
         // — without this, driver-app's auto-connect effect could see a stale
@@ -83,9 +97,23 @@ router.post('/token', async (req: Request, res: Response) => {
         // again right after this session already delivered the nudge.
         await invalidateDriverContext(phone);
         const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
-        const metadata = JSON.stringify({ nudge_kind: pending.kind, ...pending.payload });
+        // `nudge_kind` + spread of the first payload: back-compat for anything
+        // still reading the single-nudge metadata shape. `nudges`: the full
+        // list, so the agent can announce ALL pending nudges in one session
+        // (see session.py's `elif meta.get("nudges")` and agent.py's
+        // speak_nudges) instead of only the last one that overwrote the slot.
+        const [primary] = nudges;
+        const metadata = JSON.stringify({
+          nudge_kind: primary.kind,
+          ...primary.payload,
+          nudges,
+        });
         await roomService.createRoom({ name: roomName, metadata });
-        console.log(`[voice] delivering pending nudge | driver=${phone} kind=${pending.kind} room=${roomName}`);
+        console.log(
+          `[voice] delivering pending nudge(s) | driver=${phone} kinds=${nudges
+            .map((n) => n.kind)
+            .join(',')} room=${roomName}`,
+        );
       }
     }
 

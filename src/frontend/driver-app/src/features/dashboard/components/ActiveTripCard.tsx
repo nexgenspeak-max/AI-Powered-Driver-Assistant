@@ -1,14 +1,16 @@
 import { Alert } from "react-native";
-import { XStack, YStack, View, Text } from "tamagui";
+import { XStack, YStack, View } from "tamagui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { GlassSurface } from "../../../components/GlassSurface";
+import { Surface } from "../../../components/Surface";
+import { AppText } from "../../../components/AppText";
+import { RouteLine } from "../../../components/RouteLine";
 import { Button } from "../../../components/Button";
-import { InfoRow } from "./InfoRow";
 import { TripProgressStepper } from "./TripProgressStepper";
 import { tripsService } from "../../../services/api/trips";
 import { confirmDestructive } from "../../../utils/confirmDialog";
 import { formatCurrency, formatDate } from "../../../utils/format";
 import { getCurrentCoords } from "../../../utils/currentLocation";
+import { haptics } from "../../../utils/haptics";
 import type { Trip } from "../../../types";
 
 // Backend rejects arrived_pickup/picked_up/completed (409) with a
@@ -25,15 +27,14 @@ const NEXT_ACTION: Record<
   string,
   { label: string; variant: "outline" | "success" }
 > = {
-  confirmed: { label: "Arrived at Pickup", variant: "outline" },
-  arrived_pickup: { label: "Picked Up Customer", variant: "outline" },
-  picked_up: { label: "Complete Trip", variant: "success" },
+  confirmed: { label: "Đã đến điểm đón", variant: "outline" },
+  arrived_pickup: { label: "Đã đón khách", variant: "outline" },
+  picked_up: { label: "Hoàn thành chuyến", variant: "success" },
   // Card briefly still renders with this status in the window between
-  // "Complete Trip" succeeding and the invalidated driverContext refetch
+  // "Hoàn thành chuyến" succeeding and the invalidated driverContext refetch
   // actually removing it from active_trips — without an entry here, `action`
-  // fell through to undefined and the button just vanished (looked like the
-  // label disappeared) instead of showing a clear completed state.
-  completed: { label: "Trip Completed", variant: "outline" },
+  // fell through to undefined and the button just vanished.
+  completed: { label: "Đã hoàn thành", variant: "outline" },
 };
 
 export function ActiveTripCard({
@@ -68,7 +69,10 @@ export function ActiveTripCard({
       const { lat, lng } = await getCurrentCoords();
       return tripsService.complete(trip.trip_id, lat, lng);
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      haptics.success();
+      invalidate();
+    },
     onError: onArrivalError,
   });
   const { mutate: cancelTrip, isPending: cancelling } = useMutation({
@@ -78,16 +82,16 @@ export function ActiveTripCard({
 
   const confirmCancel = () => {
     confirmDestructive({
-      title: "Cancel this trip?",
-      message: "The customer will be notified. This can't be undone.",
-      cancelLabel: "Keep trip",
-      confirmLabel: "Cancel trip",
+      title: "Huỷ chuyến này?",
+      message: "Khách sẽ được thông báo. Thao tác này không thể hoàn tác.",
+      cancelLabel: "Giữ chuyến",
+      confirmLabel: "Huỷ chuyến",
       onConfirm: () => cancelTrip(),
     });
   };
 
   const avatarLetter =
-    trip.customer_name?.trim().charAt(0).toUpperCase() || "D";
+    trip.customer_name?.trim().charAt(0).toUpperCase() || "K";
 
   const isCompleted = trip.status === "completed";
   const action = NEXT_ACTION[trip.status];
@@ -98,85 +102,66 @@ export function ActiveTripCard({
         ? pickedUp
         : complete;
   const actionPending = arriving || pickingUp || completing;
-  // Mirrors the backend's CANCEL_RULES.cancelled_by_driver window (trips.ts)
-  // — once the customer is actually in the vehicle, cancelling isn't a valid
-  // move anymore (only "Complete Trip" is); the server enforces this
-  // independently, this just avoids showing a button that would 409. Also
-  // excludes "completed" — same transient-render window as the comment on
-  // NEXT_ACTION above, and there's obviously nothing left to cancel once the
-  // trip is actually done.
+  // Mirrors the backend's CANCEL_RULES.cancelled_by_driver window (trips.ts).
   const canCancel = trip.status !== "picked_up" && !isCompleted;
 
   return (
-    <GlassSurface style={{ width: "100%" }}>
-      <YStack padding="$4" gap="$4">
-        <XStack alignItems="center" gap="$3">
-          <View
-            width={48}
-            height={48}
-            borderRadius={24}
-            backgroundColor="$successContainer"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Text fontWeight="700" fontSize="$4" color="$onSuccessContainer">
-              {avatarLetter}
-            </Text>
-          </View>
+    <Surface clip borderRadius={24} padding="$4" gap="$4">
+      <XStack alignItems="center" gap="$3">
+        <View
+          width={44}
+          height={44}
+          borderRadius={22}
+          backgroundColor="$successContainer"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <AppText variant="title" color="$onSuccessContainer">
+            {avatarLetter}
+          </AppText>
+        </View>
 
-          <YStack flex={1} gap="$1">
-            <Text
-              fontWeight="700"
-              color="$textPrimary"
-              fontSize="$4"
-              numberOfLines={1}
-            >
-              {trip.customer_name}
-            </Text>
-            {!!trip.pickup_time && (
-              <Text color="$textSecondary" fontSize={12} numberOfLines={1}>
-                {formatDate(trip.pickup_time)}
-              </Text>
-            )}
-          </YStack>
-
-          {trip.estimated_fare != null && (
-            <Text color="$textPrimary" fontWeight="700" fontSize="$3">
-              {formatCurrency(trip.estimated_fare)}
-            </Text>
-          )}
-        </XStack>
-
-        <TripProgressStepper status={trip.status} />
-
-        <YStack gap="$2">
-          <InfoRow label="Ngày giờ đón" value={trip.pickup_time ? formatDate(trip.pickup_time) : "—"} />
-          <InfoRow label="SĐT khách" value={trip.customer_phone} />
-          <InfoRow label="Pickup" value={trip.pickup_address} />
-          <InfoRow label="Dropoff" value={trip.dropoff_address} />
+        <YStack flex={1} gap={2}>
+          <AppText variant="title" numberOfLines={1}>
+            {trip.customer_name}
+          </AppText>
+          <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
+            {trip.customer_phone}
+            {trip.pickup_time ? ` · ${formatDate(trip.pickup_time)}` : ""}
+          </AppText>
         </YStack>
 
-        {action && (
-          <Button
-            label={action.label}
-            variant={action.variant}
-            onPress={onAction}
-            loading={actionPending}
-            disabled={isCompleted}
-            full
-          />
+        {trip.estimated_fare != null && (
+          <AppText variant="bodyStrong">
+            {formatCurrency(trip.estimated_fare)}
+          </AppText>
         )}
-        {canCancel && (
-          <Button
-            label="Cancel Trip"
-            variant="outline"
-            onPress={confirmCancel}
-            loading={cancelling}
-            disabled={actionPending}
-            full
-          />
-        )}
-      </YStack>
-    </GlassSurface>
+      </XStack>
+
+      <TripProgressStepper status={trip.status} />
+
+      <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
+
+      {action && (
+        <Button
+          label={action.label}
+          variant={action.variant}
+          onPress={onAction}
+          loading={actionPending}
+          disabled={isCompleted}
+          full
+        />
+      )}
+      {canCancel && (
+        <Button
+          label="Huỷ chuyến"
+          variant="outline"
+          onPress={confirmCancel}
+          loading={cancelling}
+          disabled={actionPending}
+          full
+        />
+      )}
+    </Surface>
   );
 }

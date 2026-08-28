@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
-import { GlassSurface } from '../../src/components/GlassSurface'
+import { Surface } from '../../src/components/Surface'
+import { AppText } from '../../src/components/AppText'
 
 const SUPPORT_PHONE = '1900 1234'
 const SUPPORT_EMAIL = 'driver-support@czen.vn'
@@ -19,14 +20,14 @@ export default function SupportScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
       >
-        <Text fontSize="$6" fontWeight="800" color="$textPrimary">
+        <AppText variant="h1">
           Hỗ trợ
-        </Text>
+        </AppText>
         <Text color="$textSecondary" lineHeight={20}>
           Cần giúp đỡ? Liên hệ với đội ngũ hỗ trợ tài xế qua các kênh bên dưới, hoặc xem câu hỏi thường gặp.
         </Text>
 
-        <GlassSurface cornerRadius={20} outline>
+        <Surface flat>
           <YStack padding="$4" gap="$1">
             <Row
               iconName="call"
@@ -52,7 +53,7 @@ export default function SupportScreen() {
               onPress={() => router.push('/faq')}
             />
           </YStack>
-        </GlassSurface>
+        </Surface>
       </ScrollView>
     </View>
   )
@@ -72,7 +73,7 @@ function Row({
   onPress: () => void
 }) {
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} accessibilityRole="button">
       <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3">
         <XStack alignItems="center" gap="$3" flex={1}>
           <Ionicons name={iconName} size={18} color={iconColor} />

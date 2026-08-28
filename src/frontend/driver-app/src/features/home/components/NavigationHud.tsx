@@ -1,12 +1,11 @@
 import { Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { XStack, YStack, Text, View } from 'tamagui'
+import { XStack, YStack, View, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { SolidCard } from '../../../components/SolidCard'
+import { AppText } from '../../../components/AppText'
 import { TOP_CLEARANCE_BELOW_CHAT_BUTTON, MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
 import type { RouteStep } from '../../../types'
-
-const PURPLE = '#8B5CF6'
 
 // Goong's own maneuver vocabulary is short ("left"/"right"/"straight"/
 // "uturn"/""), but this matches by substring rather than exact value so it
@@ -32,13 +31,22 @@ function formatManeuverDistance(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.max(10, Math.round(meters / 10) * 10)} m`
 }
 
-function IconButton({ name, onPress }: { name: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+function IconButton({
+  name,
+  onPress,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap
+  onPress: () => void
+  color: string
+}) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
       style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(139,92,246,0.12)' }}
     >
-      <Ionicons name={name} size={16} color={PURPLE} />
+      <Ionicons name={name} size={16} color={color} />
     </Pressable>
   )
 }
@@ -65,11 +73,13 @@ export function NavigationHud({
   onRefresh: () => void
 }) {
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const purple = theme.primary.val
   return (
     <>
       <SolidCard style={{ position: 'absolute', left: 16, right: 16, top: insets.top + TOP_CLEARANCE_BELOW_CHAT_BUTTON }}>
         <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$3">
-          <View width={44} height={44} borderRadius={22} alignItems="center" justifyContent="center" backgroundColor={PURPLE}>
+          <View width={44} height={44} borderRadius={22} alignItems="center" justifyContent="center" backgroundColor={purple}>
             <Ionicons
               name={arrived ? 'flag' : error ? 'warning' : maneuverIcon(step?.maneuver ?? '')}
               size={22}
@@ -77,35 +87,27 @@ export function NavigationHud({
             />
           </View>
           <YStack flex={1}>
-            {loading && (
-              <Text color="$textPrimary" fontWeight="600">
-                Đang tính đường...
-              </Text>
-            )}
+            {loading && <AppText variant="bodyStrong">Đang tính đường...</AppText>}
             {!loading && error && (
-              <Text color="$textPrimary" fontWeight="600">
-                Không lấy được chỉ đường
-              </Text>
+              <AppText variant="bodyStrong">Không lấy được chỉ đường</AppText>
             )}
             {!loading && !error && arrived && (
-              <Text color="$textPrimary" fontWeight="600">
-                Đã đến nơi
-              </Text>
+              <AppText variant="bodyStrong">Đã đến nơi</AppText>
             )}
             {!loading && !error && !arrived && step && (
               <>
-                <Text color="$textSecondary" fontSize={12}>
+                <AppText variant="caption" color="$textSecondary">
                   {distanceToManeuverM != null ? formatManeuverDistance(distanceToManeuverM) : ''}
-                </Text>
-                <Text color="$textPrimary" fontWeight="700" fontSize={16} numberOfLines={2}>
+                </AppText>
+                <AppText variant="title" numberOfLines={2}>
                   {step.instruction}
-                </Text>
+                </AppText>
               </>
             )}
           </YStack>
           <XStack gap="$2">
-            {error && <IconButton name="refresh" onPress={onRefresh} />}
-            <IconButton name="close" onPress={onExit} />
+            {error && <IconButton name="refresh" onPress={onRefresh} color={purple} />}
+            <IconButton name="close" onPress={onExit} color={purple} />
           </XStack>
         </XStack>
       </SolidCard>
@@ -113,9 +115,9 @@ export function NavigationHud({
       {!loading && !error && !arrived && remainingKm != null && remainingMin != null && (
         <SolidCard style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE }}>
           <XStack justifyContent="center" paddingVertical="$3">
-            <Text color="$textPrimary" fontWeight="600">
+            <AppText variant="bodyStrong">
               {remainingKm} km · {remainingMin} phút còn lại
-            </Text>
+            </AppText>
           </XStack>
         </SolidCard>
       )}

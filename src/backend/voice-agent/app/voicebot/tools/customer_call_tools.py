@@ -80,7 +80,12 @@ _MIN_ISOLATED_CALL_SECONDS = 20.0
 # since the AI itself last stopped talking — so it's structurally forced to
 # sit through the customer's answer (or their silence) to whatever it just
 # asked, rather than hanging up the instant it decides it's done.
-_MIN_ISOLATED_QUIET_SECONDS = 5.0
+# Kept equal to the custcall SilenceTracker threshold (session.py's
+# `silence_seconds` for mode=="custcall"): past this same 10s of post-answer
+# silence the tracker ends the call deterministically anyway (with a goodbye),
+# so there's no window where the LLM is blocked here but nothing else acts.
+# `customer_confirmed_done=True` bypasses this wait entirely.
+_MIN_ISOLATED_QUIET_SECONDS = 10.0
 
 # Same problem, agent-mode calls (dialed into the driver's own room, driver
 # listens live) — confirmed in production: the call was reported "done"
@@ -183,6 +188,11 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
     description=(
         "End the customer call and save a summary for the driver. "
         "Call when the conversation is finished or the customer hung up. "
+        "Set customer_confirmed_done=true when you have ALREADY asked the customer once whether "
+        "they have any question or anything to pass to the driver AND they answered that they "
+        "have nothing — in that case the call ends right away (a brief thank-you + goodbye, then "
+        "hang up), with NO waiting period and NO asking the closing question again. Leave it "
+        "false otherwise. "
         "For an agent-mode call (customer dialed into the driver's room): do NOT call this "
         "until you have delivered whatever the driver asked you to convey AND the customer has "
         "confirmed they have no more questions, OR the customer hasn't said anything for a "
@@ -190,7 +200,9 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
         "early."
     ),
 )
-async def end_customer_call(context: RunContext, summary: str):
+async def end_customer_call(
+    context: RunContext, summary: str, customer_confirmed_done: bool = False
+):
     if context.userdata.get("isolated_call"):
         if not context.userdata.get("_customer_spoke"):
             elapsed = time.time() - context.userdata.get("_call_started_at", 0.0)
@@ -208,25 +220,29 @@ async def end_customer_call(context: RunContext, summary: str):
                     "end_customer_call again after the customer actually speaks, or after you "
                     "receive the <speech_not_detected> signal 2-3 times."
                 )
-        else:
+        elif not customer_confirmed_done:
+            # customer_confirmed_done=True short-circuits the quiet-time wait:
+            # the customer has already told us (in answer to the closing
+            # question) that they have nothing more — making them sit through
+            # another silence gap, or re-asking the same question, is exactly
+            # the "lặp nhiều câu hỏi trong khi khách không cần gì nữa" the
+            # driver asked us to stop doing.
             quiet_since = context.userdata.get("_isolated_call_quiet_since")
             elapsed = (time.time() - quiet_since) if quiet_since else 0.0
             if elapsed < _MIN_ISOLATED_QUIET_SECONDS:
                 logger.info(
-                    "end_customer_call refused | isolated=True customer_spoke=True quiet_elapsed=%.1fs "
-                    "attempted_summary=%s",
+                    "end_customer_call refused | isolated=True customer_spoke=True "
+                    "confirmed_done=False quiet_elapsed=%.1fs attempted_summary=%s",
                     elapsed,
                     summary[:120],
                 )
                 return (
-                    "Refused: you must ask the customer whether they have any question or anything "
-                    "they'd like to pass along to the driver, and give them a real chance to answer, "
-                    "before ending normally — this call has only had "
-                    f"{elapsed:.0f}s of actual silence since you last finished speaking. If you "
-                    "haven't asked that closing question yet, ask it now. Otherwise wait silently; "
-                    "only call end_customer_call again once the customer answers, or once at least "
-                    f"{_MIN_ISOLATED_QUIET_SECONDS:.0f}s of real silence have passed since you "
-                    "stopped talking."
+                    "Refused: ask the customer ONCE whether they have any question or anything "
+                    "they'd like to pass along to the driver, and give them a chance to answer. "
+                    "If you have NOT asked that yet, ask it now. If you ALREADY asked and the "
+                    "customer said they have nothing more, call end_customer_call again "
+                    "immediately with customer_confirmed_done=true — do NOT ask the same "
+                    f"question a second time. (Only {elapsed:.0f}s of silence so far.)"
                 )
         try:
             await _say_goodbye_and_wait(context, context.userdata.get("lang", "vn"))

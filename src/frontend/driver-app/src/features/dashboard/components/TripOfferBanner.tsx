@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { StyleSheet } from 'react-native'
-import { XStack, YStack, Text } from 'tamagui'
+import { XStack, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { GestureDetector, Gesture } from 'react-native-gesture-handler'
@@ -17,12 +17,14 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio'
 import * as Haptics from 'expo-haptics'
-import { Card } from '../../../components/Card'
+import { GlassPanel } from '../../../components/GlassPanel'
+import { AppText } from '../../../components/AppText'
+import { RouteLine } from '../../../components/RouteLine'
 import { Badge } from '../../../components/Badge'
 import { Button } from '../../../components/Button'
-import { InfoRow } from './InfoRow'
 import { tripsService } from '../../../services/api/trips'
 import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
+import { confirmDestructive } from '../../../utils/confirmDialog'
 import { useTripOfferStore } from '../../../stores/tripOfferStore'
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '../../../constants/status'
@@ -171,6 +173,16 @@ export function TripOfferBanner() {
     opacity: interpolate(translateY.value, [DISMISS_DISTANCE, 0], [0, 1], Extrapolation.CLAMP),
   }))
 
+  const confirmReject = () => {
+    confirmDestructive({
+      title: 'Từ chối chuyến này?',
+      message: 'Bạn sẽ không thể nhận lại chuyến này sau khi từ chối.',
+      cancelLabel: 'Giữ lại',
+      confirmLabel: 'Từ chối',
+      onConfirm: () => reject(),
+    })
+  }
+
   if (!tripId || !trip) return null
 
   const statusColor = TRIP_STATUS_COLORS[trip.status]
@@ -182,44 +194,37 @@ export function TripOfferBanner() {
         exiting={FadeOutUp.duration(180)}
         style={[styles.wrap, { top: insets.top + 12 }, dragStyle]}
       >
-        <Card borderRadius={20} style={{ width: '100%' }}>
-          <YStack gap="$3">
+        <GlassPanel borderRadius={24} style={{ width: '100%' }}>
+          <YStack gap="$3" padding="$4">
             <XStack alignItems="center" justifyContent="space-between">
-              <Text fontWeight="700" fontSize="$4" color="$textPrimary">
-                Chuyến mới!
-              </Text>
+              <AppText variant="h2">Chuyến mới!</AppText>
               <Badge label={TRIP_STATUS_LABELS[trip.status]} backgroundColor={statusColor.bg} color={statusColor.text} glass={false} />
             </XStack>
 
-            <YStack gap="$2">
-              <InfoRow label="Khách" value={trip.customer_name} />
-              <InfoRow label="Đón" value={trip.pickup_address} />
-              <InfoRow label="Trả" value={trip.dropoff_address} />
-            </YStack>
+            <AppText variant="bodyStrong">{trip.customer_name}</AppText>
+            <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
 
             <XStack gap="$3">
-              <Button label="Không nhận chuyến" variant="outline" onPress={() => reject()} loading={rejecting} full />
+              <Button label="Từ chối" variant="outline" onPress={confirmReject} loading={rejecting} full />
               <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} full />
             </XStack>
 
             {/* Purely local dismiss — no API call, trip stays notified/calling
-                server-side. Same fallback path as an offer going stale from
-                outside this component (see the auto-dismiss effect above):
-                the driver can still find/accept it later from Dashboard's own
-                TripCard list. */}
-            <Text
+                server-side. The driver can still find/accept it later from
+                Dashboard's own TripCard list. */}
+            <AppText
+              variant="bodyStrong"
               textAlign="center"
-              fontSize="$3"
-              fontWeight="600"
-              color="$textPrimary"
               onPress={dismiss}
               pressStyle={{ opacity: 0.6 }}
-              paddingVertical="$1"
+              paddingVertical="$3"
+              accessibilityRole="button"
+              accessibilityLabel="Để sau"
             >
               Để sau
-            </Text>
+            </AppText>
           </YStack>
-        </Card>
+        </GlassPanel>
       </Animated.View>
     </GestureDetector>
   )
