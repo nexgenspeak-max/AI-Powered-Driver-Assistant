@@ -54,4 +54,7 @@ class BridgeCallAgent(SpeechTextFixMixin, Agent):
         from app.voicebot.processors.handback import enter_bridge_listen_mode
 
         enter_bridge_listen_mode(self.session)
+        tracker = self.session.userdata.get("_silence_tracker")
+        if tracker:
+            tracker.pause()
         schedule_bridge_timeout(self.session, self.session.userdata)

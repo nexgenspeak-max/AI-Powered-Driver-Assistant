@@ -17,6 +17,7 @@ from livekit.agents import Agent, RunContext
 from app.services import backend_api
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.processors.pre_dial import announce_pre_dial
 
 logger = logging.getLogger("voice-agent.processors.contact_call")
 
@@ -38,19 +39,7 @@ def _pre_dial_announcement(name: str, lang: str) -> str:
 
 
 async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:
-    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
-    is required here — a bare `session.say()` races with this same tool's own
-    queued reply (the handoff message returned below) and silently fails the
-    whole tool call (confirmed: no exception ever reached the try/except around
-    the dial, the tool just returned near-instantly with no call placed).
-    Best-effort: any failure here must never block the actual call, so it's
-    swallowed and logged rather than left to propagate.
-    """
-    try:
-        async with context.foreground():
-            await context.session.say(_pre_dial_announcement(name, lang), allow_interruptions=False)
-    except Exception:
-        logger.warning("pre-dial announcement failed — dialing anyway", exc_info=True)
+    await announce_pre_dial(context, _pre_dial_announcement(name, lang))
 
 
 async def start_agent_call_to_contact(

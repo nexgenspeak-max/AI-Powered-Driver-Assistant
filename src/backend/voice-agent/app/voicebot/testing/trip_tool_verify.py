@@ -220,6 +220,17 @@ PENDING_EXECUTE = [
     ("Sao bạn không kiểm tra?", False),
 ]
 
+# Replay of live session driver-0888887798-e5ea0a9b (2026-08-30 ~02:59–03:02).
+CONVERSATION_REPLAY_STEPS = [
+    "schedule_intent",
+    "schedule_target_trip",
+    "bot_detail_target",
+    "call_after_context",
+    "pending_skip_during_call",
+    "pre_dial_no_foreground",
+    "handback_no_duplicate",
+]
+
 
 def _run_trip_target(report: Report) -> None:
     for case in TRIP_TARGET_CASES:
@@ -404,6 +415,70 @@ def _run_tool_trip_wiring(report: Report) -> None:
         report.add(tool_name, "tool_trip_wiring", ok, f"marker={found}")
 
 
+def _run_conversation_replay(report: Report) -> None:
+    """Replay log-derived multi-turn flows without a device."""
+    from app.voicebot.processors.pre_dial import announce_pre_dial
+    from app.voicebot.processors.schedule_reply import format_schedule_reply
+    from app.voicebot.tools import bridge_call_tools, customer_call_tools
+
+    userdata = _fixture_userdata()
+
+    utterance_schedule = "Tôi muốn xem lịch trình hôm nay"
+    ok = classify_driver_intent(utterance_schedule, "vn") == "upcoming"
+    report.add("schedule_intent", "conversation_replay", ok, f"intent={classify_driver_intent(utterance_schedule, 'vn')}")
+
+    format_schedule_reply(userdata, {"scope": "all"}, lang="vi")
+    target = context_store.get_target_trip(userdata)
+    ok = target is not None and target.get("trip_id") == "t-nexgen"
+    report.add("schedule_target_trip", "conversation_replay", ok, f"target={target and target.get('trip_id')}")
+
+    context_store.match_callable_trip_by_text(
+        userdata,
+        "Chuyến 1 đón NexGen Speak tại Lotte 54 Liễu Giai lúc 12 giờ 30.",
+    )
+    target = context_store.get_target_trip(userdata)
+    ok = target is not None and target.get("trip_id") == "t-nexgen"
+    report.add("bot_detail_target", "conversation_replay", ok, f"target={target and target.get('trip_id')}")
+
+    call_utterance = "Ok, gọi cho khách bảo tôi chuẩn bị đến rồi"
+    context_store.set_last_driver_utterance(userdata, call_utterance)
+    trip = context_store.resolve_call_target(userdata, utterance=call_utterance, lang="vi")
+    ok = (
+        classify_driver_intent(call_utterance, "vn") == "call_customer"
+        and trip is not None
+        and trip.get("trip_id") == "t-nexgen"
+    )
+    report.add(
+        "call_after_context",
+        "conversation_replay",
+        ok,
+        f"trip={trip and trip.get('trip_id')}",
+    )
+
+    during_call = _fixture_userdata()
+    during_call["customer_call_active"] = True
+    pending_action.infer_from_bot_line("Em gọi khách ngay.", during_call, lang="vn")
+    ok = context_store.get_pending_driver_action(during_call) is None
+    report.add("pending_skip_during_call", "conversation_replay", ok, "no false pending")
+
+    async def _pre_dial() -> bool:
+        session = MagicMock()
+        session.say = AsyncMock()
+        ctx = SimpleNamespace(session=session)
+        await announce_pre_dial(ctx, "Đang gọi NexGen Speak, xin đợi.")
+        return session.say.await_count == 1
+
+    ok = asyncio.run(_pre_dial())
+    report.add("pre_dial_no_foreground", "conversation_replay", ok, "say called")
+
+    import inspect
+
+    cust_src = inspect.getsource(customer_call_tools.end_customer_call)
+    bridge_src = inspect.getsource(bridge_call_tools.end_bridge_call)
+    ok = 'return driver, ""' in cust_src and 'return driver, ""' in bridge_src
+    report.add("handback_no_duplicate", "conversation_replay", ok, "empty handoff tuple")
+
+
 def main() -> int:
     report = Report()
     _run_trip_target(report)
@@ -414,6 +489,7 @@ def main() -> int:
     _run_pending(report)
     _run_tool_imports(report)
     _run_tool_trip_wiring(report)
+    _run_conversation_replay(report)
     report.print_report()
     ok, total = report.total_pass()
     return 0 if ok == total else 1

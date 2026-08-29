@@ -66,27 +66,49 @@ Customers can book a ride via app/web **or call the hotline** for AI assistance.
 
 1. Open the driver app and log in with your phone number
 2. Tap the **AI Assistant** / microphone button
-3. App connects to LiveKit — AI greets: *"Hello! How can I help you?"*
-4. Speak your request in English, keep it short
+3. App connects to LiveKit — brief greeting (Czen), then *"How can I help you?"*
+4. Speak your request in English, keep it short — **one task at a time**
 
 ### 3.2 Example voice commands
 
+- *"Today's schedule"* / *"Upcoming trips"* → trip count; follow up with *"Who am I picking up?"*
 - *"What's my next trip?"*
-- *"Where is the customer?"*
-- *"Call the customer for me"* → AI asks: AI call or direct connection
+- *"Where is the customer?"* / *"Pickup at Landmark 81"* — AI remembers the trip being discussed
+- *"Call the customer for me"* / *"Tell the customer I'm on my way"* → calls the rider for the active trip
+- *"Call NexGen Speak"* / *"Call trip 2"* — pick trip by name, address, time, or index
 - *"I've arrived"* / *"Passenger is in the car"* / *"Trip completed"*
 - *"How much have I earned today?"*
 - *"Customer didn't show up"* → report no-show
 - *"What does the app support?"* → uses playbook knowledge base
 
-### 3.3 Calling the customer — two modes
+### 3.3 Calling the customer — two main modes
 
 | Mode | How to say it | What AI does |
 |------|---------------|--------------|
-| **AI talks** | *"Have AI call and summarize"* | AI calls customer, converses, summarizes for driver |
-| **Direct connect** | *"Connect me directly"* | Bridges call; driver talks to customer |
+| **AI calls for you** (default) | *"Call the customer"*, *"Tell them I'm arriving"* | AI calls, speaks on your behalf; you listen live; **one** summary when done |
+| **Direct connect** | *"Connect me directly"* / *"Let me talk to them"* | Bridges into the room; say *"assistant hang up"* when finished |
 
-### 3.4 Cancel trip by voice
+Before dialing, AI always says *"Calling [name], please hold…"*.
+
+### 3.4 Picking the right trip (multiple trips)
+
+AI tracks the **trip under discussion** when you or the assistant just mentioned a customer name, pickup address, or scheduled time. Example:
+
+1. *"Today's schedule"* → *"7 trips"*
+2. *"Who am I picking up?"* → trip 1: NexGen Speak, Lotte 54 Liễu Giai, 12:30
+3. *"Call the customer and say I'm on my way"* → calls NexGen Speak without re-listing all trips
+
+You can also say: *"Call the customer at Pasteur"*, *"The 12:30 trip"*, *"Call Bob"*.
+
+### 3.5 Confirming with "Ok" / "Yes"
+
+When the AI says *"Let me check the schedule"* or *"I'll message the customer…"* but hasn't acted yet, say **Ok**, **That's right**, or **Go ahead and call** — the AI executes the promised action instead of a empty *"Sure"*.
+
+### 3.6 After a customer call
+
+When the call ends, the AI reads **one** summary (what the customer confirmed). You can also ask: *"Summarize the call"* / *"Is the call done?"*.
+
+### 3.7 Cancel trip by voice
 
 1. Say: *"I want to cancel the trip"*
 2. AI asks for confirmation
@@ -152,7 +174,16 @@ A: Yes. The primary voice assistant supports Vietnamese; some configurations als
 A: Select Online in the app, or tell the AI: *"Go online"* / *"I'm ready"*.
 
 **Q: How do I see my next trip?**  
-A: Check the app trip list, or ask the AI: *"What's my next trip?"*
+A: Check the app trip list, or ask the AI: *"Today's schedule"* / *"Upcoming trips"*. Follow up with *"Who am I picking up?"* for details.
+
+**Q: How do I call the right customer when I have multiple trips?**  
+A: Say the customer name (*"Call NexGen Speak"*), address (*"Call the customer at Lotte"*), time (*"The 12:30 trip"*), or index (*"Call trip 2"*). After the AI just read one trip's details, *"Call the customer"* uses that trip.
+
+**Q: The AI promised to check or call but didn't — I said Ok?**  
+A: Say *"Ok"*, *"That's right"*, or *"Go ahead and call"* — the AI executes the promised action instead of an empty acknowledgment.
+
+**Q: Does the AI summarize after a customer call?**  
+A: Yes — once when the call ends. You can also ask *"Summarize the call"* or *"Is the call done?"*.
 
 **Q: What if the customer doesn't show up?**  
 A: Wait longer (extend wait time), call the customer via AI, or report a no-show through the voice assistant.

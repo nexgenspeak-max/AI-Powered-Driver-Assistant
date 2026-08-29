@@ -11,6 +11,7 @@ from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.processors.pre_dial import announce_pre_dial
 from app.voicebot.processors.sip_call_watch import schedule_no_answer_watch
 from app.voicebot.prompts.bridge_call import bridge_greeting
 
@@ -58,20 +59,8 @@ def _pre_dial_announcement(name: str, lang: str, *, mode: str) -> str:
 
 
 async def _announce_pre_dial(context: RunContext, name: str, lang: str, *, mode: str) -> None:
-    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
-    is required here — a bare `session.say()` races with this same tool's own
-    queued reply (the handoff message for agent/bridge mode, or this tool's own
-    return string for background mode) and silently fails the whole tool call
-    (confirmed: no exception ever reached the try/except around the dial, the
-    tool just returned near-instantly with no call placed). Best-effort: any
-    failure here must never block the actual call, so it's swallowed and
-    logged rather than left to propagate.
-    """
-    try:
-        async with context.foreground():
-            await context.session.say(_pre_dial_announcement(name, lang, mode=mode), allow_interruptions=False)
-    except Exception:
-        logger.warning("pre-dial announcement failed — dialing anyway", exc_info=True)
+    """Speak before SIP dial. Uses foreground() when available (real RunContext)."""
+    await announce_pre_dial(context, _pre_dial_announcement(name, lang, mode=mode))
 
 
 def _save_call_context(

@@ -30,6 +30,13 @@ def test_vn_does_not_confirm_negations_or_smalltalk():
     assert classify_driver_intent("ok", "vn") == "conversational_ack"
     assert classify_driver_intent("cảm ơn nhé", "vn") == "conversational_ack"
     assert classify_driver_intent("khách đang chạy", "vn") is None
+    assert classify_driver_intent("Thế thôi, cảm ơn, không có gì.", "vn") == "end_conversation"
+    assert classify_driver_intent("tắt máy tắt máy", "vn") == "end_conversation"
+    assert classify_driver_intent("Ok, bây giờ thì tôi cần", "vn") is None
+
+
+def test_vn_schedule_kiem_tra_trinh():
+    assert classify_driver_intent("Tôi muốn kiểm tra trình hôm nay", "vn") == "upcoming"
 
 
 def test_needs_tool_llm_for_trip_data_not_chitchat():
@@ -293,6 +300,70 @@ async def test_handle_phone_lookup_speaks_number_from_app():
     spoken = session.say.await_args.args[0]
     assert "0912012903" in spoken
     assert "Trương Bá Chính" in spoken
+
+
+def test_handle_trip_lookup_by_address():
+    import asyncio
+
+    async def _run():
+        userdata: dict = {"driver_phone": "0888887798", "context": {}}
+        context_store.load_driver_context(
+            userdata,
+            {
+                "current_trip": None,
+                "upcoming_trips": [
+                    {
+                        "trip_id": "t-nexgen",
+                        "status": "confirmed",
+                        "customer_name": "NexGen Speak",
+                        "pickup_address": "Lotte 54 Liễu Giai, Ba Đình, Hà Nội",
+                        "scheduled_pickup": "2026-08-30T12:30:00",
+                    },
+                ],
+                "active_trip": None,
+            },
+        )
+        session = MagicMock()
+        session.userdata = userdata
+        session.say = AsyncMock()
+        message = SimpleNamespace(
+            text_content="Tôi có một chuyến đón khách ở Liễu Giai là chuyến nào nhỉ?"
+        )
+        try:
+            await handle_driver_utterance(session, message, lang="vn")
+        except StopResponse:
+            pass
+        spoken = session.say.await_args.args[0]
+        assert "NexGen Speak" in spoken
+        assert "Liễu Giai" in spoken or "Lotte" in spoken
+
+    asyncio.run(_run())
+
+
+def test_handle_end_conversation_fast_path():
+    import asyncio
+
+    async def _run():
+        userdata: dict = {"driver_phone": "0888887798", "context": {}}
+        session = MagicMock()
+        session.userdata = userdata
+        session.say = AsyncMock()
+        message = SimpleNamespace(text_content="tắt máy tắt máy")
+
+        with patch(
+            "app.voicebot.vn.tools.end_conversation.end_conversation.__wrapped__",
+            new=AsyncMock(),
+        ) as mock_end:
+            try:
+                await handle_driver_utterance(session, message, lang="vn")
+            except StopResponse:
+                pass
+            else:
+                raise AssertionError("end_conversation must StopResponse")
+            mock_end.assert_awaited_once()
+            assert mock_end.call_args.args[0] == {}
+
+    asyncio.run(_run())
 
 
 async def test_conversational_ack_stop_response_on_voice_turn():

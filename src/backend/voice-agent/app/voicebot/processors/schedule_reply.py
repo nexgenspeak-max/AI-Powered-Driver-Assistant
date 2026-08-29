@@ -107,4 +107,6 @@ def format_schedule_reply(userdata: dict, raw_arguments: dict, *, lang: str) -> 
 
     labels = _SCOPE_LABELS_EN if lang == "en" else _SCOPE_LABELS_VI
     scope_label = labels.get(scope) if scope != "all" else None
+    if trips:
+        context_store.set_target_trip(userdata, trips[0])
     return build_trip_count_response(trips, lang, scope_label=scope_label)

@@ -66,27 +66,49 @@ Khách hàng có thể đặt xe bằng app/web **hoặc gọi số hotline** đ
 
 1. Mở app tài xế, đăng nhập bằng số điện thoại
 2. Nhấn nút **Trợ lý AI** / biểu tượng mic
-3. App kết nối LiveKit — AI chào: *"Xin chào! Tôi có thể giúp gì?"*
-4. Nói yêu cầu bằng tiếng Việt, ngắn gọn
+3. App kết nối LiveKit — AI chào ngắn (Czen), sau đó hỏi *"Tôi có thể giúp gì cho bạn?"*
+4. Nói yêu cầu bằng tiếng Việt, ngắn gọn — **một việc một lúc**
 
 ### 3.2 Ví dụ câu lệnh giọng nói
 
+- *"Lịch trình hôm nay"* / *"Chuyến sắp tới"* → AI đếm chuyến; có thể hỏi tiếp *"Chuyến nào? Đón ai?"*
 - *"Chuyến tiếp theo của tôi là gì?"*
-- *"Khách đứng ở đâu?"*
-- *"Gọi cho khách giúp tôi"* → AI hỏi: AI gọi hộ hay kết nối trực tiếp
+- *"Khách đứng ở đâu?"* / *"Đón ở Lotte Liễu Giai"* — AI nhớ chuyến vừa nói
+- *"Gọi cho khách giúp tôi"* / *"Báo khách tôi đang đến"* → AI gọi đúng khách của chuyến đang bàn
+- *"Gọi cho NexGen Speak"* / *"Gọi khách chuyến 2"* — chọn chuyến theo tên, địa chỉ, giờ, hoặc số thứ tự
 - *"Tôi đến nơi rồi"* / *"Khách đã lên xe"* / *"Xong chuyến"*
 - *"Hôm nay tôi kiếm được bao nhiêu?"*
 - *"Khách không ra"* → báo vắng mặt
 - *"Ứng dụng hỗ trợ những gì?"* → dùng cơ sở tri thức playbook
 
-### 3.3 Gọi khách — hai chế độ
+### 3.3 Gọi khách — hai chế độ chính
 
 | Chế độ | Cách nói | AI làm gì |
 |--------|----------|-----------|
-| **AI nói** | *"Để AI gọi và tóm tắt"* | AI gọi khách, trò chuyện, tóm tắt lại cho tài xế |
-| **Kết nối trực tiếp** | *"Kết nối cho tôi nói"* | Nối cuộc gọi, tài xế nói trực tiếp với khách |
+| **AI gọi hộ** (mặc định) | *"Gọi cho khách"*, *"Báo khách tôi sắp đến"* | AI gọi khách, nói thay tài xế, tài xế nghe live; kết thúc AI tóm tắt **một lần** |
+| **Nói trực tiếp** | *"Kết nối cho tôi nói"* / *"Nói trực tiếp với khách"* | Nối cuộc gọi vào phòng; tài xế nói trực tiếp; nói *"trợ lý kết thúc"* khi xong |
 
-### 3.4 Hủy chuyến bằng giọng nói
+Trước khi quay số, AI luôn nói *"Đang gọi [tên khách], xin đợi…"*.
+
+### 3.4 Chọn đúng chuyến khi có nhiều chuyến
+
+AI nhớ **chuyến đang bàn** (target trip) khi bạn hoặc AI vừa nhắc tên khách, địa chỉ đón, hoặc giờ hẹn. Ví dụ:
+
+1. *"Lịch trình hôm nay"* → *"7 chuyến"*
+2. *"Đón những ai?"* → AI nói chuyến 1: NexGen Speak, Lotte 54 Liễu Giai, 12:30
+3. *"Gọi cho khách bảo tôi chuẩn bị đến"* → gọi đúng NexGen Speak, không hỏi lại danh sách
+
+Bạn cũng có thể nói thẳng: *"Gọi khách ở Pasteur"*, *"Chuyến 12 giờ 30"*, *"Gọi Bob"*.
+
+### 3.5 Xác nhận "Ok" / "Đúng rồi"
+
+Khi AI hứa *"Em kiểm tra lịch"* hoặc *"Em nhắn khách…"* mà chưa làm ngay, bạn nói **Ok**, **Đúng rồi**, hoặc **Thì gọi đi** → AI thực hiện việc đó, không chỉ trả lời *"Vâng"*.
+
+### 3.6 Sau cuộc gọi khách
+
+Khi cuộc gọi kết thúc, AI đọc **một lần** tóm tắt (khách xác nhận gì, kết quả). Bạn có thể hỏi thêm: *"Tóm tắt cuộc gọi"* / *"Gọi xong chưa?"*.
+
+### 3.7 Hủy chuyến bằng giọng nói
 
 1. Nói: *"Tôi muốn hủy chuyến"*
 2. AI hỏi xác nhận
@@ -152,7 +174,16 @@ T: Có. Trợ lý AI chính hỗ trợ tiếng Việt; một số cấu hình h�
 T: Trong app chọn Online, hoặc nói với AI: *"Bật nhận chuyến"* / *"Tôi sẵn sàng"*.
 
 **H: Làm sao xem chuyến tiếp theo?**  
-T: Mở app xem danh sách, hoặc hỏi AI: *"Chuyến tiếp theo của tôi?"*
+T: Mở app xem danh sách, hoặc hỏi AI: *"Lịch trình hôm nay"* / *"Chuyến sắp tới"*. Hỏi tiếp *"Đón ai?"* để nghe chi tiết từng chuyến.
+
+**H: Làm sao gọi đúng khách khi có nhiều chuyến?**  
+T: Nói tên khách (*"Gọi NexGen Speak"*), địa chỉ (*"Gọi khách ở Lotte Liễu Giai"*), giờ (*"Chuyến 12 giờ 30"*), hoặc số thứ tự (*"Gọi chuyến 2"*). Sau khi AI vừa đọc chi tiết một chuyến, bạn có thể nói *"Gọi cho khách"* — AI gọi đúng chuyến đó.
+
+**H: AI hứa kiểm tra / gọi khách rồi im, tôi nói Ok thì sao?**  
+T: Nói *"Ok"*, *"Đúng rồi"*, hoặc *"Thì gọi đi"* — AI sẽ thực hiện việc đã hứa, không chỉ trả lời vâng.
+
+**H: Sau cuộc gọi AI có đọc tóm tắt không?**  
+T: Có — một lần khi cuộc gọi kết thúc. Bạn cũng có thể hỏi *"Tóm tắt cuộc gọi"* hoặc *"Gọi xong chưa?"*.
 
 **H: Khách không ra thì làm gì?**  
 T: Chờ thêm (gia hạn), gọi khách qua AI, hoặc báo khách vắng mặt qua trợ lý giọng nói.

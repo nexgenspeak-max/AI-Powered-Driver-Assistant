@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { Platform } from "react-native";
-import * as Speech from "expo-speech";
 import { getForegroundService } from "../../../services/foregroundService";
+import {
+  playConnectingFiller,
+  stopConnectingFiller,
+} from "../lib/connectingFillerAudio";
 import {
   Room,
   RoomEvent,
@@ -21,15 +24,12 @@ import { bind, clearLogContext } from "../../../services/logger";
 const CALL_STATE_TOPIC = "call_state";
 const AGENT_STATE_TOPIC = "agent_state";
 const CALL_TRANSCRIPT_TOPIC = "call_transcript";
-const CONNECTING_FILLER = "Đang kết nối với Czen";
 
-function speakConnectingFiller() {
-  Speech.stop();
-  Speech.speak(CONNECTING_FILLER, { language: "vi-VN" });
-}
-
-function stopConnectingFiller() {
-  Speech.stop();
+/** LLM sometimes speaks a bare tool id — hide from chat bubbles. */
+function isRawToolToken(text: string): boolean {
+  const token = text.trim();
+  if (!token || /\s/.test(token)) return false;
+  return /^[a-z][a-z0-9_]+$/.test(token) && token.includes("_");
 }
 
 let foregroundServiceRegistered = false;
@@ -289,7 +289,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       agentSpeaking: false,
       isMicMuted: false,
     });
-    speakConnectingFiller();
+    void playConnectingFiller();
     try {
       const [{ token, livekit_url }] = await Promise.all([
         getToken(),
@@ -399,6 +399,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
 
         const emit = (text: string, isFinal: boolean) => {
           if (!text.trim()) return;
+          if (from === "agent" && isRawToolToken(text)) return;
           if (isFinal) {
             const messageKey = transcriptDedupKey(from, text);
             const now = Date.now();

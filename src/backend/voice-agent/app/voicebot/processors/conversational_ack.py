@@ -19,6 +19,24 @@ _BLOCK_VN = (
     "cao tốc",
 )
 
+_FAREWELL_BLOCK_VN = (
+    "thế thôi",
+    "tạm biệt",
+    "tắt máy",
+    "tắt trợ lý",
+    "kết thúc",
+    "dừng lại",
+    "không có gì",
+)
+_CONTINUATION_VN = (
+    "bây giờ",
+    "tôi cần",
+    "tôi muốn",
+    "rồi tôi",
+    "về đón",
+    "tiếp theo",
+)
+
 _ACK_VN: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
     (
         ("cảm ơn", "thank", "thanks", "cám ơn"),
@@ -50,6 +68,10 @@ def conversational_ack_reply(text: str, lang: str) -> str | None:
     if not t or len(t) > 36:
         return None
     if any(p in t for p in _BLOCK_VN):
+        return None
+    if any(p in t for p in _FAREWELL_BLOCK_VN):
+        return None
+    if any(p in t for p in _CONTINUATION_VN):
         return None
     if "?" in text or t.startswith(("sao", "tại sao", "làm sao", "anh ", "chị ", "em ")):
         return None

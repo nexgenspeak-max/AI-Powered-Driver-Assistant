@@ -49,6 +49,4 @@ async def end_bridge_call(context: RunContext, summary: str = "") -> tuple[Agent
     except Exception:
         logger.error("end_bridge_call failed", exc_info=True)
         raise
-    if lang == "en":
-        return driver, f"Bridge call ended. {final_summary}"
-    return driver, f"Đã kết thúc cuộc gọi trực tiếp. {final_summary}"
+    return driver, ""

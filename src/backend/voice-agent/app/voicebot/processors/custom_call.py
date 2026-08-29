@@ -15,6 +15,7 @@ from livekit.agents import Agent, RunContext
 
 from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
+from app.voicebot.processors.pre_dial import announce_pre_dial
 from app.voicebot.prompts.bridge_call import bridge_greeting
 
 logger = logging.getLogger("voice-agent.processors.custom_call")
@@ -73,23 +74,7 @@ def _pre_dial_announcement(name: str, lang: str) -> str:
 
 
 async def _announce_pre_dial(context: RunContext, name: str, lang: str) -> None:
-    """Speak the pre-dial announcement and wait for it to finish. `foreground()`
-    is required here — a bare `session.say()` races with this same tool's own
-    queued reply (the handoff message returned below) and silently fails the
-    whole tool call (confirmed: no exception ever reached the try/except around
-    the dial, the tool just returned near-instantly with no call placed).
-    Best-effort: any failure here must never block the actual call, so it's
-    swallowed and logged rather than left to propagate.
-    """
-    logger.info("DIAL-TRACE custom_call: entering _announce_pre_dial for %r", name)
-    try:
-        async with context.foreground():
-            logger.info("DIAL-TRACE custom_call: inside foreground, about to say")
-            await context.session.say(_pre_dial_announcement(name, lang), allow_interruptions=False)
-            logger.info("DIAL-TRACE custom_call: say() returned")
-    except Exception:
-        logger.warning("DIAL-TRACE custom_call: pre-dial announcement failed — dialing anyway", exc_info=True)
-    logger.info("DIAL-TRACE custom_call: leaving _announce_pre_dial")
+    await announce_pre_dial(context, _pre_dial_announcement(name, lang))
 
 
 async def start_bridge_call_to_number(

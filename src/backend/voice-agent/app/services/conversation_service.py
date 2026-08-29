@@ -137,6 +137,11 @@ class ConversationService:
             text = item.text_content
             if not text:
                 return
+            from app.voicebot.processors.transcript_filter import is_raw_tool_token
+
+            if item.role == "assistant" and is_raw_tool_token(text):
+                logger.info("conversation skip raw tool token text=%s", text[:48])
+                return
             userdata = session.userdata if isinstance(session.userdata, dict) else {}
             speaker = self._speaker_for_role(userdata, item.role)
             self.append_labeled_turn(
@@ -153,7 +158,8 @@ class ConversationService:
                 context_store.set_last_driver_utterance(userdata, text)
             if item.role == "assistant":
                 context_store.match_callable_trip_by_text(userdata, text)
-                pending_action.infer_from_bot_line(text, userdata, lang="vn")
+                bot_lang = userdata.get("lang", "vn")
+                pending_action.infer_from_bot_line(text, userdata, lang=bot_lang)
 
     async def _build_and_save_record(self) -> str:
         """Generates the transcript-based summary, saves the full record to

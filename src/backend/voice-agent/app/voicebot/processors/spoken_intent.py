@@ -37,6 +37,8 @@ Intent = Literal[
     "earnings",
     "driving_advice",
     "conversational_ack",
+    "end_conversation",
+    "trip_lookup",
 ]
 
 _CONFIRM_VN = (
@@ -84,10 +86,44 @@ _UPCOMING_VN = (
     "lịch chuyến",
     "lịch trình",
     "lịch hôm nay",
+    "kiểm tra trình",
+    "kiểm tra lịch",
+    "xem lịch",
+    "xem trình",
     "chuyến tiếp theo",
     "mấy chuyến",
     "bao nhiêu chuyến",
     "có bao nhiêu chuyến",
+)
+_END_VN = (
+    "tắt máy",
+    "tắt trợ lý",
+    "tắt đi",
+    "tạm biệt",
+    "kết thúc trợ lý",
+    "kết thúc cuộc",
+    "thôi tắt",
+    "dừng lại nhé",
+    "dừng lại đi",
+)
+_END_EN = (
+    "goodbye",
+    "hang up",
+    "end the session",
+    "end session",
+    "that's all",
+    "thats all",
+    "turn off",
+)
+_TRIP_IDENTITY_VN = (
+    "chuyến nào",
+    "khách nào",
+    "là ai",
+    "là chuyến gì",
+    "khách đấy",
+    "khách đó",
+    "họ là ai",
+    "khách nào nhỉ",
 )
 _EARNINGS_VN = (
     "thu nhập",
@@ -238,11 +274,53 @@ def _is_call_request(t: str, lang: str) -> bool:
     return len(rest) >= 3
 
 
-def classify_driver_intent(text: str, lang: str) -> Intent | None:
+def _is_end_session(t: str, lang: str) -> bool:
+    if lang == "en":
+        return any(p in t for p in _END_EN)
+    if any(p in t for p in _END_VN):
+        return True
+    if "thế thôi" in t and any(p in t for p in ("cảm ơn", "cam on", "không có gì", "khong co gi")):
+        return True
+    if t.startswith("cảm ơn") and "không có gì" in t:
+        return True
+    return False
+
+
+def _is_trip_identity_query(t: str, lang: str) -> bool:
+    if lang != "vn":
+        return False
+    if any(
+        p in t
+        for p in (
+            "lịch trình",
+            "mấy chuyến",
+            "bao nhiêu chuyến",
+            "kiểm tra trình",
+            "kiểm tra lịch",
+            "thu nhập",
+        )
+    ):
+        return False
+    return any(p in t for p in _TRIP_IDENTITY_VN)
+
+
+def _classify_trip_lookup(text: str, lang: str, userdata: dict | None) -> bool:
+    if not userdata or not _is_trip_identity_query(_norm(text), lang):
+        return False
+    from app.voicebot.processors.trip_target import resolve_trips_from_text
+
+    return resolve_trips_from_text(userdata, text).kind == "matched"
+
+
+def classify_driver_intent(
+    text: str, lang: str, userdata: dict | None = None
+) -> Intent | None:
     """Return a tool intent when the transcript is unambiguous, else None."""
     t = _norm(text)
     if not t:
         return None
+    if _is_end_session(t, lang):
+        return "end_conversation"
     if lang == "en":
         if any(p in t for p in _CONFIRM_BLOCK_EN):
             return None
@@ -279,6 +357,8 @@ def classify_driver_intent(text: str, lang: str) -> Intent | None:
         return "earnings"
     if any(p in t for p in _CURRENT_VN):
         return "current"
+    if _classify_trip_lookup(text, lang, userdata):
+        return "trip_lookup"
     if driving_advice_reply(text, lang):
         return "driving_advice"
     if conversational_ack_reply(text, lang):
@@ -386,6 +466,16 @@ async def _apply_call_customer_result(session: Any, result: Any) -> None:
         await context_store.speak_and_stop(session, result)
 
 
+async def _log_driver_turn(userdata: dict, text: str) -> None:
+    """Fast-path skips RoomIO chat events — log driver turns for conv transcript."""
+    clean = (text or "").strip()
+    if not clean:
+        return
+    conv = userdata.get("_conv_service")
+    if conv is not None:
+        conv.append_labeled_turn(clean, speaker="driver", role="user")
+
+
 async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) -> None:
     pending = context_store.pop_pending_driver_action(userdata)
     if not pending:
@@ -427,6 +517,34 @@ async def _try_interrupt(session: Any, *, reason: str) -> None:
         logger.debug("interrupt skipped before %s", reason)
 
 
+async def _execute_end_conversation(ctx: SimpleNamespace, *, lang: str) -> None:
+    if lang == "en":
+        from app.voicebot.en.tools.end_call import end_call
+
+        await end_call.__wrapped__({}, ctx)
+        return
+    from app.voicebot.vn.tools.end_conversation import end_conversation
+
+    await end_conversation.__wrapped__({}, ctx)
+
+
+async def _execute_trip_lookup(
+    session: Any, userdata: dict, text: str, *, lang: str
+) -> None:
+    from app.voicebot.processors.trip_response import build_trip_detail_response
+    from app.voicebot.processors.trip_target import resolve_and_select_trip
+
+    trip = resolve_and_select_trip(userdata, text)
+    if not trip:
+        return
+    schedule = context_store.get_schedule_trips(userdata)
+    id_to_index = {t.get("trip_id"): i + 1 for i, t in enumerate(schedule)}
+    idx = id_to_index.get(trip.get("trip_id")) or context_store.get_target_trip_index(userdata) or 1
+    spoken_lang = "en" if lang == "en" else "vi"
+    resp = build_trip_detail_response(trip, idx, spoken_lang)
+    await context_store.speak_and_stop(session, resp.spoken())
+
+
 async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> None:
     """Run a matched tool. Raises StopResponse when the tool speaks."""
     text = getattr(message, "text_content", None) or ""
@@ -434,17 +552,29 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
     if not isinstance(userdata, dict):
         return
 
+    will_handle = (
+        pending_action.should_execute(userdata, text, lang)
+        or classify_driver_intent(text, lang, userdata) is not None
+    )
+    if will_handle:
+        await _log_driver_turn(userdata, text)
+
     if pending_action.should_execute(userdata, text, lang):
         await _try_interrupt(session, reason="pending_action")
         await _execute_pending_action(session, userdata, lang=lang)
         return
 
-    intent = classify_driver_intent(text, lang)
+    intent = classify_driver_intent(text, lang, userdata)
     if intent is None:
         return
     ctx = SimpleNamespace(session=session, userdata=userdata)
     event("spoken_intent", ok=True, intent=intent, lang=lang)
     logger.info("spoken_intent intent=%s lang=%s", intent, lang)
+
+    if intent == "end_conversation":
+        await _try_interrupt(session, reason="end_conversation")
+        await _execute_end_conversation(ctx, lang=lang)
+        raise StopResponse()
 
     if intent == "conversational_ack" and pending_action.has_pending(userdata):
         if pending_action.is_action_confirm(text, lang):
@@ -505,6 +635,9 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         if reply:
             await context_store.speak_and_stop(session, reply)
         return
+    if intent == "trip_lookup":
+        await _execute_trip_lookup(session, userdata, text, lang=lang)
+        return
     if intent == "conversational_ack":
         reply = conversational_ack_reply(text, lang)
         if reply:
@@ -537,7 +670,7 @@ async def driver_text_input_cb(sess: Any, ev: Any) -> None:
         if isinstance(userdata, dict):
             context_store.set_last_driver_utterance(userdata, ev.text)
             pending_action.infer_from_driver_utterance(ev.text, userdata, lang=lang)
-        intent = classify_driver_intent(ev.text, lang)
+        intent = classify_driver_intent(ev.text, lang, sess.userdata if isinstance(sess.userdata, dict) else None)
         try:
             await handle_driver_utterance(sess, message, lang=lang)
         except StopResponse:
@@ -574,7 +707,9 @@ def attach_spoken_intent_preemptive_cancel(
         if not ev.is_final:
             return
         transcript = (getattr(ev, "transcript", None) or "").strip()
-        if not transcript or classify_driver_intent(transcript, lang) is None:
+        if not transcript or classify_driver_intent(
+            transcript, lang, session.userdata if isinstance(session.userdata, dict) else None
+        ) is None:
             if not (isinstance(session.userdata, dict) and pending_action.should_execute(session.userdata, transcript, lang)):
                 return
         asyncio.create_task(
@@ -601,7 +736,7 @@ class SpokenIntentMixin:
             pending_action.infer_from_driver_utterance(
                 text, userdata, lang=self._spoken_intent_lang
             )
-        intent = classify_driver_intent(text, self._spoken_intent_lang)
+        intent = classify_driver_intent(text, self._spoken_intent_lang, userdata)
         if intent is not None:
             await _try_interrupt(self.session, reason="spoken_intent_turn")
         elif needs_tool_llm(text, self._spoken_intent_lang):

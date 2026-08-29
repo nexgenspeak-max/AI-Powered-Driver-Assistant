@@ -371,6 +371,5 @@ async def end_customer_call(
     except Exception:
         logger.error("end_customer_call failed", exc_info=True)
         raise
-    if lang == "en":
-        return driver, f"Customer call ended. Summary: {summary}"
-    return driver, f"Cuộc gọi với khách đã kết thúc. Tóm tắt: {summary}"
+    # Handoff message is empty — DriverAgent.on_enter speaks resume_summary once.
+    return driver, ""

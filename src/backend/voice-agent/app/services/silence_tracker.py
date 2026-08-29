@@ -215,13 +215,10 @@ class SilenceTracker:
                 else:
                     logger.info(
                         "SilenceTracker | max consecutive silences reached — "
-                        "end_session_on_timeout disabled, keeping session alive"
+                        "end_session_on_timeout disabled, stopping check-ins"
                     )
                     self._consecutive_silence_count = 0
-                    # Scheduled BEFORE awaiting the notification below — see
-                    # the `else` branch's comment just below for why.
-                    self._schedule_silence_check()
-                    await self._send_silence_check_in()
+                    await self.stop()
             else:
                 # Next cycle is scheduled BEFORE awaiting the notification,
                 # not after. `self.session.run(...)` inside

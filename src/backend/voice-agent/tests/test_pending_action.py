@@ -30,6 +30,17 @@ def _userdata():
     return userdata
 
 
+def test_infer_from_bot_line_skipped_during_active_call():
+    userdata = _userdata()
+    userdata["customer_call_active"] = True
+    pending_action.infer_from_bot_line(
+        "Em gọi khách ngay nhé.",
+        userdata,
+        lang="vn",
+    )
+    assert context_store.get_pending_driver_action(userdata) is None
+
+
 def test_infer_from_bot_line_sets_check_pending():
     userdata = _userdata()
     context_store.set_last_driver_utterance(
@@ -81,6 +92,7 @@ def test_execute_nudge_triggers_pending():
     userdata = _userdata()
     context_store.set_pending_driver_action(userdata, "call_customer", {"mode": "agent"})
     assert pending_action.should_execute(userdata, "Thì gọi đi.", "vn")
+    assert pending_action.should_execute(userdata, "Kiểm tra lại xem nào.", "vn")
 
 
 def test_ok_executes_pending_check_not_ack():

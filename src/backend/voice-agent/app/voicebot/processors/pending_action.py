@@ -12,9 +12,12 @@ logger = logging.getLogger("voice-agent.pending_action")
 
 _CHECK_BOT_VN = (
     "em kiểm tra",
+    "để em kiểm tra",
+    "em kiểm tra lại",
     "kiểm tra lịch",
     "kiểm tra ngay",
     "kiểm tra chuyến",
+    "kiểm tra lại",
     "check the schedule",
     "let me check",
     "i'll check",
@@ -42,6 +45,10 @@ _EXECUTE_NUDGE_VN = (
     "hiểu rồi sao không",
     "kiểm tra đi",
     "kiểm tra ngay",
+    "kiểm tra lại",
+    "thế kiểm tra",
+    "xem nào",
+    "làm chưa",
     "thì làm",
 )
 _DRIVER_CALL_VN = ("báo khách", "bảo khách", "nhắn khách", "gọi hộ", "ai gọi hộ")
@@ -94,6 +101,15 @@ def _check_upcoming_args(userdata: dict) -> dict:
     return {"scope": "all"}
 
 
+def _call_in_progress(userdata: dict) -> bool:
+    """Sub-call active — bot lines are customer-call AI, not driver-assistant promises."""
+    return bool(
+        userdata.get("customer_call_active")
+        or userdata.get("bridge_call_active")
+        or userdata.get("background_call_active")
+    )
+
+
 def _call_customer_args(userdata: dict, *, message: str = "", utterance: str = "") -> dict:
     from app.voicebot.processors.spoken_intent import call_tool_arguments
 
@@ -110,6 +126,8 @@ def _call_customer_args(userdata: dict, *, message: str = "", utterance: str = "
 
 def infer_from_bot_line(text: str, userdata: dict, *, lang: str = "vn") -> None:
     """Remember promised tool work when the assistant speaks intent without calling."""
+    if _call_in_progress(userdata):
+        return
     t = _norm(text)
     if not t:
         return
