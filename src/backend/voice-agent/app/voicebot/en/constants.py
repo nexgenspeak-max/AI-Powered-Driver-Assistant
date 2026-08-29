@@ -1,5 +1,9 @@
 """English-specific strings: greetings, labels, error messages."""
 
+from app.voicebot.prompts.concise_driver import CONVERSATIONAL_LLM_EN
+
+GREETING_CONNECT_FILLER = "Hello, how can I help you?"
+GREETING_AFTER_PREFETCH = "How can I help you?"
 GREETING_INBOUND = "Hello! I'm your AI driving assistant. How can I help you?"
 GREETING_OUTBOUND_PREFIX = "Hello! This is the driver assistant system."
 GREETING_CUSTOMER = (
@@ -7,6 +11,8 @@ GREETING_CUSTOMER = (
     "I can help you check on your ride or any related issues. "
     "How can I help you today?"
 )
+
+CONVERSATIONAL_LLM_INSTRUCTIONS = CONVERSATIONAL_LLM_EN
 
 TRIP_CONFIRMED = "Trip confirmed. Drive safe!"
 TRIP_REJECTED  = "Got it. Thank you!"

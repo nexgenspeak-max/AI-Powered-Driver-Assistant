@@ -96,11 +96,8 @@ export function TripOfferBanner() {
     queryKey: ['trip-offer', tripId],
     queryFn: () => tripsService.get(tripId!),
     enabled: !!tripId,
-    // Short poll while the banner is up — catches the trip being reassigned
-    // elsewhere (another driver accepted first, or the 15s offer window
-    // moved on) so a stale banner doesn't sit there promising a trip that's
-    // no longer actually offered to this driver.
-    refetchInterval: 4000,
+    // Stale-offer dismiss comes from schedule_updated invalidating this
+    // query — no interval poll while the banner is up.
   })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['driverContext'] })

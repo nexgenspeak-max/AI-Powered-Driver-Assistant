@@ -12,10 +12,18 @@ from __future__ import annotations
 
 import logging
 
+from app.services import backend_api
+from app.voicebot.processors import context_store
+from app.voicebot.processors.next_stop import build_next_stop_suggestion
+from app.voicebot.processors.trip_format import short_address
+
 logger = logging.getLogger("voice-agent.processors.nudge")
 
 # Must match trip-service's driverReachService.ts DRIVER_NUDGE_TOPIC exactly.
 DRIVER_NUDGE_TOPIC = "driver_proactive_nudge"
+
+# Reload context_store only — no spoken line (see session.py live push).
+SILENT_NUDGE_KINDS = frozenset({"schedule_updated"})
 
 
 async def _refresh_schedule(userdata: dict) -> None:
@@ -31,9 +39,6 @@ async def _refresh_schedule(userdata: dict) -> None:
     if not driver_phone:
         return
     try:
-        from app.services import backend_api
-        from app.voicebot.processors import context_store
-
         fresh = await backend_api.get_driver_context(driver_phone)
         context_store.load_driver_context(userdata, fresh)
     except Exception:
@@ -66,8 +71,8 @@ async def build_nudge_message(
                 "Would you like me to call and let them know to head out?"
             )
         return (
-            f"Anh/chị sắp đến điểm đón khách {customer} ở {pickup}. "
-            "Anh/chị có muốn tôi gọi báo khách di chuyển ra điểm đón không?"
+            f"Bạn sắp đến điểm đón khách {customer} ở {pickup}. "
+            "Bạn có muốn mình gọi báo khách di chuyển ra điểm đón không?"
         )
 
     if nudge_kind == "proximity_dropoff":
@@ -79,16 +84,14 @@ async def build_nudge_message(
                 "Would you like me to call and remind them to check their belongings?"
             )
         return (
-            f"Anh/chị sắp đến điểm trả khách {customer} ở {dropoff}. "
-            "Anh/chị có muốn tôi gọi nhắc khách kiểm tra hành lý và chuẩn bị xuống xe không?"
+            f"Bạn sắp đến điểm trả khách {customer} ở {dropoff}. "
+            "Bạn có muốn mình gọi nhắc khách kiểm tra hành lý và chuẩn bị xuống xe không?"
         )
 
     if nudge_kind == "suggest_next_stop":
         if userdata is None:
             logger.warning("build_nudge_message: suggest_next_stop called without userdata")
             return ""
-        from app.voicebot.processors.next_stop import build_next_stop_suggestion
-
         await _refresh_schedule(userdata)
         # related_trip_id is only set by the 200m GPS-arrival trigger (see
         # proximityService.ts's maybeAnnounce*ArrivalNextStop) — that trip is
@@ -101,19 +104,59 @@ async def build_nudge_message(
         exclude_trip_id = payload.get("related_trip_id", "")
         return build_next_stop_suggestion(userdata, lang=lang, exclude_trip_id=exclude_trip_id)
 
+    if nudge_kind == "new_trip_offer":
+        # Mid-session booking: prefetch snapshot is stale until this GET.
+        # related_trip_id (never trip_id) keeps DriverAgent on the full
+        # inbound toolset so the driver can confirm without a new outbound room.
+        if userdata is not None:
+            await _refresh_schedule(userdata)
+        related_id = payload.get("related_trip_id", "")
+        trip = None
+        if userdata is not None and related_id:
+            trip = next(
+                (t for t in context_store.get_schedule_trips(userdata) if t.get("trip_id") == related_id),
+                None,
+            )
+        customer = (
+            (trip or {}).get("customer_name")
+            or payload.get("customer_name")
+            or ("khách" if lang != "en" else "the customer")
+        )
+        pickup = short_address(
+            (trip or {}).get("pickup_address") or payload.get("pickup_address") or "",
+            40,
+        )
+        pickup_bit = f" at {pickup}" if pickup and lang == "en" else (f" ở {pickup}" if pickup else "")
+        if lang == "en":
+            return (
+                f"You have a new trip: pick up {customer}{pickup_bit}. "
+                "Would you like to accept it?"
+            )
+        return (
+            f"Bạn có chuyến mới: đón {customer}{pickup_bit}. "
+            "Bạn nhận chuyến này không?"
+        )
+
+    if nudge_kind == "schedule_updated":
+        if userdata is not None:
+            await _refresh_schedule(userdata)
+        return ""
+
     logger.warning("build_nudge_message: unhandled nudge_kind=%s", nudge_kind)
     return ""
 
 
-# proximity_* is said before suggest_next_stop: "anh/chị sắp đến điểm đón X"
+# proximity_* is said before suggest_next_stop: "bạn sắp đến điểm đón X"
 # then "điểm kế tiếp là Y" reads in the right order, and the proximity line is
 # guaranteed non-empty so the driver always hears *something* even if the
 # suggestion can't be computed.
 _NUDGE_ORDER = {
-    "proximity_pickup": 0,
-    "proximity_dropoff": 0,
-    "debug_ping": 1,
-    "suggest_next_stop": 2,
+    "schedule_updated": -1,
+    "new_trip_offer": 0,
+    "proximity_pickup": 1,
+    "proximity_dropoff": 1,
+    "debug_ping": 2,
+    "suggest_next_stop": 3,
 }
 
 
@@ -131,8 +174,6 @@ async def speak_nudges(
 
     Returns True if at least one line was spoken.
     """
-    from app.voicebot.processors import context_store
-
     ordered = sorted(
         (n for n in nudges if isinstance(n, dict) and n.get("nudge_kind")),
         key=lambda n: _NUDGE_ORDER.get(n["nudge_kind"], 9),
@@ -148,10 +189,15 @@ async def speak_nudges(
         # Same guard as session.py's live-push _speak_driver_nudge: for
         # suggest_next_stop, payload.related_trip_id is the trip to EXCLUDE, not
         # the announced one — next_stop.py sets last_nudge_trip itself there.
-        if kind != "suggest_next_stop" and userdata is not None:
+        # new_trip_offer uses related_trip_id for the NEW booking; pointing
+        # last_nudge_trip at it would send "gọi khách" at an unconfirmed offer.
+        if kind not in ("suggest_next_stop", "new_trip_offer", "schedule_updated") and userdata is not None:
             related_trip_id = payload.get("related_trip_id", "")
             if related_trip_id:
                 context_store.set_last_nudge_trip(userdata, related_trip_id)
-        await session.say(text, allow_interruptions=False)
+        # Match session.py live-push nudges: trip offers must be interruptible
+        # so confirm/reject fast-path can cut in under the 2s bar.
+        allow_interrupt = kind in ("new_trip_offer", "proximity_pickup", "proximity_dropoff")
+        await session.say(text, allow_interruptions=allow_interrupt)
         said = True
     return said

@@ -4,6 +4,8 @@ import unicodedata
 from livekit.agents import RunContext, function_tool
 
 from app.voicebot.vn.tools_definition import raw_schema
+from app.voicebot.processors.tool_reply import as_llm
+from app.voicebot.processors.tool_response_builders import build_contact_pick_response
 
 logger = logging.getLogger("voice-agent.vn.tools.select_contact_match_for_sms")
 
@@ -27,10 +29,26 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
     matches = context.userdata.get("pending_contact_sms_matches") or []
 
     if not matches:
-        return "Không có danh sách người cần chọn. Anh/chị đọc lại tên cần nhắn tin giúp tôi."
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                "Không có danh sách người cần chọn. Bạn đọc lại tên cần nhắn tin giúp em.",
+                tool="select_contact_match_for_sms",
+                lang="vi",
+                for_sms=True,
+            ),
+        )
 
     if not selection:
-        return "Anh/chị muốn nhắn tin cho ai trong danh sách vừa đọc?"
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                "Bạn muốn nhắn tin cho ai trong danh sách vừa đọc?",
+                tool="select_contact_match_for_sms",
+                lang="vi",
+                for_sms=True,
+            ),
+        )
 
     folded_selection = _fold(selection)
 
@@ -47,11 +65,28 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
 
     if not picked:
         names = ", ".join(m.get("name", "") for m in matches)
-        return f"Tôi chưa rõ anh/chị muốn nhắn tin cho ai trong số: {names}. Anh/chị nói rõ tên hơn giúp tôi."
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                f"Tôi chưa rõ bạn muốn nhắn tin cho ai trong số: {names}. Bạn nói rõ tên hơn giúp em.",
+                tool="select_contact_match_for_sms",
+                lang="vi",
+                for_sms=True,
+            ),
+        )
 
     context.userdata["pending_contact_sms_matches"] = None
     context.userdata["pending_contact_sms"] = {
         "name": picked.get("name", ""),
         "phone_number": picked.get("phone_number", ""),
     }
-    return f"Tôi tìm thấy {picked.get('name', '')}. Có đúng người anh/chị muốn nhắn tin không? Anh/chị muốn nhắn nội dung gì?"
+    return as_llm(
+        context.userdata,
+        build_contact_pick_response(
+            f"Tôi tìm thấy {picked.get('name', '')}. "
+            "Có đúng người bạn muốn nhắn tin không? Bạn muốn nhắn nội dung gì?",
+            tool="select_contact_match_for_sms",
+            lang="vi",
+            for_sms=True,
+        ),
+    )

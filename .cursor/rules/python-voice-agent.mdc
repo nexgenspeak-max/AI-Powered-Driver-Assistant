@@ -57,9 +57,16 @@ voicebot/processors/trip_format.py          ← pure formatters, no I/O
 - Tools **read** from `context_store` (no await for reads)
 - Mutations: update context first, `schedule_sync()` for API
 - No business logic in `agent.py` or `system_instructions.py`
+- Domain logic in `app/services/<name>/` packages; HTTP to trip-service only via `backend_api` (adapter). See `.cursor/rules/service-layer.mdc`.
 
 ## Naming
 
 - Public helpers: `fmt_money`, `build_outbound_nav_info` (no leading `_` unless truly private)
 - Constants: `UPPER_SNAKE` in `constants.py`
 - Loggers: `logger = logging.getLogger("voice-agent.vn.tools.<name>")`
+
+## Google STT
+
+- **Default model:** `chirp_3` + auto location `us` for vi-VN and en-US (`settings.google_stt_model`).
+- vi-VN on chirp_3: region must be `us` or `eu` (not `asia-southeast1`).
+- Fallback when `GOOGLE_STT_MODEL` empty: `chirp_3`. Override via env or use `chirp_2` + `asia-southeast1` if needed.

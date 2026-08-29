@@ -32,7 +32,7 @@ const MIC_LABEL = {
 
 export default function AssistantChatPanel() {
   const customer = useAuthStore(s => s.customer)
-  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
+  const { chats, addUserMessage, addBotMessage, upsertStreamingMessage } = useAssistantChatStore()
   const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -40,14 +40,10 @@ export default function AssistantChatPanel() {
   const chatBoxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // TEMP DEBUG (remove once FEAT-010 chat-text investigation is done)
-    console.debug('[chat-panel] subscribing to voice messages')
-    return subscribeVoiceMessages((text, from) => {
-      console.debug('[chat-panel] listener fired', { from, text })
-      if (from === 'user') addUserMessage(text)
-      else addBotMessage(text)
+    return subscribeVoiceMessages((text, from, { isFinal, segmentId }) => {
+      upsertStreamingMessage(from === 'user' ? 'me' : 'bot', text, isFinal, segmentId)
     })
-  }, [addUserMessage, addBotMessage])
+  }, [upsertStreamingMessage])
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' })
@@ -60,10 +56,14 @@ export default function AssistantChatPanel() {
     }
     const text = msg
     setMsg('')
-    addUserMessage(text)
 
-    if (voice.status === 'connected' && (await voice.sendText(text))) {
-      return
+    if (voice.status === 'connected') {
+      upsertStreamingMessage('me', text, true)
+      if (await voice.sendText(text)) {
+        return
+      }
+    } else {
+      addUserMessage(text)
     }
 
     const { setState, setEmotion } = useAssistantAnimStore.getState()

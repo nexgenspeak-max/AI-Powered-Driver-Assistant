@@ -30,7 +30,7 @@ const MIC_LABEL = {
 
 export default function AssistantChatPanel() {
   const driver = useAuthStore(s => s.driver)
-  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
+  const { chats, addUserMessage, addBotMessage, upsertStreamingMessage } = useAssistantChatStore()
   const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -38,11 +38,10 @@ export default function AssistantChatPanel() {
   const chatBoxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    return subscribeVoiceMessages((text, from) => {
-      if (from === 'user') addUserMessage(text)
-      else addBotMessage(text)
+    return subscribeVoiceMessages((text, from, { isFinal, segmentId }) => {
+      upsertStreamingMessage(from === 'user' ? 'me' : 'bot', text, isFinal, segmentId)
     })
-  }, [addUserMessage, addBotMessage])
+  }, [upsertStreamingMessage])
 
   useEffect(() => {
     chatBoxRef.current?.scrollTo({ top: chatBoxRef.current.scrollHeight, behavior: 'smooth' })
@@ -55,10 +54,14 @@ export default function AssistantChatPanel() {
     }
     const text = msg
     setMsg('')
-    addUserMessage(text)
 
-    if (voice.status === 'connected' && (await voice.sendText(text))) {
-      return
+    if (voice.status === 'connected') {
+      upsertStreamingMessage('me', text, true)
+      if (await voice.sendText(text)) {
+        return
+      }
+    } else {
+      addUserMessage(text)
     }
 
     setStubLoading(true)

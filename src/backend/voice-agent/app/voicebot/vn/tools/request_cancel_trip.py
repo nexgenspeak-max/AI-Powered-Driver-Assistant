@@ -3,8 +3,11 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
 from app.voicebot.vn.constants import ERR_NO_ACTIVE_CANCEL
 from app.voicebot.processors import context_store
+from app.voicebot.processors.tool_reply import as_llm, trip_actions
+from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.request_cancel_trip")
+
 
 # Mirrors the backend's CANCEL_RULES.cancelled_by_driver window (trip-
 # service/src/routes/trips.ts) — a driver can only back out of a trip they've
@@ -17,14 +20,33 @@ DRIVER_CANCELLABLE_STATUSES = ("confirmed", "arrived_pickup", "picked_up")
 
 @function_tool(raw_schema=raw_schema["request_cancel_trip"])
 async def request_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
-    current = context_store.get_current_trip(context.userdata)
-    if not current or current.get("status") not in DRIVER_CANCELLABLE_STATUSES:
-        return ERR_NO_ACTIVE_CANCEL
-    context.userdata["pending_cancel_trip_id"] = current["trip_id"]
-    customer = current.get("customer_name", "khách hàng")
-    pickup_time = current.get("pickup_time", "")
-    return (
-        f"Anh/chị có chắc muốn hủy chuyến với {customer}"
+    trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
+    actions = trip_actions(lang="vi") + ["confirm_cancel_trip()"]
+    if not trip or trip.get("status") not in DRIVER_CANCELLABLE_STATUSES:
+        return as_llm(
+            context.userdata,
+            build_mutation_response(
+                ERR_NO_ACTIVE_CANCEL,
+                tool="request_cancel_trip",
+                lang="vi",
+                action=actions,
+            ),
+        )
+    context.userdata["pending_cancel_trip_id"] = trip["trip_id"]
+    customer = trip.get("customer_name", "khách hàng")
+    pickup_time = trip.get("pickup_time", "")
+    spoken = (
+        f"Bạn có chắc muốn hủy chuyến với {customer}"
         + (f" lúc {pickup_time}" if pickup_time else "")
         + " không? Nói 'có' để xác nhận hủy."
+    )
+    return as_llm(
+        context.userdata,
+        build_mutation_response(
+            spoken,
+            tool="request_cancel_trip",
+            lang="vi",
+            knowledge=[f"trip_id: {trip['trip_id']}", f"customer: {customer}"],
+            action=["confirm_cancel_trip()"],
+        ),
     )

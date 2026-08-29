@@ -15,6 +15,17 @@ import {
   tripDropoffArrivalAnnouncedKey,
 } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
+import { getLogger } from './logger';
+
+const log = getLogger('proximity');
+
+function tripShort(trip: tripService.Trip): string {
+  return trip.trip_id.slice(0, 8);
+}
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 // All four functions below return whether they actually fired a nudge this
 // call (vs. skipped for any reason: out of range, already deduped, feature
@@ -48,16 +59,27 @@ export async function maybeNotifyCustomerOfProximity(
   const radius = settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
   if (distance > radius) {
-    console.log(`[proximity] pickup-notify skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    log.info('pickup-notify skip (out of range)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+      radius_m: radius,
+    });
     return false;
   }
 
   const notifiedKey = tripProximityNotifiedKey(trip.trip_id);
   if (await cacheGet(notifiedKey)) {
-    console.log(`[proximity] pickup-notify skip (already notified) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    log.info('pickup-notify skip (already notified)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+    });
     return false;
   }
-  console.log(`[proximity] pickup-notify FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+  log.info('pickup-notify FIRING', {
+    trip: tripShort(trip),
+    distance_m: Math.round(distance),
+    radius_m: radius,
+  });
   // Set the flag before acting (not after) so two near-simultaneous pings
   // can't both pass the cacheGet check above and double-dial/double-ask.
   await cacheSet(notifiedKey, true, 3600);
@@ -77,7 +99,7 @@ export async function maybeNotifyCustomerOfProximity(
         customMessage: 'Tài xế sắp đến điểm đón, vui lòng ra cổng hoặc đường lớn để tài xế dễ đón bạn nhé.',
       });
     } catch (err) {
-      console.warn(`[proximity] pickup call failed for trip=${trip.trip_id}:`, err);
+      log.warning('pickup call failed', { trip: tripShort(trip), error: errMsg(err) });
     }
     return true;
   }
@@ -89,7 +111,7 @@ export async function maybeNotifyCustomerOfProximity(
       pickup_address: trip.pickup_address,
     });
   } catch (err) {
-    console.warn(`[proximity] pickup nudge failed for trip=${trip.trip_id}:`, err);
+    log.warning('pickup nudge failed', { trip: tripShort(trip), error: errMsg(err) });
   }
   return true;
 }
@@ -114,16 +136,27 @@ export async function maybeNotifyCustomerOfDropoffProximity(
   const radius = settings.notify_on_pickup_approach_radius_m || config.proximityAlertMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
   if (distance > radius) {
-    console.log(`[proximity] dropoff-notify skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    log.info('dropoff-notify skip (out of range)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+      radius_m: radius,
+    });
     return false;
   }
 
   const notifiedKey = tripDropoffProximityNotifiedKey(trip.trip_id);
   if (await cacheGet(notifiedKey)) {
-    console.log(`[proximity] dropoff-notify skip (already notified) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    log.info('dropoff-notify skip (already notified)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+    });
     return false;
   }
-  console.log(`[proximity] dropoff-notify FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+  log.info('dropoff-notify FIRING', {
+    trip: tripShort(trip),
+    distance_m: Math.round(distance),
+    radius_m: radius,
+  });
   await cacheSet(notifiedKey, true, 3600);
 
   if (!config.enableProximityAsk) {
@@ -137,7 +170,7 @@ export async function maybeNotifyCustomerOfDropoffProximity(
         customMessage: 'Vui lòng kiểm tra hành lý trên xe, bạn sắp đến nơi rồi.',
       });
     } catch (err) {
-      console.warn(`[proximity] dropoff call failed for trip=${trip.trip_id}:`, err);
+      log.warning('dropoff call failed', { trip: tripShort(trip), error: errMsg(err) });
     }
     return true;
   }
@@ -149,7 +182,7 @@ export async function maybeNotifyCustomerOfDropoffProximity(
       dropoff_address: trip.dropoff_address,
     });
   } catch (err) {
-    console.warn(`[proximity] dropoff nudge failed for trip=${trip.trip_id}:`, err);
+    log.warning('dropoff nudge failed', { trip: tripShort(trip), error: errMsg(err) });
   }
   return true;
 }
@@ -179,16 +212,27 @@ export async function maybeAnnouncePickupArrivalNextStop(
   const radius = settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.pickup_lat, lng: trip.pickup_lng });
   if (distance > radius) {
-    console.log(`[proximity] pickup-suggest skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    log.info('pickup-suggest skip (out of range)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+      radius_m: radius,
+    });
     return false;
   }
 
   const announcedKey = tripArrivalAnnouncedKey(trip.trip_id);
   if (await cacheGet(announcedKey)) {
-    console.log(`[proximity] pickup-suggest skip (already announced) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    log.info('pickup-suggest skip (already announced)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+    });
     return false;
   }
-  console.log(`[proximity] pickup-suggest FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+  log.info('pickup-suggest FIRING', {
+    trip: tripShort(trip),
+    distance_m: Math.round(distance),
+    radius_m: radius,
+  });
   await cacheSet(announcedKey, true, 3600);
 
   try {
@@ -202,7 +246,7 @@ export async function maybeAnnouncePickupArrivalNextStop(
     // by nudge.py itself, not trusted from this payload.
     await reachDriver(trip.driver_phone, 'suggest_next_stop', { related_trip_id: trip.trip_id });
   } catch (err) {
-    console.warn(`[proximity] pickup arrival next-stop nudge failed for trip=${trip.trip_id}:`, err);
+    log.warning('pickup arrival next-stop nudge failed', { trip: tripShort(trip), error: errMsg(err) });
   }
   return true;
 }
@@ -223,22 +267,33 @@ export async function maybeAnnounceDropoffArrivalNextStop(
   const radius = settings.auto_suggest_next_stop_radius_m || config.nextStopAnnounceMeters;
   const distance = distanceMeters(driverCoords, { lat: trip.dropoff_lat, lng: trip.dropoff_lng });
   if (distance > radius) {
-    console.log(`[proximity] dropoff-suggest skip (out of range) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+    log.info('dropoff-suggest skip (out of range)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+      radius_m: radius,
+    });
     return false;
   }
 
   const announcedKey = tripDropoffArrivalAnnouncedKey(trip.trip_id);
   if (await cacheGet(announcedKey)) {
-    console.log(`[proximity] dropoff-suggest skip (already announced) | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m`);
+    log.info('dropoff-suggest skip (already announced)', {
+      trip: tripShort(trip),
+      distance_m: Math.round(distance),
+    });
     return false;
   }
-  console.log(`[proximity] dropoff-suggest FIRING | trip=${trip.trip_id.slice(0, 8)} distance=${Math.round(distance)}m radius=${radius}m`);
+  log.info('dropoff-suggest FIRING', {
+    trip: tripShort(trip),
+    distance_m: Math.round(distance),
+    radius_m: radius,
+  });
   await cacheSet(announcedKey, true, 3600);
 
   try {
     await reachDriver(trip.driver_phone, 'suggest_next_stop', { related_trip_id: trip.trip_id });
   } catch (err) {
-    console.warn(`[proximity] dropoff arrival next-stop nudge failed for trip=${trip.trip_id}:`, err);
+    log.warning('dropoff arrival next-stop nudge failed', { trip: tripShort(trip), error: errMsg(err) });
   }
   return true;
 }

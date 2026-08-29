@@ -1,5 +1,6 @@
-import { styled, Text, View, useTheme } from "tamagui";
+import { styled, View, useTheme } from "tamagui";
 import { GlassSheen } from "./LiquidGlass";
+import { AppText } from "./AppText";
 
 const BadgeFrame = styled(View, {
   flexDirection: "row",
@@ -39,13 +40,9 @@ export function Badge({
           BadgeFrame's clip without needing a measured layout height. */}
       {glass ? <GlassSheen borderRadius={999} /> : null}
       {icon}
-      <Text
-        fontSize={11}
-        fontWeight="600"
-        color={color ?? theme.onSurfaceVariant.val}
-      >
+      <AppText variant="caption" color={color ?? theme.onSurfaceVariant.val}>
         {label}
-      </Text>
+      </AppText>
     </BadgeFrame>
   );
 }

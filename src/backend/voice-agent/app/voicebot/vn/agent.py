@@ -4,10 +4,21 @@ from datetime import datetime, timedelta, timezone
 from livekit.agents import Agent
 
 from app.voicebot.vn.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
-from app.voicebot.vn.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
-from app.voicebot.vn.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.vn.constants import (
+    GREETING_AFTER_PREFETCH,
+    GREETING_CONNECT_FILLER,
+    GREETING_OUTBOUND_PREFIX,
+    GREETING_CUSTOMER,
+)
+from app.voicebot.vn.tools_mapping import (
+    CUSTOMER_TOOLS_MAPPING_PROMPT,
+    OUTBOUND_TOOLS_MAPPING_PROMPT,
+    TOOLS_MAPPING_PROMPT,
+)
 from app.voicebot.vn.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
+from app.voicebot.processors import context_store
+from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.vn.tools.check_upcoming_trips       import check_upcoming_trips
@@ -125,7 +136,7 @@ _CUSTOMER_TOOLS = [
 ]
 
 
-class DriverAgent(SpeechTextFixMixin, Agent):
+class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
     """
     Handles both inbound (driver opens app) and outbound (system notifies driver) modes.
     All responses are in Vietnamese.
@@ -155,7 +166,7 @@ class DriverAgent(SpeechTextFixMixin, Agent):
         )
 
         if trip:
-            instructions = build_outbound_prompt(trip, lang="vi") + "\n" + TOOLS_MAPPING_PROMPT
+            instructions = build_outbound_prompt(trip, lang="vi") + "\n" + OUTBOUND_TOOLS_MAPPING_PROMPT
             tools        = _DRIVER_OUTBOUND_TOOLS
         else:
             # proactive_nudge sessions (ask-before-calling-customer,
@@ -187,8 +198,26 @@ class DriverAgent(SpeechTextFixMixin, Agent):
             # fall through to the generic "tôi giúp được gì" greeting, which
             # made an empty nudge look like the assistant randomly rang up.
             return
-        msg = self._build_outbound_greeting() if self._trip else GREETING_INBOUND
-        await self.session.say(msg, allow_interruptions=False)
+        msg = self._build_outbound_greeting() if self._trip else None
+        if msg:
+            from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
+
+            await speak_after_sip_pickup(self.session, msg)
+            return
+        await self._speak_inbound_greeting()
+
+    async def _speak_inbound_greeting(self) -> None:
+        """Czen intro on connect, then help prompt after prefetch."""
+        from app.voicebot.processors import prefetch as prefetch_processor
+        from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
+
+        await speak_after_sip_pickup(self.session, GREETING_CONNECT_FILLER)
+
+        userdata = self.session.userdata
+        if self._driver_phone and not context_store.has_prefetched_context(userdata):
+            await prefetch_processor.run_driver(self.session, self._driver_phone)
+
+        await self.session.say(GREETING_AFTER_PREFETCH, allow_interruptions=True)
 
     def _build_outbound_greeting(self) -> str:
         t        = self._trip or {}
@@ -202,7 +231,7 @@ class DriverAgent(SpeechTextFixMixin, Agent):
             msg += f" Ước tính {eta} phút."
         if traffic:
             msg += f" {traffic}."
-        msg += " Anh/chị có nhận chuyến này không?"
+        msg += " Bạn có nhận chuyến này không?"
         return msg
 
 
@@ -219,7 +248,7 @@ class CustomerAgent(SpeechTextFixMixin, Agent):
             instructions=(
                 CUSTOMER_SUPPORT_PROMPT
                 + "\n"
-                + TOOLS_MAPPING_PROMPT
+                + CUSTOMER_TOOLS_MAPPING_PROMPT
                 + _current_time_hint()
                 + _registered_phone_hint(customer_phone)
             ),

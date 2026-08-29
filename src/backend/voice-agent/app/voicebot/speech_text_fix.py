@@ -43,12 +43,10 @@ from typing import AsyncIterable, AsyncIterator
 # run, not a slice of some longer, unrelated digit string.
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+?84\d{8,10}|0\d{8,10}|1(?:900|800)\d{4,7})(?!\d)")
 _DIGIT_RUN_RE = re.compile(r"\d{6,}")
-# Vietnamese-formatted money: groups of 1-3 digits separated by ".", e.g.
-# "2.373.000" or "159.000", followed (optionally with whitespace) by a
-# currency marker. Requires at least one ".xxx" group so a plain small
-# number like "14" (a street number, handled separately) never matches here.
+# Vietnamese money: 150.000đ, 150,000đ, 2đ, 150000đ, 2.373.000 VNĐ
 _CURRENCY_RE = re.compile(
-    r"\b\d{1,3}(?:\.\d{3})+\s*(?:đ|đồng|VNĐ|VND)\b", re.IGNORECASE
+    r"\b\d+(?:[.,]\d{3})*(?:[.,]\d+)?\s*(?:đ|đồng|VNĐ|VND)\b|\b\d+\s*đ\b",
+    re.IGNORECASE,
 )
 # Vietnamese lot/alley-style address numbers: 2+ digit groups joined by "/",
 # e.g. "5/9/36", "58/10" — a bare TTS tends to read the "/" as a date or a
@@ -188,7 +186,53 @@ def _fix_slash_address(match: re.Match[str]) -> str:
     return ", ".join(_vietnamese_number_to_words(int(s)) for s in segments)
 
 
+def _strip_spoken_markup(text: str) -> str:
+    """LLMs often emit markdown — TTS reads asterisks aloud."""
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\*([^*]+)\*", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    return text
+
+
+_VN_MODE_TERMS = (
+    (re.compile(r"\bbackground\b", re.I), "gọi nền"),
+    (re.compile(r"\bbridge\b", re.I), "nói trực tiếp"),
+    (re.compile(r"\bagent\b", re.I), "AI gọi hộ"),
+)
+
+
+def _vn_spoken_tone(text: str) -> str:
+    """Honorifics and punctuation that TTS reads literally, not as speech."""
+    text = re.sub(r"[Aa]nh\s*/\s*[Cc]hị", "bạn", text)
+    text = re.sub(r"\banh/chị\b", "bạn", text, flags=re.IGNORECASE)
+    text = re.sub(r"\banh chị\b", "bạn", text, flags=re.IGNORECASE)
+    text = text.replace("—", ", ")
+    text = text.replace("–", ", ")
+    text = text.replace("→", ",")
+    text = re.sub(r"\s{2,}", " ", text)
+    return text.strip() if text else text
+
+
+def _vn_spoken_terms(text: str) -> str:
+    for pattern, replacement in _VN_MODE_TERMS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _vn_abbreviations(text: str) -> str:
+    from app.voicebot.vn.pronunciations import ABBREVIATION_PATTERNS
+
+    for pattern, replacement in ABBREVIATION_PATTERNS:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def fix_speech_text(text: str, pronunciations: list[tuple[str, str]], lang: str = "vn") -> str:
+    text = _strip_spoken_markup(text)
+    if lang != "en":
+        text = _vn_spoken_tone(text)
+        text = _vn_spoken_terms(text)
+        text = _vn_abbreviations(text)
     text = _PHONE_RE.sub(_spell_out_phone, text)
     # Vietnamese-words conversion only — an EN agent reading the same
     # dot-grouped VND price (e.g. quoting a fare back in English) needs

@@ -1,14 +1,15 @@
-import { XStack, Text } from 'tamagui'
+import { XStack } from 'tamagui'
+import { AppText } from '../../../components/AppText'
 
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <XStack justifyContent="space-between" gap="$3">
-      <Text color="$textSecondary" fontSize="$1">
+      <AppText variant="caption" color="$textSecondary">
         {label}
-      </Text>
-      <Text color="$textPrimary" fontSize="$1" fontWeight="500" flexShrink={1} textAlign="right">
+      </AppText>
+      <AppText variant="caption" color="$textPrimary" flexShrink={1} textAlign="right">
         {value}
-      </Text>
+      </AppText>
     </XStack>
   )
 }

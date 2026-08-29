@@ -44,7 +44,7 @@ class CustomerToolsMixin:
             return "Không thể tìm thấy thông tin khách hàng lúc này."
 
         if not current:
-            return "Hiện tại anh/chị không có chuyến đang hoạt động để gọi cho khách."
+            return "Hiện tại bạn không có chuyến đang hoạt động để gọi cho khách."
 
         name  = current.get("customer_name", "khách")
         phone = current.get("customer_phone", "")
@@ -75,11 +75,11 @@ class CustomerToolsMixin:
             return (
                 f"Đang gọi {name} tại {dialed}.{note_suffix} "
                 "AI đang nói chuyện với khách, vui lòng chờ. "
-                "Sau khi gọi xong, tôi sẽ tóm tắt lại nội dung cho anh/chị."
+                "Sau khi gọi xong, tôi sẽ tóm tắt lại nội dung cho bạn."
             )
         return (
             f"Đã bắt đầu cuộc gọi đến {name} tại {dialed}.{note_suffix} "
-            "Điện thoại khách sẽ đổ chuông — anh/chị chờ kết nối."
+            "Điện thoại khách sẽ đổ chuông — bạn chờ kết nối."
         )
 
     @function_tool(

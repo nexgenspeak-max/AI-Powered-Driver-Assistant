@@ -34,6 +34,7 @@ class SilenceTracker:
         end_session_on_timeout: bool = True,
         on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
         goodbye_message: Optional[str] = None,
+        check_in_spoken_message: Optional[str] = None,
     ) -> None:
         self.session = session
         self.ctx = ctx
@@ -43,6 +44,7 @@ class SilenceTracker:
         self.end_session_on_timeout = end_session_on_timeout
         self.on_timeout = on_timeout
         self.goodbye_message = goodbye_message
+        self.check_in_spoken_message = check_in_spoken_message
 
         self._last_speech_time: Optional[float] = None
         self._silence_task: Optional[asyncio.Task] = None
@@ -219,7 +221,7 @@ class SilenceTracker:
                     # Scheduled BEFORE awaiting the notification below — see
                     # the `else` branch's comment just below for why.
                     self._schedule_silence_check()
-                    await self._send_silence_notification()
+                    await self._send_silence_check_in()
             else:
                 # Next cycle is scheduled BEFORE awaiting the notification,
                 # not after. `self.session.run(...)` inside
@@ -245,12 +247,29 @@ class SilenceTracker:
                 # (measure silence from when the AI stops talking, not from
                 # when it started responding to its own nudge).
                 self._schedule_silence_check()
-                await self._send_silence_notification()
+                await self._send_silence_check_in()
 
         except asyncio.CancelledError:
             logger.info("SilenceTracker _check_silence #%d | cancelled", seq)
         except Exception as exc:
             logger.error("SilenceTracker _check_silence #%d error: %s", seq, exc, exc_info=True)
+
+    async def _send_silence_check_in(self) -> None:
+        """One deterministic spoken check-in, or LLM nudge when none configured."""
+        try:
+            if self.check_in_spoken_message:
+                await self.session.say(
+                    self.check_in_spoken_message,
+                    allow_interruptions=True,
+                )
+                logger.debug(
+                    "SilenceTracker | spoken check-in: %s",
+                    self.check_in_spoken_message,
+                )
+            else:
+                await self._send_silence_notification()
+        except Exception as exc:
+            logger.error("SilenceTracker | failed to send silence check-in: %s", exc)
 
     async def _send_silence_notification(self) -> None:
         try:

@@ -7,6 +7,18 @@ from app.config.settings import Settings
 
 logger = logging.getLogger("voice-agent.providers.kimi")
 
+# k2.5/k2.6 default thinking={"type":"enabled"} (Moonshot docs). That
+# reasoning pass was ~13s before the first tool call on a live "lịch hôm nay"
+# turn — well over the 2s voice bar. Voice tool-calling does not need it.
+_THINKING_MODELS = ("kimi-k2.5", "kimi-k2.6")
+
+
+def extra_body_for_voice(model: str) -> dict | None:
+    name = model.split("/", 1)[-1]
+    if name.startswith(_THINKING_MODELS):
+        return {"thinking": {"type": "disabled"}}
+    return None
+
 
 class KimiLLM(BaseLLM):
     """Kimi K2. Two routes, picked by whether KIMI_API_KEY is set:
@@ -35,11 +47,22 @@ class KimiLLM(BaseLLM):
                 "KimiLLM: using direct Moonshot API (key_len=%d, base_url=%s, model=%s)",
                 key_len, settings.kimi_base_url, direct_model,
             )
-            return openai_plugin.LLM(
-                model=direct_model,
-                api_key=settings.kimi_api_key,
-                base_url=settings.kimi_base_url or "https://api.moonshot.ai/v1",
-            )
+            extra = extra_body_for_voice(direct_model)
+            kwargs: dict = {
+                "model": direct_model,
+                "api_key": settings.kimi_api_key,
+                "base_url": settings.kimi_base_url or "https://api.moonshot.ai/v1",
+            }
+            if extra:
+                # Do not pass temperature — k2.6 pins 0.6 in non-thinking
+                # and 1.0 in thinking; any other value returns an error.
+                kwargs["extra_body"] = extra
+                logger.info(
+                    "KimiLLM: disabling thinking for voice (model=%s extra_body=%s)",
+                    direct_model,
+                    extra,
+                )
+            return openai_plugin.LLM(**kwargs)
         logger.info(
             "KimiLLM: kimi_api_key is empty (key_len=0) — using LiveKit Inference Gateway instead (model=%s)",
             model,

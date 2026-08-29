@@ -1,3 +1,4 @@
+import { TouchableOpacity } from 'react-native'
 import { YStack } from 'tamagui'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
@@ -28,16 +29,24 @@ export function EarningsPeriodTabs({ period, onPeriodChange, summary, isLoading,
       />
 
       {isError ? (
-        <AppText variant="body" color="$textSecondary" paddingTop="$1" onPress={onRetry}>
-          Không thể tải dữ liệu. Nhấn để thử lại.
-        </AppText>
+        <TouchableOpacity
+          onPress={onRetry}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Không thể tải dữ liệu. Nhấn để thử lại."
+          style={{ minHeight: 44, justifyContent: 'center' }}
+        >
+          <AppText variant="body" color="$textSecondary" paddingTop="$1">
+            Không thể tải dữ liệu. Nhấn để thử lại.
+          </AppText>
+        </TouchableOpacity>
       ) : isLoading || !summary ? (
         <YStack gap="$2" paddingTop="$1">
           <Skeleton width={160} height={28} />
           <Skeleton width={120} height={14} />
         </YStack>
       ) : (
-        <YStack gap={2}>
+        <YStack gap="$1">
           <AppText variant="h1">
             {formatCurrency(summary.total_earnings, summary.currency)}
           </AppText>

@@ -86,3 +86,6 @@ genai-core-livekit-voice-platform/
 
 # ── Voice models (large binaries, not tracked in git) ─────────────────────────
 src/backend/voice-agent/app/models/
+
+# ── Cursor hook sentinels ─────────────────────────────────────────────────────
+.cursor/hooks/.need-distill

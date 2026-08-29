@@ -1,6 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 import type { NotifyRole } from './types';
+import { getLogger } from '../logger';
+
+const log = getLogger('notify');
 
 // Dev-only real-time channel — a plain `ws` server bolted onto the same
 // HTTP server `local.ts` already runs (no separate port). Production swaps
@@ -38,7 +41,7 @@ export function attachWebSocketServer(httpServer: Server): void {
     });
   });
 
-  console.info('[notify] local WebSocket server attached at /ws');
+  log.info('local WebSocket server attached', { path: '/ws' });
 }
 
 export async function notify(role: NotifyRole, id: string, event: string, data: unknown): Promise<void> {

@@ -11,6 +11,7 @@ import deliveryOrdersRouter from './routes/deliveryOrders';
 import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
 import { attachLocalWebSocketServer } from './services/notify';
+import { attachLogContext, getLogger } from './services/logger';
 
 const corsOptions = {
   origin: true,
@@ -23,6 +24,7 @@ const app = express();
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '15mb' }));
+app.use(attachLogContext);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1', authenticate);
@@ -37,5 +39,6 @@ app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
 app.use('/api/v1/places', placesRouter);
 
 const PORT = process.env.PORT || 8002;
-const server = app.listen(PORT, () => console.log(`trip-service running on :${PORT}`));
+const log = getLogger('listen');
+const server = app.listen(PORT, () => log.info('listening', { port: PORT }));
 attachLocalWebSocketServer(server);

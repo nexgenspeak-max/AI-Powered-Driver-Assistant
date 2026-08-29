@@ -1,35 +1,13 @@
 """CustomerCallAgent — in-room (agent mode) or isolated room (background mode)."""
-import asyncio
 import logging
 
 from livekit.agents import Agent
 
-from app.voicebot.prompts.customer_call import build_customer_call_prompt
+from app.voicebot.prompts.customer_call import build_customer_call_opening, build_customer_call_prompt
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
-from app.voicebot.tools.customer_call_tools import end_customer_call
+from app.voicebot.tools.customer_call_tools import end_customer_call, transfer_to_driver
 
 logger = logging.getLogger("voice-agent.customer_call_agent")
-
-# Isolated (background) call answer flow — the ONLY deterministic, timer-
-# driven piece left here is stating the call's purpose if the customer hasn't
-# said anything yet (see _customer_spoke, set from session.py's
-# user_input_transcribed/conversation_item_added handlers) — this can't be
-# left to the LLM alone (it doesn't reliably decide to speak up on its own
-# this early). Ending the call on silence is no longer handled here at all:
-# a single generic rule now owns that for the whole call, from this point
-# forward — the SilenceTracker configured for "custcall" rooms in
-# app/agent/session.py, tuned to end the call after one plain silence gap
-# (session.py's `silence_seconds`/`max_silences_default` for mode=="custcall")
-# with neither the AI nor the customer saying anything. That one rule replaces
-# what used to be three separate, overlapping hand-rolled timers here.
-#
-# Kept shorter than the SilenceTracker's own threshold (not equal to it) on
-# purpose: SilenceTracker.start() runs earlier, during session setup, before
-# on_enter() ever gets here — if both waits were the same length, whichever
-# fires first would be a race (the tracker could end the call before the
-# purpose is ever spoken). This margin guarantees the purpose is always
-# spoken first, which also pauses/resets the tracker's own clock.
-_INITIAL_WAIT_SECONDS = 3.0
 
 
 class CustomerCallAgent(SpeechTextFixMixin, Agent):
@@ -63,7 +41,7 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             isolated=isolated,
             custom_message=custom_message,
         )
-        super().__init__(instructions=instructions, tools=[end_customer_call])
+        super().__init__(instructions=instructions, tools=[end_customer_call, transfer_to_driver])
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return pronunciations_for_lang(self._lang)
@@ -77,21 +55,19 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             await self._run_isolated_answer_flow()
             return
 
-        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+        from app.voicebot.processors.sip_call_watch import (
+            cancel_no_answer_watch,
+            teardown_unanswered_call,
+            wait_for_sip_pickup,
+        )
 
         answered = await wait_for_sip_pickup(self.session.userdata)
         if not answered:
-            # Never confirmed real pickup within the wait window — most
-            # likely the phone is still just ringing (a real phone can ring
-            # well past this), not a broken signal. Do NOT address a customer
-            # who may not even be on the line yet: stay silent here. STT is
-            # already retargeted to their SIP leg (see
-            # customer_call.py::_save_call_context), so if they genuinely
-            # pick up and say something, normal turn-taking picks it up from
-            # there; if they never do, sip_call_watch.py's disconnect handler
-            # reports the honest "could not connect" outcome on its own.
-            logger.info("agent-mode call: pickup not confirmed within wait window — staying silent")
+            logger.info("agent-mode call: pickup not confirmed — tearing down unanswered dial")
+            await teardown_unanswered_call(self.session, self.session.userdata)
             return
+
+        cancel_no_answer_watch(self.session.userdata)
 
         # Same resume-on-pickup as _run_isolated_answer_flow below — without
         # this, the tracker (paused right before dialing, see
@@ -112,140 +88,48 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
         # here onward, never during ringing. Mirrors _isolated_call_answered
         # below, same reasoning.
         self.session.userdata["_agent_call_answered"] = True
-
-        if self._custom_message:
-            hint = (
-                f'The person is being dialed into this room. When they answer, greet them '
-                f'briefly, then deliver this message from the driver: "{self._custom_message}" '
-                "The driver can hear everything — stay brief."
-                if self._lang == "en"
-                else (
-                    f'Người nhận đang được kết nối vào cuộc gọi. Khi họ nghe máy, chào ngắn gọn '
-                    f'rồi truyền đạt đúng nội dung tài xế nhắn: "{self._custom_message}" '
-                    "Tài xế nghe trực tiếp — nói ngắn gọn."
-                )
-            )
-        elif not self._trip.get("trip_id"):
-            # Contact call (no trip attached) with no dictated message — same
-            # "Khách"/pickup-flavored wording as the trip-customer branch
-            # below was wrong here too (a personal contact isn't a ride
-            # customer), just milder since it doesn't name "pickup"
-            # explicitly. The custom_message branch above already got this
-            # right ("Người nhận"/"The person"); mirror that neutral framing
-            # here. Real trip-customer calls (trip_id set) are unaffected —
-            # they still hit the branches below, unchanged.
-            hint = (
-                "The person is being dialed into this room. When they answer, greet them and "
-                "explain the driver asked you to give them a call — this is a personal contact, "
-                "NOT a ride customer, so don't mention a pickup or a trip. "
-                "The driver can hear everything — stay brief."
-                if self._lang == "en"
-                else (
-                    "Người nhận đang được kết nối vào cuộc gọi. Khi họ nghe máy, chào và giải "
-                    "thích tài xế nhờ bạn gọi cho họ — đây là người quen của tài xế, KHÔNG PHẢI "
-                    "khách đặt xe, nên đừng nhắc gì tới đón khách hay chuyến đi. "
-                    "Tài xế nghe trực tiếp — nói ngắn gọn."
-                )
-            )
-        elif self._lang == "en":
-            hint = (
-                "The customer is being dialed into this room. "
-                "When they answer, greet them and explain the driver asked you to call. "
-                "The driver can hear everything — stay brief."
-            )
-        else:
-            hint = (
-                "Khách đang được kết nối vào cuộc gọi. "
-                "Khi khách nghe máy, chào và giải thích tài xế nhờ bạn gọi. "
-                "Tài xế nghe trực tiếp — nói ngắn gọn."
-            )
-        await self.session.generate_reply(instructions=hint)
+        await self._speak_opening_if_needed()
 
     def _customer_spoke(self) -> bool:
         return bool(self.session.userdata.get("_customer_spoke"))
 
     async def _run_isolated_answer_flow(self) -> None:
-        """States the call's purpose once, if the customer hasn't spoken yet
-        — see the module-level constant's docstring for why this alone is
-        still hand-timed while everything past it is now the SilenceTracker's
-        job."""
-        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+        """Wait for SIP pickup, then speak the canned opening if the customer
+        has not already started talking. SilenceTracker owns hang-up after that."""
+        from app.voicebot.processors.sip_call_watch import (
+            cancel_no_answer_watch,
+            teardown_unanswered_call,
+            wait_for_sip_pickup,
+        )
 
-        # Wait for genuine pickup (sip.callStatus == active) before letting
-        # the SilenceTracker's 5s clock run at all — it was started paused
-        # for this exact reason (see session.py's custcall silence_seconds
-        # comment). Best-effort like every other use of wait_for_sip_pickup:
-        # if the signal is unavailable or times out, this still proceeds
-        # (speak/resume anyway) rather than silently stalling the call.
         answered = await wait_for_sip_pickup(self.session.userdata)
         if not answered:
-            # Never confirmed real pickup — same reasoning as the agent-mode
-            # branch in on_enter() above: could just still be ringing. Stay
-            # silent rather than state the message to a customer who may not
-            # be there; the SIP disconnect handler still reports an honest
-            # "could not connect" outcome if they truly never answer.
-            logger.info("isolated call: pickup not confirmed within wait window — staying silent")
+            logger.info("isolated call: pickup not confirmed — tearing down unanswered dial")
+            await teardown_unanswered_call(self.session, self.session.userdata)
             return
+
+        cancel_no_answer_watch(self.session.userdata)
         self.session.userdata["_isolated_call_answered"] = True
         tracker = self.session.userdata.get("_silence_tracker")
         if tracker:
             tracker.resume()
+        await self._speak_opening_if_needed()
 
-        await asyncio.sleep(_INITIAL_WAIT_SECONDS)
+    async def _speak_opening_if_needed(self) -> None:
+        """First audio after confirmed pickup — scripted TTS, not generate_reply.
+
+        A second asyncio.sleep here used to stack on wait_for_sip_pickup's
+        post_answer_delay (3s+3s of dead air after the customer already
+        answered). Outbound: the caller speaks first; skip if they already
+        said something during the ear-to-phone beat.
+        """
         if self._customer_spoke():
-            return  # customer already talking — normal LLM turn-taking takes it from here
-
-        # Contact calls (no trip attached — self._trip == {}) must NOT use the
-        # pickup-confirmation line below: it's nonsensical for a personal
-        # contact ("gọi để xác nhận đón anh/chị" to someone who isn't a ride
-        # customer — confirmed live, the contact got confused and pushed
-        # back). Real trip-customer calls (trip_id always set) are
-        # unaffected — same branch condition as build_customer_call_prompt's
-        # own trip_id=="" check, so this stays consistent with the system
-        # prompt's framing.
-        is_contact = not self._trip.get("trip_id")
-        pickup_address = self._trip.get("pickup_address", "")
-        # custom_message ALWAYS wins first, for both contacts AND real trips —
-        # this used to only be checked in the is_contact branch, so a real
-        # trip's background call (proximity-arrival notify, etc.) with a
-        # custom_message set would silently ignore it here and speak the
-        # generic pickup-confirm line instead whenever the callee stayed
-        # silent past the first 3s (very common — many people wait for the
-        # caller to speak first). The system prompt's own goal_line already
-        # prioritized custom_message correctly; this fallback line just
-        # hadn't been taught to match. Only the no-custom_message case still
-        # branches on is_contact/trip below — unchanged from before.
-        if self._custom_message:
-            if self._lang == "en":
-                purpose = (
-                    f'Hello, this is the driver\'s assistant. The driver asked me to pass along: '
-                    f'"{self._custom_message}" Can you hear me?'
-                )
-            else:
-                purpose = (
-                    f'Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi nhắn: "{self._custom_message}". '
-                    "Anh/chị có nghe rõ không?"
-                )
-        elif is_contact:
-            purpose = (
-                "Hello, this is the driver's assistant. The driver asked me to give you a call. Can you hear me?"
-                if self._lang == "en"
-                else "Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi gọi cho anh/chị. Anh/chị có nghe rõ không?"
-            )
-        elif self._lang == "en":
-            purpose = (
-                f"Hello, this is the driver's assistant calling to confirm your pickup"
-                + (f" at {pickup_address}" if pickup_address else "")
-                + ". Can you hear me?"
-            )
-        else:
-            purpose = (
-                f"Xin chào, tôi là trợ lý của tài xế, gọi để xác nhận đón anh/chị"
-                + (f" tại {pickup_address}" if pickup_address else "")
-                + ". Anh/chị có nghe rõ không?"
-            )
-        logger.info("isolated call | %.0fs silence — stating purpose", _INITIAL_WAIT_SECONDS)
+            return
+        purpose = build_customer_call_opening(
+            lang=self._lang,
+            pickup_address=self._trip.get("pickup_address", ""),
+            trip_id=self._trip.get("trip_id", ""),
+            custom_message=self._custom_message,
+        )
+        logger.info("customer call | speaking opening after pickup")
         await self.session.say(purpose, allow_interruptions=True)
-        # From here on, ending the call on silence (customer never responds,
-        # or the conversation just trails off later) is entirely the
-        # SilenceTracker's job — see this method's docstring.

@@ -3,7 +3,7 @@ Provider factory — swap STT / LLM / TTS by changing env vars only:
 
   STT_PROVIDER = openai | deepgram | google | inference
   LLM_PROVIDER = openai | gemini | kimi
-  TTS_PROVIDER = openai | elevenlabs | google
+  TTS_PROVIDER = openai | elevenlabs | google | gemini
 
 All provider modules are imported at the top level so that LiveKit plugins
 (which call Plugin.register_plugin() on import) are registered on the main
@@ -21,6 +21,7 @@ from app.providers.llm.kimi import KimiLLM
 from app.providers.tts.openai import OpenAITTS
 from app.providers.tts.elevenlabs import ElevenLabsTTS
 from app.providers.tts.google import GoogleTTS
+from app.providers.tts.gemini import GeminiTTS
 
 
 def get_stt():
@@ -62,6 +63,7 @@ def get_tts():
         "openai":     OpenAITTS,
         "elevenlabs": ElevenLabsTTS,
         "google":     GoogleTTS,
+        "gemini":     GeminiTTS,
     }
     cls = _map.get(s.tts_provider)
     if cls is None:

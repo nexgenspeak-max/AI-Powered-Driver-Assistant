@@ -30,14 +30,14 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native'
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GLASS_BORDER_COLOR } from './LiquidGlass'
-import { AssistantTabButton, BUTTON_SIZE, BUTTON_RISE } from './AssistantTabButton'
+import { AssistantTabButton, AssistantTabLabel } from './AssistantTabButton'
 import Animated, {
   Easing,
   runOnJS,
@@ -114,13 +114,20 @@ const BAR_RADIUS = 30
 // with the AI button). Matches the same reduction on the native tab bar.
 const BAR_SIDE_MARGIN = 10
 const BAR_BOTTOM_MARGIN = 16
-// Zero — the pill exactly matches each tab's own measured layout width (see
-// `moveTo`/`onTabLayout` below), the widest it can be without overlapping
-// the neighboring tab. The AI button's own slot makes every real tab's slot
-// narrower than before it existed, and even a small margin (4px each side)
-// was still cutting into long labels like "Trang chủ" (reported: the
-// "t"/"u" ends sat outside the purple background).
-const PILL_MARGIN = 0
+// Inset within a tab column; outer edge tabs use PILL_BAR_EDGE_INSET so the
+// active fill clears the bar's rounded end (Trang chủ / Cá nhân).
+const PILL_SLOT_INSET = 4
+const PILL_BAR_EDGE_INSET = 12
+
+function pillInsetsForTabIndex(tabIndex: number, routeCount: number) {
+  'worklet'
+  const isFirst = tabIndex === 0
+  const isLast = tabIndex === routeCount - 1
+  return {
+    left: isFirst ? PILL_BAR_EDGE_INSET : PILL_SLOT_INSET,
+    right: isLast ? PILL_BAR_EDGE_INSET : PILL_SLOT_INSET,
+  }
+}
 
 const LEADING_SPRING = { damping: 14, stiffness: 220, mass: 0.6 }
 const TRAILING_SPRING = { damping: 18, stiffness: 120, mass: 0.9 }
@@ -213,8 +220,9 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
       const layout = tabLayouts.current[index]
       if (!layout) return
 
-      const targetLeft = layout.x + PILL_MARGIN
-      const targetRight = layout.x + layout.width - PILL_MARGIN
+      const insets = pillInsetsForTabIndex(index, visibleRoutes.length)
+      const targetLeft = layout.x + insets.left
+      const targetRight = layout.x + layout.width - insets.right
       const movingRight = targetLeft > leftEdge.value
 
       if (movingRight) {
@@ -225,7 +233,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
         rightEdge.value = withSpring(targetRight, TRAILING_SPRING)
       }
     },
-    [leftEdge, rightEdge],
+    [leftEdge, rightEdge, visibleRoutes.length],
   )
 
   const onTabLayout = (index: number) => (e: LayoutChangeEvent) => {
@@ -233,8 +241,9 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     tabLayouts.current[index] = { x, width }
 
     if (!initialized.current && index === selectedIndex) {
-      leftEdge.value = x + PILL_MARGIN
-      rightEdge.value = x + width - PILL_MARGIN
+      const insets = pillInsetsForTabIndex(index, visibleRoutes.length)
+      leftEdge.value = x + insets.left
+      rightEdge.value = x + width - insets.right
       initialized.current = true
     }
   }
@@ -396,7 +405,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
   const pillHeight = useDerivedValue(() => {
     const width = rightEdge.value - leftEdge.value
-    const baseWidth = barWidth > 0 ? barWidth / slotCount - PILL_MARGIN * 2 : width
+    const baseWidth = barWidth > 0 ? barWidth / slotCount - (PILL_SLOT_INSET + PILL_BAR_EDGE_INSET) : width
     const stretchRatio = baseWidth > 0 ? width / baseWidth : 1
     const squash = 1 - Math.min(Math.max(stretchRatio - 1, 0), 0.4) * 0.25
     return CONTENT_HEIGHT * 0.7 * squash
@@ -410,11 +419,10 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
 
   const pillTop = useDerivedValue(() => (CONTENT_HEIGHT - pillHeight.value) / 2)
 
-  // No refraction here (that's the native shader's job) — just blur + a
-  // translucent fill whose opacity tracks `rimIntensity`, plus a bright
-  // rim border, same "glass overlay on top of whatever's behind it" idea.
-  // Purple-tinted (brand accent #8B5CF6/#A855F7), not plain white — matches
-  // the native version and the rest of the app's purple CTA color.
+  // Fill-only active pill — matches native LiquidGlassTabBar.tsx (no stroke).
+  // A 1px purple border here stacked on the bar's own 1px glass rim and read
+  // as a double/overriding edge, especially at Trang chủ (first tab, top-left
+  // corner). Opacity still tracks `rimIntensity` on press/drag.
   const pillStyle = useAnimatedStyle(() => {
     // `leftEdge`/`rightEdge` are spring-driven with different configs per
     // edge (see `moveTo`) so the pill can squash/stretch while moving, but a
@@ -423,17 +431,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
     // spilling past the bar's own rounded corner when overshooting at Home
     // (first tab) or Profile (last). Clamped here, at render time only, so
     // the underlying spring physics/squash feel stay untouched.
-    const left = Math.max(PILL_MARGIN, leftEdge.value)
-    const right = barWidth > 0 ? Math.min(barWidth - PILL_MARGIN, rightEdge.value) : rightEdge.value
+    const left = Math.max(PILL_BAR_EDGE_INSET, leftEdge.value)
+    const right = barWidth > 0 ? Math.min(barWidth - PILL_BAR_EDGE_INSET, rightEdge.value) : rightEdge.value
     return {
       left,
       top: pillTop.value,
       width: right - left,
       height: pillHeight.value,
       borderRadius: pillHeight.value / 2,
-      backgroundColor: `rgba(139,92,246,${0.1 + rimIntensity.value * 0.28})`,
-      borderWidth: 1,
-      borderColor: 'rgba(168,85,247,0.7)',
+      backgroundColor: isLight
+        ? `rgba(124,58,237,${0.12 + rimIntensity.value * 0.2})`
+        : `rgba(167,139,250,${0.24 + rimIntensity.value * 0.18})`,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       backdropFilter: `blur(${blurAmount.value}px)` as any,
     }
@@ -503,12 +511,13 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
               {Array.from({ length: slotCount }).map((_, slot) => {
                 if (slot === aiSlotIndex) {
-                  // Empty spacer — reserves the AI button's slot width so
-                  // the real tabs around it space out correctly (and so
-                  // `indexAtX`'s touch mapping doesn't resolve a tap here to
-                  // a real tab). The button itself renders below, outside
-                  // this row, positioned at `aiCenterX`.
-                  return <View key="ai-slot" pointerEvents="none" style={styles.tab} />
+                  // Spacer + label — Siri-style orb renders above (AssistantTabButton).
+                  return (
+                    <View key="ai-slot" pointerEvents="none" style={styles.tab}>
+                      <View style={{ height: 24 }} />
+                      <AssistantTabLabel color="#8B5CF6" />
+                    </View>
+                  )
                 }
                 const index = slot < aiSlotIndex ? slot : slot - 1
                 const route = visibleRoutes[index]
@@ -518,12 +527,19 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                 const tintColor = isFocused
                   ? (options.tabBarActiveTintColor ?? '#8B5CF6')
                   : (options.tabBarInactiveTintColor ?? '#888888')
-                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: 24 })
+                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: 26 })
 
                 return (
-                  <View key={route.key} style={styles.tab} onLayout={onTabLayout(index)}>
+                  <View
+                    key={route.key}
+                    style={styles.tab}
+                    onLayout={onTabLayout(index)}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    accessibilityState={{ selected: isFocused }}
+                  >
                     {icon}
-                    <Text style={[styles.label, { color: tintColor }, isFocused && styles.labelActive]}>{label}</Text>
                   </View>
                 )
               })}
@@ -536,8 +552,6 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
           <AssistantTabButton
             centerX={aiCenterX}
             barWidth={barWidth}
-            labelColor={isLight ? '#7C3AED' : '#C4B5FD'}
-            labelTop={BUTTON_SIZE - BUTTON_RISE + 4}
           />
         </View>
       </View>
@@ -557,12 +571,6 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  label: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  labelActive: {
-    fontWeight: '600',
+    minHeight: 44,
   },
 })

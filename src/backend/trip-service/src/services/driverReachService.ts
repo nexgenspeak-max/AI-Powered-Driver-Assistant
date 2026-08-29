@@ -18,6 +18,10 @@ import { DataPacket_Kind, RoomServiceClient } from 'livekit-server-sdk';
 import { config } from '../config';
 import { cacheGet, cacheSet, driverSessionKey, driverPendingNudgeKey } from '../cache/redis';
 import { invalidateDriverContext } from './driverContextService';
+import { notifyDriver } from './notify';
+import { bind, getLogger } from './logger';
+
+const log = getLogger('driverReach');
 
 // Must match session.py's DRIVER_NUDGE_TOPIC exactly.
 export const DRIVER_NUDGE_TOPIC = 'driver_proactive_nudge';
@@ -31,7 +35,19 @@ export type NudgeKind =
   | 'debug_ping'
   | 'proximity_pickup'
   | 'proximity_dropoff'
-  | 'suggest_next_stop';
+  | 'suggest_next_stop'
+  | 'new_trip_offer'
+  | 'schedule_updated';
+
+/** App WS + silent LiveKit refresh when the driver already has Trợ lý open. */
+export async function pushDriverScheduleUpdated(driverPhone: string): Promise<void> {
+  await notifyDriver(driverPhone, 'schedule_updated', {});
+  await reachDriver(driverPhone, 'schedule_updated', {}).catch((err) => {
+    log.warning('schedule_updated voice nudge failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}
 
 interface DriverSession {
   room_name: string;
@@ -73,11 +89,36 @@ export async function reachDriver(
   payload: Record<string, unknown> = {},
 ): Promise<void> {
   if (!config.livekitApiKey) {
-    console.warn('[driverReach] LIVEKIT_API_KEY not set — skipping nudge');
+    log.warning('LIVEKIT_API_KEY not set — skipping nudge');
     return;
   }
 
   const session = await cacheGet<DriverSession>(driverSessionKey(driverPhone));
+
+  // Silent cache sync for in-call context_store only — app already got WS
+  // schedule_updated via pushDriverScheduleUpdated; no pending slot / auto-connect.
+  if (kind === 'schedule_updated') {
+    if (!session?.room_name) {
+      return;
+    }
+    try {
+      const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
+      await roomService.sendData(
+        session.room_name,
+        new TextEncoder().encode(JSON.stringify({ kind, ...payload })),
+        DataPacket_Kind.RELIABLE,
+        { topic: DRIVER_NUDGE_TOPIC },
+      );
+      bind({ room: session.room_name });
+      log.info('nudge pushed into open session', { kind });
+    } catch (err) {
+      log.warning('schedule_updated sendData failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
   if (session?.room_name) {
     try {
       const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
@@ -87,27 +128,31 @@ export async function reachDriver(
         DataPacket_Kind.RELIABLE,
         { topic: DRIVER_NUDGE_TOPIC },
       );
-      console.log(`[driverReach] nudge pushed into open session | driver=${driverPhone} kind=${kind} room=${session.room_name}`);
+      bind({ room: session.room_name });
+      log.info('nudge pushed into open session', { kind });
       return;
     } catch (err) {
       // The cached room may already be closed (job crashed before clearing
       // the key) — fall through to saving it as pending instead of dropping
       // the nudge entirely.
-      console.warn(`[driverReach] sendData failed, saving as pending instead | driver=${driverPhone}:`, err);
+      log.warning('sendData failed, saving as pending instead', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   const existing = await cacheGet<unknown>(driverPendingNudgeKey(driverPhone));
   const nudges = mergePendingNudge(existing, kind, payload);
   await cacheSet(driverPendingNudgeKey(driverPhone), { nudges }, PENDING_NUDGE_TTL_SECONDS);
-  // driver-app's context poll (has_pending_nudge) reads a SEPARATELY cached
+  // driver-app's context (has_pending_nudge) reads a SEPARATELY cached
   // snapshot (driverContextKey, up to config.cacheTtlSeconds stale) — without
   // this, the app could miss the pending nudge for up to that long even
-  // though the key above is already set.
+  // though the key above is already set. The WS push below is what makes
+  // useAutoConnectOnNudge fire without a GET interval.
   await invalidateDriverContext(driverPhone);
-  console.log(
-    `[driverReach] no open session — saved as pending | driver=${driverPhone} kind=${kind} queue=${nudges
-      .map((n) => n.kind)
-      .join(',')}`,
-  );
+  await notifyDriver(driverPhone, 'pending_nudge', { kind });
+  log.info('no open session — saved as pending', {
+    kind,
+    queue: nudges.map((n) => n.kind).join(','),
+  });
 }

@@ -1,5 +1,6 @@
-import { XStack, YStack, View, Text } from 'tamagui'
+import { XStack, YStack, View, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
+import { AppText } from '../../../components/AppText'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Surface } from '../../../components/Surface'
 import { Badge } from '../../../components/Badge'
@@ -26,6 +27,7 @@ const SECONDARY_ACTION: Partial<Record<DeliveryOrderStatus, { label: string; tar
 }
 
 export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
+  const theme = useTheme()
   const qc = useQueryClient()
   const { mutate: setStatus, isPending } = useMutation({
     mutationFn: (status: DeliveryOrderStatus) => deliveryOrdersService.updateStatus(order.order_id, status),
@@ -63,16 +65,16 @@ export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
             alignItems="center"
             justifyContent="center"
           >
-            <Ionicons name="cube" size={22} color="#8B5CF6" />
+            <Ionicons name="cube" size={22} color={theme.primary.val} />
           </View>
 
           <YStack flex={1} gap="$1">
-            <Text fontWeight="700" color="$textPrimary" fontSize="$4" numberOfLines={1}>
+            <AppText variant="title" numberOfLines={1}>
               {order.recipient_phone}
-            </Text>
-            <Text color="$textSecondary" fontSize={12} numberOfLines={1}>
+            </AppText>
+            <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
               {formatDate(order.created_at)}
-            </Text>
+            </AppText>
           </YStack>
 
           <Badge label={DELIVERY_ORDER_STATUS_LABELS[order.status]} backgroundColor={statusColor.bg} color={statusColor.text} glass={false} />
@@ -90,18 +92,18 @@ export function DeliveryOrderCard({ order }: { order: DeliveryOrder }) {
           <Button label={primary.label} variant="success" onPress={() => setStatus(primary.target)} loading={isPending} full />
         )}
         {secondary && !isPending && (
-          <Text
+          <AppText
+            variant="label"
             color="$danger"
-            fontSize={13}
-            fontWeight="600"
             textAlign="center"
             paddingVertical="$2"
+            minHeight={44}
             hitSlop={10}
             accessibilityRole="button"
             onPress={onSecondaryPress}
           >
             {secondary.label}
-          </Text>
+          </AppText>
         )}
       </YStack>
     </Surface>

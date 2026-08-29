@@ -75,6 +75,8 @@ _modules = [
     "app.services.silence_tracker",
     "app.services.conversation_service",
     "app.services.backend_api",
+    "app.services.session_devlog",
+    "app.devlog",
 ]
 for mod in _modules:
     check(mod, lambda m=mod: importlib.import_module(m) and None)
@@ -86,8 +88,25 @@ from app.config.settings import get_settings  # noqa: E402
 s = get_settings()
 check("STT provider valid", lambda: s.stt_provider in ("openai", "deepgram", "google") or (_ for _ in ()).throw(ValueError(f"unknown: {s.stt_provider}")))  # type: ignore[attr-defined]
 check("LLM provider valid", lambda: s.llm_provider in ("openai", "gemini", "google", "kimi", "moonshot") or (_ for _ in ()).throw(ValueError(f"unknown: {s.llm_provider}")))  # type: ignore[attr-defined]
-check("TTS provider valid", lambda: s.tts_provider in ("elevenlabs", "google") or (_ for _ in ()).throw(ValueError(f"unknown: {s.tts_provider}")))  # type: ignore[attr-defined]
+check("TTS provider valid", lambda: s.tts_provider in ("elevenlabs", "google", "gemini") or (_ for _ in ()).throw(ValueError(f"unknown: {s.tts_provider}")))  # type: ignore[attr-defined]
 print(f"  {PASS}  providers: STT={s.stt_provider}/{s.stt_model}  LLM={s.llm_provider}/{s.llm_model}  TTS={s.tts_provider}")
+
+from app.providers.google_cloud import (  # noqa: E402
+    GOOGLE_STT_VI_VN_SUPPORT,
+    resolve_google_stt_location,
+    resolve_google_stt_model,
+)
+_stt_model = resolve_google_stt_model(s)
+_stt_location = resolve_google_stt_location(_stt_model, s.google_stt_location)
+_vi_locations = GOOGLE_STT_VI_VN_SUPPORT.get(_stt_model)
+if s.stt_provider == "google" and _vi_locations is not None:
+    check(
+        f"Google STT vi-VN region ({_stt_model}+{_stt_location})",
+        lambda: _stt_location in _vi_locations
+        or (_ for _ in ()).throw(  # type: ignore[attr-defined]
+            ValueError(f"supported: {sorted(_vi_locations)}")
+        ),
+    )
 
 
 # ── 3. Required environment variables ─────────────────────────────────────────
@@ -149,6 +168,7 @@ from app.agent.session import _parse_room  # noqa: E402
 
 cases = [
     ("driver-84867347452-1748700000", "driver",   "84867347452"),
+    ("driver-0888887798-d4963ecd-2341-4056-8425-64a663ca7a4d", "driver", "0888887798"),
     ("customer-84901234567-1748700000", "customer", "84901234567"),
     ("trip-abc12345",                 "outbound", ""),
     ("unknown-room",                  "driver",   ""),

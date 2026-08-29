@@ -1,4 +1,8 @@
 import type { RouteInfo, RouteStep, DistanceMatrixResult } from './types';
+import type { LatLng } from '../../utils/geo';
+import { getLogger } from '../logger';
+
+const log = getLogger('google');
 
 // Mirrors goong.ts's mapSteps — Google's Directions API step shape is the
 // one Goong's own response format was modeled on, so this is nearly
@@ -16,7 +20,6 @@ function mapSteps(rawSteps: unknown): RouteStep[] | undefined {
     polyline: s.polyline?.points,
   }));
 }
-import type { LatLng } from '../../utils/geo';
 
 const DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
 const DISTANCE_MATRIX_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
@@ -48,7 +51,7 @@ export async function getRoute(
     const data = await resp.json() as Record<string, unknown>;
 
     if (data.status !== 'OK' || !Array.isArray(data.routes) || data.routes.length === 0) {
-      console.warn(`Maps API status: ${data.status}`);
+      log.warning('Direction API not OK', { status: String(data.status) });
       return {};
     }
 
@@ -77,7 +80,7 @@ export async function getRoute(
       steps: mapSteps(leg.steps),
     };
   } catch {
-    console.warn('Google Maps request failed');
+    log.warning('Direction request failed');
     return {};
   }
 }
@@ -102,7 +105,7 @@ export async function getDistanceMatrix(
     const data = await resp.json() as Record<string, unknown>;
 
     if (data.status !== 'OK' || !Array.isArray(data.rows)) {
-      console.warn(`Google DistanceMatrix status: ${data.status}`);
+      log.warning('DistanceMatrix not OK', { status: String(data.status) });
       return null;
     }
 
@@ -115,7 +118,7 @@ export async function getDistanceMatrix(
 
     return { origins, destinations, rows };
   } catch {
-    console.warn('Google DistanceMatrix request failed');
+    log.warning('DistanceMatrix request failed');
     return null;
   }
 }

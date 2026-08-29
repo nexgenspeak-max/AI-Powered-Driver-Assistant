@@ -33,6 +33,7 @@ function AppShell() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="map-preview" />
       <Stack.Protected guard={!!accessToken}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>

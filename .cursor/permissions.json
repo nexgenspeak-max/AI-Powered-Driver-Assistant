@@ -1,0 +1,21 @@
+{
+  // Chinh (2026-08-29): this repo — zero Run prompts. Do NOT add a narrow
+  // terminalAllowlist here; that key REPLACES the IDE allowlist and forces
+  // Allowlist semantics even when Run Everything is selected.
+  //
+  // Pair with: Cursor Settings → Agents → Approvals & Execution → Run Mode =
+  // Run Everything, and Auto-apply edits ON. Reload window after changing.
+  "mcpAllowlist": ["*:*"],
+  "autoRun": {
+    "allow_instructions": [
+      "Chinh granted full autonomy for AI-Powered-Driver-Assistant (2026-08-29): auto-run all terminal, MCP, and fetch calls for dev, verify, debug, tests, and local servers in this workspace without asking.",
+      "All commands under src/backend, src/frontend, src/e2e, scripts/, and standard git read-only inspection are always allowed.",
+      "Reading and searching files in this workspace is always allowed."
+    ],
+    "block_instructions": [
+      "git push --force to main or master.",
+      "Committing or editing .env, credentials.json, or other secret files unless the user explicitly asked.",
+      "Destructive infra teardown (drop database, rm -rf outside build artifacts) without explicit user request."
+    ]
+  }
+}

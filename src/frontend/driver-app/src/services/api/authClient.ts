@@ -2,6 +2,7 @@ import axios from 'axios'
 import { router } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { refreshAccessToken } from './tokenRefresh'
+import { attachHttpDevlog } from '../devlog'
 
 export const authClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL ?? 'http://localhost:8003/api/v1',
@@ -38,3 +39,5 @@ authClient.interceptors.response.use(
     return Promise.reject(err)
   },
 )
+
+attachHttpDevlog(authClient)

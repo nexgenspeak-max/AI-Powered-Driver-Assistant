@@ -31,7 +31,7 @@ export default function ProfileScreen() {
     },
     onSettled: () => logout(),
   })
-  const { data: context, isLoading, isError, refetch } = useDriverContext()
+  const { data: context, isError, refetch } = useDriverContext()
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
 
@@ -39,18 +39,27 @@ export default function ProfileScreen() {
 
   return (
     <Screen scroll>
-        {!isLoading && context && (
+        {context ? (
           <ProfileCard driver={driver} profile={context.driver_profile} />
-        )}
+        ) : null}
 
-        {!isLoading && isError && (
+        {!context && isError && (
           <XStack alignItems="center" justifyContent="space-between" gap="$3">
             <AppText variant="body" color="$textSecondary" flex={1}>
               Không thể tải thông tin hồ sơ.
             </AppText>
-            <AppText variant="label" color="$primary" onPress={() => refetch()}>
-              Thử lại
-            </AppText>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Thử lại"
+              hitSlop={8}
+              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
+            >
+              <AppText variant="label" color="$primary">
+                Thử lại
+              </AppText>
+            </TouchableOpacity>
           </XStack>
         )}
 
@@ -143,7 +152,7 @@ function MenuRow({
 }) {
   const theme = useTheme()
   return (
-    <TouchableOpacity onPress={onPress} accessibilityRole="button">
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={label}>
       <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4" minHeight={56}>
         <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
           <RowIcon name={icon} />

@@ -1,0 +1,139 @@
+---
+description: Quality benchmark bar — requirements, code, tests, logs, monitoring, UI render, voice response. AI must follow before marking work done.
+alwaysApply: true
+---
+
+# Quality benchmark
+
+This repo ships a **voice-first driver assistant**. Every non-trivial change must meet the bar below. Skills: `requirements-gate` (before coding), `dev-workflow` (end-to-end), `bug-fix` (regression test first).
+
+## 1. Requirements quality
+
+Before writing code (`requirements-gate`):
+
+- **No silent guesses** on unhappy paths, API contract, scope, cross-service impact, or business rules.
+- **One-line scope + assumptions** stated, or one focused question — then implement.
+- **Contract first** when adding/changing HTTP routes, tool schemas, or store shapes consumed by another service/app.
+- **Lang split**: behavior in `voicebot/vn/` and `voicebot/en/` must stay mirrored unless the task is explicitly single-lang.
+
+**Bar:** A reviewer can predict behavior on success, empty, error, and timeout without reading the diff twice.
+
+## 2. Code quality
+
+Follow stack rules (do not invent parallel patterns):
+
+| Area | Rule file |
+|------|-----------|
+| Layout / boundaries | `project-structure.mdc`, `service-layer.mdc` |
+| TS backends | `typescript-backend.mdc` |
+| Voice agent | `python-voice-agent.mdc` |
+| Mobile UI | `ui-mobile.mdc` |
+
+**Bar:**
+
+- One concern per file; no duplicate logic across vn/en or web/mobile.
+- Service boundaries: voice-agent → trip-service via HTTP only — no direct DB from Python.
+- Early returns, typed boundaries, no secrets in git, no debug `print`/`console.log` left behind.
+- Smallest correct diff — no drive-by refactors.
+
+## 3. Testing quality
+
+**When tests are required:** bug fixes (regression test that failed before fix), non-trivial logic, parsers/formatters, store reducers, tool handlers, DEV log formatters.
+
+**When to skip:** pure copy/style, config-only, or changes covered by an existing test — say so in the report.
+
+| Project | Minimum verify |
+|---------|----------------|
+| `src/backend/<ts-service>` | `npm run build` |
+| `src/backend/voice-agent` | relevant `pytest tests/…` (add test for new behavior) |
+| Vite frontends | `typecheck` / `build` / `lint` per app |
+| `driver-app` / `customer-app` | `npm run verify` where present; exercise changed UI on device/simulator when visual |
+
+**Bar:** Tests assert **behavior**, not implementation details. A bug fix includes a test that would fail on the old code.
+
+## 4. Logging quality
+
+Every line is grep-friendly. Callers pass **facts** (`get_logger` / `getLogger` + `bind`); **shape** is owned by `services/logger`:
+
+```
+{ts} {LEVEL} {service} {fn} room={room} conv={conv} — {msg} k=v
+```
+
+`room` / `conv` are always present (`-` when unknown). Concurrent sessions: `grep 'room=driver-…'`. Pipeline traces still include `DEV `:
+
+```
+DEV ok=true|false event=<kind> key=value duration_ms=…
+```
+
+| Layer | Module |
+|-------|--------|
+| voice-agent | `app/services/logger` (formatter on all stdlib logs after `bind` in `session.py`); `app/devlog.py` for pipeline events |
+| trip-service, auth-service, call-center, call-logger | `src/services/logger` + `attachLogContext` middleware |
+| driver-app | `src/services/logger` + `devlog.ts` (`__DEV__` only) |
+
+**Rules:**
+
+- `ok=false` + `error`/`detail` on failures; `duration_ms` on I/O and pipeline steps.
+- Event names: stable `snake_case` (`http`, `tool`, `voice_connect`, `turn`, …).
+- No PII/secrets/tokens/full phone numbers in extra fields (`room` already identifies the session).
+- Prefer `get_logger` / `devlog.event` over ad hoc `console.log`.
+
+**Bar:** `grep 'room=<id>'` (or `grep 'DEV '`) reconstructs one failed user session without mixing concurrent callers.
+
+## 5. Monitoring & observability
+
+**Voice latency** (`turn_metrics.py`): speech-to-first-audio ≥ **2s** is **SLOW** — log and investigate.
+
+Emit DEV/metrics on:
+
+- HTTP to trip-service (status, duration)
+- Tool calls (name, ok, duration)
+- LiveKit connect/disconnect, STT final, turn timings (EOU, LLM TTFT, TTS TTFB)
+- Prefetch / context warm paths
+
+**Bar:** A production incident can be narrowed to STT vs LLM vs TTS vs backend HTTP from logs alone.
+
+## 6. Render & UI quality
+
+Mobile (`driver-app`, `customer-app`): **`ui-mobile.mdc`** — Screen shell, Tamagui tokens, AppText scale, 44pt, layout constants, anti-patterns, verify checklist.
+
+Web (`driver-web`, `customer-web`, `admin-panel`): **`ui-web.mdc`** — WCAG 2.2 AA, MUI 8px grid, palette tokens, layout shells, 44px touch, anti-patterns, verify checklist.
+
+**Bar:**
+
+- Readable in light + dark; no hardcoded brand hex in screens.
+- Map/chat overlays clear tab bar and floating assistant button.
+- Web previews of RN components are approximate — **device/simulator** is authoritative for pixels.
+
+## 7. Voice & chat response quality
+
+**Accuracy over fluency:** tools and prompts must not invent trip data — use `context_store`, trip-service, and tool results.
+
+**UX:**
+
+- One chat bubble per utterance; grow with STT chunks; lock on final transcript.
+- Assistant orb reflects session state (idle mic → connected waves).
+- Errors: spoken + UI message in driver language (vn/en), not raw stack traces.
+
+**Latency budget:** optimize prefetch, warm LLM, and tool round-trips before adding client complexity.
+
+**Bar:** Driver can complete confirm trip / check upcoming / navigate flow by voice without touching the screen for the happy path.
+
+## 8. Agent report quality (AI output to user)
+
+When finishing a task:
+
+- State **what changed** and **what was verified** (commands run, devices used).
+- Say explicitly what was **not** verified and why.
+- No false “done” — if tests weren’t run, say so.
+- Vietnamese, concise, complete sentences — no telegram lists of identifiers.
+
+## Definition of done (all must pass)
+
+- [ ] Requirements gate passed (assumptions stated or questions answered)
+- [ ] Code matches stack rules and service boundaries
+- [ ] Verify commands run for every touched project
+- [ ] New behavior has meaningful test coverage where applicable
+- [ ] DEV logs added/updated for new I/O or failure modes
+- [ ] UI/voice changes checked on target platform when feasible
+- [ ] Second Brain updated if a durable decision/pattern emerged

@@ -6,6 +6,8 @@ from livekit.agents import RunContext, function_tool
 
 from app.voicebot.vn.tools_definition import raw_schema
 from app.voicebot.vn.constants import ERR_CONTACT_RPC_FAILED
+from app.voicebot.processors.tool_reply import as_llm
+from app.voicebot.processors.tool_response_builders import build_contact_find_response
 
 logger = logging.getLogger("voice-agent.vn.tools.find_contact")
 
@@ -33,14 +35,24 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
     context.userdata["pending_contact_matches"] = None
 
     if not contact_name:
-        return "Anh/chị muốn gọi cho ai? Đọc giúp tôi tên người cần gọi."
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(
+                "Bạn muốn gọi cho ai? Đọc giúp em tên người cần gọi.",
+                tool="find_contact",
+                lang="vi",
+            ),
+        )
 
     job_ctx = context.userdata.get("_job_ctx")
     room = job_ctx.room if job_ctx else None
     driver = _driver_participant(room) if room else None
     if not driver:
         logger.error("find_contact — no driver participant in room")
-        return ERR_CONTACT_RPC_FAILED
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        )
 
     try:
         response = await room.local_participant.perform_rpc(
@@ -51,22 +63,38 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
         )
     except rtc.RpcError:
         logger.error("find_contact — perform_rpc failed", exc_info=True)
-        return ERR_CONTACT_RPC_FAILED
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        )
 
     try:
         parsed = json.loads(response)
     except (TypeError, ValueError):
         logger.error("find_contact — malformed RPC response: %r", response)
-        return ERR_CONTACT_RPC_FAILED
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        )
 
     if parsed.get("error"):
         logger.warning("find_contact — client reported error: %s", parsed["error"])
-        return ERR_CONTACT_RPC_FAILED
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        )
 
     matches = parsed.get("matches") or []
 
     if not matches:
-        return f"Không tìm thấy {contact_name} trong danh bạ."
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(
+                f"Không tìm thấy {contact_name} trong danh bạ.",
+                tool="find_contact",
+                lang="vi",
+            ),
+        )
 
     if len(matches) == 1:
         match = matches[0]
@@ -74,11 +102,27 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
             "name": match.get("name", contact_name),
             "phone_number": match.get("phone_number", ""),
         }
-        return f"Tôi tìm thấy {match.get('name', contact_name)}. Có đúng người anh/chị muốn gọi không?"
+        return as_llm(
+            context.userdata,
+            build_contact_find_response(
+                f"Tôi tìm thấy {match.get('name', contact_name)}. Có đúng người bạn muốn gọi không?",
+                tool="find_contact",
+                lang="vi",
+                matches=matches,
+            ),
+        )
 
     limited = matches[:MAX_SPOKEN_MATCHES]
     context.userdata["pending_contact_matches"] = [
         {"name": m.get("name", ""), "phone_number": m.get("phone_number", "")} for m in limited
     ]
     names = ", ".join(m.get("name", "") for m in limited)
-    return f"Tôi tìm thấy nhiều người tên {contact_name}: {names}. Anh/chị muốn gọi ai?"
+    return as_llm(
+        context.userdata,
+        build_contact_find_response(
+            f"Tôi tìm thấy nhiều người tên {contact_name}: {names}. Bạn muốn gọi ai?",
+            tool="find_contact",
+            lang="vi",
+            matches=limited,
+        ),
+    )

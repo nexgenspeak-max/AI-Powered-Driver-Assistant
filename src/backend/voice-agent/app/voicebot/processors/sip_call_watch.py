@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING
 
 from livekit import api, rtc
 from livekit.agents import AgentSession
 from livekit.agents.job import get_job_context
-from livekit.agents.utils.participant import wait_for_participant_attribute
 
 from app.services import backend_api
+from app.devlog import event as dev_event
 from app.voicebot.processors.handback import (
     disconnect_sip_participant,
     handback_to_customer,
@@ -28,13 +29,158 @@ logger = logging.getLogger("voice-agent.processors.sip_call_watch")
 # early media) — see livekit.agents.voice.amd.detector._SIP_CALL_STATUS_ATTR.
 _SIP_CALL_STATUS_ATTR = "sip.callStatus"
 _SIP_CALL_STATUS_ACTIVE = "active"
+# Beat after sip.callStatus=active so the callee can get the phone to their
+# ear. Must stay well under 1s — stacking another 3s wait in CustomerCallAgent
+# used to make outbound calls sit silent ~6s after pickup.
+_DEFAULT_POST_ANSWER_DELAY = 0.6
+# Max ring time before treating the dial as unanswered — matches
+# wait_for_sip_pickup's default answer_timeout and product ask (~20s).
+DEFAULT_RING_TIMEOUT_SECONDS = 20.0
+
+
+async def wait_for_participant_attribute(
+    room: rtc.Room,
+    *,
+    identity: str,
+    attribute: str,
+    value: str,
+) -> None:
+    """Wait until a remote participant attribute equals ``value``.
+
+    Mirrors livekit-agents >=1.6 helper — our env may still pin 1.5.x.
+    """
+    if not room.isconnected():
+        raise RuntimeError("room is not connected")
+    if identity not in room.remote_participants:
+        raise RuntimeError(f"participant {identity!r} is not in the room")
+
+    fut: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+
+    def _is_match(p: rtc.Participant) -> bool:
+        return (
+            isinstance(p, rtc.RemoteParticipant)
+            and p.identity == identity
+            and p.attributes.get(attribute) == value
+        )
+
+    def _on_attributes_changed(_changed: list[str], p: rtc.Participant) -> None:
+        if _is_match(p) and not fut.done():
+            fut.set_result(None)
+
+    def _on_participant_disconnected(p: rtc.RemoteParticipant) -> None:
+        if p.identity == identity and not fut.done():
+            fut.set_exception(
+                RuntimeError(
+                    f"participant {identity!r} disconnected while waiting for {attribute}"
+                )
+            )
+
+    def _on_connection_state_changed(state: int) -> None:
+        if state == rtc.ConnectionState.CONN_DISCONNECTED and not fut.done():
+            fut.set_exception(
+                RuntimeError(
+                    f"room disconnected while waiting for {identity!r} {attribute}"
+                )
+            )
+
+    room.on("participant_attributes_changed", _on_attributes_changed)
+    room.on("participant_disconnected", _on_participant_disconnected)
+    room.on("connection_state_changed", _on_connection_state_changed)
+
+    try:
+        existing = room.remote_participants.get(identity)
+        if existing is None:
+            raise RuntimeError(f"participant {identity!r} is not in the room")
+        if existing.attributes.get(attribute) == value:
+            return
+        await fut
+    finally:
+        room.off("participant_attributes_changed", _on_attributes_changed)
+        room.off("participant_disconnected", _on_participant_disconnected)
+        room.off("connection_state_changed", _on_connection_state_changed)
+
+
+def sip_identity_of(userdata: dict) -> str:
+    """Dialed SIP participant id — customer_call first, then driver outbound."""
+    return str(
+        (userdata.get("customer_call") or {}).get("sip_identity")
+        or userdata.get("sip_identity")
+        or ""
+    ).strip()
+
+
+_DEFAULT_IN_APP_AUDIO_DELAY = 0.25
+
+
+async def wait_for_in_app_audio_ready(
+    session: AgentSession,
+    *,
+    timeout: float = 5.0,
+    post_ready_delay: float = _DEFAULT_IN_APP_AUDIO_DELAY,
+) -> None:
+    """Wait until RoomIO output is wired so in-app TTS reaches the mobile client.
+
+    Live 2026-08-30: DriverAgent.on_enter() runs during session.start(), before
+    RoomIO attaches. The connect filler TTS finished into an empty pipe; drivers
+    only heard the later prefetch prompt (or silence).
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if (
+            getattr(session, "agent_state", None) == "listening"
+            and getattr(session, "room_io", None) is not None
+        ):
+            break
+        await asyncio.sleep(0.05)
+    else:
+        logger.warning(
+            "in-app audio ready wait timed out after %.1fs — speaking anyway",
+            timeout,
+        )
+    if post_ready_delay > 0:
+        await asyncio.sleep(post_ready_delay)
+
+
+async def speak_after_sip_pickup(session: AgentSession, text: str) -> None:
+    """Speak only after audio is actually reachable by the driver.
+
+    SIP outbound: wait for pickup (ringback otherwise eats the greeting).
+    In-app WebRTC: wait for RoomIO + listening — on_enter fires mid-start().
+    Link RoomIO to the SIP identity so STT/TTS attach to the phone leg.
+    """
+    userdata = session.userdata
+    sip_id = sip_identity_of(userdata)
+    if sip_id:
+        room_io = getattr(session, "room_io", None)
+        if room_io is not None:
+            try:
+                room_io.set_participant(sip_id)
+            except Exception:
+                logger.debug("set_participant before SIP pickup failed", exc_info=True)
+        answered = await wait_for_sip_pickup(userdata)
+        if not answered:
+            logger.info("SIP pickup not confirmed — staying silent")
+            return
+        # Participant may not exist until pickup; retarget again so TTS
+        # rides the SIP leg instead of an empty first-participant slot.
+        if room_io is not None:
+            try:
+                room_io.set_participant(sip_id)
+            except Exception:
+                logger.warning("set_participant after SIP pickup failed", exc_info=True)
+    else:
+        await wait_for_in_app_audio_ready(session)
+    try:
+        await session.say(text, allow_interruptions=False)
+    except Exception:
+        logger.warning("speak_after_sip_pickup say failed", exc_info=True)
 
 
 async def wait_for_sip_pickup(
     userdata: dict,
     *,
-    answer_timeout: float = 20.0,
-    post_answer_delay: float = 3.0,
+    answer_timeout: float = DEFAULT_RING_TIMEOUT_SECONDS,
+    post_answer_delay: float = _DEFAULT_POST_ANSWER_DELAY,
 ) -> bool:
     """Wait until the dialed party's SIP leg is actually answered before the
     caller speaks — used by BridgeCallAgent/CustomerCallAgent's `on_enter()`.
@@ -42,8 +188,10 @@ async def wait_for_sip_pickup(
     Without this, the greeting/relayed message was spoken the instant the
     agent joined the room, while the phone was often still just ringing
     (ringback tone, no one listening yet), so the other person missed the
-    start of it. `post_answer_delay` gives them a beat after pickup to
+    start of it.     `post_answer_delay` (default 0.6s) gives them a beat after pickup to
     actually get the phone to their ear before the agent starts talking.
+    Do not add a second sleep in CustomerCallAgent — that stacked to ~6s of
+    dead air after the customer had already answered.
 
     Returns True only once pickup is genuinely confirmed (and
     `post_answer_delay` has elapsed) — False for every other case: no SIP
@@ -59,7 +207,7 @@ async def wait_for_sip_pickup(
     never confirmed" and hold off acting like the customer is on the line —
     not as license to proceed anyway.
     """
-    sip_identity = (userdata.get("customer_call") or {}).get("sip_identity", "")
+    sip_identity = sip_identity_of(userdata)
     if not sip_identity:
         return False
 
@@ -68,6 +216,7 @@ async def wait_for_sip_pickup(
     except RuntimeError:
         return False
 
+    started_at = time.perf_counter()
     try:
         await asyncio.wait_for(
             wait_for_participant_attribute(
@@ -83,9 +232,22 @@ async def wait_for_sip_pickup(
             "wait_for_sip_pickup: answer wait failed/timed out — pickup not confirmed",
             exc_info=True,
         )
+        dev_event(
+            "sip_pickup",
+            ok=False,
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            error="timeout_or_missing",
+        )
         return False
 
-    await asyncio.sleep(post_answer_delay)
+    if post_answer_delay > 0:
+        await asyncio.sleep(post_answer_delay)
+    dev_event(
+        "sip_pickup",
+        ok=True,
+        duration_ms=(time.perf_counter() - started_at) * 1000,
+        post_answer_delay_ms=post_answer_delay * 1000,
+    )
     return True
 
 
@@ -263,6 +425,98 @@ async def complete_isolated_call(session: AgentSession, userdata: dict, summary:
         logger.info("isolated call auto-completed | summary=%s", summary[:120])
     finally:
         userdata["_handback_in_progress"] = False
+
+
+def cancel_no_answer_watch(userdata: dict) -> None:
+    task = userdata.pop("_no_answer_watch_task", None)
+    if task and not task.done():
+        task.cancel()
+
+
+def _pickup_confirmed(userdata: dict) -> bool:
+    return bool(
+        userdata.get("_customer_spoke")
+        or userdata.get("_isolated_call_answered")
+        or userdata.get("_agent_call_answered")
+    )
+
+
+async def teardown_unanswered_call(session: AgentSession, userdata: dict) -> None:
+    """Hang up + mark complete when nobody picked up within the ring window.
+
+    Without this, wait_for_sip_pickup timing out only made the agent stay
+    silent while trip-service kept status=in_progress — the driver kept
+    hearing "AI vẫn đang gọi khách" even with no audio on the line.
+    """
+    if userdata.get("_isolated_call_done") or userdata.get("_handback_in_progress"):
+        return
+    if _pickup_confirmed(userdata):
+        return
+
+    cancel_no_answer_watch(userdata)
+
+    lang = userdata.get("lang", "vn")
+    call_meta = userdata.get("customer_call") or {}
+    mode = call_meta.get("mode", "agent")
+    silence_tracker: SilenceTracker | None = userdata.get("_silence_tracker")
+
+    await disconnect_sip_participant(userdata)
+
+    if userdata.get("isolated_call") or mode == "background":
+        summary = _disconnect_summary(lang, "background", answered=False)
+        await complete_isolated_call(session, userdata, summary)
+        dev_event("call_no_answer", ok=True, mode="background")
+        return
+
+    if userdata.get("bridge_call_active") or mode == "bridge":
+        from app.voicebot.processors.handback import cancel_bridge_timeout, handback_to_driver
+
+        cancel_bridge_timeout(userdata)
+        summary = _disconnect_summary(lang, "bridge", answered=False)
+        await handback_to_driver(
+            session, userdata, summary, mode="bridge", silence_tracker=silence_tracker,
+        )
+        dev_event("call_no_answer", ok=True, mode="bridge")
+        return
+
+    if userdata.get("customer_call_active") or mode == "agent":
+        from app.voicebot.processors.agent_call_silence import cancel_agent_call_silence_watch
+        from app.voicebot.processors.handback import handback_to_driver
+
+        cancel_agent_call_silence_watch(userdata)
+        summary = _disconnect_summary(lang, "agent", answered=False)
+        await handback_to_driver(
+            session, userdata, summary, mode="agent", silence_tracker=silence_tracker,
+        )
+        dev_event("call_no_answer", ok=True, mode="agent")
+        return
+
+    logger.warning("teardown_unanswered_call | no active call flags — skipped")
+
+
+def schedule_no_answer_watch(
+    session: AgentSession,
+    userdata: dict,
+    *,
+    timeout: float = DEFAULT_RING_TIMEOUT_SECONDS,
+) -> None:
+    """Start a hard backstop from dial time — ends the call if still unanswered."""
+    cancel_no_answer_watch(userdata)
+    dial_at = userdata.get("_dial_started_at")
+    if dial_at is None:
+        dial_at = time.time()
+        userdata["_dial_started_at"] = dial_at
+    delay = max(0.0, timeout - (time.time() - dial_at))
+
+    async def _worker() -> None:
+        try:
+            await asyncio.sleep(delay)
+            await teardown_unanswered_call(session, userdata)
+        except asyncio.CancelledError:
+            return
+
+    userdata["_no_answer_watch_task"] = asyncio.create_task(_worker(), name="no_answer_watch")
+    logger.info("no-answer watch scheduled | delay=%.1fs", delay)
 
 
 def register_sip_call_watchers(

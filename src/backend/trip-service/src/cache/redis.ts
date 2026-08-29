@@ -2,6 +2,9 @@
  * Redis cache with in-memory fallback when REDIS_URL is not set (local dev).
  */
 import { config } from '../config';
+import { getLogger } from '../services/logger';
+
+const log = getLogger('cache');
 
 type RedisClient = {
   get(key: string): Promise<string | null>;
@@ -50,7 +53,7 @@ async function getClient(): Promise<RedisClient> {
   initAttempted = true;
 
   if (!config.redisUrl) {
-    console.info('[cache] REDIS_URL not set — using in-memory cache');
+    log.info('REDIS_URL not set — using in-memory cache');
     client = memoryClient;
     return client;
   }
@@ -64,10 +67,12 @@ async function getClient(): Promise<RedisClient> {
     });
     await redis.connect();
     client = makeRedisAdapter(redis);
-    console.info('[cache] connected to Redis');
+    log.info('connected to Redis');
     return client;
   } catch (err) {
-    console.warn('[cache] Redis unavailable, using in-memory fallback:', err);
+    log.warning('Redis unavailable, using in-memory fallback', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     client = memoryClient;
     return client;
   }

@@ -1,9 +1,10 @@
 import { Platform, Linking } from "react-native";
 import * as ExpoLinking from "expo-linking";
-import ForegroundService from "@supersami/rn-foreground-service";
+import { getForegroundService } from "../../services/foregroundService";
 import * as Vosk from "react-native-vosk";
 import { queryClient } from "../../providers/QueryProvider";
 import { useVoiceSessionStore } from "../home/stores/voiceSessionStore";
+import { useAssistantChatStore } from "../home/stores/assistantChatStore";
 import type { Driver } from "../../types";
 
 // Model downloaded from https://alphacephei.com/vosk/models (Apache-2.0, no
@@ -177,7 +178,7 @@ async function ensureForegroundServiceForListening() {
   // UIBackgroundModes "audio" entry (app.json) instead of a foreground
   // notification.
   if (Platform.OS !== "android") return;
-  await ForegroundService.start({
+  await getForegroundService().start({
     id: SERVICE_ID,
     title: LISTENING_TITLE,
     message: LISTENING_MESSAGE,
@@ -204,6 +205,7 @@ async function onWakeWordDetected() {
     return;
   }
 
+  useAssistantChatStore.getState().openPanel();
   await useVoiceSessionStore.getState().connect(driver.phone);
   // Brings the app to the foreground even if the driver was in another app —
   // relies on the active foreground service being exempt from Android's
@@ -410,7 +412,7 @@ export async function disableWakeWord() {
   // it here if nothing else needs it. Android only — see
   // ensureForegroundServiceForListening() above.
   if (Platform.OS === "android" && useVoiceSessionStore.getState().status === "idle") {
-    ForegroundService.stop().catch(() => {});
+    getForegroundService().stop().catch(() => {});
   }
 }
 

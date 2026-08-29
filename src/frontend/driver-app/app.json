@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.chinhtruongba.driverapp",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
         "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
@@ -53,7 +54,7 @@
         "android.permission.BLUETOOTH",
         "android.permission.READ_CONTACTS"
       ],
-      "package": "com.anonymous.driverapp"
+      "package": "com.chinhtruongba.driverapp"
     },
     "web": {
       "favicon": "./assets/favicon.png",

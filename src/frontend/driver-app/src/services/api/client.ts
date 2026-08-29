@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { queryClient } from '../../providers/QueryProvider'
 import { refreshAccessToken } from './tokenRefresh'
 import type { Driver } from '../../types'
+import { attachHttpDevlog } from '../devlog'
 
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
@@ -43,3 +44,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(err)
   },
 )
+
+attachHttpDevlog(apiClient)

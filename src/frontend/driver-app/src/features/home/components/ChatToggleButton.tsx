@@ -11,7 +11,7 @@ import { GlassMaterial, GlowOverlay, useGlassPress } from '../../../components/L
 // here since Home (the only screen this renders on) never shows a
 // BackButton. Kept off the top-right corner on purpose: the map's own
 // compass control renders there, and this used to sit right on top of it.
-export const CHAT_TOGGLE_BUTTON_SIZE = 40
+export const CHAT_TOGGLE_BUTTON_SIZE = 44
 const CHAT_TOGGLE_BUTTON_LEFT = 20
 const CHAT_TOGGLE_BUTTON_TOP_GAP = 12
 
@@ -32,6 +32,8 @@ export function ChatToggleButton({ onPress }: Props) {
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
+        accessibilityRole="button"
+        accessibilityLabel="Mở trò chuyện trợ lý"
         style={[
           {
             position: 'absolute',

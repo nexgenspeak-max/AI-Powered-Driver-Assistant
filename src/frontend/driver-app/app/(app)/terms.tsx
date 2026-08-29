@@ -1,7 +1,5 @@
-import { ScrollView } from 'react-native'
-import { View, YStack, Text } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
+import { YStack } from 'tamagui'
+import { Screen } from '../../src/components/Screen'
 import { AppText } from '../../src/components/AppText'
 
 const SECTIONS = [
@@ -32,31 +30,19 @@ const SECTIONS = [
 ]
 
 export default function TermsScreen() {
-  const insets = useSafeAreaInsets()
-
   return (
-    <View flex={1} backgroundColor="$surface">
-      <BackButton />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100 }}
-      >
-        <AppText variant="h1" marginBottom="$3">
-          Điều khoản sử dụng & Chính sách bảo mật
-        </AppText>
-        <YStack gap="$4">
-          {SECTIONS.map(section => (
-            <YStack key={section.title} gap="$1">
-              <Text color="$textPrimary" fontWeight="700" fontSize="$3">
-                {section.title}
-              </Text>
-              <Text color="$textSecondary" lineHeight={22}>
-                {section.body}
-              </Text>
-            </YStack>
-          ))}
-        </YStack>
-      </ScrollView>
-    </View>
+    <Screen scroll backButton>
+      <AppText variant="h1">Điều khoản sử dụng & Chính sách bảo mật</AppText>
+      <YStack gap="$4">
+        {SECTIONS.map(section => (
+          <YStack key={section.title} gap="$1">
+            <AppText variant="h2">{section.title}</AppText>
+            <AppText variant="body" color="$textSecondary">
+              {section.body}
+            </AppText>
+          </YStack>
+        ))}
+      </YStack>
+    </Screen>
   )
 }

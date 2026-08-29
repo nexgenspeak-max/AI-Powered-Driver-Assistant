@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useTripOfferStore } from '../../../stores/tripOfferStore'
 import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
+import { devlog } from '../../../services/devlog'
 
 // Same wss://.../ws?role=driver&id=<phone> protocol on both environments —
 // see trip-service's notify/local.ts (dev, plain `ws`) and
@@ -29,11 +30,14 @@ const WS_URL = deriveWsUrl()
 
 const RECONNECT_DELAY_MS = 3000
 
-// Real-time nudge for new/escalated trip offers — purely an optimization on
-// top of the existing 5s poll (useDriverContext.ts), which stays the source
-// of truth. If the socket never connects or keeps dropping, the driver still
-// sees new offers within 5s via polling — this just makes it near-instant
-// when it works.
+function invalidateDriverQueries(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['driverContext'] })
+  qc.invalidateQueries({ queryKey: ['trip-offer'] })
+}
+
+// Live path for trip offers / schedule / pending nudges. GET /me/context
+// runs once on mount and again when this socket opens or an event lands —
+// no interval poll (REST and WS share the trip-service process).
 export function useDispatchSocket(isOnline: boolean, driverPhone: string | undefined): void {
   const qc = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
@@ -50,14 +54,21 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
 
     const connect = () => {
       if (cancelled) return
+      const openedAt = Date.now()
       const ws = new WebSocket(`${WS_URL}?role=driver&id=${encodeURIComponent(driverPhone)}`)
       wsRef.current = ws
+
+      ws.onopen = () => {
+        if (cancelled) return
+        invalidateDriverQueries(qc)
+        devlog.event('dispatch_ws', { ok: true, state: 'open', duration_ms: Date.now() - openedAt })
+      }
 
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string)
           if (msg.event === 'trip_offer') {
-            qc.invalidateQueries({ queryKey: ['driverContext'] })
+            invalidateDriverQueries(qc)
             // Surfaces the floating accept/reject banner (TripOfferBanner.tsx)
             // immediately, regardless of which tab the driver is currently on
             // — the dashboard's own TripCard list is still the fallback
@@ -70,16 +81,14 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
           // confirm_trip) becomes confirmed — fires the same fresh-GPS push
           // TripCard/TripOfferBanner already do on tap, so a
           // voice-confirmed trip gets the same near-zero-latency treatment.
-          // usePushLocationOnNewTrip.ts's 5s-poll diffing stays as the
-          // fallback if this socket message is ever missed/dropped.
           if (msg.event === 'trip_confirmed') {
             pushImmediateLocation()
           }
-          // Pushed by POST /drivers/me/location/live once it's rebuilt the
-          // optimized route with a fresh fix (see drivers.ts) — refetch now
-          // instead of waiting on the 5s poll to pick up the new order.
-          if (msg.event === 'schedule_updated') {
-            qc.invalidateQueries({ queryKey: ['driverContext'] })
+          // Pushed after any PATCH that changes this driver's schedule
+          // (cancel, reject, progress, …) and after POST /me/location/live
+          // rebuilds the optimized route.
+          if (msg.event === 'schedule_updated' || msg.event === 'pending_nudge') {
+            invalidateDriverQueries(qc)
           }
         } catch {
           // Malformed message — ignore, don't drop the connection over it.

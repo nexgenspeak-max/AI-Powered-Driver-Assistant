@@ -3,7 +3,7 @@ import { View, useTheme, useThemeName } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassSheen, getGlassShadow } from './LiquidGlass'
 
-const HEIGHT = 40
+const HEIGHT = 44
 const RADIUS = 14
 const GLASS_BG_LIGHT = 'rgba(255,255,255,0.55)'
 const GLASS_BG_DARK = 'rgba(36,29,44,0.72)'
@@ -39,23 +39,29 @@ export function SearchInput({ value, onChangeText, placeholder }: Props) {
         }}
       >
         <GlassSheen borderRadius={RADIUS} />
-        <Ionicons name="search" size={16} color={theme.textMuted.val} />
+        <Ionicons name="search" size={18} color={theme.textMuted.val} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={theme.textMuted.val}
-          selectionColor={isLight ? '#8B5CF6' : '#C084FC'}
+          selectionColor={isLight ? theme.primary.val : theme.secondary.val}
           style={{
             flex: 1,
             height: HEIGHT,
-            fontSize: 13,
+            fontSize: 15,
             color: theme.textPrimary.val,
           }}
         />
         {value.length > 0 && (
-          <TouchableOpacity onPress={() => onChangeText('')} hitSlop={10}>
-            <Ionicons name="close-circle" size={16} color={theme.textMuted.val} />
+          <TouchableOpacity
+            onPress={() => onChangeText('')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Xóa tìm kiếm"
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Ionicons name="close-circle" size={18} color={theme.textMuted.val} />
           </TouchableOpacity>
         )}
       </RNView>

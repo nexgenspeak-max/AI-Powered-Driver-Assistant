@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Platform } from "react-native";
-import ForegroundService from "@supersami/rn-foreground-service";
+import * as Speech from "expo-speech";
+import { getForegroundService } from "../../../services/foregroundService";
 import {
   Room,
   RoomEvent,
@@ -14,20 +15,35 @@ import {
 import { voiceService } from "../../../services/api/voice";
 import { useWakeWordSettingsStore } from "../../assistant-wakeword/wakeWordSettingsStore";
 import { searchContacts } from "../services/contactsSearch";
+import { devlog } from "../../../services/devlog";
+import { bind, clearLogContext } from "../../../services/logger";
 
 const CALL_STATE_TOPIC = "call_state";
 const AGENT_STATE_TOPIC = "agent_state";
+const CALL_TRANSCRIPT_TOPIC = "call_transcript";
+const CONNECTING_FILLER = "Đang kết nối với Czen";
 
-// Must run once at module load (before the service is ever started), per the
-// package's own requirement — registers the headless task the service runs on.
-if (Platform.OS === "android") {
-  ForegroundService.register({
+function speakConnectingFiller() {
+  Speech.stop();
+  Speech.speak(CONNECTING_FILLER, { language: "vi-VN" });
+}
+
+function stopConnectingFiller() {
+  Speech.stop();
+}
+
+let foregroundServiceRegistered = false;
+
+function ensureForegroundServiceRegistered() {
+  if (Platform.OS !== "android" || foregroundServiceRegistered) return;
+  getForegroundService().register({
     config: {
       alert: false,
       onServiceErrorCallBack: () =>
         console.error("[voice-session] foreground service error"),
     },
   });
+  foregroundServiceRegistered = true;
 }
 
 // Keeps the call connected while the driver switches to another app — Android
@@ -40,7 +56,8 @@ if (Platform.OS === "android") {
 // notification invalid and startForeground() throw with no usable message.
 async function startCallForegroundService() {
   if (Platform.OS !== "android") return;
-  await ForegroundService.start({
+  ensureForegroundServiceRegistered();
+  await getForegroundService().start({
     id: 4471,
     title: "Czen Driver",
     message: "Đang trong cuộc gọi với trợ lý AI",
@@ -62,27 +79,45 @@ function stopCallForegroundService() {
   // (and re-labels) the still-running service instead of it ever having
   // stopped.
   if (useWakeWordSettingsStore.getState().enabled) return;
-  ForegroundService.stop();
+  getForegroundService().stop();
 }
 
 export type VoiceSessionStatus = "idle" | "connecting" | "connected" | "error";
-export type VoiceMessageSource = "user" | "agent";
+export type VoiceMessageSource = "user" | "agent" | "customer";
+export type VoiceTranscriptMeta = {
+  isFinal: boolean;
+  segmentId?: string;
+};
+
 export type VoiceMessageListener = (
   text: string,
   from: VoiceMessageSource,
+  meta: VoiceTranscriptMeta,
 ) => void;
 
 const CHAT_TOPIC = "lk.chat";
 const TRANSCRIPTION_TOPIC = "lk.transcription";
+const TRANSCRIPTION_FINAL_ATTR = "lk.transcription_final";
+const SEGMENT_ID_ATTR = "lk.segment_id";
 
-// Each connecting-cue audio file's own length (AssistantChatPanel.tsx plays
-// one of these, picked randomly per connect) plus a short trailing pause —
-// held here so connectWithToken can delay starting the actual LiveKit
-// connect until the cue has genuinely finished, instead of letting the AI's
-// first words race it. Index must line up with `connectingCueAssets` in
-// AssistantChatPanel.tsx. Update/add entries if a cue file is ever replaced
-// or a new one added — measured lengths: 2.53s, 5.93s, 5.20s.
-const CONNECTING_CUE_DURATIONS_MS = [2800, 6200, 5500];
+function transcriptDedupKey(from: VoiceMessageSource, text: string): string {
+  return `${from}:${text
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[.!?…]+$/u, "")
+    .toLowerCase()}`;
+}
+
+// LiveKit agents publish each STT/TTS hypothesis as a text stream on
+// `lk.transcription`. Interim chunks share `lk.segment_id`; `lk.transcription_final`
+// flips "false" → "true" on the trailer (only reliable after the iterator ends).
+// Chat (`lk.chat`) has no such flag and is always committed.
+function isFinalTranscriptStream(reader: {
+  info: { topic: string; attributes?: Record<string, string> };
+}): boolean {
+  if (reader.info.topic !== TRANSCRIPTION_TOPIC) return true;
+  return reader.info.attributes?.[TRANSCRIPTION_FINAL_ATTR] !== "false";
+}
 
 // Module-level (not React state) so the LiveKit session survives navigation
 // between tabs — only the store's `status` needs to be reactive.
@@ -140,20 +175,17 @@ interface VoiceSessionState {
    * reports by publishing `active: false`) may end the session.
    */
   isCallActive: boolean;
-  /** Which entry of `connectingCueAssets` (AssistantChatPanel.tsx) to play for the current/last connect — picked randomly once per connect() call so the delay below and the cue actually played always agree on the same file. Meaningless while `silentConnect` is true (nothing plays). */
-  connectingCueIndex: number;
+  /** In-room SIP sub-call mode from backend call_state — agent or bridge. */
+  callMode: "" | "agent" | "bridge";
   /**
-   * True while the in-flight connect was triggered automatically (a
-   * proactive nudge waiting — see useAutoConnectOnNudge.ts), not by the
-   * driver tapping the orb. Skips the connecting-cue audio AND the delay
-   * that normally holds off the real LiveKit connect until that cue
-   * finishes (see connect()'s `silent` option below) — the driver didn't
-   * just tap anything to "wait" on, so get the nudge to them as fast as
-   * possible instead. AssistantChatPanel.tsx reads this to skip playback.
+   * True when the driver's microphone is off but the LiveKit room is still
+   * connected — the AI can keep speaking; we just stop sending uplink audio.
+   * Reset on every connect/disconnect. Independent of `status`.
    */
-  silentConnect: boolean;
-  connect: (driverPhone: string, opts?: { silent?: boolean }) => Promise<void>;
+  isMicMuted: boolean;
+  connect: (driverPhone: string) => Promise<void>;
   disconnect: () => void;
+  setMicMuted: (muted: boolean) => Promise<void>;
   sendText: (text: string) => Promise<boolean>;
 }
 
@@ -167,12 +199,16 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
   // superseded this one, so tearing down would clobber the new session).
   const handleDisconnected = async (guardRoom: Room) => {
     if (room !== guardRoom) {
-      console.log(
-        "[voice-session] handleDisconnected: skipped, room already replaced",
-      );
+      bind({ room: guardRoom.name || "-" });
+      devlog.event("voice_disconnect", {
+        ok: true,
+        skipped: true,
+        reason: "room_replaced",
+      });
       return;
     }
-    console.log("[voice-session] handleDisconnected: tearing down");
+    bind({ room: guardRoom.name || "-" });
+    devlog.event("voice_disconnect", { ok: true, reason: "teardown" });
     room = null;
     clearWatchdog();
     audioEls.forEach((el) => el.remove());
@@ -184,43 +220,44 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     // once LiveKit's audio session has genuinely torn down, that handoff is
     // both faster and doesn't depend on the guess being long enough.
     await stopAudioSession();
-    console.log(
-      "[voice-session] handleDisconnected: stopAudioSession done, setting idle",
-    );
+    clearLogContext();
     stopCallForegroundService();
+    stopConnectingFiller();
     set({
       status: "idle",
       agentAudioLevel: 0,
       isCallActive: false,
+      callMode: "",
       agentSpeaking: false,
-      silentConnect: false,
+      isMicMuted: false,
     });
   };
 
   const connectWithToken = async (
     getToken: () => Promise<{ token: string; livekit_url: string }>,
-    silent: boolean,
   ) => {
     // Synchronous re-entrancy guard — see `connecting`'s own comment for why
     // the `room`-based staleness check below isn't enough on its own.
     if (connecting) {
-      console.log(
-        "[voice-session] connectWithToken already in flight, ignoring re-entrant call",
-      );
+      devlog.event("voice_connect", {
+        ok: true,
+        skipped: true,
+        reason: "already_in_flight",
+      });
       return;
     }
     connecting = true;
     try {
-      await connectWithTokenLocked(getToken, silent);
+      await connectWithTokenLocked(getToken);
     } finally {
       connecting = false;
     }
   };
 
-  const connectWithTokenLocked = async (
+    const connectWithTokenLocked = async (
     getToken: () => Promise<{ token: string; livekit_url: string }>,
-    silent: boolean,
   ) => {
+    const connectStartedAt = Date.now();
     // A stale room can be left behind if the app was backgrounded and the
     // connection died without ever firing RoomEvent.Disconnected (Android
     // suspends WebRTC threads while the app isn't in the foreground) — treat
@@ -244,43 +281,20 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       room = null;
     }
 
-    // Picked once per connect, not per render — AssistantChatPanel.tsx reads
-    // this same index for which file to actually play, so the delay below
-    // and the cue on screen always agree. Meaningless (never read) when silent.
-    const cueIndex = Math.floor(
-      Math.random() * CONNECTING_CUE_DURATIONS_MS.length,
-    );
-
-    // `status` flips to 'connecting' first, immediately — the connecting-cue
-    // audio (AssistantChatPanel.tsx) reacts to that and starts playing right
-    // away, UNLESS `silentConnect` is set (auto-triggered by a pending
-    // nudge, not a driver tap — see useAutoConnectOnNudge.ts): no cue, no
-    // artificial wait, straight to connecting so the nudge reaches the
-    // driver as fast as possible.
+    // Flip to 'connecting' immediately — spoken filler covers the handshake gap.
     set({
       status: "connecting",
       isCallActive: false,
+      callMode: "",
       agentSpeaking: false,
-      connectingCueIndex: cueIndex,
-      silentConnect: silent,
+      isMicMuted: false,
     });
+    speakConnectingFiller();
     try {
-      // Sequential, not overlapping: the actual LiveKit connect (and
-      // whatever the AI says the instant it joins the room) must not start
-      // until the cue has genuinely finished — the AI's voice arrives over
-      // its own audio track regardless of what this store's `status` says,
-      // so merely delaying when we *expose* 'connected' doesn't stop it
-      // from overlapping the cue. Actually holding off the connect itself
-      // is what does. `CONNECTING_CUE_DURATIONS_MS` must stay in sync with
-      // the cue files' real lengths (AssistantChatPanel.tsx). Skipped
-      // entirely when silent — there's no cue playing to wait out.
-      if (!silent) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, CONNECTING_CUE_DURATIONS_MS[cueIndex]),
-        );
-      }
-      await startAudioSession();
-      const { token, livekit_url } = await getToken();
+      const [{ token, livekit_url }] = await Promise.all([
+        getToken(),
+        startAudioSession(),
+      ]);
       const r = new Room();
       room = r;
 
@@ -292,7 +306,15 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         if (topic === CALL_STATE_TOPIC) {
           try {
             const msg = JSON.parse(new TextDecoder().decode(payload));
-            if (msg?.type === "call_state") set({ isCallActive: !!msg.active });
+            if (msg?.type === "call_state") {
+              set({
+                isCallActive: !!msg.active,
+                callMode:
+                  msg.active && (msg.mode === "agent" || msg.mode === "bridge")
+                    ? msg.mode
+                    : "",
+              });
+            }
           } catch (err) {
             console.error(
               "[voice-session] failed to parse call_state payload",
@@ -341,10 +363,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       });
 
       r.on(RoomEvent.Disconnected, (reason) => {
-        console.log(
-          "[voice-session] RoomEvent.Disconnected fired, reason:",
-          reason,
-        );
+        devlog.event("voice_disconnect", { ok: true, reason: String(reason) });
         handleDisconnected(r);
       });
 
@@ -365,21 +384,68 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         reader: Parameters<Parameters<Room["registerTextStreamHandler"]>[1]>[0],
         participantInfo: { identity: string },
       ) => {
-        const text = await reader.readAll();
-        if (!text.trim()) return;
-        const from: VoiceMessageSource =
-          participantInfo.identity === r.localParticipant.identity
-            ? "user"
+        const isLocal =
+          participantInfo.identity === r.localParticipant.identity;
+        const isCustomerSip =
+          get().isCallActive &&
+          /^customer-/i.test(participantInfo.identity);
+        const from: VoiceMessageSource = isLocal
+          ? "user"
+          : isCustomerSip
+            ? "customer"
             : "agent";
-        const messageKey = `${from}:${text.trim().replace(/\s+/g, " ")}`;
-        const now = Date.now();
-        const previousTimestamp = recentMessages.get(messageKey);
-        if (previousTimestamp && now - previousTimestamp < 2000) return;
-        recentMessages.set(messageKey, now);
-        for (const [key, timestamp] of recentMessages) {
-          if (now - timestamp >= 2000) recentMessages.delete(key);
+
+        const segmentId = reader.info.attributes?.[SEGMENT_ID_ATTR];
+
+        const emit = (text: string, isFinal: boolean) => {
+          if (!text.trim()) return;
+          if (isFinal) {
+            const messageKey = transcriptDedupKey(from, text);
+            const now = Date.now();
+            const previousTimestamp = recentMessages.get(messageKey);
+            if (previousTimestamp && now - previousTimestamp < 3000) return;
+            recentMessages.set(messageKey, now);
+            for (const [key, timestamp] of recentMessages) {
+              if (now - timestamp >= 3000) recentMessages.delete(key);
+            }
+            devlog.event("voice_transcript", { from, text: text.trim() });
+            if (
+              get().callMode === "bridge" &&
+              from === "customer" &&
+              r.localParticipant
+            ) {
+              r.localParticipant
+                .publishData(
+                  new TextEncoder().encode(
+                    JSON.stringify({ speaker: "customer", text: text.trim() }),
+                  ),
+                  { reliable: true, topic: CALL_TRANSCRIPT_TOPIC },
+                )
+                .catch((err) =>
+                  console.warn("[voice-session] call_transcript publish failed", err),
+                );
+            }
+          }
+          messageListeners.forEach((listener) =>
+            listener(text, from, { isFinal, segmentId }),
+          );
+        };
+
+        // Typed chat is one complete payload. Transcriptions are a live
+        // delta stream (agent TTS tokens, STT hypotheses) — readAll() would
+        // hide every chunk until the segment closed, so the bubble jumped
+        // from empty to a finished sentence.
+        if (reader.info.topic !== TRANSCRIPTION_TOPIC) {
+          emit(await reader.readAll(), true);
+          return;
         }
-        messageListeners.forEach((listener) => listener(text, from));
+
+        let text = "";
+        for await (const chunk of reader) {
+          text += chunk;
+          emit(text, false);
+        }
+        emit(text, isFinalTranscriptStream(reader));
       };
       r.registerTextStreamHandler(TRANSCRIPTION_TOPIC, handleStream);
       r.registerTextStreamHandler(CHAT_TOPIC, handleStream);
@@ -404,9 +470,15 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       });
 
       await r.connect(livekit_url, token);
+      bind({ room: r.name || "-", conv: r.name || "-" });
       await r.localParticipant.setMicrophoneEnabled(true);
       await startCallForegroundService();
-      set({ status: "connected" });
+      stopConnectingFiller();
+      set({ status: "connected", isMicMuted: false });
+      devlog.event("voice_connect", {
+        ok: true,
+        duration_ms: Date.now() - connectStartedAt,
+      });
 
       clearWatchdog();
       watchdogTimer = setInterval(() => {
@@ -441,21 +513,28 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         err instanceof ConnectionError &&
         err.reason === ConnectionErrorReason.Cancelled;
       if (cancelled) {
-        console.log("[voice-session] connect cancelled by disconnect()");
+        devlog.event("voice_connect", { ok: true, cancelled: true });
       } else {
-        console.error("[voice-session] connect failed", err);
+        devlog.event("voice_connect", {
+          ok: false,
+          error: err instanceof Error ? err.name : "unknown",
+          detail: err instanceof Error ? err.message : String(err),
+          duration_ms: Date.now() - connectStartedAt,
+        });
       }
       clearWatchdog();
       await room?.disconnect();
       room = null;
       await stopAudioSession();
       stopCallForegroundService();
+      stopConnectingFiller();
       set({
         status: cancelled ? "idle" : "error",
         agentAudioLevel: 0,
         isCallActive: false,
+        callMode: "",
         agentSpeaking: false,
-        silentConnect: false,
+        isMicMuted: false,
       });
     }
   };
@@ -464,22 +543,33 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     status: "idle",
     agentAudioLevel: 0,
     isCallActive: false,
+    callMode: "",
     agentSpeaking: false,
-    connectingCueIndex: 0,
-    silentConnect: false,
+    isMicMuted: false,
 
-    connect: (driverPhone: string, opts?: { silent?: boolean }) =>
-      connectWithToken(
-        () => voiceService.getDriverToken(driverPhone),
-        !!opts?.silent,
-      ),
+    connect: (driverPhone: string) =>
+      connectWithToken(() => voiceService.getDriverToken(driverPhone)),
 
-    // The AI orb on Home must gate its own hangup on `isCallActive`
-    // before calling this — see AssistantChatPanel.tsx's handleOrbPress.
+    // The AI button in the tab bar must gate its own hangup on `isCallActive`
+    // before calling this — see AssistantTabButton.tsx's handlePress.
     // `disconnect()` itself stays unconditional (also used for cleanup paths
     // like unmount/logout that must always be able to tear the room down).
     disconnect: () => {
       room?.disconnect();
+    },
+
+    setMicMuted: async (muted: boolean) => {
+      if (!room || get().status !== "connected") return;
+      try {
+        await room.localParticipant.setMicrophoneEnabled(!muted);
+        set({ isMicMuted: muted });
+      } catch (err) {
+        devlog.event("voice_mic", {
+          ok: false,
+          error: err instanceof Error ? err.name : "unknown",
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
     },
 
     sendText: async (text: string) => {

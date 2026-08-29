@@ -1,12 +1,11 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
 from app.voicebot.vn.constants import TRIP_REJECTED, ERR_CANNOT_UPDATE
-from app.services import backend_api
 from app.voicebot.processors import context_store
+from app.voicebot.processors.confirm_trip_flow import apply_and_speak
 from app.voicebot.processors.trip_format import short_address
-
-logger = logging.getLogger("voice-agent.vn.tools.reject_trip")
+from app.voicebot.processors.tool_reply import R, trip_actions
+from app.voicebot.processors.tool_response_builders import build_pending_confirm_response
 
 # Mirrors check_upcoming_trips.py's own tuple — kept as a separate copy
 # rather than importing it, same convention as elsewhere in this codebase.
@@ -30,35 +29,63 @@ async def reject_trip(raw_arguments: dict, context: RunContext) -> str:
     else:
         trips = _pending_trips(context.userdata)
         if not trips:
-            return "Không có chuyến nào đang chờ xác nhận."
+            return await context_store.speak_and_stop(
+                context.session,
+                R(
+                    "reject_trip",
+                    "Không có chuyến nào đang chờ xác nhận.",
+                    lang="vi",
+                    action=trip_actions(lang="vi"),
+                ),
+            )
 
         trip_index = raw_arguments.get("trip_index")
         if len(trips) == 1:
             target = trips[0]
-        elif trip_index is not None:
-            idx = int(trip_index) - 1
-            if idx < 0 or idx >= len(trips):
-                return f"Anh/chị chỉ có {len(trips)} chuyến đang chờ xác nhận. Vui lòng chọn từ 1 đến {len(trips)}."
-            target = trips[idx]
         else:
-            lines = [
-                f"{i}. {t.get('customer_name') or 'khách'} (đón {short_address(t.get('pickup_address', ''), 30)})"
-                for i, t in enumerate(trips, 1)
-            ]
-            return (
-                "Anh/chị đang có nhiều chuyến chờ xác nhận — chuyến nào ạ muốn từ chối: "
-                + "; ".join(lines)
-                + "? Anh/chị đọc số thứ tự hoặc tên khách giúp em."
+            target = context_store.resolve_trip_from_subset(
+                context.userdata, trips, raw_arguments
             )
+            if target is None and trip_index is not None:
+                idx = int(trip_index) - 1
+                if idx < 0 or idx >= len(trips):
+                    return await context_store.speak_and_stop(
+                        context.session,
+                        R(
+                            "reject_trip",
+                            f"Bạn chỉ có {len(trips)} chuyến đang chờ xác nhận. "
+                            f"Vui lòng chọn từ 1 đến {len(trips)}.",
+                            lang="vi",
+                            action=trip_actions(lang="vi"),
+                        ),
+                    )
+                target = trips[idx]
+            if target is None:
+                lines = [
+                    f"{i}. {t.get('customer_name') or 'khách'} (đón {short_address(t.get('pickup_address', ''), 30)})"
+                    for i, t in enumerate(trips, 1)
+                ]
+                spoken = (
+                    "Bạn đang có nhiều chuyến chờ xác nhận — chuyến nào ạ muốn từ chối: "
+                    + "; ".join(lines)
+                    + "? Bạn đọc số thứ tự hoặc tên khách giúp em."
+                )
+                return await context_store.speak_and_stop(
+                    context.session,
+                    build_pending_confirm_response(
+                        spoken,
+                        tool="reject_trip",
+                        lang="vi",
+                        trip_indices=list(range(1, len(trips) + 1)),
+                        confirm=False,
+                    ),
+                )
 
-    trip_id = target["trip_id"]
-
-    try:
-        await backend_api.update_trip_status(trip_id, "rejected")
-    except Exception:
-        logger.error("reject_trip failed", exc_info=True)
-        return ERR_CANNOT_UPDATE
-
-    context_store.patch_trip_by_id(context.userdata, trip_id, status="rejected")
-    await context.session.say(TRIP_REJECTED, allow_interruptions=False)
-    return "rejected"
+    return await apply_and_speak(
+        context.session,
+        context.userdata,
+        target["trip_id"],
+        TRIP_REJECTED,
+        error_reply=ERR_CANNOT_UPDATE,
+        status="rejected",
+    )

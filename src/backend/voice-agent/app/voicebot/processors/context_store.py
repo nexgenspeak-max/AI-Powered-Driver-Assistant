@@ -11,8 +11,14 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import re
 import time
-from typing import Any
+from typing import Any, NoReturn
+
+from livekit.agents import StopResponse
+
+from app.agent.turn_metrics import mark_user_stopped
+from app.voicebot.prompts.tool_response import ToolResponse
 
 logger = logging.getLogger("voice-agent.context_store")
 
@@ -85,12 +91,234 @@ def format_age_note(userdata: dict, lang: str = "vi") -> str:
     return f"{minutes} phút trước"
 
 
+def with_refresh_offer(
+    userdata: dict,
+    topic: str,
+    reply: str,
+    *,
+    lang: str = "vi",
+    args: dict | None = None,
+) -> str:
+    """Cache-first reply; live fetch is refresh_latest_data when driver asks.
+
+    Age disclaimers removed — schedule_updated LiveKit nudge keeps RAM in sync
+    with app WS while Trợ lý is open.
+    """
+    set_pending_refresh(userdata, topic, args)
+    return reply
+
+
+def spoken_from_tool_output(text: str | ToolResponse) -> str:
+    """TTS-safe line — never read raw ResponseTemplate XML aloud."""
+    if isinstance(text, ToolResponse):
+        return text.spoken()
+    if ToolResponse.is_template(text):
+        return ToolResponse.spoken_from_template(text)
+    return text.strip()
+
+
+async def speak_and_stop(
+    session: Any,
+    text: str | ToolResponse,
+    *,
+    allow_interruptions: bool = True,
+) -> NoReturn:
+    """Speak from the tool, then halt the LLM so it cannot rewrite TTS.
+
+    Returning already_spoken still ran a second LLM pass (~2.1s live after
+    confirm_trip, then 28s of schedule audio). StopResponse skips that pass.
+    A TTS failure must not propagate — the backend/tool work already finished.
+    """
+    if isinstance(text, ToolResponse):
+        set_last_tool_response(session.userdata, text)
+    spoken = spoken_from_tool_output(text)
+    mark_user_stopped(session)
+    try:
+        await session.say(spoken, allow_interruptions=allow_interruptions)
+    except Exception:
+        logger.warning("speak_and_stop say failed", exc_info=True)
+    raise StopResponse()
+
+
+async def speak_reply(session: Any, text: str | ToolResponse, *, lang: str = "vi") -> NoReturn:
+    """Speak a fully-formatted tool reply and skip the LLM's second pass."""
+    await speak_and_stop(session, text)
+
+
+async def speak_with_refresh_offer(
+    session: Any,
+    userdata: dict,
+    topic: str,
+    reply: str | ToolResponse,
+    *,
+    lang: str = "vi",
+    args: dict | None = None,
+) -> NoReturn:
+    from app.voicebot.processors.tool_reply import coerce
+
+    if isinstance(reply, str):
+        reply = coerce(topic, reply, lang=lang)
+    set_last_tool_response(userdata, reply)
+    spoken = reply.spoken()
+    text = with_refresh_offer(userdata, topic, spoken, lang=lang, args=args)
+    await speak_reply(session, text, lang=lang)
+
+
+def set_last_tool_response(userdata: dict, response: ToolResponse) -> None:
+    """Persist structured tool output so follow-ups can use FollowUpKnowledge."""
+    userdata.setdefault("context", {})["_last_tool_response"] = {
+        "tool": response.tool,
+        "template": response.to_template(),
+        "spoken": response.spoken(),
+        "follow_up": list(response.follow_up_knowledge),
+        "action": list(response.action_knowledge),
+        "at": _now(),
+    }
+    _maybe_select_trip_from_tool_response(userdata, response)
+    spoken = response.spoken()
+    if spoken:
+        match_callable_trip_by_text(userdata, spoken)
+
+
+def _maybe_select_trip_from_tool_response(userdata: dict, response: ToolResponse) -> None:
+    import re
+
+    for row in response.response_knowledge:
+        if row.startswith("trip_index:"):
+            try:
+                idx = int(row.split(":", 1)[1].strip())
+            except ValueError:
+                continue
+            trip = resolve_trip(userdata, trip_index=idx)
+            if trip:
+                set_target_trip(userdata, trip)
+            return
+    for row in response.follow_up_knowledge:
+        m = re.match(r"(?:Chuyến|Trip)\s+(\d+)", row.strip())
+        if not m:
+            continue
+        trip = resolve_trip(userdata, trip_index=int(m.group(1)))
+        if trip:
+            set_target_trip(userdata, trip)
+            return
+
+
+_STT_NAME_ALIASES = (
+    ("nextgen", "nexgen"),
+    ("nickand", "nexgen"),
+    ("nickandspeak", "nexgenspeak"),
+)
+
+
+def _name_match_key(text: str) -> str:
+    """Collapse STT variants (NextGen/Nick and Speak → NexGen Speak)."""
+    key = re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+    for src, dst in _STT_NAME_ALIASES:
+        key = key.replace(src, dst)
+    return key
+
+
+def _customer_name_in_text(customer_name: str, text: str) -> bool:
+    name = (customer_name or "").strip()
+    if len(name) < 3:
+        return False
+    haystack = (text or "").lower()
+    if name.lower() in haystack:
+        return True
+    name_key = _name_match_key(name)
+    text_key = _name_match_key(text)
+    if not name_key or not text_key:
+        return False
+    return name_key in text_key or text_key in name_key
+
+
+def _extract_call_target_name(text: str) -> str:
+    """Name fragment after 'gọi cho' / 'call' when driver names a customer."""
+    lowered = (text or "").lower()
+    for sep in ("gọi cho", "call "):
+        if sep not in lowered:
+            continue
+        rest = lowered.split(sep, 1)[1].strip()
+        for suffix in (" giúp tôi", " giúp", " please", " for me"):
+            if rest.endswith(suffix):
+                rest = rest[: -len(suffix)].strip()
+        rest = rest.strip(".,!?… ")
+        if rest and not rest.startswith("tôi") and rest not in {"ai", "ai đó", "khách"}:
+            return rest
+    return ""
+
+
+def match_trip_by_text(
+    userdata: dict,
+    text: str,
+    *,
+    callable_only: bool = False,
+) -> dict | None:
+    """Match trip from utterance by customer name, address, time, or index."""
+    from app.voicebot.processors.trip_target import resolve_and_select_trip
+
+    call_target = _extract_call_target_name(text)
+    for blob in (call_target, text):
+        if not (blob or "").strip():
+            continue
+        matched = resolve_and_select_trip(userdata, blob, callable_only=callable_only)
+        if matched:
+            return matched
+    return None
+
+
+def match_callable_trip_by_text(userdata: dict, text: str) -> dict | None:
+    """If spoken text identifies one callable trip, remember it as target."""
+    return match_trip_by_text(userdata, text, callable_only=True)
+
+
+_NO_XML_SPOKEN_HINT_EN = (
+    "Reply in one short natural sentence. Do NOT read XML tags, ResponseTemplate, "
+    "ResponseRule, ActionKnowledge, or tool syntax aloud. Use tools for actions."
+)
+_NO_XML_SPOKEN_HINT_VI = (
+    "Trả lời một câu ngắn tự nhiên. KHÔNG đọc thẻ XML, ResponseTemplate, "
+    "ResponseRule, ActionKnowledge hay cú pháp tool. Muốn hành động thì gọi tool."
+)
+
+
+def get_last_tool_response_hint(userdata: dict, lang: str = "vi") -> str:
+    last = userdata.get("context", {}).get("_last_tool_response")
+    if not last:
+        return ""
+    spoken = (last.get("spoken") or "").strip()
+    if not spoken and last.get("template"):
+        spoken = ToolResponse.spoken_from_template(last["template"])
+    if not spoken:
+        return ""
+    tool = last.get("tool") or "tool"
+    follow_up = last.get("follow_up") or []
+    action = last.get("action") or []
+    if lang == "en":
+        lines = [
+            f"\n\nLAST TOOL ({tool}) — driver already heard: {spoken}",
+            _NO_XML_SPOKEN_HINT_EN,
+        ]
+        if follow_up:
+            lines.append("Follow-up facts: " + "; ".join(follow_up[:6]))
+        if action:
+            lines.append("Actions (call tools, do not read aloud): " + "; ".join(action[:4]))
+        return "\n".join(lines)
+    lines = [
+        f"\n\nTOOL GẦN NHẤT ({tool}) — tài xế đã nghe: {spoken}",
+        _NO_XML_SPOKEN_HINT_VI,
+    ]
+    if follow_up:
+        lines.append("Follow-up: " + "; ".join(follow_up[:6]))
+    if action:
+        lines.append("Hành động (gọi tool, không đọc to): " + "; ".join(action[:4]))
+    return "\n".join(lines)
+
+
 def set_pending_refresh(userdata: dict, topic: str, args: dict | None = None) -> None:
-    """Remembers which cached-data topic a driver was just asked 'want the
-    latest?' about — a single slot, like set_last_nudge_trip below. If the
-    driver asks about a second topic before confirming the first, the new
-    topic simply overwrites it: a bare "yes" naturally answers whichever
-    question was asked most recently, not some earlier one."""
+    """Remembers which cached topic to re-fetch if the driver asks for latest
+    data — a single slot, like set_last_nudge_trip below. A later cache-read
+    overwrites it, so "làm mới" / "get the latest" applies to the last answer."""
     userdata.setdefault("context", {})["_pending_refresh"] = {
         "topic": topic,
         "args": args or {},
@@ -110,12 +338,21 @@ def get(userdata: dict, key: str, default: Any = None) -> Any:
     return userdata.get("context", {}).get(key, default)
 
 
+def _as_trip(value: Any) -> dict | None:
+    """Prefetch stores current_trip/active_trip as explicit None, not missing."""
+    return value if isinstance(value, dict) else None
+
+
 def set_context(userdata: dict, key: str, value: Any) -> None:
     userdata.setdefault("context", {})[key] = value
 
 
+def has_prefetched_context(userdata: dict) -> bool:
+    return bool(userdata.get("context", {}).get("fetched_at"))
+
+
 def get_current_trip(userdata: dict) -> dict | None:
-    return get(userdata, "current_trip")
+    return _as_trip(get(userdata, "current_trip"))
 
 
 def get_current_location(userdata: dict) -> dict | None:
@@ -175,14 +412,75 @@ def set_upcoming_trips(userdata: dict, trips: list[dict]) -> None:
     userdata.setdefault("context", {})["upcoming_trips"] = trips
 
 
-def resolve_trip(userdata: dict, trip_index: int | None = None) -> dict | None:
-    """Current trip, or trip by schedule index (1-based), or nearest upcoming."""
+def set_target_trip(userdata: dict, trip: dict | None) -> None:
+    """Remember which schedule trip the conversation is focused on (resolved target)."""
+    ctx = userdata.setdefault("context", {})
+    tid = (trip or {}).get("trip_id")
+    if tid:
+        ctx["_target_trip_id"] = tid
+        ctx.pop("_selected_trip_id", None)  # legacy key from before rename
+    else:
+        ctx.pop("_target_trip_id", None)
+        ctx.pop("_selected_trip_id", None)
+
+
+def get_target_trip(userdata: dict) -> dict | None:
+    ctx = userdata.get("context", {})
+    tid = ctx.get("_target_trip_id")
+    if not tid:
+        tid = ctx.pop("_selected_trip_id", None)
+        if tid:
+            ctx["_target_trip_id"] = tid
+    if not tid:
+        return None
+    for t in get_schedule_trips(userdata):
+        if t.get("trip_id") == tid:
+            return t
+    return None
+
+
+def get_target_trip_index(userdata: dict) -> int | None:
+    """1-based index in full schedule (current first, then upcoming)."""
+    target = get_target_trip(userdata)
+    if not target:
+        return None
+    tid = target.get("trip_id")
+    for i, t in enumerate(get_schedule_trips(userdata), 1):
+        if t.get("trip_id") == tid:
+            return i
+    return None
+
+
+# Legacy aliases — remove after one release if nothing external imports these.
+set_selected_trip = set_target_trip
+get_selected_trip = get_target_trip
+get_selected_trip_index = get_target_trip_index
+
+
+def resolve_trip(
+    userdata: dict,
+    trip_index: int | None = None,
+    *,
+    utterance: str = "",
+) -> dict | None:
+    """Current trip, explicit index, utterance match, target trip, or nearest upcoming."""
+    if utterance.strip():
+        matched = match_trip_by_text(userdata, utterance, callable_only=False)
+        if matched:
+            return matched
+
     if trip_index is not None:
         schedule = get_schedule_trips(userdata)
         idx = int(trip_index) - 1
         if 0 <= idx < len(schedule):
-            return schedule[idx]
+            trip = schedule[idx]
+            set_target_trip(userdata, trip)
+            return trip
         return None
+
+    target = get_target_trip(userdata)
+    if target:
+        return target
 
     current = get_current_trip(userdata)
     if current:
@@ -190,6 +488,68 @@ def resolve_trip(userdata: dict, trip_index: int | None = None) -> dict | None:
 
     schedule = get_schedule_trips(userdata)
     return schedule[0] if schedule else None
+
+
+def resolve_customer_trip(
+    userdata: dict,
+    raw_arguments: dict | None = None,
+) -> dict | None:
+    """Trip for customer-facing tools — index, last utterance, target, current, nearest."""
+    args = raw_arguments or {}
+    trip_index = args.get("trip_index")
+    utterance = get_last_driver_utterance(userdata) or ""
+    return resolve_trip(userdata, trip_index, utterance=utterance)
+
+
+def match_trip_in_subset(userdata: dict, text: str, trips: list[dict]) -> dict | None:
+    """Match utterance to one trip within a filtered list (pending offers, callable, …)."""
+    if not (text or "").strip() or not trips:
+        return None
+    allowed_ids = {t.get("trip_id") for t in trips}
+    schedule = get_schedule_trips(userdata)
+    id_to_index = {t.get("trip_id"): i + 1 for i, t in enumerate(schedule)}
+    from app.voicebot.processors.trip_target import score_trip
+
+    scored = []
+    for trip in trips:
+        idx = id_to_index.get(trip.get("trip_id"), 0)
+        row = score_trip(trip, text, schedule_index=idx)
+        if row.score > 0:
+            scored.append(row)
+    if not scored:
+        return None
+    scored.sort(key=lambda r: (-r.score, r.schedule_index))
+    best = scored[0]
+    if best.score < 28:
+        return None
+    if len(scored) == 1 or best.score - scored[1].score >= 6:
+        set_target_trip(userdata, best.trip)
+        return best.trip
+    return None
+
+
+def resolve_trip_from_subset(
+    userdata: dict,
+    trips: list[dict],
+    raw_arguments: dict | None = None,
+) -> dict | None:
+    """Pick one trip from a filtered list by index or last driver utterance."""
+    if not trips:
+        return None
+    if len(trips) == 1:
+        set_target_trip(userdata, trips[0])
+        return trips[0]
+    args = raw_arguments or {}
+    trip_index = args.get("trip_index")
+    if trip_index is not None:
+        idx = int(trip_index) - 1
+        if 0 <= idx < len(trips):
+            t = trips[idx]
+            set_target_trip(userdata, t)
+            return t
+        return None
+    utterance = get_last_driver_utterance(userdata) or ""
+    return match_trip_in_subset(userdata, utterance, trips)
 
 
 def get_schedule_trips(userdata: dict) -> list[dict]:
@@ -225,6 +585,90 @@ def get_callable_trips(userdata: dict) -> list[dict]:
     ]
 
 
+def resolve_call_target(
+    userdata: dict,
+    *,
+    trip_index: int | None = None,
+    nudge_trip_id: str = "",
+    utterance: str = "",
+    lang: str = "vi",
+) -> dict | str | None:
+    """Pick trip for call_customer — by index, nudge, target trip, or disambiguation."""
+    from app.voicebot.processors.trip_format import short_address
+
+    trips = get_callable_trips(userdata)
+    if not trips:
+        current = get_current_trip(userdata)
+        if not current:
+            return None
+        trips = [current]
+
+    if len(trips) == 1:
+        set_target_trip(userdata, trips[0])
+        return trips[0]
+
+    if trip_index is not None:
+        idx = int(trip_index) - 1
+        if idx < 0 or idx >= len(trips):
+            if lang == "en":
+                return f"You only have {len(trips)} trip(s). Please choose 1 to {len(trips)}."
+            return f"Bạn chỉ có {len(trips)} chuyến. Vui lòng chọn từ 1 đến {len(trips)}."
+        target = trips[idx]
+        set_target_trip(userdata, target)
+        return target
+
+    if utterance.strip():
+        matched = match_callable_trip_by_text(userdata, utterance)
+        if matched:
+            sid = matched.get("trip_id")
+            for t in trips:
+                if t.get("trip_id") == sid:
+                    return t
+
+    if nudge_trip_id and any(t.get("trip_id") == nudge_trip_id for t in trips):
+        target = next(t for t in trips if t.get("trip_id") == nudge_trip_id)
+        set_target_trip(userdata, target)
+        return target
+
+    target = get_target_trip(userdata)
+    if target:
+        sid = target.get("trip_id")
+        for t in trips:
+            if t.get("trip_id") == sid:
+                return t
+        if target.get("customer_phone"):
+            return target
+
+    last = userdata.get("context", {}).get("_last_tool_response") or {}
+    for blob in (last.get("spoken") or "", * (last.get("follow_up") or [])):
+        matched = match_callable_trip_by_text(userdata, blob)
+        if matched:
+            sid = matched.get("trip_id")
+            for t in trips:
+                if t.get("trip_id") == sid:
+                    return t
+
+    if lang == "en":
+        lines = [
+            f"{i}. {t.get('customer_name') or 'unnamed customer'} (pickup {short_address(t.get('pickup_address', ''), 30)})"
+            for i, t in enumerate(trips, 1)
+        ]
+        return (
+            "You have multiple trips right now — which customer would you like to call: "
+            + "; ".join(lines)
+            + "? Tell me the number or the customer's name."
+        )
+    lines = [
+        f"{i}. khách {t.get('customer_name') or 'không rõ tên'} (đón {short_address(t.get('pickup_address', ''), 30)})"
+        for i, t in enumerate(trips, 1)
+    ]
+    return (
+        "Bạn đang có nhiều chuyến, muốn gọi cho khách nào: "
+        + "; ".join(lines)
+        + "? Bạn nói số thứ tự hoặc tên khách giúp em."
+    )
+
+
 def build_context_hint(userdata: dict, lang: str = "vi") -> str:
     """Short hint injected into agent instructions after prefetch."""
     schedule = get_schedule_trips(userdata)
@@ -238,6 +682,13 @@ def build_context_hint(userdata: dict, lang: str = "vi") -> str:
             parts.append(f"{len(schedule)} scheduled trip(s) loaded")
         if earnings.get("total_earnings"):
             parts.append("today's earnings loaded")
+        target_idx = get_target_trip_index(userdata)
+        target = get_target_trip(userdata)
+        if target_idx and target:
+            name = target.get("customer_name") or "customer"
+            parts.append(
+                f"target trip #{target_idx} ({name}) — follow-ups apply to this trip unless driver switches"
+            )
         if not parts:
             return ""
         return (
@@ -252,6 +703,13 @@ def build_context_hint(userdata: dict, lang: str = "vi") -> str:
         parts.append(f"{len(schedule)} chuyến trong lịch")
     if earnings.get("total_earnings") is not None:
         parts.append("thu nhập hôm nay")
+    target_idx = get_target_trip_index(userdata)
+    target = get_target_trip(userdata)
+    if target_idx and target:
+        name = target.get("customer_name") or "khách"
+        parts.append(
+            f"chuyến đích số {target_idx} ({name}) — câu hỏi tiếp theo áp dụng chuyến này trừ khi tài xế đổi chuyến"
+        )
     if not parts:
         return ""
     return (
@@ -262,7 +720,7 @@ def build_context_hint(userdata: dict, lang: str = "vi") -> str:
 
 
 def get_active_customer_trip(userdata: dict) -> dict | None:
-    return get(userdata, "active_trip")
+    return _as_trip(get(userdata, "active_trip"))
 
 
 def add_customer_trip(userdata: dict, trip: dict) -> None:
@@ -289,7 +747,8 @@ def resolve_driver_trip(userdata: dict) -> dict | None:
 
 def patch_trip_by_id(userdata: dict, trip_id: str, **fields: Any) -> None:
     ctx = userdata.setdefault("context", {})
-    if ctx.get("current_trip", {}).get("trip_id") == trip_id:
+    current = _as_trip(ctx.get("current_trip"))
+    if current and current.get("trip_id") == trip_id:
         patch_current_trip(userdata, **fields)
         return
     for key in ("upcoming_trips", "trips"):
@@ -297,14 +756,26 @@ def patch_trip_by_id(userdata: dict, trip_id: str, **fields: Any) -> None:
         if not isinstance(items, list):
             continue
         ctx[key] = [
-            {**t, **fields} if t.get("trip_id") == trip_id else t
+            {**t, **fields} if isinstance(t, dict) and t.get("trip_id") == trip_id else t
             for t in items
         ]
-    if ctx.get("active_trip", {}).get("trip_id") == trip_id:
-        ctx["active_trip"] = {**ctx["active_trip"], **fields}
+    active = _as_trip(ctx.get("active_trip"))
+    if active and active.get("trip_id") == trip_id:
+        ctx["active_trip"] = {**active, **fields}
     outbound = userdata.get("trip")
     if isinstance(outbound, dict) and outbound.get("trip_id") == trip_id:
         outbound.update(fields)
+
+    # trip-service's current_trip is the in-progress trip (confirmed /
+    # arrived_pickup / picked_up). After confirm, promote so later tools in
+    # this session don't still see current_trip=None until the next prefetch.
+    if fields.get("status") in CALLABLE_TRIP_STATUSES and not get_current_trip(userdata):
+        for t in get_schedule_trips(userdata):
+            if t.get("trip_id") == trip_id:
+                set_current_trip(userdata, t)
+                return
+        if isinstance(outbound, dict) and outbound.get("trip_id") == trip_id:
+            set_current_trip(userdata, outbound)
 
 
 def set_last_call(userdata: dict, call_id: str, **fields: Any) -> None:
@@ -331,9 +802,61 @@ def pop_last_nudge_trip(userdata: dict) -> str:
     return ctx.pop("_last_nudge_trip_id", "") or ""
 
 
+def set_pending_driver_action(
+    userdata: dict,
+    intent: str,
+    args: dict,
+    *,
+    source: str = "",
+) -> None:
+    userdata.setdefault("context", {})["_pending_driver_action"] = {
+        "intent": intent,
+        "args": dict(args),
+        "source": (source or "")[:200],
+        "at": _now(),
+    }
+
+
+def get_pending_driver_action(userdata: dict) -> dict | None:
+    pending = userdata.get("context", {}).get("_pending_driver_action")
+    return pending if isinstance(pending, dict) else None
+
+
+def pop_pending_driver_action(userdata: dict) -> dict | None:
+    ctx = userdata.setdefault("context", {})
+    pending = ctx.pop("_pending_driver_action", None)
+    return pending if isinstance(pending, dict) else None
+
+
+def clear_pending_driver_action(userdata: dict) -> None:
+    userdata.get("context", {}).pop("_pending_driver_action", None)
+
+
+def set_last_driver_utterance(userdata: dict, text: str) -> None:
+    clean = (text or "").strip()
+    if clean:
+        userdata.setdefault("context", {})["_last_driver_utterance"] = clean
+
+
+def get_last_driver_utterance(userdata: dict) -> str:
+    return userdata.get("context", {}).get("_last_driver_utterance") or ""
+
+
+def set_pending_call_utterance(userdata: dict, text: str) -> None:
+    """Driver's latest call-customer phrase — consumed by call_customer tool."""
+    ctx = userdata.setdefault("context", {})
+    if text.strip():
+        ctx["_pending_call_utterance"] = text.strip()
+
+
+def pop_pending_call_utterance(userdata: dict) -> str:
+    ctx = userdata.setdefault("context", {})
+    return ctx.pop("_pending_call_utterance", "") or ""
+
+
 def patch_current_trip(userdata: dict, **fields: Any) -> None:
     ctx = userdata.setdefault("context", {})
-    trip = ctx.get("current_trip")
+    trip = _as_trip(ctx.get("current_trip"))
     if not trip:
         return
     trip.update(fields)
@@ -350,10 +873,15 @@ def remove_trip_from_lists(userdata: dict, trip_id: str) -> None:
     for key in ("upcoming_trips", "trips"):
         items = ctx.get(key)
         if isinstance(items, list):
-            ctx[key] = [t for t in items if t.get("trip_id") != trip_id]
-    if ctx.get("current_trip", {}).get("trip_id") == trip_id:
+            ctx[key] = [
+                t for t in items
+                if not (isinstance(t, dict) and t.get("trip_id") == trip_id)
+            ]
+    current = _as_trip(ctx.get("current_trip"))
+    if current and current.get("trip_id") == trip_id:
         ctx["current_trip"] = None
-    if ctx.get("active_trip", {}).get("trip_id") == trip_id:
+    active = _as_trip(ctx.get("active_trip"))
+    if active and active.get("trip_id") == trip_id:
         ctx["active_trip"] = None
 
 

@@ -102,7 +102,7 @@ def extra_stops_suffix(extra: int, lang: str) -> str:
         return ""
     if lang == "en":
         return f" You have {extra} more stop{'s' if extra != 1 else ''} waiting after that."
-    return f" Anh/chị còn {extra} điểm dừng khác đang chờ sau đó."
+    return f" Bạn còn {extra} điểm dừng khác đang chờ sau đó."
 
 
 # Mirrors trip-service's config.proximityAlertMeters default (1km) — only
@@ -118,7 +118,7 @@ def build_next_stop_suggestion(userdata: dict, lang: str = "vi", exclude_trip_id
     # module's docstring, including the on-demand tool.
     if not context_store.get_driver_settings(userdata).get("auto_suggest_next_stop"):
         return (
-            "Tính năng tự động gợi ý điểm dừng tiếp theo hiện đang tắt. Anh/chị có thể bật trong mục Cài đặt của ứng dụng."
+            "Tính năng tự động gợi ý điểm dừng tiếp theo hiện đang tắt. Bạn có thể bật trong mục Cài đặt của ứng dụng."
             if lang != "en" else
             "Auto next-stop suggestion is currently turned off. You can enable it in the app's Settings."
         )
@@ -127,12 +127,12 @@ def build_next_stop_suggestion(userdata: dict, lang: str = "vi", exclude_trip_id
     if not candidates:
         if exclude_trip_id:
             return (
-                "Sau điểm này, anh/chị không còn điểm đón hay trả khách nào khác đang chờ."
+                "Sau điểm này, bạn không còn điểm đón hay trả khách nào khác đang chờ."
                 if lang != "en" else
                 "After this one, you don't have any other pending pickup or dropoff waiting."
             )
         return (
-            "Hiện anh/chị không có điểm đón hay trả khách nào đang chờ."
+            "Hiện bạn không có điểm đón hay trả khách nào đang chờ."
             if lang != "en" else
             "You don't have any pending pickup or dropoff right now."
         )
@@ -158,7 +158,7 @@ def build_next_stop_suggestion(userdata: dict, lang: str = "vi", exclude_trip_id
         msg += (
             " Would you like me to call and let them know to head out?"
             if lang == "en"
-            else " Anh/chị có muốn tôi gọi báo khách di chuyển ra điểm đón không?"
+            else " Bạn có muốn tôi gọi báo khách di chuyển ra điểm đón không?"
         )
         # So a driver's "yes, gọi đi" resolves straight to THIS trip (the
         # announced next stop) instead of re-asking which customer — mirrors

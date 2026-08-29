@@ -10,10 +10,12 @@ import { cacheSet, driverLocationKey, driverLiveLocationKey } from '../cache/red
 import { distanceMeters, type LatLng } from '../utils/geo';
 import { notifyDriver, notifyCustomer } from '../services/notify';
 import { maybeNotifyCustomerOfProximity, maybeNotifyCustomerOfDropoffProximity } from '../services/proximityService';
-import { reachDriver } from '../services/driverReachService';
+import { pushDriverScheduleUpdated, reachDriver } from '../services/driverReachService';
 import * as driverSettingsService from '../services/driverSettingsService';
+import { getLogger } from '../services/logger';
 
 const router = Router();
+const log = getLogger('trips');
 
 // Precise coordinates the client already resolved (Goong Place Detail after
 // an autocomplete pick, or the customer's own GPS fix) — when present,
@@ -136,10 +138,24 @@ router.post('/', async (req: Request, res: Response) => {
     await driverContextService.invalidateTripParties(notified ?? trip);
     // Real-time nudge to the driver the customer picked — driver-app's
     // useDispatchSocket invalidates its driverContext query on 'trip_offer'.
-    // notify() itself is a safe no-op if the driver has no live connection
-    // (see notify/types.ts) — the 5s poll remains the fallback either way.
+    // notify() itself is a safe no-op if the driver has no live connection.
     const finalTrip = notified ?? trip;
-    if (finalTrip.driver_phone) await notifyDriver(finalTrip.driver_phone, 'trip_offer', { trip_id: finalTrip.trip_id });
+    if (finalTrip.driver_phone) {
+      await notifyDriver(finalTrip.driver_phone, 'trip_offer', { trip_id: finalTrip.trip_id });
+      // App WS is the banner. This LiveKit nudge reloads the in-call
+      // context_store snapshot and speaks the offer — without it a session
+      // that prefetched 3 trips would keep answering "3" after a 4th booked.
+      reachDriver(finalTrip.driver_phone, 'new_trip_offer', {
+        related_trip_id: finalTrip.trip_id,
+        customer_name: finalTrip.customer_name ?? '',
+        pickup_address: finalTrip.pickup_address ?? '',
+      }).catch((err) => {
+        log.warning('new-trip voice nudge failed', {
+          trip: finalTrip.trip_id.slice(0, 8),
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
     return res.status(201).json(finalTrip);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -235,19 +251,25 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     }
     const updated = await tripService.updateStatus(req.params.tripId, status);
     await driverContextService.invalidateTripParties(updated);
-    // Real-time nudge back to the customer once the driver they picked has
-    // answered — accept or reject. Same notify() no-op-if-offline semantics
-    // as the trip_offer push on POST / (see notify/types.ts); customer-app's
-    // 10s poll (useTripStatus.ts) is still the fallback either way.
-    if (updated && (status === 'confirmed' || status === 'rejected')) {
+    // Push every status change so the apps refetch from the socket instead
+    // of a GET interval. notify() is a no-op if nobody is connected.
+    // trip_confirmed / trip_rejected keep their own names because the
+    // customer banner keys off those two; everything else is trip_updated.
+    if (updated) {
       const customerId = updated.id_account || updated.customer_phone;
-      if (customerId) await notifyCustomer(customerId, status === 'confirmed' ? 'trip_confirmed' : 'trip_rejected', { trip_id: updated.trip_id });
+      if (customerId) {
+        if (status === 'confirmed' || status === 'rejected') {
+          await notifyCustomer(customerId, status === 'confirmed' ? 'trip_confirmed' : 'trip_rejected', { trip_id: updated.trip_id });
+        } else {
+          await notifyCustomer(customerId, 'trip_updated', { trip_id: updated.trip_id, status });
+        }
+      }
     }
     // Same event name/shape as the customer-facing one above but to the
     // DRIVER's own socket — this is what driver-app's useDispatchSocket.ts
     // listens for to immediately push a fresh GPS fix (POST
     // /drivers/me/location/live) right as a trip lands in the routing-active
-    // set, rather than waiting on useLiveDriverLocation's own ~30s cadence.
+    // set, rather than waiting on useLiveDriverLocation's own ~10min cadence.
     // Fires for both the driver-app "Accept" button and voice-agent's
     // confirm_trip tool, since both PATCH through this exact handler.
     if (updated && status === 'confirmed' && updated.driver_phone) {
@@ -256,22 +278,25 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
     // arrived_pickup/picked_up/completed all already carry a fresh,
     // just-validated GPS fix (see the arrival-radius check above) — cache it
     // as this driver's live location right now (skips waiting on the next
-    // ~30s useLiveDriverLocation tick) and tell the driver their stop order
-    // needs a refetch. invalidateTripParties above already cleared the
-    // cached route, and completing/progressing a stop always changes which
-    // points are still in it: dropped entirely once `completed`, pickup ->
-    // dropoff once `picked_up` — see routeOptimizationService.ts's
-    // candidatesFromTrips, which reads each trip's CURRENT status to decide
-    // what it still contributes, so a completed/progressed trip is excluded
-    // on the very next rebuild without any separate "visited" list to
-    // maintain — status IS that list.
+    // ~10min useLiveDriverLocation tick). invalidateTripParties above
+    // already cleared the cached route, and completing/progressing a stop
+    // always changes which points are still in it: dropped entirely once
+    // `completed`, pickup -> dropoff once `picked_up` — see
+    // routeOptimizationService.ts's candidatesFromTrips, which reads each
+    // trip's CURRENT status to decide what it still contributes, so a
+    // completed/progressed trip is excluded on the very next rebuild
+    // without any separate "visited" list to maintain — status IS that list.
     if (updated?.driver_phone && (status === 'arrived_pickup' || status === 'picked_up' || status === 'completed')) {
       const driverLat = Number(req.body.lat);
       const driverLng = Number(req.body.lng);
       if (Number.isFinite(driverLat) && Number.isFinite(driverLng)) {
         await cacheSet(driverLiveLocationKey(updated.driver_phone), { lat: driverLat, lng: driverLng, updated_at: new Date().toISOString() }, 1200);
       }
-      await notifyDriver(updated.driver_phone, 'schedule_updated', {});
+    }
+    // Any PATCH that has a driver (cancel, reject, no_show, progress, …)
+    // changes their dashboard — push so the app refetches immediately.
+    if (updated?.driver_phone) {
+      await pushDriverScheduleUpdated(updated.driver_phone);
     }
     // Proactive "what should I do next" nudge — fires right when the driver
     // just picked up (status=picked_up) or just dropped off (status=
@@ -290,7 +315,10 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
         if (!settings?.auto_suggest_next_stop) return undefined;
         return reachDriver(driverPhone, 'suggest_next_stop', {});
       }).catch(err => {
-        console.warn(`[trips] next-stop nudge failed for trip=${updated.trip_id}:`, err);
+        log.warning('next-stop nudge failed', {
+          trip: updated.trip_id.slice(0, 8),
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
     }
     return res.json(updated);
@@ -350,7 +378,7 @@ router.post('/:tripId/confirm-with-customer', async (req: Request, res: Response
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
     const message = req.body.message || 'Tài xế đã xác nhận chuyến đi và sẽ đến đón đúng giờ.';
-    console.info(`[sms-stub] to=${trip.customer_phone} message=${message}`);
+    log.info('sms stub sent', { trip: trip.trip_id.slice(0, 8) });
     return res.json({ status: 'sent', method: req.body.method || 'sms', message });
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -433,7 +461,19 @@ router.post('/:tripId/reassign-driver', async (req: Request, res: Response) => {
 
     const updated = await tripService.updateStatus(req.params.tripId, 'notified', { driver_phone: driverPhone });
     await driverContextService.invalidateTripParties(updated ?? trip);
-    if (updated) await notifyDriver(driverPhone, 'trip_offer', { trip_id: updated.trip_id });
+    if (updated) {
+      await notifyDriver(driverPhone, 'trip_offer', { trip_id: updated.trip_id });
+      reachDriver(driverPhone, 'new_trip_offer', {
+        related_trip_id: updated.trip_id,
+        customer_name: updated.customer_name ?? '',
+        pickup_address: updated.pickup_address ?? '',
+      }).catch((err) => {
+        log.warning('new-trip voice nudge failed', {
+          trip: updated.trip_id.slice(0, 8),
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -454,6 +494,13 @@ router.post('/:tripId/dispatch', async (req: Request, res: Response) => {
     const roomName = await dispatchService.dispatchCall({ ...trip, driver_phone: driverPhone } as TripData);
     const updated = await tripService.updateStatus(req.params.tripId, 'calling', { driver_phone: driverPhone, room_name: roomName });
     await driverContextService.invalidateTripParties(updated);
+    if (updated?.driver_phone) {
+      await pushDriverScheduleUpdated(updated.driver_phone);
+    }
+    const customerId = updated?.id_account || updated?.customer_phone || trip.id_account || trip.customer_phone;
+    if (customerId) {
+      await notifyCustomer(customerId, 'trip_updated', { trip_id: trip.trip_id, status: 'calling' });
+    }
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ detail: String(err) });

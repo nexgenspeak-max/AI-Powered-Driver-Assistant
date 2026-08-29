@@ -121,7 +121,7 @@ export function ActiveTripCard({
           </AppText>
         </View>
 
-        <YStack flex={1} gap={2}>
+        <YStack flex={1} gap="$1">
           <AppText variant="title" numberOfLines={1}>
             {trip.customer_name}
           </AppText>

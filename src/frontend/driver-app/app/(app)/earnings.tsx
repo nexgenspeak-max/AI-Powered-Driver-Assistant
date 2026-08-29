@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TouchableOpacity } from 'react-native'
 import { Screen } from '../../src/components/Screen'
 import { AppText } from '../../src/components/AppText'
 import { Skeleton } from '../../src/components/Skeleton'
@@ -27,9 +28,9 @@ export default function EarningsScreen() {
     <Screen scroll>
       <AppText variant="h1">Thu nhập</AppText>
 
-      {contextLoading ? (
+      {contextLoading && !context ? (
         <Skeleton height={120} radius={24} />
-      ) : contextError ? (
+      ) : contextError && !context ? (
         <ErrorRetry message="Không thể tải dữ liệu thu nhập hôm nay." onRetry={refetchContext} />
       ) : context ? (
         <TodayEarningsCard earnings={context.today_earnings} />
@@ -44,15 +45,23 @@ export default function EarningsScreen() {
         onRetry={refetchSummary}
       />
 
-      {!contextLoading && !contextError && context && <BonusList bonuses={context.active_bonuses} />}
+      {context && !contextError && <BonusList bonuses={context.active_bonuses} />}
     </Screen>
   )
 }
 
 function ErrorRetry({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <AppText variant="body" color="$textSecondary" textAlign="center" paddingVertical="$4" onPress={onRetry}>
-      {message} Nhấn để thử lại.
-    </AppText>
+    <TouchableOpacity
+      onPress={onRetry}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${message} Nhấn để thử lại.`}
+      style={{ minHeight: 44, justifyContent: 'center' }}
+    >
+      <AppText variant="body" color="$textSecondary" textAlign="center" paddingVertical="$4">
+        {message} Nhấn để thử lại.
+      </AppText>
+    </TouchableOpacity>
   )
 }

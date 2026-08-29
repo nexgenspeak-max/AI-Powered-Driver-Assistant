@@ -41,7 +41,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
   const themeMode = useThemeStore(s => s.mode)
   const isLight = themeMode === 'light'
   const theme = useTheme()
-  const { chats, addUserMessage, addBotMessage } = useAssistantChatStore()
+  const { chats, addUserMessage, addBotMessage, upsertStreamingMessage } = useAssistantChatStore()
   const voice = useVoiceSessionStore()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -49,10 +49,9 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
   const scrollRef = useRef<ScrollView>(null)
   const insets = useSafeAreaInsets()
 
-  useEffect(() => subscribeVoiceMessages((text, from) => {
-    if (from === 'user') addUserMessage(text)
-    else addBotMessage(text)
-  }), [addUserMessage, addBotMessage])
+  useEffect(() => subscribeVoiceMessages((text, from, { isFinal, segmentId }) => {
+    upsertStreamingMessage(from === 'user' ? 'me' : 'bot', text, isFinal, segmentId)
+  }), [upsertStreamingMessage])
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true })
@@ -65,10 +64,15 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     }
     const text = msg
     setMsg('')
-    addUserMessage(text)
+    setError(null)
 
-    if (voice.status === 'connected' && (await voice.sendText(text))) {
-      return
+    if (voice.status === 'connected') {
+      upsertStreamingMessage('me', text, true)
+      if (await voice.sendText(text)) {
+        return
+      }
+    } else {
+      addUserMessage(text)
     }
 
     setStubLoading(true)

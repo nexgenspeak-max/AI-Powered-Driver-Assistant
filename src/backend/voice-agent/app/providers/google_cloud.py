@@ -27,9 +27,11 @@ GOOGLE_STT_MODELS = STT_V2_MODELS | frozenset({
     "medical_conversation",
 })
 
-# Models known to work with vi-VN in testing (model -> allowed locations).
+# Models known to work with vi-VN (model -> allowed locations).
+# chirp_3+vi-VN is GA only in us/eu — asia-southeast1 returns 403
+# ("no longer generally available").
 GOOGLE_STT_VI_VN_SUPPORT: dict[str, frozenset[str]] = {
-    "chirp_3": frozenset({"asia-southeast1", "us"}),
+    "chirp_3": frozenset({"us", "eu"}),
     "chirp_2": frozenset({"asia-southeast1", "us"}),
     "latest_long": frozenset({"global"}),
     "latest_short": frozenset({"global"}),
@@ -58,6 +60,8 @@ def resolve_google_stt_model(settings: Settings) -> str:
 
 
 def default_stt_location(model: str) -> str:
+    if model == "chirp_3":
+        return "us"
     if model in STT_V2_MODELS:
         return "asia-southeast1"
     return "global"
@@ -79,7 +83,7 @@ def validate_google_stt_config(model: str, languages: list[str], location: str) 
         if model == "telephony":
             logger.warning(
                 "Google STT | model=%s does not support vi-VN — "
-                "use chirp_3 + asia-southeast1 or latest_long + global",
+                "use chirp_2 + asia-southeast1, chirp_3 + us, or latest_long + global",
                 model,
             )
         return

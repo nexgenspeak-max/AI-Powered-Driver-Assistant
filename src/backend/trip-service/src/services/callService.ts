@@ -5,6 +5,9 @@ import {
 } from 'livekit-server-sdk';
 import { config } from '../config';
 import { cacheGet, cacheSet, driverLastCallKey } from '../cache/redis';
+import { bind, getLogger } from './logger';
+
+const log = getLogger('calls');
 
 // How long "tóm tắt cuộc gọi" stays answerable from cache after a call ends.
 // Was 1 hour — too short for a driver to still ask about a call from earlier
@@ -31,7 +34,7 @@ function resolveDialTo(customerPhone: string): [string, string | null] {
 
   const verified = config.twilioVerifiedTo ? normalizePhone(config.twilioVerifiedTo) : '';
   if (config.callForceVerifiedTo && verified && target !== verified) {
-    console.warn(`Twilio trial override: dialing ${verified} instead of customer ${target}`);
+    log.warning('Twilio trial override — dialing verified number instead of customer');
     return [verified, `Đang gọi số Twilio đã xác minh ${verified} (trên đơn ghi ${target}).`];
   }
   return [target, null];
@@ -57,7 +60,8 @@ async function dialCustomerViaLiveKit(
     playRingtone: true,
   });
 
-  console.log(`[calls] SIP customer dialed into room=${roomName} → ${dialTo}`);
+  bind({ room: roomName, conv: `${roomName}-${sipIdentity}` });
+  log.info('SIP participant dialed into room');
   return { callId: `${roomName}-${sipIdentity}`, sipIdentity };
 }
 
@@ -71,7 +75,8 @@ async function createBackgroundCallRoom(meta: Record<string, string>): Promise<s
 
   const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
   await roomService.createRoom({ name: roomName, metadata: JSON.stringify(meta) });
-  console.log(`[calls] background room created: ${roomName}`);
+  bind({ room: roomName });
+  log.info('background room created');
 
   return roomName;
 }
@@ -80,9 +85,12 @@ async function dispatchBackgroundAgent(roomName: string): Promise<void> {
   try {
     const agentDispatch = new AgentDispatchClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
     await agentDispatch.createDispatch(roomName, config.livekitAgentName);
-    console.log(`[calls] background agent dispatched | room=${roomName}`);
+    bind({ room: roomName });
+    log.info('background agent dispatched');
   } catch (err) {
-    console.warn(`[calls] background agent dispatch failed (non-fatal): ${err}`);
+    log.warning('background agent dispatch failed (non-fatal)', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

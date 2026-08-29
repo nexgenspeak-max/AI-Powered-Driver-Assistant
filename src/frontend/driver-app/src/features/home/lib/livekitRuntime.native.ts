@@ -1,19 +1,24 @@
 import { registerGlobals, AudioSession, AndroidAudioTypePresets } from '@livekit/react-native'
 
-// Must run once before any Room is created — sets up the WebRTC globals
-// (RTCPeerConnection, MediaStream, ...) that livekit-client expects.
-registerGlobals()
+let globalsRegistered = false
+
+function ensureLiveKitGlobals() {
+  if (globalsRegistered) return
+  // Must run once before any Room is created — sets up WebRTC globals.
+  registerGlobals()
+  globalsRegistered = true
+}
 
 export { Room, RoomEvent, Track, ConnectionState, ConnectionError, ConnectionErrorReason } from 'livekit-client'
 
 export async function startAudioSession() {
+  ensureLiveKitGlobals()
   // Force speaker output on both platforms — this is a hands-free driving
   // assistant, not a phone call held to the ear. Without this, iOS's default
   // audio routing for a `playAndRecord`/voice-chat session favors the
-  // earpiece, and the connecting-cue audio (AssistantChatPanel.tsx) and the
-  // AI's own voice once connected would play too quietly for a driver to
-  // notice. Must be called before `startAudioSession()` for the config to
-  // apply.
+  // earpiece, and the AI's voice once connected would play too quietly for a
+  // driver to notice. Must be called before `startAudioSession()` for the
+  // config to apply.
   await AudioSession.configureAudio({
     ios: { defaultOutput: 'speaker' },
     android: {

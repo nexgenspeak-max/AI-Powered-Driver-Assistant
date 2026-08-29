@@ -1,0 +1,250 @@
+---
+description: Web UI/UX standards (driver-web, customer-web, admin-panel) — WCAG 2.2 AA, MUI 8px grid, layout shells, a11y, verify
+globs: src/frontend/{driver-web,customer-web,admin-panel}/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Web UI standards (Vite + MUI)
+
+**Apps:** `driver-web`, `customer-web`, `admin-panel`.
+
+**NOT mobile Expo UI** — for that see `ui-mobile.mdc`. `driver-app` Expo web export is still mobile rules.
+
+**International bar:** WCAG 2.2 **Level AA**, Material Design 3 **8px grid**, Apple HIG **44×44px** touch, ISO 9241-210 usability.
+
+**Tokens per app:** `src/styles/palette.ts` + `src/styles/theme.ts`. Shared purple brand — consolidate later; until then **keep the three files in sync** when changing brand colors.
+
+**Verify before done:**
+
+```bash
+# driver-web / customer-web
+npm run typecheck && npm run build && npm run lint
+
+# admin-panel
+npm run build && npm run lint
+```
+
+---
+
+## 1. Breakpoints (all three apps)
+
+From `theme.ts`:
+
+| Key | min width | Device intent |
+|-----|-----------|---------------|
+| `xs` | 0 | Phone |
+| `sm` | 768px | Tablet / large phone |
+| `md` | 1024px | Desktop — sidebar/nav permanent |
+| `lg` | 1280px | Wide desktop |
+| `xl` | 1536px | Ultra-wide |
+
+**Test every UI change at 375px (xs) and 1024px (md).**
+
+Responsive pattern:
+
+```tsx
+sx={{
+  px: { xs: 3, sm: 4 },      // 24 → 32px page gutter
+  py: { xs: 3, sm: 4 },
+  gap: { xs: 2, sm: 3 },
+}}
+```
+
+---
+
+## 2. Spacing scale (8px grid — mandatory)
+
+MUI `sx` number **`n` = n × 8px**. Allowed values:
+
+| Unit | px | Use |
+|------|-----|-----|
+| 0.5 | 4 | Tight icon gap |
+| 1 | 8 | Inline spacing, between touch targets |
+| 1.5 | 12 | Compact rows, chat gutters |
+| 2 | 16 | Default `Stack spacing`, form fields |
+| 3 | 24 | Page gutter mobile, section padding |
+| 4 | 32 | Page gutter desktop, card padding |
+| 5 | 40 | Large section gap |
+| 6 | 48 | FAQ / marketing vertical rhythm |
+
+```tsx
+// ❌ BAD — off-grid
+<Stack spacing="17px" sx={{ mb: 22, px: 18 }}>
+
+// ✅ GOOD
+<Stack spacing={2} sx={{ mb: 3, px: { xs: 3, sm: 4 } }}>
+```
+
+**Viewport:** use `minHeight: '100dvh'` for full-screen shells (mobile browser chrome). Avoid `100vh` alone.
+
+**Content width:** `Container maxWidth="sm"` (prose/FAQ), `"md"` (dashboard content). Line length ~45–75 chars: `maxWidth: '65ch'` on long text.
+
+---
+
+## 3. Color tokens (`palette.ts`)
+
+| Token | Hex | Role |
+|-------|-----|------|
+| `darkest` | `#2a1448` | Deep purple, header gradient end |
+| `base` | `#401f68` | Brand purple dark |
+| `mid` | `#7c5b9c` | Secondary purple |
+| `light` | `#c3aee0` | Soft accent |
+| `pale` | `#f3effa` | Page background (`background.default`) |
+| `ink` | `#2b2630` | Primary text |
+| `gray` | `#8b8792` | Secondary text — **check contrast** on `pale` |
+| `border` | `#e6e1ee` | Dividers |
+
+MUI theme also sets `primary.main: '#6c8aff'` — **legacy blue accent**. New work: prefer `PALETTE.base` / extend theme rather than a third accent.
+
+```tsx
+// ❌ BAD
+<Box sx={{ color: '#1a1f36', bgcolor: '#f3effa', borderColor: '#e6e1ee' }}>
+
+// ✅ GOOD
+import { PALETTE } from '../../styles/palette'
+<Box sx={{ color: PALETTE.ink, bgcolor: PALETTE.pale, borderColor: PALETTE.border }}>
+```
+
+**Contrast (WCAG AA):** body text ≥ **4.5:1** on surface; large text (≥18px bold / ≥24px) ≥ **3:1**. Never convey state by color alone — add icon + text.
+
+**Dark mode:** if implemented, switch MUI `palette.mode` — do not leave orphaned CSS vars in `index.css` unused by components.
+
+---
+
+## 4. Typography
+
+Font: **Inter** (theme default). Use MUI `variant`:
+
+| Variant | Typical size | Use |
+|---------|--------------|-----|
+| `h4`–`h6` | 20–34px | Page / section titles |
+| `subtitle1` | 16px | Card headers |
+| `body1` | 16px | Default body (**preferred**) |
+| `body2` | 14px | Secondary body — minimum for long copy |
+| `caption` | 12px | Meta, timestamps — **minimum UI text** |
+
+```tsx
+// ❌ BAD
+<Typography sx={{ fontSize: 11, fontWeight: 800 }}>
+
+// ✅ GOOD
+<Typography variant="h5" component="h1">Chuyến đi</Typography>
+<Typography variant="body2" color="text.secondary">Cập nhật 5 phút trước</Typography>
+```
+
+Buttons: `textTransform: 'none'` (already in theme) — readable sentence-case labels.
+
+---
+
+## 5. Touch & pointer (44px rule)
+
+| Control | Min size |
+|---------|----------|
+| Primary `Button` | Default height ≥ 40px; full-width on mobile OK |
+| `IconButton` (nav, chat, voice) | **44×44 CSS px** — use `sx={{ width: 44, height: 44 }}` |
+| Adjacent targets | ≥ **8px** gap between |
+
+```tsx
+// ❌ BAD — sole nav control on mobile
+<IconButton size="small" onClick={...}>
+
+// ✅ GOOD
+<IconButton
+  aria-label="Mở menu điều hướng"
+  sx={{ width: 44, height: 44 }}
+>
+```
+
+**Keyboard:** never remove `:focus-visible` without custom focus ring. Tab order must reach all interactive elements.
+
+---
+
+## 6. Layout shells (pick one — do not invent)
+
+### driver-web / customer-web
+
+| Page type | Shell |
+|-----------|--------|
+| Auth (login/register) | Full-viewport gradient `Box` → centered `Card` `maxWidth={400}`, inner `p: 4` |
+| App home (assistant) | `Box minHeight 100dvh` → `HeaderComponent` + scene/chat overlay |
+| Content (dashboard, FAQ) | `HeaderComponent` + `Container maxWidth="md"` + standard `py` |
+| Info (about, terms) | `Container maxWidth="sm"` |
+
+Mobile nav: `MobileNavDrawer` below `md` — header `px: { xs: 1.5, sm: 3 }`.
+
+### admin-panel
+
+| Page type | Shell |
+|-----------|--------|
+| Login | Standalone full page (no sidebar) |
+| Authenticated | **`DashboardLayout`** — sidebar 240px @ `md+`, main `p: 3` |
+
+**One scroll owner per page** — avoid nested scroll traps. Sticky header: pad content below it.
+
+---
+
+## 7. Forms & feedback
+
+- Every field: visible `label` or `aria-label`; error via `FormHelperText` (theme restores margin stripped by CSS reset).
+- Loading: disable submit + `CircularProgress` — no silent 3s wait.
+- Errors: human-readable Vietnamese/English inline — not raw API JSON.
+- Destructive: `Dialog` confirm; destructive action is **not** the primary (filled) button.
+
+---
+
+## 8. Voice / assistant widgets
+
+- `VoiceSessionWidget`: show connecting / live / error state; same contrast + 44px touch rules.
+- Chat (`AssistantChatPanel`): **one bubble per utterance**; grow with streaming STT; lock on final transcript.
+- Session status visible without opening devtools.
+
+---
+
+## 9. Motion
+
+- `prefers-reduced-motion: reduce` → disable decorative animation (3D scene parallax, pulsing orbs).
+- Feedback transitions ≤ **300ms**; loading spinners excepted.
+
+---
+
+## 10. Anti-patterns (reject in review)
+
+- Raw hex in `src/features/**` (`#6c8aff`, `#0d1117`, …)
+- Off-grid spacing (`17px`, `22px`, `margin: 13`)
+- `IconButton size="small"` as only nav control on mobile
+- New authenticated admin page **outside** `DashboardLayout`
+- Tailwind classes — **not used in this repo**; do not add `className="..."` unless project migrates
+- Duplicating `palette.ts`/`theme.ts` differently across the three apps in one PR
+- `100vh` without `dvh` on mobile full-screen layouts
+- Removing focus outlines globally
+
+---
+
+## 11. Cross-platform alignment (web ↔ mobile)
+
+Same product, same brand:
+
+| Concern | Mobile (`driver-app`) | Web (`driver-web`) |
+|---------|----------------------|-------------------|
+| Primary brand | `$primary` `#8B5CF6` | `PALETTE.base` / purple gradient headers |
+| Min touch | 44pt | 44px |
+| Min caption | 12px (`AppText caption`) | 12px (`caption`) |
+| Screen gutter | 20px (`Screen`) | 24–32px (`px: 3–4`) |
+| Voice UX | Orb + waves | Widget + chat panel |
+
+When changing brand or assistant UX, update **both** unless task is explicitly single-platform.
+
+---
+
+## 12. Definition of done (web UI)
+
+- [ ] Spacing on 8px grid; page `px: { xs: 3, sm: 4 }`
+- [ ] Colors from `PALETTE` / theme — no new feature hex
+- [ ] Typography via MUI variants; nothing below 12px
+- [ ] Primary icon controls 44×44 on mobile width
+- [ ] Focus visible; form labels + errors
+- [ ] Responsive at 375px and 1024px
+- [ ] `typecheck` / `build` / `lint` pass for touched app
+- [ ] Voice/chat changes: status visible, one bubble per utterance
+
+See also: `ui-mobile.mdc`, `quality-standards.mdc`.

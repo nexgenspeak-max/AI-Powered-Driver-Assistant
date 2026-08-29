@@ -12,7 +12,7 @@
 | 2026-07-19 | Không dùng `alexandrius/liquid-glass-rn-skia` (khúc xạ ánh sáng thật qua shader) cho chrome dùng chung (tab bar/nút) | Kỹ thuật này chỉ hoạt động khi nền cũng được vẽ trong cùng 1 Skia Canvas (ảnh/gradient) — tab bar/nút của app nổi trên nội dung native tuỳ ý (ScrollView, text...), không thể áp dụng mà không chụp lại toàn màn hình mỗi frame (quá tốn); có thể cân nhắc cho 1 hiệu ứng trang trí độc lập sau này nơi đã tự vẽ nền bằng Skia |
 | 2026-07-19 | Dùng `react-native-gesture-handler` (`Gesture.Pan`/`Gesture.Tap` qua `useGlassPress`) thay vì touch-responder thuần (`onPressIn`/`onPressOut`) cho hiệu ứng co-giãn khi chạm | Khớp đúng kỹ thuật đã kiểm chứng của repo tham khảo; cho phép theo dõi vị trí chạm liên tục (`onUpdate`) để tính độ "kéo giãn" mượt hơn touch-responder |
 | 2026-07-19 | `Card` không có viền gradient (`GlassSheen withBorder={false}`), chỉ `Button`/`Badge`/`BackButton`/tab bar mới có | Viền gradient tuyến tính tạo điểm sáng nhọn ở góc bo nhỏ trên hình chữ nhật dẹt — xem [BUG-M005](tickets/BUG-M005.md); đồng thời khớp đúng spec gốc "Card không viền, chỉ shadow" |
-| 2026-07-19 | Tách `LiquidGlass.tsx` (265 dòng) thành thư mục `LiquidGlass/` (4 file theo trách nhiệm) + tách `GlassTabButton` khỏi route file `(app)/_layout.tsx` | Theo yêu cầu tổ chức lại code cho dễ maintain; dùng barrel `index.ts` để không phải sửa import ở nơi khác |
+| 2026-08-29 | Outbound gọi khách: câu mở `session.say` (không `generate_reply`); `post_answer_delay` 0.6s; không prefetch `custcall` | Người gọi nói trước; 3s+3s sleep chồng là dead air sau pickup. Chi tiết [BUG-M011](tickets/BUG-M011.md) |
 
 ## Cách mở rộng file này
 

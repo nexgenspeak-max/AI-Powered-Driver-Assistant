@@ -1,8 +1,7 @@
-import { ScrollView, Linking, TouchableOpacity } from 'react-native'
-import { View, YStack, XStack, Text } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Linking, TouchableOpacity } from 'react-native'
+import { View, YStack, XStack, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
+import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
 
@@ -20,70 +19,81 @@ const SAFETY_TIPS = [
 ]
 
 export default function SafetyScreen() {
-  const insets = useSafeAreaInsets()
+  const theme = useTheme()
 
   return (
-    <View flex={1} backgroundColor="$surface">
-      <BackButton />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
-      >
-        <AppText variant="h1">
-          Trung tâm an toàn
-        </AppText>
+    <Screen scroll backButton>
+      <AppText variant="h1">Trung tâm an toàn</AppText>
 
-        <Surface flat>
-          <YStack padding="$4" gap="$1">
-            <Text color="$textSecondary" fontSize={12} fontWeight="700" marginBottom="$2">
-              Gọi khẩn cấp
-            </Text>
-            {EMERGENCY_NUMBERS.map((item, i) => (
-              <View key={item.number}>
-                <TouchableRow
-                  label={item.label}
-                  value={item.number}
-                  onPress={() => Linking.openURL(`tel:${item.number}`)}
-                />
-                {i < EMERGENCY_NUMBERS.length - 1 && <View height={1} backgroundColor="$border" marginLeft={0} alignSelf="stretch" />}
-              </View>
-            ))}
-          </YStack>
-        </Surface>
+      <Surface flat>
+        <YStack padding="$4" gap="$1">
+          <AppText variant="label" color="$textSecondary" marginBottom="$2">
+            Gọi khẩn cấp
+          </AppText>
+          {EMERGENCY_NUMBERS.map((item, i) => (
+            <View key={item.number}>
+              <TouchableRow
+                label={item.label}
+                value={item.number}
+                iconColor={theme.danger.val}
+                onPress={() => Linking.openURL(`tel:${item.number}`)}
+              />
+              {i < EMERGENCY_NUMBERS.length - 1 && (
+                <View height={1} backgroundColor="$border" alignSelf="stretch" />
+              )}
+            </View>
+          ))}
+        </YStack>
+      </Surface>
 
-        <Surface flat>
-          <YStack padding="$4" gap="$3">
-            <Text color="$textSecondary" fontSize={12} fontWeight="700">
-              Mẹo an toàn khi lái xe
-            </Text>
-            {SAFETY_TIPS.map((tip, i) => (
-              <XStack key={i} gap="$2" alignItems="flex-start">
-                <Ionicons name="shield-checkmark-outline" size={16} color="#34d399" style={{ marginTop: 2 }} />
-                <Text color="$textPrimary" fontSize={13} lineHeight={19} flex={1}>
-                  {tip}
-                </Text>
-              </XStack>
-            ))}
-          </YStack>
-        </Surface>
-      </ScrollView>
-    </View>
+      <Surface flat>
+        <YStack padding="$4" gap="$3">
+          <AppText variant="label" color="$textSecondary">
+            Mẹo an toàn khi lái xe
+          </AppText>
+          {SAFETY_TIPS.map((tip, i) => (
+            <XStack key={i} gap="$2" alignItems="flex-start">
+              <Ionicons name="shield-checkmark-outline" size={16} color={theme.success.val} style={{ marginTop: 2 }} />
+              <AppText variant="body" flex={1}>
+                {tip}
+              </AppText>
+            </XStack>
+          ))}
+        </YStack>
+      </Surface>
+    </Screen>
   )
 }
 
-function TouchableRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+function TouchableRow({
+  label,
+  value,
+  iconColor,
+  onPress,
+}: {
+  label: string
+  value: string
+  iconColor: string
+  onPress: () => void
+}) {
   return (
-    <TouchableOpacity onPress={onPress} accessibilityRole="button">
-      <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3">
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Gọi ${label}, ${value}`}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+    >
+      <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3" minHeight={44}>
         <XStack alignItems="center" gap="$3" flex={1}>
-          <Ionicons name="call" size={18} color="#ef4444" />
-          <Text color="$textPrimary" fontWeight="500" flexShrink={1} numberOfLines={1}>
+          <Ionicons name="call" size={18} color={iconColor} />
+          <AppText variant="label" flexShrink={1} numberOfLines={1}>
             {label}
-          </Text>
+          </AppText>
         </XStack>
-        <Text color="$textSecondary" fontWeight="600" flexShrink={1} numberOfLines={1}>
+        <AppText variant="bodyStrong" color="$textSecondary" flexShrink={1} numberOfLines={1}>
           {value}
-        </Text>
+        </AppText>
       </XStack>
     </TouchableOpacity>
   )

@@ -40,7 +40,7 @@ def format_route_order(route: dict, lang: str = "vi") -> str:
     stops = route.get("stops") or []
     if not stops:
         return (
-            "Hiện anh/chị không có nhiều điểm dừng cần sắp xếp."
+            "Hiện bạn không có nhiều điểm dừng cần sắp xếp."
             if lang != "en" else
             "You don't have multiple stops to order right now."
         )
@@ -62,7 +62,7 @@ def format_route_order(route: dict, lang: str = "vi") -> str:
     header = (
         f"You have {len(stops)} stops, optimal order is"
         if lang == "en" else
-        f"Anh/chị có {len(stops)} điểm dừng, thứ tự tối ưu là"
+        f"Bạn có {len(stops)} điểm dừng, thứ tự tối ưu là"
     )
     source_note = ""
     if route.get("source") == "haversine_fallback":
@@ -118,7 +118,7 @@ def format_traffic_info(trip: dict, lang: str = "vi") -> str:
             )
         return (
             "Chưa có dữ liệu giao thông cho chuyến này. "
-            "Anh/chị dùng Google Maps hoặc Waze để xem đường chi tiết."
+            "Bạn dùng Google Maps hoặc Waze để xem đường chi tiết."
         )
 
     if lang == "en":
@@ -158,8 +158,8 @@ _UNCONFIRMED_STATUSES = ("pending", "notified", "calling")
 # in the pickup→dropoff sequence instead of the raw backend status code.
 _STATUS_PHRASES_VI = {
     "pending": "vừa được tạo, đang chờ hệ thống liên hệ",
-    "notified": "chưa xác nhận, đang chờ anh/chị đồng ý",
-    "calling": "chưa xác nhận, đang chờ anh/chị đồng ý",
+    "notified": "chưa xác nhận, đang chờ bạn đồng ý",
+    "calling": "chưa xác nhận, đang chờ bạn đồng ý",
     "confirmed": "đã xác nhận, đang trên đường đến điểm đón",
     "arrived_pickup": "đã đến điểm đón, đang chờ đón khách",
     "picked_up": "đã đón khách, đang trên đường đến điểm trả",
@@ -193,83 +193,104 @@ def _schedule_confirm_prompt(index: int, time: str, lang: str) -> str:
             " Would you like to confirm it?"
         )
     return (
-        f" Chuyến {index} là chuyến hẹn giờ lúc {time}, đang chờ anh/chị xác nhận."
-        " Anh/chị có muốn xác nhận nhận chuyến này không?"
+        f" Chuyến {index} là chuyến hẹn giờ lúc {time}, đang chờ bạn xác nhận."
+        " Bạn có muốn xác nhận nhận chuyến này không?"
     )
+
+
+def format_customer_phone(trip: dict, lang: str = "vi") -> str:
+    """Read the number saved on the trip — the driver already sees it in the app."""
+    name = trip.get("customer_name") or ("khách" if lang != "en" else "the customer")
+    phone = (trip.get("customer_phone") or "").strip()
+    if not phone:
+        if lang == "en":
+            return f"No customer phone is saved on {name}'s trip in the app."
+        return f"Chuyến của khách {name} chưa có số điện thoại trên ứng dụng."
+    if lang == "en":
+        return f"{name}'s number in the app is {phone}."
+    return f"Số điện thoại của khách {name} trên ứng dụng là {phone}."
+
+
+def format_primary_customer_phone(trips: list[dict], lang: str = "vi") -> str:
+    """One number for a direct phone lookup — the active/upcoming trip first."""
+    if not trips:
+        return format_customer_phones([], lang)
+    return format_customer_phone(trips[0], lang)
+
+
+def format_customer_phones(trips: list[dict], lang: str = "vi") -> str:
+    shown = [t for t in trips if t.get("customer_name") or t.get("customer_phone")][:MAX_LIST]
+    if not shown:
+        if lang == "en":
+            return "I don't have a customer phone on any loaded trip."
+        return "Tôi chưa thấy số điện thoại khách trên các chuyến đã tải."
+    return " ".join(format_customer_phone(t, lang) for t in shown)
+
+
+def format_trip_existence(trip: dict, lang: str = "vi") -> str:
+    """Yes/no trip presence — customer name only, details on follow-up."""
+    customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
+    if lang == "en":
+        return f"You have a trip with {customer}."
+    return f"Bạn có chuyến với {customer}."
 
 
 def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
-    pickup = short_address(trip.get("pickup_address", ""))
-    dropoff = short_address(trip.get("dropoff_address", ""))
-    money = fmt_money(estimated_fare(trip), lang)
-    eta = trip.get("eta_minutes")
-    km = trip.get("distance_km")
-    time = trip.get("pickup_time", "")
+    """One-line trip pick — customer + pickup; fare/phone/status in FollowUpKnowledge."""
+    pickup = short_address(trip.get("pickup_address", ""), 36)
     customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
-    status = trip.get("status", "")
-
+    time = (trip.get("pickup_time") or "").strip()
     if lang == "en":
-        msg = (
-            f"Trip {index}: pick up {customer} at {pickup}, drop off at {dropoff}. "
-            f"Estimated fare: {money}."
-        )
+        msg = f"Trip {index} with {customer}, pickup at {pickup}."
         if time:
-            msg += f" Pickup time: {time}."
-        if km:
-            msg += f" Distance: {km} km."
-        if eta:
-            msg += f" ETA: {eta} min."
-        if status:
-            msg += f" Status: {status_phrase(status, lang)}."
-        traffic = trip.get("traffic_note")
-        if traffic:
-            msg += f" Traffic: {traffic}."
+            msg += f" Pickup time {time}."
         if _needs_schedule_confirm(trip):
             msg += _schedule_confirm_prompt(index, time, lang)
         return msg
-
-    msg = (
-        f"Chuyến {index}: đón {customer} tại {pickup}, đến {dropoff}. "
-        f"Giá ước tính: {money}."
-    )
+    msg = f"Chuyến {index} với {customer}, đón tại {pickup}."
     if time:
-        msg += f" Giờ đón: {time}."
-    if km:
-        msg += f" Quãng đường: {km} km."
-    if eta:
-        msg += f" Dự kiến {eta} phút."
-    if status:
-        msg += f" Trạng thái: {status_phrase(status, lang)}."
-    traffic = trip.get("traffic_note")
-    if traffic:
-        msg += f" {traffic}."
+        msg += f" Giờ đón {time}."
     if _needs_schedule_confirm(trip):
         msg += _schedule_confirm_prompt(index, time, lang)
     return msg
 
 
 def format_trip_brief(trip: dict, index: int, lang: str = "vi") -> str:
-    pickup = short_address(trip.get("pickup_address", ""), 36)
-    dropoff = short_address(trip.get("dropoff_address", ""), 36)
-    fare = fmt_money(estimated_fare(trip), lang)
-    time = trip.get("pickup_time", "")
+    """Compact list row — name (+ optional pickup time) for FollowUpKnowledge."""
+    time = (trip.get("pickup_time") or "").strip()
     customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
-    # Plain words instead of "—"/"→" — this string is spoken aloud by TTS, and
-    # ElevenLabs (eleven_flash_v2_5) noticeably destabilizes pacing/tone when
-    # it hits non-standard punctuation glyphs in a dense, list-like sentence.
-    # Each field is explicitly labeled (customer/pickup/dropoff/fare) rather
-    # than a bare comma list — the driver needs to hear WHO/WHERE/HOW MUCH
-    # unambiguously for each trip in a multi-trip list, not guess from order.
     if lang == "en":
-        msg = f"{index}. Customer {customer}, pickup {pickup}, dropoff {dropoff}, fare {fare}"
+        msg = f"{index}. {customer}"
         if time:
-            msg += f", pickup time {time}"
+            msg += f", {time}"
         return msg
-
-    msg = f"{index}. Khách hàng {customer}, điểm đón {pickup}, điểm trả {dropoff}, giá {fare}"
+    msg = f"{index}. {customer}"
     if time:
-        msg += f", giờ đón {time}"
+        msg += f", {time}"
     return msg
+
+
+def format_trip_count_summary(
+    trips: list[dict],
+    lang: str = "vi",
+    *,
+    scope_label: str | None = None,
+) -> str:
+    """Spoken count-first reply — one fact, then wait for follow-up."""
+    n = len(trips)
+    if n == 0:
+        return ""
+    if n == 1:
+        return format_trip_existence(trips[0], lang)
+
+    if lang == "en":
+        if scope_label:
+            return f"You have {n} trips {scope_label}."
+        return f"You have {n} upcoming trips."
+
+    if scope_label:
+        return f"Bạn có {n} chuyến {scope_label}."
+    return f"Bạn có {n} chuyến sắp tới."
 
 
 def format_trip_list(trips: list[dict], lang: str = "vi") -> str:
@@ -278,38 +299,16 @@ def format_trip_list(trips: list[dict], lang: str = "vi") -> str:
         return ""
 
     if len(shown) == 1:
-        return format_trip_detail(shown[0], 1, lang)
+        return format_trip_existence(shown[0], lang)
 
     if lang == "en":
-        header = f"You have {len(trips)} upcoming trip(s)"
+        header = f"You have {len(trips)} trips"
         if len(trips) > MAX_LIST:
-            header += f" (showing first {MAX_LIST})"
-        suffix = " Say the trip number for more details."
+            header += f", first {MAX_LIST}"
     else:
-        header = f"Anh/chị có {len(trips)} chuyến sắp tới"
+        header = f"Bạn có {len(trips)} chuyến"
         if len(trips) > MAX_LIST:
-            header += f" (hiển thị {MAX_LIST} chuyến gần nhất)"
-        suffix = " Anh/chị muốn biết chi tiết chuyến nào thì nói số thứ tự."
+            header += f", {MAX_LIST} chuyến gần nhất"
 
     lines = [format_trip_brief(t, i, lang) for i, t in enumerate(shown, 1)]
-    msg = header + ": " + "; ".join(lines) + "." + suffix
-
-    scheduled = [
-        (i, t) for i, t in enumerate(shown, 1) if _needs_schedule_confirm(t)
-    ]
-    if scheduled:
-        if lang == "en":
-            idxs = ", ".join(str(i) for i, _ in scheduled)
-            noun = "Trip" if len(scheduled) == 1 else "Trips"
-            msg += (
-                f" {noun} {idxs} {'is' if len(scheduled) == 1 else 'are'} scheduled"
-                " pickup(s) awaiting your confirmation — let me know which one to confirm."
-            )
-        else:
-            idxs = ", ".join(str(i) for i, _ in scheduled)
-            noun = "Chuyến" if len(scheduled) == 1 else "Các chuyến"
-            msg += (
-                f" {noun} {idxs} là chuyến hẹn giờ đang chờ xác nhận."
-                " Anh/chị cho biết muốn xác nhận chuyến nào."
-            )
-    return msg
+    return header + ": " + ", ".join(lines) + "."

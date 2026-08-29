@@ -165,6 +165,6 @@ async def start_bridge_call_to_number(
     else:
         msg = (
             f"Đang kết nối {display_name} tại {dialed} vào phòng này.{suffix} "
-            "Khi đầu dây bên kia nghe máy, anh/chị nói trực tiếp."
+            "Khi đầu dây bên kia nghe máy, bạn nói trực tiếp."
         )
     return agent, msg

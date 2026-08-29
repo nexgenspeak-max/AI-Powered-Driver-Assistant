@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"        # openai | gemini | kimi
     llm_model: str = "gpt-4o-mini"
 
-    tts_provider: str = "elevenlabs"    # elevenlabs | google
+    tts_provider: str = "elevenlabs"    # elevenlabs | google | gemini
     tts_voice: str = ""
 
     # ── OpenAI ────────────────────────────────────────────────────────────────
@@ -57,9 +57,9 @@ class Settings(BaseSettings):
     # ── Google Cloud (STT + TTS) ──────────────────────────────────────────────
     google_credentials_file: str = ""
     google_credentials_json: str = ""   # full JSON string for containerised envs
-    google_stt_model: str = "telephony"
-    google_stt_location: str = ""     # auto: asia-southeast1 for chirp_3, global for latest_long
-    google_tts_voice: str = "vi-VN-Neural2-A"
+    google_stt_model: str = "chirp_3"
+    google_stt_location: str = ""     # auto: asia-southeast1 for chirp_2, us for chirp_3, global for latest_long
+    google_tts_voice: str = "vi-VN-Chirp3-HD-Kore"
     # Northern-Vietnamese-standard delivery: slightly slower for clear
     # enunciation ("rõ chữ") and a touch lower-pitched for the gentle
     # downward inflection ("hơi xuống") typical of Northern Vietnamese
@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     # a subtle shift, not a different-sounding voice.
     google_tts_speaking_rate: float = 0.95
     google_tts_pitch: float = -2.0
+
+    # ── Gemini TTS (LiveKit google.beta.gemini_tts — non-streaming) ───────────
+    google_api_key: str = ""              # GOOGLE_API_KEY — Gemini API route
+    gemini_tts_model: str = "gemini-3.1-flash-tts-preview"
+    gemini_tts_voice: str = "Kore"
+    gemini_tts_location: str = "us-central1"
+    gemini_tts_use_vertexai: bool = True  # reuse GOOGLE_CREDENTIALS_FILE when true
+    gemini_tts_instructions: str = ""     # empty = Northern vi-VN driver-assistant default
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────
     elevenlabs_api_key: str = ""

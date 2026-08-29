@@ -1,0 +1,55 @@
+---
+description: Service layer — folder per domain, compose deps, adapters for vendors. No DI container.
+globs: src/backend/**/services/**/*.{ts,py}
+alwaysApply: false
+---
+
+# Service layer
+
+Canonical examples already in the repo: `trip-service/src/services/maps/` and `notify/`.
+
+## Folder = one domain
+
+```
+services/<name>/
+  index.ts | __init__.py   ← public API only (what callers import)
+  types.ts                 ← contracts (optional)
+  <adapter>.ts             ← vendor/IO (optional)
+```
+
+- New services are folders. Flat `fooService.ts` is legacy — convert when that file is next touched, not as a drive-by.
+- Callers import the package (`../services/maps`, `app.services.backend_api`), never an adapter file.
+- Keep `__init__.py` / `index.ts` a façade. Split internals when a file grows past one concern.
+
+## Compose — do not add a DI container
+
+Pass collaborators as arguments (defaults to the process singleton). That is the injection standard.
+
+```typescript
+// ✅ mapsService.ts — pick adapter from config, same function signature
+const providers: Record<string, RouteProvider> = { google: google.getRoute, goong: goong.getRoute };
+return (providers[config.mapsProvider] ?? google.getRoute)(pickup, dropoff, key, ...);
+```
+
+```python
+# ✅ testable without patching globals
+async def get_driver_context(phone: str, *, http: httpx.AsyncClient | None = None) -> dict:
+    client = http or _get_client()
+```
+
+```typescript
+// ❌ new Inversify / tsyringe / dependency-injector package
+// ❌ class TripService { constructor(@inject('db') ...) } for a module that is functions today
+```
+
+## Adapter
+
+Stable interface, swap the vendor. `maps/types.ts` `RouteProvider` + `goong.ts` / `google.ts`. Voice-agent `backend_api` is the HTTP adapter to trip-service (Python must not touch DynamoDB).
+
+## Process singleton — I/O clients and config only
+
+`httpx` pool, `get_settings()` (`lru_cache`), loggers. Never singleton session/request/user state (that lives on `CallAwareUserData` / the HTTP request).
+
+## Do not invent Bridge/Factory/Observer classes
+
+`session.py` already bridges LiveKit transport ↔ agents. Adding a GoF type name without a second implementation to swap is ceremony.

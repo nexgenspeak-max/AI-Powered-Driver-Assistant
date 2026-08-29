@@ -1,5 +1,5 @@
 import { CHAT_TOGGLE_BUTTON_SIZE } from '../features/home/components/ChatToggleButton'
-import { BUTTON_RISE } from '../components/AssistantTabButton'
+import { BUTTON_RISE, BUTTON_LABEL_OVERHANG } from '../components/AssistantTabButton'
 
 // ChatToggleButton (Home screen only) sits at `insets.top + 12`, is
 // CHAT_TOGGLE_BUTTON_SIZE tall — anything else top-anchored on that same
@@ -23,3 +23,7 @@ export const TOP_CLEARANCE_BELOW_CHAT_BUTTON = 12 + CHAT_TOGGLE_BUTTON_SIZE + 12
 // stop list) sat low enough that the AI button's own poked-up top clipped
 // into/behind its bottom edge.
 export const MAP_OVERLAY_BOTTOM_CLEARANCE = 16 + 84 + BUTTON_RISE + 12
+
+// Scrollable tab screens must clear the floating tab bar plus the raised
+// assistant button (disc + label pill below).
+export const SCROLL_TAB_BAR_CLEARANCE = MAP_OVERLAY_BOTTOM_CLEARANCE + BUTTON_LABEL_OVERHANG

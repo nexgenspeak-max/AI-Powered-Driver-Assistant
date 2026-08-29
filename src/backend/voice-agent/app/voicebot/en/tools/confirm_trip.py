@@ -1,12 +1,11 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.en.tools_definition import raw_schema
 from app.voicebot.en.constants import TRIP_CONFIRMED, ERR_CANNOT_UPDATE
-from app.services import backend_api
 from app.voicebot.processors import context_store
+from app.voicebot.processors.confirm_trip_flow import apply_and_speak
+from app.voicebot.processors.tool_reply import R, trip_actions
+from app.voicebot.processors.tool_response_builders import build_mutation_response, build_pending_confirm_response
 from app.voicebot.processors.trip_format import short_address
-
-logger = logging.getLogger("voice-agent.en.tools.confirm_trip")
 
 # Mirrors check_upcoming_trips.py's own tuple — kept as a separate copy
 # rather than importing it, same convention as elsewhere in this codebase.
@@ -20,6 +19,10 @@ def _pending_trips(userdata: dict) -> list[dict]:
     ]
 
 
+def _pending_indices(trips: list[dict]) -> list[int]:
+    return list(range(1, len(trips) + 1))
+
+
 @function_tool(raw_schema=raw_schema["confirm_trip"])
 async def confirm_trip(raw_arguments: dict, context: RunContext) -> str:
     # Outbound SIP call (driver dialed to be offered exactly one trip) — no
@@ -30,39 +33,75 @@ async def confirm_trip(raw_arguments: dict, context: RunContext) -> str:
     else:
         trips = _pending_trips(context.userdata)
         if not trips:
-            return "No trip is waiting for confirmation."
-
-        trip_index = raw_arguments.get("trip_index")
-        if len(trips) == 1:
-            target = trips[0]
-        elif trip_index is not None:
-            idx = int(trip_index) - 1
-            if idx < 0 or idx >= len(trips):
-                return f"You have {len(trips)} trip(s) awaiting confirmation. Please choose 1 to {len(trips)}."
-            target = trips[idx]
-        else:
-            lines = [
-                f"{i}. {t.get('customer_name') or 'unnamed customer'} (pickup {short_address(t.get('pickup_address', ''), 30)})"
-                for i, t in enumerate(trips, 1)
-            ]
-            return (
-                "You have multiple trips awaiting confirmation — which one: "
-                + "; ".join(lines)
-                + "? Tell me the number or the customer's name."
+            return await context_store.speak_and_stop(
+                context.session,
+                R("confirm_trip", "No trip is waiting for confirmation.", lang="en"),
             )
 
+        trip_index = raw_arguments.get("trip_index")
+        indices = _pending_indices(trips)
+        if len(trips) == 1:
+            target = trips[0]
+        else:
+            target = context_store.resolve_trip_from_subset(
+                context.userdata, trips, raw_arguments
+            )
+            if target is None and trip_index is not None:
+                idx = int(trip_index) - 1
+                if idx < 0 or idx >= len(trips):
+                    spoken = (
+                        f"You have {len(trips)} trip(s) awaiting confirmation. "
+                        f"Please choose 1 to {len(trips)}."
+                    )
+                    return await context_store.speak_and_stop(
+                        context.session,
+                        build_pending_confirm_response(
+                            spoken,
+                            tool="confirm_trip",
+                            lang="en",
+                            trip_indices=indices,
+                            confirm=True,
+                        ),
+                    )
+                target = trips[idx]
+            if target is None:
+                lines = [
+                    f"{i}. {t.get('customer_name') or 'unnamed customer'} (pickup {short_address(t.get('pickup_address', ''), 30)})"
+                    for i, t in enumerate(trips, 1)
+                ]
+                spoken = (
+                    "You have multiple trips awaiting confirmation — which one: "
+                    + "; ".join(lines)
+                    + "? Tell me the number or the customer's name."
+                )
+                return await context_store.speak_and_stop(
+                    context.session,
+                    build_pending_confirm_response(
+                        spoken,
+                        tool="confirm_trip",
+                        lang="en",
+                        trip_indices=indices,
+                        confirm=True,
+                    ),
+                )
+
     trip_id = target["trip_id"]
-
-    try:
-        updated = await backend_api.update_trip_status(trip_id, "confirmed")
-    except Exception:
-        logger.error("confirm_trip failed", exc_info=True)
-        return ERR_CANNOT_UPDATE
-
-    fields = {k: v for k, v in updated.items() if k != "trip_id"}
-    context_store.patch_trip_by_id(context.userdata, trip_id, **fields)
-
     customer = target.get("customer_name", "")
     msg = f"Trip with {customer} confirmed. Drive safe!" if customer else TRIP_CONFIRMED
-    await context.session.say(msg, allow_interruptions=False)
-    return "confirmed"
+    context_store.set_last_tool_response(
+        context.userdata,
+        build_mutation_response(
+            msg,
+            tool="confirm_trip",
+            lang="en",
+            knowledge=[f"trip_id: {trip_id}", f"status: confirmed"],
+            action=trip_actions(lang="en"),
+        ),
+    )
+    return await apply_and_speak(
+        context.session,
+        context.userdata,
+        trip_id,
+        msg,
+        error_reply=ERR_CANNOT_UPDATE,
+    )

@@ -10,6 +10,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { config } from '../src/config';
 import { DEFAULT_SETTINGS } from '../src/services/settingsService';
+import { getLogger } from '../src/services/logger';
+
+const log = getLogger('backfillSettings');
 
 const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.awsRegion }));
 
@@ -55,13 +58,13 @@ async function main() {
     lastEvaluatedKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
   } while (lastEvaluatedKey);
 
-  console.log(`Scanned ${scanned} account(s) in ${config.dynamodbTable}.`);
-  console.log(`Created ${created} new settings row(s) in ${config.dynamodbSettingsTable}, ${existing} already existed.`);
+  log.info('scan complete', { scanned, table: config.dynamodbTable });
+  log.info('settings rows', { created, existing, table: config.dynamodbSettingsTable });
 }
 
 main()
   .then(() => process.exit(0))
   .catch(err => {
-    console.error('[backfillSettings] failed:', err);
+    log.error('failed', { error: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });

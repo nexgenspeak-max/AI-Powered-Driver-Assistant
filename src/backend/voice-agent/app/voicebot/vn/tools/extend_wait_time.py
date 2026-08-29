@@ -3,6 +3,8 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.vn.tools_definition import raw_schema
 from app.services import backend_api
 from app.voicebot.processors import context_store
+from app.voicebot.processors.tool_reply import as_llm, trip_actions
+from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.extend_wait_time")
 
@@ -12,13 +14,22 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
     minutes = int(raw_arguments.get("minutes") or 3)
     minutes = max(1, min(minutes, 10))
     driver_phone = context.userdata["driver_phone"]
+    actions = trip_actions(lang="vi")
 
-    current = context_store.get_current_trip(context.userdata)
-    if not current:
-        return "Không có chuyến đang hoạt động."
+    trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
+    if not trip:
+        return as_llm(
+            context.userdata,
+            build_mutation_response(
+                "Không có chuyến đang hoạt động.",
+                tool="extend_wait_time",
+                lang="vi",
+                action=actions,
+            ),
+        )
 
-    trip_id = current["trip_id"]
-    prev_wait = int(current.get("wait_extra_minutes") or 0)
+    trip_id = trip["trip_id"]
+    prev_wait = int(trip.get("wait_extra_minutes") or 0)
     total_wait = prev_wait + minutes
     context_store.patch_current_trip(context.userdata, wait_extra_minutes=total_wait)
 
@@ -37,8 +48,18 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
             logger.error("extend_wait_time failed", exc_info=True)
 
     context_store.schedule_sync(_sync())
-    customer = current.get("customer_name", "khách hàng")
-    return (
+    customer = trip.get("customer_name", "khách hàng")
+    spoken = (
         f"Đã gia hạn thêm {minutes} phút. "
         f"Tổng thời gian chờ {customer}: {total_wait} phút."
+    )
+    return as_llm(
+        context.userdata,
+        build_mutation_response(
+            spoken,
+            tool="extend_wait_time",
+            lang="vi",
+            knowledge=[f"trip_id: {trip_id}", f"total_wait_minutes: {total_wait}"],
+            action=actions,
+        ),
     )

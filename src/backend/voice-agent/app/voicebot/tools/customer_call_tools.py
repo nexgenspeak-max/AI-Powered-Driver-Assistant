@@ -11,11 +11,14 @@ from app.services import backend_api
 from app.voicebot.processors.handback import (
     build_driver_agent,
     disconnect_sip_participant,
+    enter_bridge_listen_mode,
     notify_driver_of_background_call_result,
     restore_room_participant,
     restore_session_audio,
     store_call_summary,
 )
+from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout
+from app.voicebot.processors.agent_call_silence import cancel_agent_call_silence_watch
 
 logger = logging.getLogger("voice-agent.tools.customer_call")
 
@@ -29,7 +32,7 @@ _HANGUP_GRACE_SECONDS = 5.0
 
 
 def _closing_line(lang: str) -> str:
-    return "Vâng, cảm ơn anh/chị nhé, tạm biệt ạ." if lang != "en" else "Alright, thank you, goodbye!"
+    return "Vâng, cảm ơn bạn nhé, tạm biệt." if lang != "en" else "Alright, thank you, goodbye!"
 
 
 async def _customer_still_on_line(userdata: dict) -> bool:
@@ -181,6 +184,74 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
 
     logger.info("isolated customer call ended | summary=%s", summary[:120])
     return summary
+
+
+@function_tool(
+    name="transfer_to_driver",
+    description=(
+        "Hand the live call to the driver so they speak directly with the customer. "
+        "Use when the customer asks to talk to the driver, the question is too complex "
+        "for you to handle, or the driver says they want to speak. "
+        "Only available during an in-room agent call (driver is listening live)."
+    ),
+)
+async def transfer_to_driver(context: RunContext, reason: str = "") -> tuple[Agent, str]:
+    if context.userdata.get("isolated_call"):
+        return (
+            "Refused: this is a background call — the driver is not in the room. "
+            "Finish the call yourself or ask the driver to start a direct bridge call instead."
+        )
+
+    call_meta = context.userdata.get("customer_call") or {}
+    if call_meta.get("mode") != "agent" or not context.userdata.get("customer_call_active"):
+        return "Refused: no active AI-led customer call to transfer."
+
+    lang = context.userdata.get("lang", "vn")
+    customer_name = call_meta.get("customer_name") or (
+        "the customer" if lang == "en" else "khách"
+    )
+
+    handoff_line = (
+        "I'll connect you with the driver now — one moment please."
+        if lang == "en"
+        else "Dạ em xin nối tài xế cho bạn nghe máy ạ."
+    )
+    try:
+        await context.session.say(handoff_line, allow_interruptions=False)
+    except Exception:
+        logger.warning("transfer_to_driver handoff say failed", exc_info=True)
+
+    call_meta["mode"] = "bridge"
+    context.userdata["customer_call"] = call_meta
+    context.userdata["customer_call_active"] = False
+    context.userdata["bridge_call_active"] = True
+    context.userdata["background_call_active"] = False
+
+    cancel_agent_call_silence_watch(context.userdata)
+    restore_room_participant(context.session, context.userdata)
+    enter_bridge_listen_mode(context.session)
+    schedule_bridge_timeout(context.session, context.userdata)
+
+    from app.voicebot.bridge_call_agent import BridgeCallAgent
+
+    agent = BridgeCallAgent(lang=lang, customer_name=customer_name)
+    logger.info(
+        "transfer_to_driver | customer=%s reason=%s",
+        customer_name,
+        (reason or "-")[:120],
+    )
+
+    if lang == "en":
+        driver_msg = (
+            f"Connected — speak directly with {customer_name}. "
+            "Say 'assistant hang up' when you're done."
+        )
+    else:
+        driver_msg = (
+            f"Đã nối máy — bạn nói trực tiếp với {customer_name}. "
+            "Nói 'trợ lý kết thúc' khi xong."
+        )
+    return agent, driver_msg
 
 
 @function_tool(

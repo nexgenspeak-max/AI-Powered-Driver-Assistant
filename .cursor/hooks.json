@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/mark-distill.py"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/require-distill.py",
+        "loop_limit": 1
+      }
+    ]
+  }
+}

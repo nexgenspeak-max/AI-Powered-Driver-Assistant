@@ -36,7 +36,7 @@ export function RouteLine({
       </YStack>
 
       <YStack flex={1} gap="$3">
-        <YStack gap={2}>
+        <YStack gap="$1">
           <AppText variant="caption" color="$textMuted">
             {pickupLabel}
           </AppText>
@@ -44,7 +44,7 @@ export function RouteLine({
             {pickup}
           </AppText>
         </YStack>
-        <YStack gap={2}>
+        <YStack gap="$1">
           <AppText variant="caption" color="$textMuted">
             {dropoffLabel}
           </AppText>

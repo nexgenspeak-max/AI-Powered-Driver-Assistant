@@ -31,5 +31,8 @@ if __name__ == "__main__":
             api_secret=s.livekit_api_secret,
             agent_name=s.agent_name,
             initialize_process_timeout=60.0,
+            # `dev` defaults num_idle_processes to 0, so the first job waits
+            # ~1.5s to spawn a process ("no warmed process available").
+            num_idle_processes=1,
         )
     )

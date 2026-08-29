@@ -1,6 +1,52 @@
 """Prompts for CustomerCallAgent — AI speaks to customer while driver listens in-room."""
 
 
+def build_customer_call_opening(
+    *,
+    lang: str,
+    pickup_address: str = "",
+    trip_id: str = "",
+    custom_message: str = "",
+) -> str:
+    """Canned first utterance after SIP pickup — TTS via session.say, no LLM wait.
+
+    Outbound callers speak first. Do not add a second sleep on top of
+    wait_for_sip_pickup's post_answer_delay.
+    """
+    is_contact = not trip_id
+    if custom_message:
+        if lang == "en":
+            return (
+                f'Hello, this is the driver\'s assistant. The driver asked me to pass along: '
+                f'"{custom_message}" Can you hear me?'
+            )
+        return (
+            f'Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi nhắn: "{custom_message}". '
+            "Bạn có nghe rõ không?"
+        )
+    if is_contact:
+        if lang == "en":
+            return (
+                "Hello, this is the driver's assistant. The driver asked me to give you a call. "
+                "Can you hear me?"
+            )
+        return (
+            "Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi gọi cho bạn. "
+            "Bạn có nghe rõ không?"
+        )
+    if lang == "en":
+        where = f" at {pickup_address}" if pickup_address else ""
+        return (
+            f"Hello, this is the driver's assistant calling to confirm your pickup{where}. "
+            "Can you hear me?"
+        )
+    where_vi = f" tại {pickup_address}" if pickup_address else ""
+    return (
+        f"Xin chào, tôi là trợ lý của tài xế, gọi để xác nhận đón bạn{where_vi}. "
+        "Bạn có nghe rõ không?"
+    )
+
+
 def build_customer_call_prompt(
     *,
     lang: str,
@@ -24,7 +70,7 @@ def build_customer_call_prompt(
     # Contact calls (trip_id=="") were defaulting to the same "confirm
     # pickup" framing as real trip-customer calls whenever the driver hadn't
     # dictated a custom_message — the AI would open an isolated background
-    # call to a personal contact with "gọi để xác nhận đón anh/chị", which is
+    # call to a personal contact with "gọi để xác nhận đón bạn", which is
     # nonsensical for someone who isn't a ride customer (confirmed live: the
     # contact replied confused, AI doubled down on "xác nhận đón... cho
     # chuyến"). Only affects the trip_id=="" branch below — real
@@ -93,6 +139,9 @@ Rules:
 - Do not invent trip details — use the context above.
 - If the customer hangs up or refuses to talk, call end_customer_call with what happened — the
   "ask before ending" requirement above only applies when wrapping up normally, not here.
+- If the customer asks to speak with the driver directly, the question is beyond what you can
+  answer from trip context, or the driver interrupts asking to speak: call transfer_to_driver
+  immediately — do NOT keep trying to handle it yourself.
 - Do NOT assume "no answer" on your own just because you have not heard the customer speak yet —
   dialing takes time. Only conclude the customer did not answer after you receive the
   <speech_not_detected> signal (sent automatically after real silence); if you get it 2-3 times in
@@ -131,18 +180,18 @@ Nhiệm vụ:
 - Nếu câu trả lời của khách không rõ, nghe không hiểu, bị nhiễu/đứt quãng,
   hoặc không liên quan gì tới câu vừa hỏi: KHÔNG được coi như khách đã trả
   lời xong hay không còn gì để nói, và TUYỆT ĐỐI không gọi end_customer_call
-  chỉ vì lý do này — phải hỏi lại cho rõ (vd "Dạ, em nghe không rõ, anh/chị
+  chỉ vì lý do này — phải hỏi lại cho rõ (vd "Dạ, em nghe không rõ, bạn
   nói lại giúp em được không ạ?") rồi chờ khách trả lời lại. Chỉ khi đã hỏi
   lại 2-3 lần mà vẫn không rõ được thì mới coi là không liên lạc được và ghi
   rõ điều đó vào tóm tắt.
 - BẮT BUỘC trước khi kết thúc cuộc gọi bình thường: hỏi thẳng khách ĐÚNG MỘT
-  LẦN "Anh/chị có câu hỏi gì hay muốn nhắn gì cho tài xế không?" (hoặc cách
+  LẦN "Bạn có câu hỏi gì hay muốn nhắn gì cho tài xế không?" (hoặc cách
   nói tự nhiên tương đương) rồi chờ khách trả lời. KHÔNG được gọi
   end_customer_call khi chưa hỏi câu này và chưa có câu trả lời.
 - NGAY KHI khách trả lời là không còn gì / không có thắc mắc: gọi
   end_customer_call với customer_confirmed_done=true luôn. Hệ thống sẽ tự nói
   lời cảm ơn + tạm biệt và ngắt máy — bạn KHÔNG cần tự chào tạm biệt, TUYỆT
-  ĐỐI KHÔNG hỏi lại câu chốt lần nữa, KHÔNG hỏi "anh/chị chắc chưa" hay bất kỳ
+  ĐỐI KHÔNG hỏi lại câu chốt lần nữa, KHÔNG hỏi "bạn chắc chưa" hay bất kỳ
   câu thăm dò nào. Khách đã nói không cần gì thì kết thúc luôn.
 - CHỈ khi khách CÓ câu hỏi hoặc có điều muốn nhắn: trả lời/ghi nhận xong, hỏi
   lại câu chốt trên đúng một lần nữa, rồi kết thúc như trên.
@@ -174,6 +223,9 @@ Quy tắc:
 - Nếu khách cúp máy hoặc từ chối, vẫn gọi end_customer_call và ghi lại diễn
   biến — yêu cầu "phải hỏi trước khi kết thúc" ở trên chỉ áp dụng khi kết
   thúc bình thường, không áp dụng ở trường hợp này.
+- Nếu khách muốn nói trực tiếp với tài xế, câu hỏi vượt quá thông tin chuyến
+  bạn có, hoặc tài xế xen vào muốn tự nói: gọi transfer_to_driver ngay — KHÔNG
+  cố xử lý thêm.
 - KHÔNG tự đoán "khách không nghe máy" chỉ vì chưa nghe thấy khách nói — quá trình đổ chuông/kết nối
   cần thời gian. Chỉ được kết luận khách không bắt máy sau khi nhận tín hiệu <speech_not_detected>
   (hệ thống tự gửi khi im lặng thật sự); nếu nhận liên tiếp 2-3 lần mà vẫn không ai nói, lúc đó mới

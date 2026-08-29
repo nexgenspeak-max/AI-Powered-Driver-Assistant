@@ -5,7 +5,7 @@ description: Standard end-to-end workflow for any coding task in this repo (back
 
 # Dev Workflow
 
-Repo layout (see `.cursor/rules/project-structure.mdc` for the authoritative version):
+Repo layout (see `.cursor/rules/project-structure.mdc` for the authoritative version). Quality bar: `.cursor/rules/quality-standards.mdc` (always apply).
 
 | Project                                              | Path                        | Run/build                                     | Stack conventions                      |
 | ----------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ----------------------------------------- |
@@ -25,6 +25,7 @@ Task Progress:
 - [ ] Implement: change made, matches project conventions
 - [ ] Self-review: diffed own change against the checklist below
 - [ ] Verify: build/lint/typecheck/tests run and passing for every touched project
+- [ ] Distill: Second Brain memory updated (or explicitly nothing new to capture)
 - [ ] Report: concise summary of what changed and what was verified
 ```
 
@@ -102,4 +103,6 @@ If a check fails, fix the root cause and re-run. Never report done with a known-
 
 ## 7. Report
 
-Only after verification passes: summarize what changed and what was verified, in 1-2 sentences. Don't produce planning/decision write-ups as separate files — plan and decisions live in the conversation, not in new docs, unless the user explicitly asks for a document.
+Only after verification passes: summarize what changed and what was verified, in 1-2 sentences. Don't produce planning/decision write-ups as separate files in the git repo.
+
+**Distill first:** update `~/.claude/projects/<escaped-cwd>/memory/` per `.claude/skills/second-brain/SKILL.md` (or state that nothing new belongs there). Obsidian SecondBrain is a view over that folder — not a `second-brain/` directory in git.

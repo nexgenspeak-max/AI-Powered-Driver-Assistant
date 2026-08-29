@@ -33,11 +33,11 @@ class TripToolsMixin:
             return "Hiện không thể lấy thông tin chuyến đi. Vui lòng thử lại sau."
 
         if not trips:
-            return "Hiện tại anh/chị không có chuyến đi nào sắp tới."
+            return "Hiện tại bạn không có chuyến đi nào sắp tới."
 
         t = trips[0]
         return (
-            f"Anh/chị có {len(trips)} chuyến. "
+            f"Bạn có {len(trips)} chuyến. "
             f"Chuyến gần nhất lúc {t.get('pickup_time', '')}: "
             f"đón {t.get('customer_name', 'khách')} tại {t.get('pickup_address', '')}, "
             f"đến {t.get('dropoff_address', '')}."
@@ -96,7 +96,7 @@ class TripToolsMixin:
         except Exception:
             logger.error("confirm_trip failed", exc_info=True)
         await context.session.say(
-            "Đã xác nhận chuyến đi. Chúc anh/chị lái xe an toàn!",
+            "Đã xác nhận chuyến đi. Chúc bạn lái xe an toàn!",
             allow_interruptions=False,
         )
         return "confirmed"
@@ -115,7 +115,7 @@ class TripToolsMixin:
             await backend_api.update_trip_status(self._trip["trip_id"], "rejected")
         except Exception:
             logger.error("reject_trip failed", exc_info=True)
-        await context.session.say("Đã ghi nhận. Cảm ơn anh/chị!", allow_interruptions=False)
+        await context.session.say("Đã ghi nhận. Cảm ơn bạn!", allow_interruptions=False)
         return "rejected"
 
     @function_tool(
@@ -138,7 +138,7 @@ class TripToolsMixin:
         customer    = current.get("customer_name", "khách hàng")
         pickup_time = current.get("pickup_time", "")
         return (
-            f"Anh/chị có chắc muốn hủy chuyến với {customer}"
+            f"Bạn có chắc muốn hủy chuyến với {customer}"
             + (f" lúc {pickup_time}" if pickup_time else "")
             + " không? Nói 'có' để xác nhận hủy."
         )

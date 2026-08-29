@@ -18,12 +18,13 @@ src/e2e/                                                         — cross-servi
 - **Service boundaries** — voice-agent calls trip-service via HTTP; no direct DB access from Python
 - **Lang split** — `voicebot/vn/` and `voicebot/en/` mirror each other; shared logic in `processors/`, `prompts/`, `services/`
 - **Requirements/docs** — product specs in `voice-agent/requirements/`, not mixed into code
+- **Service packages** — `services/<domain>/` (folder + public `index`/`__init__`). Compose adapters; no DI container. See `.cursor/rules/service-layer.mdc`.
 
 ## File naming
 
 | Layer | Python | TypeScript |
 |-------|--------|------------|
 | HTTP routes | — | `routes/*.ts` |
-| Business logic | `services/`, `processors/` | `services/*.ts` |
+| Business logic | `services/<name>/` | `services/<name>/` (legacy: `*Service.ts`) |
 | Agent tools | `voicebot/{lang}/tools/*.py` | — |
 | Prompts | `voicebot/prompts/`, `system_instructions.py` | — |

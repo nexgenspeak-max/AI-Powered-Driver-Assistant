@@ -4,8 +4,13 @@ All methods raise httpx.HTTPStatusError on non-2xx — callers handle it.
 """
 import asyncio
 import logging
+import time
+from urllib.parse import urlparse
+
 import httpx
+
 from app.config.settings import get_settings
+from app.devlog import event as dev_event
 from app.services.service_token import auth_headers
 
 logger = logging.getLogger("voice-agent.backend-api")
@@ -24,8 +29,44 @@ _client: httpx.AsyncClient | None = None
 _client_loop: asyncio.AbstractEventLoop | None = None
 
 
+def _http_path(url: httpx.URL | str) -> str:
+    parsed = urlparse(str(url))
+    return parsed.path or str(url)
+
+
+class _LoggingClient(httpx.AsyncClient):
+    """Logs every outbound request (ok/fail, status, duration) without secrets."""
+
+    async def request(self, method, url, *args, **kwargs):
+        started_at = time.perf_counter()
+        path = _http_path(url)
+        try:
+            response = await super().request(method, url, *args, **kwargs)
+        except Exception as exc:
+            dev_event(
+                "http",
+                ok=False,
+                method=method,
+                path=path,
+                duration_ms=(time.perf_counter() - started_at) * 1000,
+                error=type(exc).__name__,
+                detail=str(exc),
+            )
+            raise
+        dev_event(
+            "http",
+            ok=response.is_success,
+            method=method,
+            path=path,
+            status=response.status_code,
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            bytes=len(response.content),
+        )
+        return response
+
+
 def _new_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(
+    return _LoggingClient(
         limits=httpx.Limits(max_keepalive_connections=20, max_connections=20),
     )
 
@@ -161,7 +202,14 @@ async def update_trip_status(trip_id: str, status: str) -> dict:
     )
     r.raise_for_status()
     logger.info("trip %s → %s", trip_id, status)
-    return r.json()
+    try:
+        payload = r.json()
+    except Exception:
+        payload = None
+    if not isinstance(payload, dict):
+        payload = {"trip_id": trip_id, "status": status}
+    payload.setdefault("status", status)
+    return payload
 
 
 async def get_trip_location(trip_id: str) -> dict:

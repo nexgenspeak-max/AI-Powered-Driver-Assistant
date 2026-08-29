@@ -11,6 +11,7 @@ import customersRouter from './routes/customers';
 import deliveryOrdersRouter from './routes/deliveryOrders';
 import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
+import { attachLogContext } from './services/logger';
 
 const corsOptions = {
   origin: true,
@@ -25,6 +26,7 @@ app.use(cors(corsOptions));
 // Delivery-order photos travel here as base64 JSON, well past Express's 100kb
 // default — raised to cover a compressed phone-camera photo with headroom.
 app.use(express.json({ limit: '15mb' }));
+app.use(attachLogContext);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1', authenticate);

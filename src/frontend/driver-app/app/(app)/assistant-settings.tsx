@@ -1,10 +1,8 @@
-import { ScrollView } from 'react-native'
-import { View, XStack, YStack, Text, useTheme, useThemeName } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { View, XStack, YStack, useTheme, useThemeName } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
+import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
 import { Toggle } from '../../src/components/Toggle'
@@ -16,7 +14,6 @@ import { pushImmediateLocation } from '../../src/services/location/pushImmediate
 type ToggleKey = 'hands_free_mode' | 'notify_on_pickup_approach' | 'auto_suggest_next_stop'
 
 export default function AssistantSettingsScreen() {
-  const insets = useSafeAreaInsets()
   const theme = useTheme()
   const isLight = useThemeName() === 'light'
   const queryClient = useQueryClient()
@@ -89,20 +86,13 @@ export default function AssistantSettingsScreen() {
   if (!driver) return null
 
   return (
-    <View flex={1} backgroundColor="$surface">
-      <BackButton />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
-      >
-        <AppText variant="h1">
-          Cài đặt trợ lý
-        </AppText>
-        <Text color="$textSecondary" fontSize={13}>
-          Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.
-        </Text>
+    <Screen scroll backButton>
+      <AppText variant="h1">Cài đặt trợ lý</AppText>
+      <AppText variant="body" color="$textSecondary">
+        Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.
+      </AppText>
 
-        <Surface flat>
+      <Surface flat>
           <ToggleRow
             iconName="mic-outline"
             label="Chế độ rảnh tay"
@@ -133,8 +123,7 @@ export default function AssistantSettingsScreen() {
             theme={theme}
           />
         </Surface>
-      </ScrollView>
-    </View>
+    </Screen>
   )
 }
 
@@ -176,7 +165,7 @@ function ToggleRow({
   }, [value])
 
   return (
-    <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
+    <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4" minHeight={56}>
       <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
         <View width={24} alignItems="center">
           <Ionicons name={iconName} size={20} color={theme.textSecondary.val} />

@@ -216,6 +216,6 @@ async def start_background_call_to_contact(
         )
     return (
         f"Đang gọi {contact_name} tại {dialed} ở chế độ nền.{suffix} "
-        "Anh/chị có thể hỏi việc khác. "
+        "Bạn có thể hỏi việc khác. "
         "Khi cần biết kết quả, nói 'tóm tắt cuộc gọi' hoặc 'gọi xong chưa'."
     )

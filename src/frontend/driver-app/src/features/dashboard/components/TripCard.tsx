@@ -72,7 +72,7 @@ export function TripCard({
           </AppText>
         </View>
 
-        <YStack flex={1} gap={2}>
+        <YStack flex={1} gap="$1">
           <AppText variant="title" numberOfLines={1}>
             {trip.customer_name}
           </AppText>
@@ -82,7 +82,7 @@ export function TripCard({
           </AppText>
         </YStack>
 
-        <YStack alignItems="flex-end" gap={4}>
+        <YStack alignItems="flex-end" gap="$1">
           <Badge
             label={TRIP_STATUS_LABELS[trip.status]}
             backgroundColor={statusColor.bg}

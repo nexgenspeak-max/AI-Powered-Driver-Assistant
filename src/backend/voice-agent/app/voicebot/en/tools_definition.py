@@ -2,6 +2,7 @@
 English tool schemas.
 Each entry is a raw JSON-schema dict consumed by @function_tool(raw_schema=...).
 """
+from app.voicebot.schema_compact import compact_raw_schema
 
 raw_schema = {
 
@@ -11,20 +12,9 @@ raw_schema = {
         "type": "function",
         "name": "check_upcoming_trips",
         "description": (
-            "View the driver's trips — lists trips (pickup, dropoff, estimated fare) within the "
-            "exact scope the driver wants. IMPORTANT: if the driver's request is vague ('check my "
-            "trips', 'how are my trips looking', 'any trips?') — do NOT guess the scope, ASK "
-            "first: 'Would you like to see trips in progress (already accepted, currently "
-            "running), trips awaiting confirmation (offered, not yet answered), or all?' then "
-            "call the tool. If the driver already specified in their question, call directly, no "
-            "need to ask — e.g. 'what trips do I currently have' / 'show me everything' → "
-            "scope=all; 'which customers have I picked up' → scope=picked_up; 'which trips "
-            "haven't I picked up yet' → scope=not_picked_up; 'any new or unconfirmed trips' → "
-            "scope=awaiting_confirmation. For follow-ups ('how much is trip 2', 'yes' to see "
-            "more) → call again with the SAME scope as the most recent listing. When answering "
-            "any in-progress scope (in_progress/not_picked_up/picked_up), if the driver also has "
-            "a trip 'awaiting_confirmation', you MUST mention it too — don't wait for the driver "
-            "to ask again to find out a new trip is waiting."
+            "Count/list trips by scope. Default: say the COUNT and ask which trip to detail — "
+            "do not read the full list. General questions ('how many trips') → scope=all. "
+            "trip_index = one trip's details. list_all=true only when driver asks to read each trip."
         ),
         "parameters": {
             "type": "object",
@@ -33,29 +23,18 @@ raw_schema = {
                     "type": "string",
                     "enum": ["in_progress", "not_picked_up", "picked_up", "awaiting_confirmation", "new", "all"],
                     "description": (
-                        "'in_progress' = ALL accepted trips currently running: covers confirmed-"
-                        "but-not-yet-at-pickup, arrived-at-pickup-but-not-yet-picked-up, AND "
-                        "already-picked-up — use when the driver asks generally without "
-                        "distinguishing picked up or not. 'not_picked_up' = only accepted trips "
-                        "where the customer is NOT yet in the car (on the way to pickup, or "
-                        "arrived but waiting) — use for 'which trips haven't I picked up', 'any "
-                        "customers still waiting'. 'picked_up' = only trips where the customer IS "
-                        "already in the car, on the way to dropoff — use for 'which customers "
-                        "have I picked up', 'who's in the car right now'. 'awaiting_confirmation' "
-                        "= a NEW trip the system has offered the driver and is waiting for their "
-                        "yes/no. 'new' = a trip just created, the system hasn't offered it to the "
-                        "driver yet (very rare in practice). 'all' = every group above — use when "
-                        "the driver asks generally ('what trips do I currently have'), or chose "
-                        "'all' after being asked."
+                        "in_progress=accepted running; not_picked_up=not yet in car; "
+                        "picked_up=in car; awaiting_confirmation=offered; new=just created; all=every group."
                     ),
                 },
                 "trip_index": {
                     "type": "integer",
-                    "description": (
-                        "Trip number in the most recent listing (1 = first). Use for 'how much is "
-                        "that trip', 'trip 2 details', or when driver says yes to see more."
-                    ),
-                }
+                    "description": "Index (1 = first) when the driver picks one trip for details/fare.",
+                },
+                "list_all": {
+                    "type": "boolean",
+                    "description": "true only when the driver asks to hear every trip listed aloud.",
+                },
             },
             "required": ["scope"],
         },
@@ -65,10 +44,9 @@ raw_schema = {
         "type": "function",
         "name": "refresh_latest_data",
         "description": (
-            "Step 2: Re-fetch live data for whatever check_upcoming_trips or get_today_earnings "
-            "just answered from cache. Only call right after one of those tools ended its reply "
-            "with 'would you like me to get the latest data?' AND the driver said yes/confirmed. "
-            "Do NOT call proactively or for anything else."
+            "Re-fetch live data for the cached topic just answered (schedule, earnings, "
+            "current trip, …). Only call when the driver asks to refresh/update/get the latest. "
+            "Do NOT call proactively."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -77,8 +55,8 @@ raw_schema = {
         "type": "function",
         "name": "get_current_trip_info",
         "description": (
-            "Active/current trip details: customer, addresses, fare, ETA, status. "
-            "Use for 'current trip', 'this trip', 'how much is this ride'."
+            "Active trip: customer, phone number, addresses, fare, ETA, status. "
+            "Use for current trip, customer phone, how much is this ride."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -160,34 +138,12 @@ raw_schema = {
         "type": "function",
         "name": "call_customer",
         "description": (
-            "Call the customer of ONE active trip. "
-            "IF the driver currently has MORE THAN 1 trip in progress: you MUST ask which "
-            "trip's customer to call FIRST — call this tool without trip_index and it will "
-            "answer with a list of the trips to read back to the driver; wait for them to "
-            "pick, do NOT guess. If there's only 1 trip, skip this and don't bother with "
-            "trip_index. "
-            "IMPORTANT: Before actually calling, also ask the driver to choose a mode:\n"
-            "  • mode='background' — AI calls customer in a separate room; driver keeps using assistant (RECOMMENDED when busy).\n"
-            "  • mode='agent'  — AI dials customer into the same room; driver listens live.\n"
-            "  • mode='bridge' — Driver speaks directly to customer in the same room.\n"
-            "Only call this tool for real once the driver has picked the right trip (if needed) "
-            "AND chosen a mode.\n"
-            "RIGHT AFTER the AI proactively asked 'would you like me to call the customer' "
-            "(proximity nudge) and the driver agreed: call DIRECTLY with mode='background' AND "
-            "fill in `message` with the exact content to convey (e.g. 'Please head to the pickup "
-            "point, the driver is almost there' for pickup, or 'Please get your belongings "
-            "ready, you're almost at the dropoff' for dropoff) — do NOT ask for mode again, and "
-            "do NOT call without `message` in this situation, or the AI will just make generic "
-            "small talk with the customer instead of stating why it called. This is ALWAYS "
-            "mode='background' (the driver doesn't need to listen to this notify call live) — "
-            "never mode='agent' for this automatic proximity-notify situation.\n"
-            "RIGHT AFTER calling this tool (mode='agent' or 'bridge'): do NOT say ANYTHING else "
-            "to the driver, even something that sounds reasonable like 'I've called the "
-            "customer, anything else?' — the call has ONLY JUST STARTED dialing/ringing, the "
-            "system already spoke 'Calling X, please hold on' before this. Saying anything that "
-            "implies the call is already done is WRONG and misleads the driver. For "
-            "mode='background', the system already returns the 'calling in the background' "
-            "confirmation on its own — nothing more needs to be said there either."
+            "Call the customer of one trip. Two main modes: "
+            "agent = AI calls on your behalf, you listen live (DEFAULT for relay/confirm); "
+            "bridge = you speak directly with the customer. "
+            "background = AI calls in a separate room, you don't listen live (only when asked). "
+            "Multiple trips: ask which, or call without trip_index to list. "
+            "After agent/bridge: stay silent — system already said Calling."
         ),
         "parameters": {
             "type": "object",
@@ -195,7 +151,11 @@ raw_schema = {
                 "mode": {
                     "type": "string",
                     "enum": ["background", "agent", "bridge"],
-                    "description": "'background' = AI calls in background, 'agent' = driver listens, 'bridge' = driver talks directly.",
+                    "description": (
+                        "'agent' (default) = AI calls, driver listens live; "
+                        "'bridge' = driver talks directly; "
+                        "'background' = AI calls in background, driver not on the line."
+                    ),
                 },
                 "trip_index": {
                     "type": "integer",
@@ -537,3 +497,5 @@ raw_schema = {
         },
     },
 }
+
+raw_schema = compact_raw_schema(raw_schema)

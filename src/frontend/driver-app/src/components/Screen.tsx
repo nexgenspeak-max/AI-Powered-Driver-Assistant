@@ -2,23 +2,19 @@ import type { ReactNode } from 'react'
 import { RefreshControl, ScrollView, type StyleProp, type ViewStyle } from 'react-native'
 import { View } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
+import { BackButton, getBackButtonClearance } from './BackButton'
+import { SCROLL_TAB_BAR_CLEARANCE } from '../constants/layout'
 
 // Standard screen shell. Replaces the per-screen mix of bare `<View flex={1}>`,
-// hardcoded background hex (`#15111F`, `#F4F4F6→#E2E2E6`, `#110D1B`), one-off
-// `LinearGradient` fills, and hand-rolled `ScrollView` + `contentContainerStyle`
-// padding. Every screen: flat `$background`, safe-area aware, optional scroll.
-//
-// Duplicated in customer-app/src/components/Screen.tsx.
-
-// LiquidGlassTabBar floats over content (position:absolute, ~76 tall, 16 up) and
-// reserves no layout space — scrollable screens pad their content past it.
-const TAB_BAR_CLEARANCE = 104
+// hardcoded background hex, one-off ScrollView padding, and mismatched tab-bar
+// clearance (100 vs 104). Every screen: flat `$background`, safe-area aware.
 
 export type ScreenProps = {
   children: ReactNode
   /** Wrap content in a ScrollView with standard padding + tab-bar clearance. */
   scroll?: boolean
-  /** Apply the standard 20px gutter + 16px top inset + gap. On by default. */
+  /** Apply the standard 20px gutter + top inset + gap. On by default. */
   padded?: boolean
   /** Safe-area edges to inset. Default: just the top (tab bar covers bottom). */
   edges?: Array<'top' | 'bottom'>
@@ -27,6 +23,10 @@ export type ScreenProps = {
   onRefresh?: () => void
   /** Fixed element above the scroll area — an AppBar or a sticky dashboard header. */
   header?: ReactNode
+  /** Render floating BackButton and reserve top clearance for it. */
+  backButton?: boolean
+  /** Where the back button navigates — defaults to '/profile'. */
+  backTo?: Parameters<typeof router.replace>[0]
   /** Override the screen fill. Defaults to `$background`. */
   background?: string
   contentContainerStyle?: StyleProp<ViewStyle>
@@ -41,6 +41,8 @@ export function Screen({
   refreshing,
   onRefresh,
   header,
+  backButton = false,
+  backTo,
   background = '$background',
   contentContainerStyle,
   style,
@@ -49,17 +51,24 @@ export function Screen({
   const top = edges.includes('top') ? insets.top : 0
   const bottom = edges.includes('bottom') ? insets.bottom : 0
 
+  const topPad = backButton
+    ? getBackButtonClearance(insets.top) + 16
+    : header
+      ? 16
+      : top + 16
+
   const contentPad: ViewStyle = padded
     ? {
         paddingHorizontal: 20,
-        paddingTop: (header ? 0 : top) + 16,
-        paddingBottom: bottom + TAB_BAR_CLEARANCE,
+        paddingTop: topPad,
+        paddingBottom: bottom + SCROLL_TAB_BAR_CLEARANCE,
         gap: 20,
       }
-    : { paddingTop: header ? 0 : top, paddingBottom: bottom }
+    : { paddingTop: backButton ? getBackButtonClearance(insets.top) : header ? 0 : top, paddingBottom: bottom }
 
   return (
     <View flex={1} backgroundColor={background} style={style}>
+      {backButton ? <BackButton to={backTo} /> : null}
       {header}
       {scroll ? (
         <ScrollView

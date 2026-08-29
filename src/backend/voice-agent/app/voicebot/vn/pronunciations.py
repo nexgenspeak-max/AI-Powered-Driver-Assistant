@@ -1,19 +1,15 @@
 """
-Vietnamese TTS pronunciation corrections.
+Vietnamese TTS pronunciation — display text stays as-is; `SpeechTextFixMixin.tts_node`
+transforms a copy right before synthesis.
 
-Each entry is (pattern, replacement) where pattern is a plain string or
-regex that the TTS pre-processor will substitute before synthesis.
-Apply these to agent speech output before sending to the TTS provider.
+Sections:
+  PRONUNCIATIONS       — whole-word replacements (word boundaries)
+  ABBREVIATION_PATTERNS — regex for VN abbreviations (Q1, TP.HCM, …)
 """
+from __future__ import annotations
 
 PRONUNCIATIONS: list[tuple[str, str]] = [
-    # Digits 0-9, spoken individually. speech_text_fix.py spells phone
-    # numbers out one digit at a time, comma-joined (e.g. "0, 9, 1, 2, ...").
-    # Mapping each bare digit to its Vietnamese word (rather than leaving the
-    # numeral for the TTS to read) avoids ElevenLabs occasionally misreading
-    # or slurring an isolated numeral. Only matches a standalone digit
-    # (word-boundary on both sides), so multi-digit runs like grouped prices
-    # ("250 000") are unaffected.
+    # Standalone digits → Vietnamese words (phone digits already comma-spelled).
     ("0", "không"),
     ("1", "một"),
     ("2", "hai"),
@@ -25,17 +21,34 @@ PRONUNCIATIONS: list[tuple[str, str]] = [
     ("8", "tám"),
     ("9", "chín"),
 
-    # Unit abbreviations → full Vietnamese words
-    ("km",   "cây số"),
-    ("KM",   "cây số"),
-    ("phút", "phút"),    # already correct, included as no-op anchor
+    # Units
+    ("km", "cây số"),
+    ("KM", "cây số"),
+    ("km/h", "cây số trên giờ"),
 
-    # English acronyms that TTS often mispronounces
-    ("ETA",  "ê tê a"),
-    ("SMS",  "ét em ét"),
-    ("AI",   "ây ai"),
-    ("SIP",  "síp"),
+    # English acronyms
+    ("ETA", "ê tê a"),
+    ("SMS", "ét em ét"),
+    ("AI", "ây ai"),
+    ("SIP", "síp"),
+    ("GPS", "gi pi ét"),
+    ("APP", "ép"),
+]
 
-    # Number formatting edge cases handled elsewhere; listed for reference
-    # ("0",  "không"),  # only in specific contexts — apply with regex if needed
+# Regex → spoken form. Longer / more specific patterns first.
+ABBREVIATION_PATTERNS: list[tuple[str, str]] = [
+    (r"\bTP\.?\s*HCM\b", "thành phố Hồ Chí Minh"),
+    (r"\bTP\.?\s*HN\b", "thành phố Hà Nội"),
+    (r"\bHCM\b", "Hồ Chí Minh"),
+    (r"\bHN\b", "Hà Nội"),
+    (r"\bSG\b", "Sài Gòn"),
+    (r"\bQ\.?\s*(\d+)\b", r"quận \1"),
+    (r"\bP\.?\s*(\d+)\b", r"phường \1"),
+    (r"\bQu\.?\s*(\d+)\b", r"quận \1"),
+    # Shorthand money: 150k, 2tr, 1.5tr
+    (r"\b(\d+(?:[.,]\d+)?)\s*k\b", r"\1 nghìn"),
+    (r"\b(\d+(?:[.,]\d+)?)\s*tr\b", r"\1 triệu"),
+    (r"\b(\d+(?:[.,]\d+)?)\s*tỷ\b", r"\1 tỷ"),
+    (r"\bVNĐ\b", "đồng"),
+    (r"\bVND\b", "đồng"),
 ]

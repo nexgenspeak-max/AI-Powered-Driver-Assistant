@@ -36,6 +36,7 @@ from livekit.agents.job import get_job_context
 logger = logging.getLogger("voice-agent.processors.call_state")
 
 CALL_STATE_TOPIC = "call_state"
+CALL_TRANSCRIPT_TOPIC = "call_transcript"
 
 # Userdata flags that mean "the user in THIS room is actively talking with
 # the other party right now" — bridge (driver<->customer direct) and
@@ -79,14 +80,30 @@ def _schedule_publish(userdata: dict) -> None:
         pass
 
 
+def _active_call_mode(userdata: dict) -> str:
+    if userdata.get("bridge_call_active"):
+        return "bridge"
+    if userdata.get("customer_call_active"):
+        return "agent"
+    return ""
+
+
 async def _publish(userdata: dict) -> None:
     active = is_call_active(userdata)
     try:
         job_ctx = get_job_context()
-        payload = json.dumps({"type": "call_state", "active": active})
+        payload = json.dumps({
+            "type": "call_state",
+            "active": active,
+            "mode": _active_call_mode(userdata) if active else "",
+        })
         await job_ctx.room.local_participant.publish_data(
             payload, reliable=True, topic=CALL_STATE_TOPIC
         )
-        logger.info("call_state published | active=%s", active)
+        logger.info(
+            "call_state published | active=%s mode=%s",
+            active,
+            _active_call_mode(userdata) if active else "-",
+        )
     except Exception:
         logger.warning("failed to publish call_state | active=%s", active, exc_info=True)

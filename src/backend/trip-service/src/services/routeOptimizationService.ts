@@ -12,6 +12,9 @@ import { cacheGet, cacheSet, driverOptimizedRouteKey } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
 import { optimizeOrder, type PrecedenceOf } from '../utils/twoOpt';
 import { decodePolyline } from '../utils/polyline';
+import { getLogger } from './logger';
+
+const log = getLogger('routeOptimization');
 
 // Mirrors driverContextService.ts's IN_PROGRESS / routes/drivers.ts's
 // IN_PROGRESS_STATUSES — intentionally duplicated rather than imported
@@ -170,7 +173,7 @@ async function buildRoadPath(points: LatLng[]): Promise<LatLng[]> {
     if (decoded) {
       path.push(...decoded);
     } else {
-      console.warn(`[routeOptimization] hop ${i} Direction request failed after retry — using straight line for this hop`);
+      log.warning('hop Direction request failed after retry — using straight line', { hop: i });
       path.push(from, to);
     }
   }
@@ -186,7 +189,7 @@ export async function computeOptimizedRoute(
     const candidates = candidatesFromTrips(trips);
     if (candidates.length <= 1) return null;
 
-    console.log(`[routeOptimization] computing | driver=${driverPhone} stops=${candidates.length} hasLocation=${!!currentLocation}`);
+    log.info('computing', { stops: candidates.length, has_location: !!currentLocation });
 
     const stopPoints: LatLng[] = candidates.map(c => ({ lat: c.lat, lng: c.lng }));
     // No GPS fix yet (driver never went online long enough for a ping) —
@@ -241,10 +244,12 @@ export async function computeOptimizedRoute(
       durationMatrix = m.rows.slice(1).map(row => row.map(c => c.duration_s));
       source = 'goong_matrix';
       if (anyCellFellBack) {
-        console.warn(`[routeOptimization] some DistanceMatrix cells missing, backfilled with haversine | driver=${driverPhone}`);
+        log.warning('some DistanceMatrix cells missing, backfilled with haversine');
       }
     } else {
-      console.warn(`[routeOptimization] Goong matrix unusable after retry, falling back to haversine | driver=${driverPhone} gotMatrix=${!!matrix}`);
+      log.warning('Goong matrix unusable after retry, falling back to haversine', {
+        got_matrix: !!matrix,
+      });
       costFromStart = stopPoints.map(p => distanceMeters(originPoint, p));
       costMatrix = haversineMatrix(stopPoints, stopPoints);
     }
@@ -277,13 +282,14 @@ export async function computeOptimizedRoute(
       };
     });
 
-    console.log(
-      `[routeOptimization] done | driver=${driverPhone} source=${source} order=${stops.map(s => `${s.kind}:${s.trip_id.slice(0, 8)}(${s.distance_m}m,${s.eta_minutes}min)`).join(' -> ')}`,
-    );
+    log.info('done', {
+      source,
+      order: stops.map((s) => `${s.kind}:${s.trip_id.slice(0, 8)}`).join('->'),
+    });
 
     const orderedPoints: LatLng[] = [originPoint, ...stops.map(s => ({ lat: s.lat, lng: s.lng }))];
     const path = await buildRoadPath(orderedPoints);
-    console.log(`[routeOptimization] road path built | driver=${driverPhone} points=${path.length}`);
+    log.info('road path built', { points: path.length });
 
     return {
       stops,
@@ -293,7 +299,9 @@ export async function computeOptimizedRoute(
       path,
     };
   } catch (err) {
-    console.warn(`[routeOptimization] compute failed for driver=${driverPhone}:`, err);
+    log.warning('compute failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

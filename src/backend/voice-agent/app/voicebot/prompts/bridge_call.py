@@ -55,6 +55,6 @@ def bridge_greeting(lang: str, customer_name: str) -> str:
         )
     return (
         f"Đang kết nối {customer_name} vào cuộc gọi. "
-        "Khi khách nghe máy, anh/chị nói trực tiếp với khách. Tôi sẽ im lặng. "
+        "Khi khách nghe máy, bạn nói trực tiếp với khách. Tôi sẽ im lặng. "
         "Xong rồi, nói 'trợ lý kết thúc' hoặc chờ khách cúp máy."
     )

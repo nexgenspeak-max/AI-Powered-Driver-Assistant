@@ -21,6 +21,8 @@ from livekit.plugins import silero
 from livekit.agents.llm import ChatMessage
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from app.agent import turn_metrics
+from app.agent.llm_warmup import warmup_llm
 from app.config.settings import get_settings
 from app.providers import get_stt, get_llm, get_tts
 from app.services import backend_api
@@ -30,20 +32,33 @@ from app.voicebot.processors import context_store
 from app.voicebot.processors.call_state import CallAwareUserData
 from app.voicebot.processors.agent_state import publish_agent_state
 from app.voicebot.processors.handback import BACKGROUND_CALL_SUMMARY_TOPIC
-from app.voicebot.processors.nudge import DRIVER_NUDGE_TOPIC, build_nudge_message
+from app.voicebot.processors.nudge import DRIVER_NUDGE_TOPIC, SILENT_NUDGE_KINDS, build_nudge_message
 from app.voicebot.processors.sip_call_watch import (
     complete_isolated_call,
     register_customer_room_sip_watchers,
     register_sip_call_watchers,
 )
+from app.voicebot.processors.spoken_intent import (
+    attach_spoken_intent_preemptive_cancel,
+    driver_text_input_cb,
+)
 from app.voicebot.customer_call_agent import CustomerCallAgent
-from app.services.conversation_service import ConversationService
+from app.services.conversation_service import ConversationService, CALL_TRANSCRIPT_TOPIC
+from app.services.logger import bind, clear
+from app.services.session_devlog import attach_session_devlog
 from app.services.silence_tracker import SilenceTracker
 
 logger = logging.getLogger("voice-agent.session")
 
+
+def _job_id(ctx: JobContext) -> str:
+    job = getattr(ctx, "job", None)
+    raw = getattr(job, "id", None) if job is not None else None
+    return str(raw) if raw else "-"
+
+
 # ── Room name patterns ─────────────────────────────────────────────────────────
-_DRIVER_RE      = re.compile(r"^driver-(\d+)-\d+$")    # driver-84867347452-1748700000
+_DRIVER_RE      = re.compile(r"^driver-(\d+)-[0-9a-fA-F-]+$")  # unix ts or UUID suffix
 # Real inbound phone call: driver dials the Twilio number, LiveKit's SIP
 # dispatch rule (scripts/setup_sip.py, room_prefix="driver-call-") creates
 # something like "driver-call-_+84867347452_abc" (see README.md's own log
@@ -59,6 +74,30 @@ _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbou
 _CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
 
 RoomMode = Literal["driver", "customer", "outbound", "custcall"]
+
+
+def turn_handling_for_lang(lang: str) -> dict:
+    """Turn-taking options LiveKit actually honors.
+
+    Passing ``turn_detection=`` next to a ``turn_handling`` dict is ignored:
+    the SDK only reads ``turn_handling['turn_detection']`` and otherwise
+    installs ``inference.TurnDetector()``. That detector does not support
+    Vietnamese and was the live default despite our VAD-only comment.
+    """
+    return {
+        "turn_detection": None if lang == "vn" else MultilingualModel(),
+        # Tighter than 0.35/0.8 — live eou≈0.96s + Luna TTFT blew the 2s bar
+        # on voice even with preemptive generation. Shorter endpointing starts
+        # LLM earlier while the driver is still finishing the last word.
+        "endpointing": {"min_delay": 0.25, "max_delay": 0.55},
+        "preemptive_generation": {"enabled": True, "preemptive_tts": True},
+        # LiveKit default false_interruption_timeout is 2.0s — that pause
+        # alone is already the voice bar when the driver talks over TTS.
+        "interruption": {
+            "min_duration": 0.3,
+            "false_interruption_timeout": 0.5,
+        },
+    }
 
 
 def _parse_room(room_name: str) -> tuple[RoomMode, str]:
@@ -148,10 +187,12 @@ async def entrypoint(ctx: JobContext) -> None:
     ctx.add_shutdown_callback(backend_api.aclose)
     await ctx.connect()
     room_name = ctx.room.name
-    logger.info("connected | room=%s", room_name)
+    bind(room=room_name, conv=_job_id(ctx))
+    logger.info("connected")
 
     mode, phone = _parse_room(room_name)
     is_telephony = _is_telephony_room(room_name)
+    sip_identity = ""
     logger.info("room_mode=%s phone=%r is_telephony=%s", mode, phone, is_telephony)
 
     # ── Resolve trip metadata ───────────────────────────────────────────────
@@ -185,6 +226,13 @@ async def entrypoint(ctx: JobContext) -> None:
     elif mode in ("driver", "outbound"):
         try:
             meta = json.loads(ctx.room.metadata or "{}")
+            sip_identity = str(meta.get("sip_identity") or "").strip()
+            if sip_identity:
+                # driver-{phone}-{ts} is also the in-app room shape. SIP
+                # outbound sets sip_identity so we wait for pickup and use
+                # telephony noise cancel — without it, greeting plays into
+                # ringback and the driver hears silence after answer.
+                is_telephony = True
             if meta.get("trip_id"):
                 trip = meta
                 # For SIP outbound rooms, driver phone is in metadata
@@ -235,6 +283,7 @@ async def entrypoint(ctx: JobContext) -> None:
         asyncio.create_task(_register_driver_session_safe(phone, room_name))
 
     conv_service = ConversationService(ctx)
+    bind(conv=conv_service.call_id)
     silence_tracker: SilenceTracker | None = None
     settings = get_settings()
 
@@ -246,6 +295,7 @@ async def entrypoint(ctx: JobContext) -> None:
         session_userdata = CallAwareUserData({
             "driver_phone":           phone if mode not in ("customer",) else "",
             "customer_phone":         phone if mode == "customer" else "",
+            "sip_identity":           sip_identity,
             "trip":                   trip,
             "pending_cancel_trip_id": None,
             "room_name":              room_name,
@@ -299,25 +349,33 @@ async def entrypoint(ctx: JobContext) -> None:
                 "driver_room_name": meta.get("driver_room_name", ""),
             }
 
-        # MultilingualModel's turn detector doesn't support Vietnamese — logs
-        # "Turn detector does not support language vi" on every user turn and,
-        # in practice, the pipeline stops picking up further speech after a
-        # couple of exchanges. Fall back to VAD-only (Silero) endpointing for
-        # "vn", which is language-agnostic and unaffected by this gap.
+        # Warm the LLM while prefetch runs so the first spoken turn is not a
+        # cold TLS+TTFT (~2.45s live on gpt-5.6-luna). Awaited before
+        # session.start so greeting/first turn share the pooled client.
+        llm = get_llm()
+        warmup = asyncio.create_task(warmup_llm(llm))
         session = AgentSession(
             stt=get_stt(),
-            llm=get_llm(),
+            llm=llm,
             tts=get_tts(),
             vad=ctx.proc.userdata["vad"],
-            turn_detection=MultilingualModel() if lang != "vn" else None,
             userdata=session_userdata,
+            turn_handling=turn_handling_for_lang(lang),
         )
+        attach_session_devlog(session, room=room_name, mode=mode, lang=lang)
+        attach_spoken_intent_preemptive_cancel(session, lang=lang, mode=mode)
+        turn_metrics.attach(session)
 
-        # Prefetch BEFORE session.start so tools + greeting have warm context
-        if mode == "customer" and phone:
+        # Prefetch BEFORE session.start so tools + greeting have warm context.
+        # Inbound driver: defer prefetch so connect filler TTS can start first.
+        role = prefetch_processor.prefetch_role(mode)
+        defer_driver_prefetch = mode in ("driver", "outbound") and not trip
+        if role == "customer" and phone:
             await prefetch_processor.run_customer(session, phone)
-        elif phone:
+        elif role == "driver" and phone and not defer_driver_prefetch:
             await prefetch_processor.run_driver(session, phone)
+        if not defer_driver_prefetch:
+            await warmup
 
         # ── Build the right agent for this room ───────────────────────────────
         voicebot = get_voicebot(lang)
@@ -373,31 +431,23 @@ async def entrypoint(ctx: JobContext) -> None:
                 proactive_nudge=proactive_nudge,
                 proactive_nudges=proactive_nudges,
             )
-            silence_seconds = 60.0
-            # Check-in nudges at 60s/120s, then hang up at 180s (3 min) of
-            # total silence — driver asked not to leave the session hanging
-            # open indefinitely once they've gone quiet. max_silences_default
-            # here matches the .env SILENCE_MAX_CONSECUTIVE default (3) on
-            # purpose, so the 3min total holds whether or not that env var
-            # is actually set.
-            max_silences_default = 3
+            silence_seconds = 10.0
+            # 10s im lặng → hỏi "Bạn còn đó không?" đúng 1 lần (TTS cố định,
+            # không qua LLM — tránh bot hỏi lặp). Thêm 10s im lặng nữa → chào
+            # tạm biệt và ngắt (~20s tổng).
+            max_silences_default = 2
 
         # BVCTelephony is for SIP/phone audio — it can strip speech from mobile
         # WebRTC mics, so it must only apply to real telephony rooms. Was
         # keyed on `mode == "outbound"`, but `mode` gets reassigned
         # "outbound" -> "driver" a few lines above the instant trip metadata
-        # resolves (the normal case for every real dispatched call) — so that
-        # check silently never matched in practice. `is_telephony` is computed
-        # once from the room name up top and never mutated, so it still says
-        # the right thing here regardless of how `mode` changed since.
+        # resolves. Room name `driver-{phone}-{ts}` is shared with in-app
+        # sessions, so `_is_telephony_room` is false there; SIP outbound
+        # flips `is_telephony` when metadata includes `sip_identity`.
         noise_cancel = _NOISE_CANCEL if is_telephony else None
-
-        await session.start(
-            agent=agent,
-            room=ctx.room,
-            room_input_options=RoomInputOptions(
-                noise_cancellation=noise_cancel,
-                # Agent-mode customer calls retarget RoomIO's linked
+        room_input = RoomInputOptions(
+            noise_cancellation=noise_cancel,
+            # Agent-mode customer calls retarget RoomIO's linked
                 # participant to the dialed-in SIP customer (see
                 # customer_call.py::_save_call_context) so the AI can hear
                 # them directly. RoomIO's own close_on_disconnect (default
@@ -415,8 +465,15 @@ async def entrypoint(ctx: JobContext) -> None:
                 # driven by ctx.room's own "disconnected" event further
                 # down, and background/bridge calls don't rely on this flag
                 # either (see the comment there).
-                close_on_disconnect=False,
-            ),
+            close_on_disconnect=False,
+        )
+        if mode == "driver":
+            room_input.text_input_cb = driver_text_input_cb
+
+        await session.start(
+            agent=agent,
+            room=ctx.room,
+            room_input_options=room_input,
             room_output_options=RoomOutputOptions(
                 transcription_enabled=True,
                 # False (not True): with sync_transcription on, the SDK's
@@ -438,6 +495,7 @@ async def entrypoint(ctx: JobContext) -> None:
             publish_agent_state(ev.new_state)
 
         conv_service.attach(session)
+        bind(conv=conv_service.call_id)
 
         # ── Silence tracker ───────────────────────────────────────────────────
         if mode == "custcall":
@@ -518,7 +576,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 if session_userdata.get("_customer_spoke"):
                     try:
                         await session.say(
-                            "Vâng, cảm ơn anh/chị nhé, tạm biệt ạ."
+                            "Vâng, cảm ơn bạn nhé, tạm biệt."
                             if lang != "en" else
                             "Alright, thank you, goodbye!",
                             allow_interruptions=False,
@@ -539,12 +597,19 @@ async def entrypoint(ctx: JobContext) -> None:
             # with a listening driver/customer, so it gets no spoken goodbye
             # here — only driver/customer sessions do.
             goodbye_message = None
+            driver_check_in = None
             if mode != "custcall":
                 goodbye_message = (
                     "If there's nothing else, I'll go ahead and end the call here. Goodbye!"
                     if lang == "en" else
-                    "Nếu anh/chị không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt anh/chị!"
+                    "Nếu bạn không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt bạn!"
                 )
+                if mode == "driver":
+                    driver_check_in = (
+                        "Still there?"
+                        if lang == "en" else
+                        "Bạn còn đó không?"
+                    )
 
             silence_tracker = SilenceTracker(
                 session=session,
@@ -555,6 +620,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 end_session_on_timeout=end_on_timeout,
                 on_timeout=_on_isolated_silence_timeout if mode == "custcall" else None,
                 goodbye_message=goodbye_message,
+                check_in_spoken_message=driver_check_in,
             )
 
             # Farewell phrases in the AI's own speech that mean "the call is
@@ -693,6 +759,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 session,
                 silence_tracker=silence_tracker,
             )
+            if mode == "custcall":
+                from app.voicebot.processors.sip_call_watch import schedule_no_answer_watch
+
+                session_userdata["_dial_started_at"] = session_userdata.get(
+                    "_call_started_at", time.time()
+                )
+                schedule_no_answer_watch(session, session_userdata)
         elif mode == "customer":
             register_customer_room_sip_watchers(
                 ctx.room,
@@ -735,6 +808,23 @@ async def entrypoint(ctx: JobContext) -> None:
                 # rely on that. No text/behavior change for either call type.
                 session.say(text, allow_interruptions=True)
 
+            @ctx.room.on("data_received")
+            def _on_call_transcript(packet) -> None:
+                if packet.topic != CALL_TRANSCRIPT_TOPIC:
+                    return
+                if not session_userdata.get("bridge_call_active"):
+                    return
+                try:
+                    payload = json.loads(packet.data.decode("utf-8"))
+                except Exception:
+                    logger.warning("call_transcript: bad payload", exc_info=True)
+                    return
+                speaker = (payload.get("speaker") or "customer").strip()
+                text = (payload.get("text") or "").strip()
+                if not text:
+                    return
+                conv_service.append_labeled_turn(text, speaker=speaker, role="user")
+
             # Proactive nudge (ask-before-calling-customer proximity alert,
             # suggest-next-stop, ...) — pushed by trip-service's
             # driverReachService.ts straight into this room's data channel
@@ -744,7 +834,10 @@ async def entrypoint(ctx: JobContext) -> None:
             async def _speak_driver_nudge(nudge_kind: str, payload: dict) -> None:
                 text = await build_nudge_message(nudge_kind, payload, lang=lang, userdata=session.userdata)
                 if not text:
-                    logger.warning("driver_nudge: empty message for kind=%s", nudge_kind)
+                    if nudge_kind in SILENT_NUDGE_KINDS:
+                        logger.info("driver_nudge: silent refresh kind=%s", nudge_kind)
+                    else:
+                        logger.warning("driver_nudge: empty message for kind=%s", nudge_kind)
                     return
                 # suggest_next_stop already sets this itself (see next_stop.py's
                 # build_next_stop_suggestion), targeting the ANNOUNCED next
@@ -753,10 +846,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 # ranking, see proximityService.ts's 200m arrival trigger).
                 # Setting it again here from payload would silently overwrite
                 # that with the wrong trip.
-                if nudge_kind != "suggest_next_stop":
+                if nudge_kind not in ("suggest_next_stop", "new_trip_offer", "schedule_updated"):
                     related_trip_id = payload.get("related_trip_id", "")
                     if related_trip_id:
                         context_store.set_last_nudge_trip(session.userdata, related_trip_id)
+                # new_trip_offer already reloaded context_store inside
+                # build_nudge_message — the next check_upcoming_trips /
+                # confirm_trip read sees the 4th trip without a driver "làm mới".
                 session.say(text, allow_interruptions=True)
 
             @ctx.room.on("data_received")
@@ -804,3 +900,4 @@ async def entrypoint(ctx: JobContext) -> None:
         await conv_service.finish()
         if mode in ("driver", "outbound") and phone:
             await _clear_driver_session_safe(phone)
+        clear()

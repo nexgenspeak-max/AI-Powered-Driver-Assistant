@@ -65,5 +65,5 @@ class DriverAgent(InboundToolsMixin, Agent):
             msg += f" Ước tính {eta} phút."
         if traffic:
             msg += f" {traffic}."
-        msg += " Anh/chị có nhận chuyến này không?"
+        msg += " Bạn có nhận chuyến này không?"
         return msg

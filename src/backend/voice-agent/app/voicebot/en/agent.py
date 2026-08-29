@@ -3,10 +3,21 @@ import logging
 from livekit.agents import Agent
 
 from app.voicebot.en.system_instructions import INBOUND_PROMPT, CUSTOMER_SUPPORT_PROMPT
-from app.voicebot.en.constants import GREETING_INBOUND, GREETING_OUTBOUND_PREFIX, GREETING_CUSTOMER
-from app.voicebot.en.tools_mapping import TOOLS_MAPPING_PROMPT
+from app.voicebot.en.constants import (
+    GREETING_AFTER_PREFETCH,
+    GREETING_CONNECT_FILLER,
+    GREETING_OUTBOUND_PREFIX,
+    GREETING_CUSTOMER,
+)
+from app.voicebot.en.tools_mapping import (
+    CUSTOMER_TOOLS_MAPPING_PROMPT,
+    OUTBOUND_TOOLS_MAPPING_PROMPT,
+    TOOLS_MAPPING_PROMPT,
+)
 from app.voicebot.en.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
+from app.voicebot.processors import context_store
+from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.en.tools.check_upcoming_trips       import check_upcoming_trips
@@ -81,11 +92,13 @@ _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
 _CUSTOMER_TOOLS = [get_my_trip, cancel_my_trip, get_driver_eta, answer_app_faq]
 
 
-class DriverAgent(SpeechTextFixMixin, Agent):
+class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
     """
     Handles both inbound and outbound driver sessions.
     All responses are in English.
     """
+
+    _spoken_intent_lang = "en"
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return PRONUNCIATIONS
@@ -112,7 +125,7 @@ class DriverAgent(SpeechTextFixMixin, Agent):
         )
 
         if trip:
-            instructions = build_outbound_prompt(trip, lang="en") + "\n" + TOOLS_MAPPING_PROMPT
+            instructions = build_outbound_prompt(trip, lang="en") + "\n" + OUTBOUND_TOOLS_MAPPING_PROMPT
             tools        = _DRIVER_OUTBOUND_TOOLS
         else:
             # proactive_nudge sessions still need the FULL inbound toolset —
@@ -140,8 +153,26 @@ class DriverAgent(SpeechTextFixMixin, Agent):
             # Opened FOR these nudges — if none rendered, stay quiet and let the
             # silence tracker close it, don't drop into the generic greeting.
             return
-        msg = self._build_outbound_greeting() if self._trip else GREETING_INBOUND
-        await self.session.say(msg, allow_interruptions=False)
+        msg = self._build_outbound_greeting() if self._trip else None
+        if msg:
+            from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
+
+            await speak_after_sip_pickup(self.session, msg)
+            return
+        await self._speak_inbound_greeting()
+
+    async def _speak_inbound_greeting(self) -> None:
+        """Connect filler first, then help prompt after prefetch."""
+        from app.voicebot.processors import prefetch as prefetch_processor
+        from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
+
+        await speak_after_sip_pickup(self.session, GREETING_CONNECT_FILLER)
+
+        userdata = self.session.userdata
+        if self._driver_phone and not context_store.has_prefetched_context(userdata):
+            await prefetch_processor.run_driver(self.session, self._driver_phone)
+
+        await self.session.say(GREETING_AFTER_PREFETCH, allow_interruptions=True)
 
     def _build_outbound_greeting(self) -> str:
         t        = self._trip or {}
@@ -172,7 +203,7 @@ class CustomerAgent(SpeechTextFixMixin, Agent):
         self._customer_phone = customer_phone
         self._resume_summary = resume_summary
         super().__init__(
-            instructions=CUSTOMER_SUPPORT_PROMPT + "\n" + TOOLS_MAPPING_PROMPT,
+            instructions=CUSTOMER_SUPPORT_PROMPT + "\n" + CUSTOMER_TOOLS_MAPPING_PROMPT,
             tools=_CUSTOMER_TOOLS,
         )
 

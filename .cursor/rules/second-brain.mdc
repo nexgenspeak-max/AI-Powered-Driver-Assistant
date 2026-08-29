@@ -1,0 +1,10 @@
+---
+description: Distill substantial conversations into the Obsidian SecondBrain vault (Claude memory). Always on.
+alwaysApply: true
+---
+
+# Second Brain
+
+Before ending a turn that decided, diagnosed, or changed code: write/update `~/.claude/projects/<escaped-cwd>/memory/*.md` (Obsidian vault `~/Documents/Obsidian/SecondBrain`). Skill: `.claude/skills/second-brain/SKILL.md`.
+
+Wikilink by **filename** (`[[voice_runtime]]`). Skip only true one-liners already in memory. A `stop` hook nags once if you edited the repo and skipped this. Do not create `second-brain/` in the git repo.

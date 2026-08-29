@@ -35,18 +35,30 @@ function IconButton({
   name,
   onPress,
   color,
+  label,
 }: {
   name: keyof typeof Ionicons.glyphMap
   onPress: () => void
   color: string
+  label: string
 }) {
+  const theme = useTheme()
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(139,92,246,0.12)' }}
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.primaryMuted.val,
+      }}
     >
-      <Ionicons name={name} size={16} color={color} />
+      <Ionicons name={name} size={18} color={color} />
     </Pressable>
   )
 }
@@ -75,6 +87,7 @@ export function NavigationHud({
   const insets = useSafeAreaInsets()
   const theme = useTheme()
   const purple = theme.primary.val
+  const onPrimary = theme.textInverse.val
   return (
     <>
       <SolidCard style={{ position: 'absolute', left: 16, right: 16, top: insets.top + TOP_CLEARANCE_BELOW_CHAT_BUTTON }}>
@@ -83,7 +96,7 @@ export function NavigationHud({
             <Ionicons
               name={arrived ? 'flag' : error ? 'warning' : maneuverIcon(step?.maneuver ?? '')}
               size={22}
-              color="#ffffff"
+              color={onPrimary}
             />
           </View>
           <YStack flex={1}>
@@ -106,8 +119,8 @@ export function NavigationHud({
             )}
           </YStack>
           <XStack gap="$2">
-            {error && <IconButton name="refresh" onPress={onRefresh} color={purple} />}
-            <IconButton name="close" onPress={onExit} color={purple} />
+            {error && <IconButton name="refresh" onPress={onRefresh} color={purple} label="Tính lại đường đi" />}
+            <IconButton name="close" onPress={onExit} color={purple} label="Thoát chỉ đường" />
           </XStack>
         </XStack>
       </SolidCard>

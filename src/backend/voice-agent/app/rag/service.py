@@ -129,7 +129,7 @@ class FaqRagService:
                 )
             return (
                 "Tôi chưa có thông tin trong sổ tay hướng dẫn về câu hỏi này. "
-                "Anh/chị thử xem trong app hoặc liên hệ hỗ trợ."
+                "Bạn thử xem trong app hoặc liên hệ hỗ trợ."
             )
 
         template = VOICE_SYNTHESIS_PROMPT_EN if lang == "en" else VOICE_SYNTHESIS_PROMPT_VI
@@ -146,12 +146,12 @@ class FaqRagService:
             logger.warning("FAQ RAG unavailable [%s]: %s", lang, exc)
             if lang == "en":
                 return "The app guide is not available right now. Please try again later."
-            return "Sổ tay hướng dẫn tạm thời không khả dụng. Anh/chị thử lại sau."
+            return "Sổ tay hướng dẫn tạm thời không khả dụng. Bạn thử lại sau."
         except Exception:
             logger.error("answer_app_faq failed [%s]", lang, exc_info=True)
             if lang == "en":
                 return "Sorry, I couldn't look that up. Please try again."
-            return "Xin lỗi, tôi chưa tra được thông tin. Anh/chị thử lại giúp tôi."
+            return "Xin lỗi, tôi chưa tra được thông tin. Bạn thử lại giúp tôi."
 
     async def answer(self, question: str, language: str = "vi") -> str:
         loop = asyncio.get_running_loop()

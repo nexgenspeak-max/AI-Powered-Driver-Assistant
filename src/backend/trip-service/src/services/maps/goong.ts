@@ -1,5 +1,8 @@
 import type { RouteInfo, RouteStep, DistanceMatrixResult } from './types';
 import type { LatLng } from '../../utils/geo';
+import { getLogger } from '../logger';
+
+const log = getLogger('goong');
 
 const GEOCODE_URL = 'https://rsapi.goong.io/geocode';
 const DIRECTION_URL = 'https://rsapi.goong.io/Direction';
@@ -60,7 +63,7 @@ export async function getRoute(
     const data = await resp.json() as Record<string, unknown>;
 
     if (!Array.isArray(data.routes) || data.routes.length === 0) {
-      console.warn(`Goong Direction API status: ${data.status ?? 'unknown'}`);
+      log.warning('Direction API empty', { status: String(data.status ?? 'unknown') });
       return {};
     }
 
@@ -102,7 +105,7 @@ export async function getRoute(
       steps: mapSteps(leg.steps),
     };
   } catch {
-    console.warn('Goong Maps request failed');
+    log.warning('Direction request failed');
     return {};
   }
 }
@@ -120,7 +123,7 @@ export async function getDistanceMatrix(
 ): Promise<DistanceMatrixResult | null> {
   if (!apiKey || origins.length === 0 || destinations.length === 0) return null;
 
-  console.log(`[goong] DistanceMatrix request | origins=${origins.length} destinations=${destinations.length}`);
+  log.info('DistanceMatrix request', { origins: origins.length, destinations: destinations.length });
 
   try {
     const params = new URLSearchParams({
@@ -136,7 +139,7 @@ export async function getDistanceMatrix(
     // field — only a per-element one (checked below when reading each
     // cell) — so the only thing to validate here is the response shape.
     if (!Array.isArray(data.rows)) {
-      console.warn('[goong] DistanceMatrix: unexpected response shape', data);
+      log.warning('DistanceMatrix unexpected response shape');
       return null;
     }
 
@@ -149,11 +152,13 @@ export async function getDistanceMatrix(
 
     const cellCount = rows.reduce((n, row) => n + row.length, 0);
     const okCount = rows.reduce((n, row) => n + row.filter(c => c.distance_m !== null).length, 0);
-    console.log(`[goong] DistanceMatrix response | cells=${cellCount} ok=${okCount}`);
+    log.info('DistanceMatrix response', { cells: cellCount, ok: okCount });
 
     return { origins, destinations, rows };
   } catch (err) {
-    console.warn('[goong] DistanceMatrix request failed:', err);
+    log.warning('DistanceMatrix request failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

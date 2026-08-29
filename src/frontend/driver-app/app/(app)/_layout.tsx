@@ -1,5 +1,8 @@
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
+import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
 import { Tabs } from 'expo-router'
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { LiquidGlassProvider, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
@@ -25,6 +28,19 @@ function TabIcon({ route, size, color, focused }: { route: TabRoute; size: numbe
   return <Ionicons name={focused ? g.on : g.off} size={size} color={color} />
 }
 
+const renderTabBar = (props: BottomTabBarProps) => <LiquidGlassTabBar {...props} />
+
+function AssistantChatOverlay() {
+  const panelOpen = useAssistantChatStore(s => s.panelOpen)
+  const closePanel = useAssistantChatStore(s => s.closePanel)
+  if (!panelOpen) return null
+  return (
+    <View style={[StyleSheet.absoluteFill, { zIndex: 50, elevation: 50 }]}>
+      <AssistantChatPanel onClose={closePanel} />
+    </View>
+  )
+}
+
 export default function AppLayout() {
   // Lives here (not dashboard.tsx) so the socket connects — and the
   // trip-offer banner below can appear — regardless of which tab the driver
@@ -47,8 +63,14 @@ export default function AppLayout() {
     <LiquidGlassProvider>
       <View style={{ flex: 1 }}>
         <Tabs
-          tabBar={props => <LiquidGlassTabBar {...props} />}
-          screenOptions={{ headerShown: false }}
+          tabBar={renderTabBar}
+          detachInactiveScreens={false}
+          screenOptions={{
+            headerShown: false,
+            // Inactive tabs stay frozen — avoids map/list re-rendering on every
+            // poll tick from useDriverContext in sibling tabs.
+            freezeOnBlur: true,
+          }}
         >
           <Tabs.Screen
             name="index"
@@ -99,6 +121,7 @@ export default function AppLayout() {
           <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
         </Tabs>
         <TripOfferBanner />
+        <AssistantChatOverlay />
       </View>
     </LiquidGlassProvider>
   )

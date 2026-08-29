@@ -14,8 +14,13 @@ from livekit.agents import AgentSession, JobContext
 from livekit.agents.llm import ChatMessage
 
 from app.config.settings import get_settings
+from app.devlog import event as dev_event
 
 logger = logging.getLogger("voice-agent.conversation")
+
+# Sub-call relay from driver-app during bridge mode — server STT only hears
+# the driver; customer speech arrives on the client from the SIP participant.
+CALL_TRANSCRIPT_TOPIC = "call_transcript"
 
 # _post_record retry: call-logger being briefly unreachable (still starting
 # up, a network blip) used to mean the record was gone for good — one warning
@@ -61,6 +66,44 @@ class ConversationService:
         # silently duplicate that work without this flag.
         self._finished = False
 
+    @property
+    def call_id(self) -> str:
+        return self._call_id
+
+    def _speaker_for_role(self, userdata: dict, role: str) -> str:
+        if role == "assistant":
+            return "ai"
+        if userdata.get("bridge_call_active"):
+            return "driver"
+        if userdata.get("customer_call_active"):
+            return "customer"
+        if self._is_customer_call:
+            return "customer"
+        return "driver"
+
+    def append_labeled_turn(
+        self,
+        text: str,
+        *,
+        speaker: str,
+        role: str | None = None,
+        ts: float | None = None,
+    ) -> None:
+        clean = (text or "").strip()
+        if not clean:
+            return
+        role = role or ("assistant" if speaker == "ai" else "user")
+        entry = {
+            "role": role,
+            "speaker": speaker,
+            "text": clean,
+            "ts": ts or time.time(),
+        }
+        if self.turns and self.turns[-1].get("text") == clean and self.turns[-1].get("speaker") == speaker:
+            return
+        self.turns.append(entry)
+        logger.info("  [%s] %s", speaker.upper(), clean[:120])
+
     def attach(self, session: AgentSession) -> None:
         userdata = session.userdata
         if userdata.get("isolated_call"):
@@ -94,13 +137,23 @@ class ConversationService:
             text = item.text_content
             if not text:
                 return
-            self.turns.append({
-                "role": item.role,
-                "text": text,
-                "ts":   ev.created_at or time.time(),
-            })
-            label = "USER" if item.role == "user" else "BOT "
-            logger.info("  [%s] %s", label, text[:120])
+            userdata = session.userdata if isinstance(session.userdata, dict) else {}
+            speaker = self._speaker_for_role(userdata, item.role)
+            self.append_labeled_turn(
+                text,
+                speaker=speaker,
+                role=item.role,
+                ts=ev.created_at or time.time(),
+            )
+            if not userdata:
+                return
+            from app.voicebot.processors import context_store, pending_action
+
+            if item.role == "user":
+                context_store.set_last_driver_utterance(userdata, text)
+            if item.role == "assistant":
+                context_store.match_callable_trip_by_text(userdata, text)
+                pending_action.infer_from_bot_line(text, userdata, lang="vn")
 
     async def _build_and_save_record(self) -> str:
         """Generates the transcript-based summary, saves the full record to
@@ -228,6 +281,7 @@ class ConversationService:
                 log_label,
                 json.dumps(record, ensure_ascii=False),
             )
+            dev_event("call_logger", ok=False, call_id=log_label, error="CALL_LOGGER_URL_unset")
             return
 
         attempts = len(_POST_RECORD_RETRY_DELAYS_SECONDS) + 1
@@ -242,6 +296,12 @@ class ConversationService:
                 logger.info(
                     "  [saved] call_id=%s attempt=%d/%d turns=%d",
                     log_label, attempt, attempts, len(record.get("turns", [])),
+                )
+                dev_event(
+                    "call_logger",
+                    call_id=log_label,
+                    attempt=attempt,
+                    turns=len(record.get("turns", [])),
                 )
                 return
             except httpx.ConnectError as exc:
@@ -275,6 +335,14 @@ class ConversationService:
             attempts, log_label, json.dumps(record, ensure_ascii=False),
             exc_info=last_exc,
         )
+        dev_event(
+            "call_logger",
+            ok=False,
+            call_id=log_label,
+            attempts=attempts,
+            error=type(last_exc).__name__ if last_exc else "unknown",
+            detail=str(last_exc) if last_exc else None,
+        )
 
     async def generate_summary(self) -> str:
         """Public entry point — also used mid-call by session.py's isolated
@@ -295,8 +363,13 @@ class ConversationService:
         # driver<->AI in the prompt below) was actively wrong for these,
         # producing summaries that misattributed or confused who said what.
         other_label = "Khách" if self._is_customer_call else "Tài xế"
+        speaker_labels = {
+            "driver": "Tài xế",
+            "ai": "Bot",
+            "customer": "Khách",
+        }
         transcript = "\n".join(
-            f"{other_label if t['role'] == 'user' else 'Bot'}: {t['text']}"
+            f"{speaker_labels.get(t.get('speaker', ''), other_label if t['role'] == 'user' else 'Bot')}: {t['text']}"
             for t in self.turns
         )
 

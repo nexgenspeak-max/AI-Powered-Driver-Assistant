@@ -1,37 +1,18 @@
-import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.en.tools_definition import raw_schema
-from app.services import backend_api
 from app.voicebot.processors import context_store
+from app.voicebot.processors.trip_response import build_bonus_response
+from app.voicebot.prompts.tool_response import ToolResponse
 
-logger = logging.getLogger("voice-agent.en.tools.get_bonus_info")
+
+def _format_bonus_reply(userdata: dict) -> ToolResponse:
+    bonuses = context_store.get(userdata, "active_bonuses", []) or []
+    return build_bonus_response(bonuses, lang="en")
 
 
 @function_tool(raw_schema=raw_schema["get_bonus_info"])
 async def get_bonus_info(raw_arguments: dict, context: RunContext) -> str:
-    # Live re-fetch — see get_current_trip_info.py for why.
-    driver_phone = context.userdata.get("driver_phone", "")
-    if driver_phone:
-        try:
-            fresh = await backend_api.get_active_bonuses(driver_phone)
-            context_store.set_context(context.userdata, "active_bonuses", fresh)
-        except Exception:
-            logger.warning("get_bonus_info — live refresh failed, using cached data", exc_info=True)
-
-    bonuses = context_store.get(context.userdata, "active_bonuses", [])
-    if not bonuses:
-        return "There are no active bonus or surge programs right now."
-
-    lines = []
-    for b in bonuses:
-        desc = b.get("description", "")
-        amount = b.get("amount", "")
-        expire = b.get("expires_at", "")
-        line = desc
-        if amount:
-            line += f" (+{amount})"
-        if expire:
-            line += f" (expires {expire})"
-        lines.append(line)
-
-    return "Active bonuses: " + "; ".join(lines) + "."
+    reply = _format_bonus_reply(context.userdata)
+    return await context_store.speak_with_refresh_offer(
+        context.session, context.userdata, "active_bonuses", reply, lang="en"
+    )

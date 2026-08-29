@@ -11,14 +11,15 @@ import { subscribeVoiceMessages } from '../stores/voiceSessionStore'
 // useDispatchSocket/useAutoConnectOnNudge, so it's always active regardless
 // of which tab or overlay is showing.
 export function useCaptureVoiceMessages(): void {
-  const { addUserMessage, addBotMessage } = useAssistantChatStore()
+  const upsertStreamingMessage = useAssistantChatStore(s => s.upsertStreamingMessage)
 
   useEffect(
     () =>
-      subscribeVoiceMessages((text, from) => {
-        if (from === 'user') addUserMessage(text)
-        else addBotMessage(text)
+      subscribeVoiceMessages((text, from, { isFinal, segmentId }) => {
+        const who =
+          from === 'user' ? 'me' : from === 'customer' ? 'customer' : 'bot'
+        upsertStreamingMessage(who, text, isFinal, segmentId)
       }),
-    [addUserMessage, addBotMessage],
+    [upsertStreamingMessage],
   )
 }

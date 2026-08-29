@@ -55,9 +55,18 @@ export default function DashboardScreen() {
     data: context,
     isLoading,
     isError,
-    isRefetching,
     refetch,
   } = useDriverContext();
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const onPullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setPullRefreshing(false);
+    }
+  };
+  const showTripSkeleton = isLoading && !context;
 
   const { mutate: toggleOnline } = useMutation({
     mutationFn: (online: boolean) =>
@@ -163,8 +172,8 @@ export default function DashboardScreen() {
     <Screen
       scroll
       header={header}
-      refreshing={isRefetching}
-      onRefresh={refetch}
+      refreshing={pullRefreshing}
+      onRefresh={onPullRefresh}
     >
       <SegmentedControl<DashboardMode>
         value={mode}
@@ -185,14 +194,14 @@ export default function DashboardScreen() {
         }
       />
 
-      {mode === "trips" && isLoading && (
+      {mode === "trips" && showTripSkeleton && (
         <YStack gap="$4">
           <Skeleton height={120} radius={24} />
           <Skeleton height={120} radius={24} />
         </YStack>
       )}
 
-      {mode === "trips" && !isLoading && isError && (
+      {mode === "trips" && !showTripSkeleton && isError && (
         <EmptyState
           icon="alert-circle-outline"
           title="Không thể tải chuyến đi"
@@ -202,7 +211,7 @@ export default function DashboardScreen() {
         />
       )}
 
-      {mode === "trips" && !isLoading && !isError && (
+      {mode === "trips" && !showTripSkeleton && !isError && context && (
         <>
           {/* Short labels, no icons — 3 segments is already tight; an icon +
               "Chưa xác nhận (12)" wrapped to 2 lines inside the control's

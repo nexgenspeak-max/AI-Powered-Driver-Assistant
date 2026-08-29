@@ -1,14 +1,19 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { bind, getLogger } from './logger';
 
 const LOG_DIR = path.resolve(__dirname, '../../data');
 const LOG_FILE = path.join(LOG_DIR, 'twilio_events.jsonl');
+const log = getLogger('twilio');
 
 export function logEvent(source: string, payload: Record<string, string>): void {
   const row = { ts: new Date().toISOString(), source, ...payload };
   if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
   fs.appendFileSync(LOG_FILE, JSON.stringify(row) + '\n', 'utf-8');
-  console.log(`[twilio] ${source} CallSid=${payload.CallSid ?? '?'} status=${payload.CallStatus ?? payload.status ?? ''}`);
+  if (payload.CallSid) {
+    bind({ conv: payload.CallSid });
+  }
+  log.info(source, { status: payload.CallStatus ?? payload.status ?? '-' });
 }
 
 export function readEvents(limit = 200, callSid?: string): Record<string, string>[] {

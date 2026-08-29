@@ -8,15 +8,18 @@ import * as mapsService from '../services/mapsService';
 import { phoneVariants } from '../utils/phone';
 import { distanceMeters } from '../utils/geo';
 import { cacheSet, cacheGet, cacheDel, driverLiveLocationKey, driverOptimizedRouteKey, driverSessionKey } from '../cache/redis';
-import { notifyDriver } from '../services/notify';
+import { pushDriverScheduleUpdated } from '../services/driverReachService';
+import { notifyDriver, notifyCustomer } from '../services/notify';
 import {
   maybeNotifyCustomerOfProximity,
   maybeNotifyCustomerOfDropoffProximity,
   maybeAnnouncePickupArrivalNextStop,
   maybeAnnounceDropoffArrivalNextStop,
 } from '../services/proximityService';
+import { getLogger } from '../services/logger';
 
 const router = Router();
+const log = getLogger('drivers');
 
 // "Chuyến đang có" của tài xế — chỉ những chuyến THỰC SỰ còn đang diễn ra: chưa tới điểm
 // đón (pending/notified/calling/confirmed) hoặc đã đón khách rồi (arrived_pickup/picked_up).
@@ -206,6 +209,21 @@ async function cacheDriverLocation(driverPhone: string, lat: number, lng: number
   }
 }
 
+// Customer-app's map used to GET /customers/me/context every 5s just to
+// pick up this same cached fix. Push instead — the ping cadence is already
+// ~10min (or a trip-event burst), so this is a handful of WS messages, not
+// a live GPS stream. No-op when the customer has no socket (see notify/).
+async function notifyCustomersOfDriverLocation(driverPhone: string): Promise<void> {
+  const trips = (await tripsForDriver(driverPhone)).filter(t => DRIVER_ACTIVE_STATUSES.has(t.status));
+  await Promise.all(trips.map(async (trip) => {
+    const customerId = trip.id_account || trip.customer_phone;
+    if (!customerId) {
+      return;
+    }
+    await notifyCustomer(customerId, 'driver_location', { trip_id: trip.trip_id });
+  }));
+}
+
 // Shared by both location endpoints below — proximity-to-pickup/dropoff
 // customer notification + driver next-stop nudge, per active trip. Used to
 // live ONLY in POST /me/location on the theory that its ~10-min background-
@@ -272,8 +290,8 @@ async function runProximityChecks(
         return { trip, kind };
       });
 
-  console.log(
-    `[proximity] checking | driver=${driverPhone} candidates=${toCheck
+  log.info('checking', {
+    candidates: toCheck
       .map(({ trip, kind }) => {
         const point = kind === 'dropoff'
           ? { lat: trip.dropoff_lat, lng: trip.dropoff_lng }
@@ -281,10 +299,10 @@ async function runProximityChecks(
         const d = typeof point.lat === 'number' && typeof point.lng === 'number'
           ? Math.round(distanceMeters({ lat, lng }, { lat: point.lat, lng: point.lng }))
           : null;
-        return `${kind}:${trip.trip_id.slice(0, 8)}(${trip.customer_name || '?'},${d ?? '?'}m)`;
+        return `${kind}:${trip.trip_id.slice(0, 8)}(${d ?? '?'}m)`;
       })
-      .join(' , ')}`,
-  );
+      .join(','),
+  });
 
   // Stops after the first nudge that actually fires this cycle —
   // driverReachService.ts's pending-nudge slot holds exactly ONE nudge, not
@@ -338,8 +356,13 @@ router.post('/me/location', async (req: Request, res: Response) => {
       return res.status(400).json({ detail: 'lat and lng must be numbers' });
     }
 
-    console.log(`[drivers] POST /me/location | driver=${driverPhone} lat=${lat} lng=${lng}`);
+    log.info('location ping');
     await cacheDriverLocation(driverPhone, lat, lng);
+    notifyCustomersOfDriverLocation(driverPhone).catch(err => {
+      log.warning('driver_location push failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
     await runProximityChecks(driverPhone, lat, lng);
 
     return res.json({ status: 'ok' });
@@ -384,6 +407,11 @@ router.post('/me/location/live', async (req: Request, res: Response) => {
         : 'both';
 
     await cacheDriverLocation(driverPhone, lat, lng);
+    notifyCustomersOfDriverLocation(driverPhone).catch(err => {
+      log.warning('driver_location push failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     // A cache MISS here (not just the null-location case cacheDriverLocation
     // already handles above) means something recently cleared the route —
@@ -402,7 +430,7 @@ router.post('/me/location/live', async (req: Request, res: Response) => {
     if (!existingRoute) {
       const trips = await tripsForDriver(driverPhone);
       const route = await routeOptimizationService.getOptimizedRoute(driverPhone, trips, { lat, lng });
-      if (route) await notifyDriver(driverPhone, 'schedule_updated', {});
+      if (route) await pushDriverScheduleUpdated(driverPhone);
     }
 
     await runProximityChecks(driverPhone, lat, lng, proximityScope);

@@ -7,7 +7,8 @@ import { router } from 'expo-router'
 import { useThemeStore } from '../stores/themeStore'
 import { GlassMaterial, GlowOverlay, useGlassPress } from './LiquidGlass'
 
-export const BACK_BUTTON_SIZE = 40
+// WCAG / platform HIG minimum touch target — 44×44pt.
+export const BACK_BUTTON_SIZE = 44
 const BACK_BUTTON_LEFT = 20
 // Gap between the safe-area top inset and the button itself.
 export const BACK_BUTTON_TOP_GAP = 12
@@ -36,6 +37,8 @@ export function BackButton({ to = '/profile' }: Props = {}) {
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
+        accessibilityRole="button"
+        accessibilityLabel="Quay lại"
         style={[
           {
             position: 'absolute',

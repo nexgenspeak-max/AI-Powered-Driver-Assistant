@@ -1,0 +1,229 @@
+---
+description: Mobile UI/UX standards (driver-app, customer-app) — WCAG AA, 8pt grid, Screen shell, tokens, a11y, verify
+globs: src/frontend/{driver-app,customer-app}/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Mobile UI standards (Expo + Tamagui)
+
+**Apps:** `driver-app`, `customer-app` — NOT legacy `mobile-app/`.
+
+**International bar:** WCAG 2.2 AA (contrast, labels, target size), Apple HIG + Material **44×44pt** touch, **8pt spacing grid**, ISO 9241-210 (predictable nav, recoverable errors).
+
+**Design system:** Neo Glass + Soft Dark — `tamagui.config.ts`, overview `claude/docs/mobile/driver/00_OVERVIEW.md`.
+
+**Verify before done:** `npm run verify` in the touched app (typecheck + `scripts/ui-check.sh`).
+
+---
+
+## 1. Which shell to use (mandatory)
+
+| Screen type | Pattern | Example |
+|-------------|---------|---------|
+| Tab root (home, trips, profile) | Full-bleed or custom map layout — **exception** documented in file header | `index`, map home |
+| Sub-screen with back | `<Screen scroll backButton>` | support, faq, edit-profile |
+| Sub-screen, no scroll | `<Screen backButton padded={false}>` | rare |
+| Auth | Existing auth layout + `GlassButton` | login |
+| Modal / sheet | Match sibling modals in same feature | trip offer |
+
+**Never:** bare `View flex={1}` + hand-rolled `ScrollView` + `paddingBottom: 100`.
+
+```tsx
+// ❌ BAD
+<View flex={1}><ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+
+// ✅ GOOD
+<Screen scroll backButton>
+  <AppText variant="h1">Hỗ trợ</AppText>
+</Screen>
+```
+
+---
+
+## 2. Spacing scale (8pt grid)
+
+Tamagui tokens — **only these** for margin/padding/gap:
+
+| Token | px | Use |
+|-------|-----|-----|
+| `$1` | 4 | Icon–text micro gap |
+| `$2` | 8 | Inline chip gap, tight rows |
+| `$3` | 12 | Compact list item padding |
+| `$4` | 16 | Default section inner padding |
+| `$5` | 20 | **Screen horizontal gutter** (built into `Screen`) |
+| `$6` | 24 | Section gap, card padding |
+| `$7` | 28 | Large section separation |
+| `$8` | 32 | Hero blocks |
+| `$9`–`$10` | 40–48 | Rare vertical rhythm |
+
+**Screen defaults** (`Screen.tsx`): horizontal **20px**, vertical gap **20px**, top **insets.top + 16** (or back-button clearance).
+
+**Floating chrome clearance** — import from `src/constants/layout.ts`, never magic numbers:
+
+| Constant | When |
+|----------|------|
+| `SCROLL_TAB_BAR_CLEARANCE` | Scrollable tab screens (bottom padding) |
+| `MAP_OVERLAY_BOTTOM_CLEARANCE` | Bottom-anchored map overlays (route panel, HUD) |
+| `TOP_CLEARANCE_BELOW_CHAT_BUTTON` | Top overlays on home below chat toggle |
+
+---
+
+## 3. Color & theme tokens
+
+Use Tamagui **semantic** tokens — not raw hex in screens/components:
+
+| Role | Token |
+|------|--------|
+| Page background | `$background` |
+| Card / elevated surface | `$surfaceElevated`, `$card` |
+| Primary text | `$textPrimary` |
+| Secondary / meta | `$textSecondary`, `$textMuted` |
+| Brand accent | `$primary`, `$primaryPress` |
+| CTA gradient | `$gradientStart`, `$gradientEnd` |
+| Success / warning / danger | `$success`, `$warning`, `$danger` |
+| Borders (sparse) | `$outline`, `$divider` |
+
+```tsx
+// ❌ BAD
+<Text color="#8B5CF6">
+<Ionicons color="#34d399" />
+
+// ✅ GOOD
+<AppText color="$primary">
+<Ionicons color={theme.success.val} />  // useTheme() for non-Tamagui APIs
+```
+
+**Allowed hex exceptions:** map markers, third-party map layers, Skia/canvas — comment why.
+
+**Both themes:** every changed surface must read clearly in **light AND dark** (WCAG AA ~4.5:1 body on background).
+
+Brand anchor: `#8B5CF6` primary — defined once in `tamagui.config.ts`.
+
+---
+
+## 4. Typography (`AppText` only)
+
+**Never** ad-hoc `fontSize: 11` or `fontWeight` on text — pick a variant:
+
+| Variant | Size | Use |
+|---------|------|-----|
+| `display` | 28 | Big numbers, hero stats |
+| `h1` | 22 | Screen title |
+| `h2` | 18 | Section / card title |
+| `title` | 16 | List row title |
+| `body` | 15 | Default copy |
+| `bodyStrong` | 15 | Emphasis in paragraph |
+| `label` | 13 | Field labels, meta |
+| `caption` | 12 | Timestamps, hints — **minimum readable size** |
+
+```tsx
+// ❌ BAD
+<Text fontSize={11} fontWeight="700">Trang chủ</Text>
+
+// ✅ GOOD
+<AppText variant="caption" color="$textSecondary">Trang chủ</AppText>
+```
+
+Tab bar labels: **12px** minimum (`LiquidGlassTabBar`).
+
+**Exception:** route tabs (Trang chủ, Chuyến, …) are **icon-only** — meaning is carried by the icon + `accessibilityLabel`; center **Trợ lý AI** slot keeps its caption under the orb.
+
+---
+
+## 5. Touch & accessibility (WCAG + HIG)
+
+| Rule | Requirement |
+|------|-------------|
+| Min touch target | **44×44pt** on every primary control |
+| `Pressable` / `TouchableOpacity` | `accessibilityRole` + descriptive `accessibilityLabel` (Vietnamese for driver UI) |
+| Expandable rows | `accessibilityState={{ expanded }}` |
+| Icon-only buttons | Label describes action, not icon name ("Mở trò chuyện", not "chatbubble") |
+| Reduce motion | Respect `AccessibilityInfo.isReduceMotionEnabled()` for decorative animation |
+
+**Reference implementations:** `BackButton`, `ChatToggleButton`, `AssistantTabButton` (hitSlop 8).
+
+```tsx
+// ❌ BAD — 32pt icon button
+<Pressable style={{ width: 32, height: 32 }}>
+
+// ✅ GOOD
+<Pressable
+  style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+  accessibilityRole="button"
+  accessibilityLabel="Quay lại"
+>
+```
+
+---
+
+## 6. Component picker
+
+| Need | Use | Avoid |
+|------|-----|-------|
+| Standard screen | `Screen` | Raw View + ScrollView |
+| Text | `AppText` | Tamagui `Text` with manual sizes |
+| Primary button | `Button` | Raw Pressable styled ad hoc |
+| Auth / glass CTA | `GlassButton` | MUI-style filled rect on glass |
+| Text field | `Input`, `GlassAuthInput` | Unstyled TextInput |
+| Card / panel | `Card`, `Surface` | View + shadow one-off |
+| Glass floating control | `GlassMaterial` + `useGlassPress` | Skia shader (removed — use BlurView stack) |
+| Back nav | `BackButton` or `<Screen backButton>` | Custom chevron per screen |
+| Badge | `Badge` | Inline styled View |
+
+**Glass rule:** `Card` uses `GlassSheen` (no blur). Floating controls (tab bar, back, assistant orb) use `GlassMaterial`.
+
+---
+
+## 7. Tab bar & assistant orb
+
+- Tab bar: `LiquidGlassTabBar` — floating island, **do not** hardcode bottom padding without clearance constants.
+- **Route tabs:** icon-only (no caption) — icons at **26px**; `accessibilityLabel` from route `title` (Vietnamese) for screen readers.
+- **Active tab pill:** fill/tint only (`backgroundColor`) — **never** add a `borderWidth` stroke on the pill; the bar already has a 1px glass rim (`GLASS_BORDER_COLOR`). Stacking both reads as overlapping/double borders (worst at first/last tab corners, e.g. Trang chủ).
+- **Edge clearance:** first/last tab pill must inset **`PILL_BAR_EDGE_INSET` (12px)** from the bar's rounded outer edge; middle tabs use **`PILL_SLOT_INSET` (4px)** — pill must not "chạm thành" the bar rim.
+- Center **Trợ lý AI**: `AssistantTabButton` + `AssistantTabLabel` — mic when idle, waves when connected, purple brand gradient.
+- Web preview (`driver-app` on Expo web) is **approximate** for map/orb — **device/simulator is authoritative** for pixels.
+
+---
+
+## 8. Forms & feedback
+
+- Labels above fields (`AppText variant="label"`).
+- Errors: `$danger` text + clear message — not color alone.
+- Submit: disable while loading; show activity indicator.
+- Destructive: confirm `Alert.alert` before irreversible actions.
+
+---
+
+## 9. Motion & performance
+
+- Decorative orb/spin animation: **off when idle** on web; respect reduce motion on native.
+- Prefer Reanimated / CSS for motion; avoid 60fps JS loops updating many nodes.
+- No `filter: blur` stacks on web tab bar (CPU) — see `AssistantTabButton.web.tsx` pattern.
+
+---
+
+## 10. Anti-patterns (reject in review)
+
+- `paddingBottom: 100` or any hardcoded tab clearance
+- `fontSize: 11` anywhere in `app/` or `src/features/`
+- `#8B5CF6`, `#7C3AED`, `#34d399` literals in feature screens
+- `IconButton` / pressable under 44pt for primary actions
+- New screen without `Screen` shell (unless full-bleed exception comment)
+- Duplicating layout math instead of importing `layout.ts`
+- Light-only colors that vanish in dark theme
+
+`scripts/ui-check.sh` catches some of these — run `npm run verify`.
+
+---
+
+## 11. Definition of done (mobile UI)
+
+- [ ] Correct shell (`Screen` / documented exception)
+- [ ] Spacing from `$1`–`$10` or layout constants
+- [ ] `AppText` variants; no 11px text
+- [ ] Semantic color tokens; light + dark checked
+- [ ] Touch targets ≥ 44pt; a11y labels on interactives
+- [ ] `npm run verify` passes
+- [ ] Visual check on **iOS or Android** for layout/orb/map changes
+
+See also: `ui-web.mdc`, `quality-standards.mdc`.

@@ -31,9 +31,11 @@ class BridgeCallAgent(SpeechTextFixMixin, Agent):
         return self._lang
 
     async def on_enter(self) -> None:
-        from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout
-        from app.voicebot.processors.handback import enter_bridge_listen_mode
-        from app.voicebot.processors.sip_call_watch import wait_for_sip_pickup
+        from app.voicebot.processors.sip_call_watch import (
+            cancel_no_answer_watch,
+            teardown_unanswered_call,
+            wait_for_sip_pickup,
+        )
 
         logger.info("BridgeCallAgent active | customer=%s", self._customer_name)
         # No greeting spoken here anymore — the full bridge_greeting script
@@ -42,6 +44,14 @@ class BridgeCallAgent(SpeechTextFixMixin, Agent):
         # *before* dialing (see customer_call.py/custom_call.py's
         # _pre_dial_announcement), so the driver already knows everything by
         # the time the callee picks up. The AI has nothing left to say.
-        await wait_for_sip_pickup(self.session.userdata)
+        answered = await wait_for_sip_pickup(self.session.userdata)
+        if not answered:
+            logger.info("bridge call: pickup not confirmed — tearing down unanswered dial")
+            await teardown_unanswered_call(self.session, self.session.userdata)
+            return
+        cancel_no_answer_watch(self.session.userdata)
+        from app.voicebot.processors.bridge_timeout import schedule_bridge_timeout
+        from app.voicebot.processors.handback import enter_bridge_listen_mode
+
         enter_bridge_listen_mode(self.session)
         schedule_bridge_timeout(self.session, self.session.userdata)

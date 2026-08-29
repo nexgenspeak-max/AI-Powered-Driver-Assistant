@@ -12,6 +12,10 @@ export function useDriverContext() {
     queryKey: ['driverContext'],
     queryFn: () => driversService.getContext(),
     enabled: !!driver,
-    refetchInterval: 5000,
+    staleTime: 60_000,
+    // No interval poll — trip_offer / schedule_updated / pending_nudge on
+    // the dispatch socket invalidate this query. Same host as REST: if the
+    // socket is down the API is down too.
+    placeholderData: (prev) => prev,
   })
 }

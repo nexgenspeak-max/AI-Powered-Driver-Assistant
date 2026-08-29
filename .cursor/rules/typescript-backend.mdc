@@ -36,14 +36,18 @@ Use **early return** in routes. Keep handlers thin — delegate to `services/`.
 
 ## Service layer
 
+New work lives in `services/<name>/` (folder). Canonical adapters: `maps/`, `notify/`. Flat `*Service.ts` files are legacy — convert when that file is next edited. Full rules: `.cursor/rules/service-layer.mdc`.
+
 | Service | Responsibility |
 |---------|----------------|
-| `tripService.ts` | DynamoDB CRUD |
+| `tripService.ts` | DynamoDB CRUD (legacy flat file) |
 | `driverContextService.ts` | Build/cache driver context |
 | `earningsService.ts` | Fare + earnings calculations |
+| `maps/` | Route/matrix adapters (Goong / Google) |
+| `notify/` | Local WS vs Lambda push |
 | `routes/*.ts` | HTTP only — validate, call service, map response |
 
-- Export pure functions: `tripFare()`, `enrichTrip()`, `buildDriverContext()`
+- Export functions from the package façade. Inject collaborators as args; do not add a DI container.
 - Invalidate cache in routes after writes: `invalidateTripParties()`
 
 ## Types

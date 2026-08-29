@@ -1,11 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { AccessToken, VideoGrant, AgentDispatchClient, RoomServiceClient } from 'livekit-server-sdk';
+import { AccessToken, VideoGrant, RoomServiceClient } from 'livekit-server-sdk';
 import { config } from '../config';
 import { cacheGet, cacheDel, driverPendingNudgeKey, driverSessionKey } from '../cache/redis';
 import { invalidateDriverContext } from '../services/driverContextService';
+import { dispatchAgent, getRoomAgentState } from '../services/voiceSessionService';
+import { bind, getLogger } from '../services/logger';
 
 const router = Router();
+const log = getLogger('voice');
 
 interface PendingNudge {
   kind: string;
@@ -23,15 +26,6 @@ function readPendingNudges(value: unknown): PendingNudge[] {
     return [{ kind: v.kind, payload: (v.payload as Record<string, unknown>) ?? {} }];
   }
   return [];
-}
-async function dispatchAgent(roomName: string, agentName: string): Promise<void> {
-  try {
-    const client = new AgentDispatchClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
-    await client.createDispatch(roomName, agentName);
-    console.log(`[voice] agent '${agentName}' dispatched | room=${roomName}`);
-  } catch (err) {
-    console.warn(`[voice] agent dispatch failed (non-fatal): ${err}`);
-  }
 }
 
 function makeToken(identity: string, name: string, roomName: string): Promise<string> {
@@ -75,8 +69,30 @@ router.post('/token', async (req: Request, res: Response) => {
     // name to a UUID suffix instead of Date.now()/1000 (second-granularity —
     // two genuinely-new-session requests landing in the same second used to
     // collide onto the identical room name and double-dispatch onto it).
-    const existingSession = await cacheGet<{ room_name: string }>(driverSessionKey(phone));
+    let existingSession = await cacheGet<{ room_name: string }>(driverSessionKey(phone));
+    let needsDispatch = !existingSession;
+    if (existingSession) {
+      // Session key outlives a killed voice-agent worker (clear is best-effort
+      // on job shutdown). Reusing that room without dispatch leaves the driver
+      // in an empty LiveKit room — no agent, no confirm_trip, no audio.
+      const agentState = await getRoomAgentState(existingSession.room_name);
+      if (agentState === 'missing') {
+        const staleRoom = existingSession.room_name;
+        await cacheDel(driverSessionKey(phone));
+        existingSession = null;
+        needsDispatch = true;
+        log.info('stale session room gone, minting a new room', { was: staleRoom });
+      } else if (agentState === 'no_agent') {
+        needsDispatch = true;
+        bind({ room: existingSession.room_name });
+        log.info('reusing room but no agent present, will re-dispatch');
+      } else {
+        bind({ room: existingSession.room_name });
+        log.info('reusing existing session instead of creating a new room');
+      }
+    }
     const roomName = existingSession?.room_name || `driver-${phone.replace('+', '')}-${randomUUID()}`;
+    bind({ room: roomName });
 
     // Deliver anything reachDriver() couldn't push live (driver had no
     // session open at the time — see driverReachService.ts) as soon as they
@@ -109,19 +125,13 @@ router.post('/token', async (req: Request, res: Response) => {
           nudges,
         });
         await roomService.createRoom({ name: roomName, metadata });
-        console.log(
-          `[voice] delivering pending nudge(s) | driver=${phone} kinds=${nudges
-            .map((n) => n.kind)
-            .join(',')} room=${roomName}`,
-        );
+        log.info('delivering pending nudge(s)', { kinds: nudges.map((n) => n.kind).join(',') });
       }
     }
 
     const token = await makeToken(`driver-${phone}`, phone, roomName);
 
-    if (existingSession) {
-      console.log(`[voice] reusing existing session instead of creating a new room | driver=${phone} room=${roomName}`);
-    } else {
+    if (needsDispatch) {
       await dispatchAgent(roomName, config.livekitAgentName);
     }
 
@@ -158,9 +168,12 @@ router.post('/end-session', async (req: Request, res: Response) => {
     for (const identity of participant_identities) {
       try {
         await roomService.removeParticipant(room_name, identity);
-        console.log(`[voice] end-session removed participant | room=${room_name} identity=${identity}`);
+        log.info('end-session removed participant', { identity });
       } catch (err) {
-        console.warn(`[voice] end-session could not remove ${identity} from ${room_name}: ${err}`);
+        log.warning('end-session could not remove participant', {
+          identity,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 

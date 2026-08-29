@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import twilio from 'twilio';
 import * as callService from '../services/callService';
 import * as twilioMonitor from '../services/twilioMonitor';
+import { getLogger } from '../services/logger';
 
 const router = Router();
+const log = getLogger('calls');
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
 function logForm(source: string, body: Record<string, string>): void {
@@ -30,8 +32,8 @@ router.post('/inbound/webhook', (req: Request, res: Response) => {
 });
 
 router.post('/inbound/recorded', (req: Request, res: Response) => {
-  const { CallSid, RecordingUrl = '', RecordingDuration = '' } = req.body;
-  console.log(`[Inbound] Recording done: ${CallSid} | url=${RecordingUrl} | dur=${RecordingDuration}s`);
+  const { RecordingUrl = '', RecordingDuration = '' } = req.body;
+  log.info('inbound recording done', { duration_s: RecordingDuration, has_url: Boolean(RecordingUrl) });
 
   const twiml = new VoiceResponse();
   twiml.say({ language: 'vi-VN' }, 'Cuộc gọi đã được ghi lại. Cảm ơn bạn!');
@@ -40,14 +42,17 @@ router.post('/inbound/recorded', (req: Request, res: Response) => {
 });
 
 router.post('/inbound/recording-status', (req: Request, res: Response) => {
-  const { CallSid, RecordingStatus = '', RecordingUrl = '' } = req.body;
-  console.log(`[Inbound] Recording status: ${CallSid} | ${RecordingStatus} | ${RecordingUrl}`);
+  const { RecordingStatus = '', RecordingUrl = '' } = req.body;
+  log.info('inbound recording status', { status: RecordingStatus, has_url: Boolean(RecordingUrl) });
   res.json({ status: 'ok' });
 });
 
 router.post('/inbound/transcription', (req: Request, res: Response) => {
-  const { CallSid, TranscriptionText = '', TranscriptionStatus = '' } = req.body;
-  console.log(`[Inbound] Transcription [${TranscriptionStatus}]: ${TranscriptionText}`);
+  const { TranscriptionText = '', TranscriptionStatus = '' } = req.body;
+  log.info('inbound transcription', {
+    status: TranscriptionStatus,
+    chars: String(TranscriptionText).length,
+  });
   // TODO: send transcript to GPT-4o for summary
   res.json({ status: 'ok' });
 });
@@ -74,8 +79,8 @@ router.post('/outbound/twiml', (_req: Request, res: Response) => {
 });
 
 router.post('/outbound/gather', (req: Request, res: Response) => {
-  const { CallSid, Digits = '' } = req.body;
-  console.log(`[Outbound] Gather: ${CallSid} | Digits=${Digits}`);
+  const { Digits = '' } = req.body;
+  log.info('outbound gather', { digits: Digits });
 
   const twiml = new VoiceResponse();
   if (Digits === '1') {

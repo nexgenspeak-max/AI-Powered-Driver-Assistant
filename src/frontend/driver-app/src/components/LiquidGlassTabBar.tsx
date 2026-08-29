@@ -17,7 +17,7 @@
  * doesn't need to change; `PageBlurOverlay` is gone.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
@@ -30,7 +30,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { haptics } from '../utils/haptics'
-import { AssistantTabButton, BUTTON_SIZE, BUTTON_RISE } from './AssistantTabButton'
+import { AssistantTabButton, AssistantTabLabel } from './AssistantTabButton'
 
 // Kept only so existing `<LiquidGlassProvider>` in _layout.tsx keeps working.
 export function LiquidGlassProvider({ children }: { children: ReactNode }) {
@@ -46,13 +46,20 @@ const BOTTOM_MARGIN = 16
 const HEIGHT = 72
 const RADIUS = 28
 const PILL_INSET = 8
-// Zero horizontal inset — the pill exactly matches each tab's own flex
-// slot width (same width the label/icon render into), the widest it can be
-// without overlapping the neighboring tab. The AI button's own slot makes
-// every real tab's slot narrower than before it existed, and even a small
-// inset (4px each side) was still cutting into long labels like "Trang chủ"
-// (reported: the "t"/"u" ends sat outside the purple background).
-const PILL_H_INSET = 0
+// Inset within a tab slot (gap to neighbor). Edge tabs also use PILL_BAR_EDGE_INSET
+// on the outer side so the fill clears the bar's rounded end — was 0 and the
+// pill read as "chạm thành" at Trang chủ / Cá nhân.
+const PILL_SLOT_INSET = 4
+const PILL_BAR_EDGE_INSET = 12
+
+function pillInsetsForSlot(slotIndex: number, slots: number) {
+  const isFirst = slotIndex === 0
+  const isLast = slotIndex === slots - 1
+  return {
+    left: isFirst ? PILL_BAR_EDGE_INSET : PILL_SLOT_INSET,
+    right: isLast ? PILL_BAR_EDGE_INSET : PILL_SLOT_INSET,
+  }
+}
 
 const PALETTE = {
   light: {
@@ -86,7 +93,7 @@ const PALETTE = {
   },
 }
 
-export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function LiquidGlassTabBarInner({ state, descriptors, navigation }: BottomTabBarProps) {
   const isLight = useThemeName() === 'light'
   const p = isLight ? PALETTE.light : PALETTE.dark
   const reduced = useReducedMotion()
@@ -116,18 +123,25 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
   // full bar, AI slot included), so the pill always lands centered under
   // its tab and the AI button always lands centered on its own slot.
   const segW = barWidth > 0 ? barWidth / slotCount : 0
-  const pillWidth = Math.max(0, segW - PILL_H_INSET * 2)
   // Real-tab index -> its slot index once the AI slot is inserted ahead of it.
   const pillSlotIndex = activeIndex < aiSlotIndex ? activeIndex : activeIndex + 1
+  const pillEdgeInsets = pillInsetsForSlot(pillSlotIndex, slotCount)
+  const pillWidth = Math.max(0, segW - pillEdgeInsets.left - pillEdgeInsets.right)
   const aiCenterX = aiSlotIndex * segW + segW / 2
 
   const tx = useSharedValue(0)
+  const pillW = useSharedValue(0)
   useEffect(() => {
-    const target = pillSlotIndex * segW + PILL_H_INSET
+    const insets = pillInsetsForSlot(pillSlotIndex, slotCount)
+    const target = pillSlotIndex * segW + insets.left
     tx.value = reduced ? target : withTiming(target, { duration: 220 })
-  }, [pillSlotIndex, segW, reduced, tx])
+    pillW.value = reduced ? pillWidth : withTiming(pillWidth, { duration: 220 })
+  }, [pillSlotIndex, segW, slotCount, pillWidth, reduced, tx, pillW])
 
-  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }))
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }],
+    width: pillW.value,
+  }))
 
   const onPress = (routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: routeKey, canPreventDefault: true })
@@ -197,7 +211,6 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                 position: 'absolute',
                 top: PILL_INSET,
                 bottom: PILL_INSET,
-                width: pillWidth,
                 borderRadius: RADIUS - PILL_INSET,
                 backgroundColor: p.pill,
               },
@@ -209,11 +222,17 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
         <View style={{ flex: 1, flexDirection: 'row' }}>
           {Array.from({ length: slotCount }).map((_, slot) => {
             if (slot === aiSlotIndex) {
-              // Empty spacer — reserves the AI button's slot width so the
-              // real tabs around it space out correctly. The button itself
-              // renders below, outside this clipped view, so it can poke
-              // up above the bar's top edge.
-              return <View key="ai-slot" pointerEvents="none" style={{ flex: 1 }} />
+              // Spacer + label — the Siri-style orb renders above (AssistantTabButton).
+              return (
+                <View
+                  key="ai-slot"
+                  pointerEvents="none"
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 }}
+                >
+                  <View style={{ height: 24 }} />
+                  <AssistantTabLabel color={p.active} />
+                </View>
+              )
             }
             const routeIndex = slot < aiSlotIndex ? slot : slot - 1
             const route = visibleRoutes[routeIndex]
@@ -221,7 +240,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
             const isFocused = routeIndex === activeIndex
             const label = options.title ?? route.name
             const color = isFocused ? p.active : p.inactive
-            const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 24 })
+            const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 26 })
             return (
               <Pressable
                 key={route.key}
@@ -233,21 +252,11 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                   flex: 1,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 3,
+                  minHeight: 44,
                   opacity: pressed ? 0.6 : 1,
                 })}
               >
                 {icon}
-                <Animated.Text
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 11,
-                    fontFamily: isFocused ? 'Inter_600SemiBold' : 'Inter_500Medium',
-                    color,
-                  }}
-                >
-                  {label}
-                </Animated.Text>
               </Pressable>
             )
           })}
@@ -260,9 +269,9 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
       <AssistantTabButton
         centerX={aiCenterX}
         barWidth={barWidth}
-        labelColor={p.active}
-        labelTop={BUTTON_SIZE - BUTTON_RISE + 4}
       />
     </View>
   )
 }
+
+export const LiquidGlassTabBar = memo(LiquidGlassTabBarInner)

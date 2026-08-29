@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native'
-import { View, YStack, Text } from 'tamagui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native'
+import { View, YStack, useTheme } from 'tamagui'
 import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
@@ -9,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import { BackButton, getBackButtonClearance } from '../../src/components/BackButton'
+import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
 import { GlassAuthInput } from '../../src/components/GlassAuthInput'
@@ -25,7 +24,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export default function AddDeliveryScreen() {
-  const insets = useSafeAreaInsets()
+  const theme = useTheme()
   const qc = useQueryClient()
   const [photoUri, setPhotoUri] = useState<string | undefined>()
 
@@ -90,84 +89,78 @@ export default function AddDeliveryScreen() {
   const onSubmit = (data: FormValues) => createOrder(data)
 
   return (
-    <View flex={1} backgroundColor="$surface">
-      <BackButton to="/dashboard" />
+    <Screen scroll backButton backTo="/dashboard">
+      <AppText variant="h1">Thêm đơn giao hàng</AppText>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: getBackButtonClearance(insets.top) + 16, paddingBottom: 100, gap: 20 }}
+      <TouchableOpacity
+        onPress={handleCapture}
+        activeOpacity={0.85}
+        disabled={isScanning}
+        accessibilityRole="button"
+        accessibilityLabel="Chụp ảnh đơn hàng"
       >
-        <AppText variant="h1">
-          Thêm đơn giao hàng
-        </AppText>
-
-        <TouchableOpacity onPress={handleCapture} activeOpacity={0.85} disabled={isScanning}>
-          <Surface style={{ minHeight: 160 }}>
-            <YStack flex={1} alignItems="center" justifyContent="center" padding="$4" gap="$2">
-              {photoUri && (
-                <Image source={{ uri: photoUri }} style={{ width: '100%', height: 160, borderRadius: 14 }} resizeMode="cover" />
-              )}
-              {isScanning && (
+        <Surface style={{ minHeight: 160 }}>
+          <YStack flex={1} alignItems="center" justifyContent="center" padding="$4" gap="$2">
+            {photoUri && (
+              <Image source={{ uri: photoUri }} style={{ width: '100%', height: 160, borderRadius: 14 }} resizeMode="cover" />
+            )}
+            {isScanning && (
+              <View
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                alignItems="center"
+                justifyContent="center"
+                gap="$2"
+                backgroundColor="rgba(0,0,0,0.45)"
+                borderRadius={14}
+              >
+                <ActivityIndicator size="small" color={theme.textInverse.val} />
+                <AppText variant="bodyStrong" color={theme.textInverse.val}>
+                  Đang phân tích ảnh...
+                </AppText>
+              </View>
+            )}
+            {!photoUri && !isScanning && (
+              <>
                 <View
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  right={0}
-                  bottom={0}
+                  width={56}
+                  height={56}
+                  borderRadius={28}
                   alignItems="center"
                   justifyContent="center"
-                  gap="$2"
-                  backgroundColor="rgba(0,0,0,0.45)"
-                  borderRadius={14}
+                  backgroundColor="$primaryMuted"
                 >
-                  <ActivityIndicator size="small" color="#ffffff" />
-                  <Text fontWeight="700" color="#ffffff" fontSize="$3">
-                    Đang phân tích ảnh...
-                  </Text>
+                  <Ionicons name="camera" size={26} color={theme.primary.val} />
                 </View>
-              )}
-              {!photoUri && !isScanning && (
-                <>
-                  <View
-                    width={56}
-                    height={56}
-                    borderRadius={28}
-                    alignItems="center"
-                    justifyContent="center"
-                    backgroundColor="$primaryMuted"
-                  >
-                    <Ionicons name="camera" size={26} color="#8B5CF6" />
-                  </View>
-                  <Text fontWeight="700" color="$textPrimary" fontSize="$3">
-                    Chụp ảnh đơn hàng
-                  </Text>
-                  <Text color="$textSecondary" fontSize={12} textAlign="center">
-                    Chụp để AI tự điền thông tin bên dưới — tuỳ chọn
-                  </Text>
-                </>
-              )}
-            </YStack>
-          </Surface>
+                <AppText variant="bodyStrong">Chụp ảnh đơn hàng</AppText>
+                <AppText variant="caption" color="$textSecondary" textAlign="center">
+                  Chụp để AI tự điền thông tin bên dưới — tuỳ chọn
+                </AppText>
+              </>
+            )}
+          </YStack>
+        </Surface>
+      </TouchableOpacity>
+      {photoUri && !isScanning && (
+        <TouchableOpacity
+          onPress={() => setPhotoUri(undefined)}
+          style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Chụp lại ảnh"
+        >
+          <AppText variant="label" color="$danger">
+            Chụp lại
+          </AppText>
         </TouchableOpacity>
-        {photoUri && !isScanning && (
-          <TouchableOpacity
-            onPress={() => setPhotoUri(undefined)}
-            style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 4 }}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Chụp lại ảnh"
-          >
-            <Text color="$danger" fontSize={13} fontWeight="600">
-              Chụp lại
-            </Text>
-          </TouchableOpacity>
-        )}
+      )}
 
-        <Surface>
-          <YStack padding="$4" gap="$4">
-            <Text fontWeight="700" color="$textPrimary" fontSize="$4">
-              Người gửi
-            </Text>
+      <Surface>
+        <YStack padding="$4" gap="$4">
+          <AppText variant="h2">Người gửi</AppText>
             <Controller
               name="sender_phone"
               control={control}
@@ -200,11 +193,9 @@ export default function AddDeliveryScreen() {
           </YStack>
         </Surface>
 
-        <Surface>
-          <YStack padding="$4" gap="$4">
-            <Text fontWeight="700" color="$textPrimary" fontSize="$4">
-              Người nhận
-            </Text>
+      <Surface>
+        <YStack padding="$4" gap="$4">
+          <AppText variant="h2">Người nhận</AppText>
             <Controller
               name="recipient_phone"
               control={control}
@@ -237,8 +228,7 @@ export default function AddDeliveryScreen() {
           </YStack>
         </Surface>
 
-        <GlassButton label="Thêm đơn hàng" onPress={handleSubmit(onSubmit)} loading={isSaving} />
-      </ScrollView>
-    </View>
+      <GlassButton label="Thêm đơn hàng" onPress={handleSubmit(onSubmit)} loading={isSaving} />
+    </Screen>
   )
 }

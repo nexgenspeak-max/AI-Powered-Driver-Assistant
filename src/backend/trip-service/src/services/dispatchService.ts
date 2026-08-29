@@ -4,6 +4,9 @@ import {
   SipClient,
 } from 'livekit-server-sdk';
 import { config } from '../config';
+import { bind, getLogger } from './logger';
+
+const log = getLogger('dispatch');
 
 export interface TripData {
   trip_id: string;
@@ -25,6 +28,7 @@ export async function dispatchCall(trip: TripData): Promise<string> {
 
   const driverPhoneClean = trip.driver_phone.replace('+', '');
   const roomName = `driver-${driverPhoneClean}-${Math.floor(Date.now() / 1000)}`;
+  const sipIdentity = `driver-${driverPhoneClean}`;
 
   const metadata = JSON.stringify({
     trip_id: trip.trip_id,
@@ -37,29 +41,34 @@ export async function dispatchCall(trip: TripData): Promise<string> {
     eta_minutes: String(trip.eta_minutes ?? ''),
     traffic_note: trip.traffic_note ?? '',
     route_summary: trip.route_summary ?? '',
+    sip_identity: sipIdentity,
   });
 
   const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
   await roomService.createRoom({ name: roomName, metadata });
-  console.log(`[dispatch] room created: ${roomName}`);
+  bind({ room: roomName });
+  log.info('room created');
 
   try {
     const agentDispatch = new AgentDispatchClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
     await agentDispatch.createDispatch(roomName, config.livekitAgentName);
-    console.log(`[dispatch] agent dispatched | room=${roomName}`);
+    log.info('agent dispatched');
   } catch (err) {
-    console.warn(`[dispatch] agent dispatch failed (non-fatal): ${err}`);
+    log.warning('agent dispatch failed (non-fatal)', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   if (config.sipTrunkId) {
     const sipClient = new SipClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
     await sipClient.createSipParticipant(config.sipTrunkId, trip.driver_phone, roomName, {
+      participantIdentity: sipIdentity,
       participantName: 'driver',
       playRingtone: true,
     });
-    console.log(`[dispatch] outbound SIP call initiated → ${trip.driver_phone}`);
+    log.info('outbound SIP call initiated');
   } else {
-    console.warn('[dispatch] SIP_TRUNK_ID not set — skipping SIP dial, agent-only room created');
+    log.warning('SIP_TRUNK_ID not set — skipping SIP dial, agent-only room created');
   }
 
   return roomName;

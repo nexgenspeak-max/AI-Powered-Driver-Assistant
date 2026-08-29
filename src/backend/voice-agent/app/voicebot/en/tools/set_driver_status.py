@@ -2,7 +2,8 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.en.tools_definition import raw_schema
 from app.services import backend_api
-from app.voicebot.processors import context_store
+from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors.tool_response_builders import build_driver_status_response
 
 logger = logging.getLogger("voice-agent.en.tools.set_driver_status")
 
@@ -22,6 +23,5 @@ async def set_driver_status(raw_arguments: dict, context: RunContext) -> str:
 
     context_store.schedule_sync(_sync())
 
-    if online:
-        return "You're now online and ready to receive trips. Drive safe!"
-    return "You're now offline. You won't receive new trips."
+    resp = build_driver_status_response(online, lang="en")
+    return tool_reply.as_llm(context.userdata, resp)

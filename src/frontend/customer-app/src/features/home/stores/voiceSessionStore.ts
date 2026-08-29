@@ -41,10 +41,24 @@ function stopCallForegroundService() {
 
 export type VoiceSessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 export type VoiceMessageSource = 'user' | 'agent'
-export type VoiceMessageListener = (text: string, from: VoiceMessageSource) => void
+export type VoiceTranscriptMeta = { isFinal: boolean; segmentId?: string }
+export type VoiceMessageListener = (text: string, from: VoiceMessageSource, meta: VoiceTranscriptMeta) => void
 
 const CHAT_TOPIC = 'lk.chat'
 const TRANSCRIPTION_TOPIC = 'lk.transcription'
+const TRANSCRIPTION_FINAL_ATTR = 'lk.transcription_final'
+const SEGMENT_ID_ATTR = 'lk.segment_id'
+
+function transcriptDedupKey(from: VoiceMessageSource, text: string): string {
+  return `${from}:${text.trim().replace(/\s+/g, ' ').replace(/[.!?…]+$/u, '').toLowerCase()}`
+}
+
+function isFinalTranscriptStream(reader: {
+  info: { topic: string; attributes?: Record<string, string> }
+}): boolean {
+  if (reader.info.topic !== TRANSCRIPTION_TOPIC) return true
+  return reader.info.attributes?.[TRANSCRIPTION_FINAL_ATTR] !== 'false'
+}
 
 // Module-level (not React state) so the LiveKit session survives navigation
 // between tabs — only the store's `status` needs to be reactive.
@@ -142,11 +156,34 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
 
       // Both the customer's own speech-to-text and the agent's replies arrive on
       // the same topics — distinguish by participant identity, not by topic.
+      const recentMessages = new Map<string, number>()
       const handleStream = async (reader: Parameters<Parameters<Room['registerTextStreamHandler']>[1]>[0], participantInfo: { identity: string }) => {
-        const text = await reader.readAll()
-        if (!text.trim()) return
         const from: VoiceMessageSource = participantInfo.identity === r.localParticipant.identity ? 'user' : 'agent'
-        messageListeners.forEach(listener => listener(text, from))
+        const segmentId = reader.info.attributes?.[SEGMENT_ID_ATTR]
+        const emit = (text: string, isFinal: boolean) => {
+          if (!text.trim()) return
+          if (isFinal) {
+            const messageKey = transcriptDedupKey(from, text)
+            const now = Date.now()
+            const previousTimestamp = recentMessages.get(messageKey)
+            if (previousTimestamp && now - previousTimestamp < 3000) return
+            recentMessages.set(messageKey, now)
+            for (const [key, timestamp] of recentMessages) {
+              if (now - timestamp >= 3000) recentMessages.delete(key)
+            }
+          }
+          messageListeners.forEach(listener => listener(text, from, { isFinal, segmentId }))
+        }
+        if (reader.info.topic !== TRANSCRIPTION_TOPIC) {
+          emit(await reader.readAll(), true)
+          return
+        }
+        let text = ''
+        for await (const chunk of reader) {
+          text += chunk
+          emit(text, false)
+        }
+        emit(text, isFinalTranscriptStream(reader))
       }
       r.registerTextStreamHandler(TRANSCRIPTION_TOPIC, handleStream)
       r.registerTextStreamHandler(CHAT_TOPIC, handleStream)

@@ -4,6 +4,8 @@ import unicodedata
 from livekit.agents import RunContext, function_tool
 
 from app.voicebot.vn.tools_definition import raw_schema
+from app.voicebot.processors.tool_reply import as_llm
+from app.voicebot.processors.tool_response_builders import build_contact_pick_response
 
 logger = logging.getLogger("voice-agent.vn.tools.select_contact_match")
 
@@ -31,10 +33,24 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
     matches = context.userdata.get("pending_contact_matches") or []
 
     if not matches:
-        return "Không có danh sách người cần chọn. Anh/chị đọc lại tên cần gọi giúp tôi."
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                "Không có danh sách người cần chọn. Bạn đọc lại tên cần gọi giúp em.",
+                tool="select_contact_match",
+                lang="vi",
+            ),
+        )
 
     if not selection:
-        return "Anh/chị muốn gọi ai trong danh sách vừa đọc?"
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                "Bạn muốn gọi ai trong danh sách vừa đọc?",
+                tool="select_contact_match",
+                lang="vi",
+            ),
+        )
 
     folded_selection = _fold(selection)
 
@@ -51,11 +67,25 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
 
     if not picked:
         names = ", ".join(m.get("name", "") for m in matches)
-        return f"Tôi chưa rõ anh/chị muốn gọi ai trong số: {names}. Anh/chị nói rõ tên hơn giúp tôi."
+        return as_llm(
+            context.userdata,
+            build_contact_pick_response(
+                f"Tôi chưa rõ bạn muốn gọi ai trong số: {names}. Bạn nói rõ tên hơn giúp em.",
+                tool="select_contact_match",
+                lang="vi",
+            ),
+        )
 
     context.userdata["pending_contact_matches"] = None
     context.userdata["pending_contact_call"] = {
         "name": picked.get("name", ""),
         "phone_number": picked.get("phone_number", ""),
     }
-    return f"Tôi tìm thấy {picked.get('name', '')}. Có đúng người anh/chị muốn gọi không?"
+    return as_llm(
+        context.userdata,
+        build_contact_pick_response(
+            f"Tôi tìm thấy {picked.get('name', '')}. Có đúng người bạn muốn gọi không?",
+            tool="select_contact_match",
+            lang="vi",
+        ),
+    )

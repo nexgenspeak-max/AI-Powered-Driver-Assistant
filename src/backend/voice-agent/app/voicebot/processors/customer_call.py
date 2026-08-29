@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING
 
 from livekit.agents import Agent, RunContext
@@ -10,6 +11,7 @@ from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.processors.sip_call_watch import schedule_no_answer_watch
 from app.voicebot.prompts.bridge_call import bridge_greeting
 
 if TYPE_CHECKING:
@@ -86,6 +88,7 @@ def _save_call_context(
         "call_id": call_id,
         "trip_id": current.get("trip_id", ""),
         "customer_phone": current.get("customer_phone", ""),
+        "customer_name": current.get("customer_name", ""),
         "sip_identity": result.get("sip_identity", ""),
         "room_name": room_name,
         "mode": mode,
@@ -160,6 +163,9 @@ def _save_call_context(
             mode=mode,
             status=result.get("status", "in_progress"),
         )
+
+    context.userdata["_dial_started_at"] = time.time()
+    schedule_no_answer_watch(context.session, context.userdata)
 
 
 def _pause_silence(context: RunContext) -> None:
@@ -275,7 +281,7 @@ async def start_in_room_bridge_call(
     else:
         msg = (
             f"Đang kết nối {name} tại {dialed} vào phòng này.{suffix} "
-            "Khi khách nghe máy, anh/chị nói trực tiếp với khách."
+            "Khi khách nghe máy, bạn nói trực tiếp với khách."
         )
     return agent, msg
 
@@ -335,6 +341,6 @@ async def start_background_call(
         )
     return (
         f"Đang gọi {name} tại {dialed} ở chế độ nền.{suffix} "
-        "Anh/chị có thể hỏi việc khác. "
+        "Bạn có thể hỏi việc khác. "
         "Khi cần biết kết quả, nói 'tóm tắt cuộc gọi' hoặc 'gọi xong chưa'."
     )
