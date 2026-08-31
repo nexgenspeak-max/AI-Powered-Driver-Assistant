@@ -21,7 +21,13 @@ _BACKGROUND_HINTS_VN = ("gọi nền", "goi nen", "nền thôi", "nen thoi")
 _BACKGROUND_HINTS_EN = ("background call", "in the background", "while i drive")
 
 
-def resolve_call_mode(text: str, *, lang: str = "vn", explicit: str | None = None) -> str:
+def resolve_call_mode(
+    text: str,
+    *,
+    lang: str = "vn",
+    explicit: str | None = None,
+    default_mode: str = "agent",
+) -> str:
     """Map driver intent to internal mode: agent (AI-led), bridge (direct), background."""
     if explicit in ("agent", "bridge", "background"):
         return explicit
@@ -34,4 +40,6 @@ def resolve_call_mode(text: str, *, lang: str = "vn", explicit: str | None = Non
         return "bridge"
     if any(h in t for h in bg_hints):
         return "background"
+    if default_mode in ("agent", "bridge"):
+        return default_mode
     return "agent"

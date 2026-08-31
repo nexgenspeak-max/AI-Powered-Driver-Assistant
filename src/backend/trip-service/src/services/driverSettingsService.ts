@@ -8,6 +8,7 @@ export interface AccountSettings {
   notify_on_pickup_approach_radius_m: number;
   auto_suggest_next_stop: boolean;
   auto_suggest_next_stop_radius_m: number;
+  default_customer_call_mode: 'agent' | 'bridge';
 }
 
 // Resolves phone -> account id -> settings row. Deliberately NOT cached: a

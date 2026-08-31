@@ -13,7 +13,7 @@ const docClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: config.awsRegion })
 );
 
-export type Role = 'admin' | 'driver' | 'customer';
+export type Role = 'admin' | 'super_admin' | 'driver' | 'customer';
 export type Status = 'online' | 'offline' | 'locked';
 
 export interface User {

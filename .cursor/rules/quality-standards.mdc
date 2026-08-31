@@ -44,7 +44,7 @@ Follow stack rules (do not invent parallel patterns):
 
 | Project | Minimum verify |
 |---------|----------------|
-| `src/backend/<ts-service>` | `npm run build` |
+| `src/backend/<ts-service>` | `npm run build` (`ops-service`: also `npm run verify:ops`) |
 | `src/backend/voice-agent` | relevant `pytest tests/…` (add test for new behavior) |
 | Vite frontends | `typecheck` / `build` / `lint` per app |
 | `driver-app` / `customer-app` | `npm run verify` where present; exercise changed UI on device/simulator when visual |
@@ -68,7 +68,7 @@ DEV ok=true|false event=<kind> key=value duration_ms=…
 | Layer | Module |
 |-------|--------|
 | voice-agent | `app/services/logger` (formatter on all stdlib logs after `bind` in `session.py`); `app/devlog.py` for pipeline events |
-| trip-service, auth-service, call-center, call-logger | `src/services/logger` + `attachLogContext` middleware |
+| trip-service, auth-service, call-center, call-logger, ops-service | `src/services/logger` + `attachLogContext` middleware |
 | driver-app | `src/services/logger` + `devlog.ts` (`__DEV__` only) |
 
 **Rules:**

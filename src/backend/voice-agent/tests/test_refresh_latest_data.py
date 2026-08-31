@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from livekit.agents import StopResponse
 
 from app.voicebot.processors import context_store
-from app.voicebot.vn.constants import ERR_NO_PENDING_REFRESH
-from app.voicebot.vn.tools.refresh_latest_data import refresh_latest_data
+from app.voicebot.locales.vn.constants import ERR_NO_PENDING_REFRESH
+from app.voicebot.locales.vn.tools.refresh_latest_data import refresh_latest_data
 
 
 async def _run(context, args=None):
@@ -39,7 +39,7 @@ async def test_refresh_today_earnings_speaks_fresh_totals():
     context.session.say = AsyncMock()
 
     with patch(
-        "app.voicebot.vn.tools.refresh_latest_data.backend_api.get_today_earnings",
+        "app.voicebot.locales.vn.tools.refresh_latest_data.backend_api.get_today_earnings",
         new_callable=AsyncMock,
         return_value={"total_earnings": 500000, "trip_count": 6, "bonus_earnings": 0},
     ):

@@ -27,8 +27,9 @@ _STT_NAME_ALIASES = (
     ("nickjanspeak", "nexgenspeak"),
 )
 
-_ADDRESS_STOP = frozenset(
-    "tại ở tôi muốn gọi cho khách đón trả chuyến và với của là".split()
+_ADDRESS_STT_ALIASES = (
+    ("lieudai", "lieugiai"),
+    ("liễudài", "lieugiai"),
 )
 
 
@@ -60,7 +61,14 @@ def _fold_key(text: str) -> str:
     key = re.sub(r"[^a-z0-9]+", "", key)
     for src, dst in _STT_NAME_ALIASES:
         key = key.replace(src, dst)
+    for src, dst in _ADDRESS_STT_ALIASES:
+        key = key.replace(src, dst)
     return key
+
+
+_ADDRESS_STOP = frozenset(
+    "tại ở tôi muốn gọi cho khách đón trả chuyến và với của là cái mà".split()
+)
 
 
 def _name_score(name: str, text: str) -> float:

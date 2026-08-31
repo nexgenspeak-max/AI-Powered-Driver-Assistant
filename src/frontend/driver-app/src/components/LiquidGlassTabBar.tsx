@@ -30,7 +30,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { haptics } from '../utils/haptics'
-import { AssistantTabButton, AssistantTabLabel } from './AssistantTabButton'
+import { AssistantTabButton } from './AssistantTabButton'
+import { TabBarAiSlotSpacer } from './tabBarIcons'
 
 // Kept only so existing `<LiquidGlassProvider>` in _layout.tsx keeps working.
 export function LiquidGlassProvider({ children }: { children: ReactNode }) {
@@ -222,15 +223,13 @@ function LiquidGlassTabBarInner({ state, descriptors, navigation }: BottomTabBar
         <View style={{ flex: 1, flexDirection: 'row' }}>
           {Array.from({ length: slotCount }).map((_, slot) => {
             if (slot === aiSlotIndex) {
-              // Spacer + label — the Siri-style orb renders above (AssistantTabButton).
               return (
                 <View
                   key="ai-slot"
                   pointerEvents="none"
-                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 }}
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <View style={{ height: 24 }} />
-                  <AssistantTabLabel color={p.active} />
+                  <TabBarAiSlotSpacer />
                 </View>
               )
             }
@@ -240,7 +239,7 @@ function LiquidGlassTabBarInner({ state, descriptors, navigation }: BottomTabBar
             const isFocused = routeIndex === activeIndex
             const label = options.title ?? route.name
             const color = isFocused ? p.active : p.inactive
-            const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 26 })
+            const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 24 })
             return (
               <Pressable
                 key={route.key}

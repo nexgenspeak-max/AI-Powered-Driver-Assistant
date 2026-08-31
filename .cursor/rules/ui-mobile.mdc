@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Mobile UI standards (Expo + Tamagui)
 
-**Apps:** `driver-app`, `customer-app` — NOT legacy `mobile-app/`.
+**Apps:** `driver-app`, `customer-app`.
 
 **International bar:** WCAG 2.2 AA (contrast, labels, target size), Apple HIG + Material **44×44pt** touch, **8pt spacing grid**, ISO 9241-210 (predictable nav, recoverable errors).
 

@@ -9,9 +9,9 @@ Repo layout (see `.cursor/rules/project-structure.mdc` for the authoritative ver
 
 | Project                                              | Path                        | Run/build                                     | Stack conventions                      |
 | ----------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ----------------------------------------- |
-| auth-service, call-center, call-logger, trip-service | `src/backend/<service>`      | `npm run dev` / `npm run build`               | `.cursor/rules/typescript-backend.mdc` |
+| auth-service, call-center, call-logger, trip-service, ops-service | `src/backend/<service>`      | `npm run dev` / `npm run build`               | `.cursor/rules/typescript-backend.mdc` |
 | voice-agent                                          | `src/backend/voice-agent`    | uv/python, `tests/` (e.g. `smoke_test.py`)    | `.cursor/rules/python-voice-agent.mdc` |
-| admin-panel, customer-web, driver-web                | `src/frontend/<app>`         | `npm run dev` / `build` / `typecheck` / `lint` | Vite + React                           |
+| admin-panel, super-admin-panel, customer-web, driver-web | `src/frontend/<app>`         | `npm run dev` / `build` / `typecheck` / `lint` | Vite + React                           |
 | agents-playground                                    | `src/frontend/agents-playground` | `npm run dev` / `build` / `lint`             | Next.js                                |
 | customer-app, driver-app, mobile-app                 | `src/frontend/<app>`         | `npm run start` / `android` / `ios`           | Expo/React Native                      |
 

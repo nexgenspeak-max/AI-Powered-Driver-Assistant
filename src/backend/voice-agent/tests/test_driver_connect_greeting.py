@@ -3,8 +3,8 @@ import inspect
 
 from app.voicebot.processors.context_store import load_driver_context
 from app.voicebot.processors.driver_greeting import build_inbound_context_greeting
-from app.voicebot.vn.agent import DriverAgent
-from app.voicebot.vn.constants import GREETING_AFTER_PREFETCH, GREETING_CONNECT_FILLER
+from app.voicebot.locales.vn.agent import DriverAgent
+from app.voicebot.locales.vn.constants import GREETING_AFTER_PREFETCH, GREETING_CONNECT_FILLER
 
 
 def test_connect_filler_wording():

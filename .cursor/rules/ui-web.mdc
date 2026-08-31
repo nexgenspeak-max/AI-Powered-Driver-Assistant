@@ -1,18 +1,18 @@
 ---
-description: Web UI/UX standards (driver-web, customer-web, admin-panel) — WCAG 2.2 AA, MUI 8px grid, layout shells, a11y, verify
-globs: src/frontend/{driver-web,customer-web,admin-panel}/**/*.{tsx,ts,css}
+description: Web UI/UX standards (driver-web, customer-web, admin-panel, super-admin-panel) — WCAG 2.2 AA, MUI 8px grid, layout shells, a11y, verify
+globs: src/frontend/{driver-web,customer-web,admin-panel,super-admin-panel}/**/*.{tsx,ts,css}
 alwaysApply: false
 ---
 
 # Web UI standards (Vite + MUI)
 
-**Apps:** `driver-web`, `customer-web`, `admin-panel`.
+**Apps:** `driver-web`, `customer-web`, `admin-panel`, `super-admin-panel`.
 
 **NOT mobile Expo UI** — for that see `ui-mobile.mdc`. `driver-app` Expo web export is still mobile rules.
 
 **International bar:** WCAG 2.2 **Level AA**, Material Design 3 **8px grid**, Apple HIG **44×44px** touch, ISO 9241-210 usability.
 
-**Tokens per app:** `src/styles/palette.ts` + `src/styles/theme.ts`. Shared purple brand — consolidate later; until then **keep the three files in sync** when changing brand colors.
+**Tokens per app:** `src/styles/palette.ts` + `src/styles/theme.ts`. Shared purple brand — keep in sync when changing brand colors. Super Admin uses the same PALETTE on a **dark purple shell** (not Cursor gray `#1e1e1e`).
 
 **Verify before done:**
 
@@ -20,13 +20,13 @@ alwaysApply: false
 # driver-web / customer-web
 npm run typecheck && npm run build && npm run lint
 
-# admin-panel
+# admin-panel / super-admin-panel
 npm run build && npm run lint
 ```
 
 ---
 
-## 1. Breakpoints (all three apps)
+## 1. Breakpoints (all four apps)
 
 From `theme.ts`:
 
@@ -172,12 +172,14 @@ Buttons: `textTransform: 'none'` (already in theme) — readable sentence-case l
 
 Mobile nav: `MobileNavDrawer` below `md` — header `px: { xs: 1.5, sm: 3 }`.
 
-### admin-panel
+### admin-panel / super-admin-panel
 
 | Page type | Shell |
 |-----------|--------|
 | Login | Standalone full page (no sidebar) |
-| Authenticated | **`DashboardLayout`** — sidebar 240px @ `md+`, main `p: 3` |
+| Authenticated | **`SettingsShellLayout`** — sidebar 280px @ `md+`, grouped nav + search |
+
+`admin-panel` is dispatcher (Trip Board). `super-admin-panel` is ops (health, live logs, calls) — JWT `super_admin` only.
 
 **One scroll owner per page** — avoid nested scroll traps. Sticky header: pad content below it.
 
@@ -212,7 +214,7 @@ Mobile nav: `MobileNavDrawer` below `md` — header `px: { xs: 1.5, sm: 3 }`.
 - Raw hex in `src/features/**` (`#6c8aff`, `#0d1117`, …)
 - Off-grid spacing (`17px`, `22px`, `margin: 13`)
 - `IconButton size="small"` as only nav control on mobile
-- New authenticated admin page **outside** `DashboardLayout`
+- New authenticated admin/ops page **outside** `SettingsShellLayout`
 - Tailwind classes — **not used in this repo**; do not add `className="..."` unless project migrates
 - Duplicating `palette.ts`/`theme.ts` differently across the three apps in one PR
 - `100vh` without `dvh` on mobile full-screen layouts

@@ -11,23 +11,44 @@ export type Stat = {
 
 export function StatCard({ label, value, color, icon }: Stat) {
   return (
-    <Box sx={{
-      display: 'flex', alignItems: 'center', gap: 1.75,
-      p: 2.25, borderRadius: 3, bgcolor: '#fff',
-      border: `1px solid ${PALETTE.border}`,
-      transition: 'all 0.15s ease',
-      '&:hover': { borderColor: color, boxShadow: `0 4px 14px ${color}26`, transform: 'translateY(-1px)' },
-    }}>
-      <Box sx={{
-        width: 44, height: 44, borderRadius: '12px', flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        bgcolor: `${color}1a`, color,
-      }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        p: 2,
+        borderRadius: 2,
+        bgcolor: PALETTE.shellStat,
+        border: `1px solid ${PALETTE.shellBorder}`,
+        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        '&:hover': {
+          borderColor: `${color}55`,
+          bgcolor: 'rgba(255,255,255,0.04)',
+        },
+      }}
+    >
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: 1.5,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: `${color}22`,
+          color,
+        }}
+      >
         {icon}
       </Box>
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" sx={{ color: PALETTE.gray, fontWeight: 500 }}>{label}</Typography>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: PALETTE.ink, lineHeight: 1.2, mt: 0.25 }}>{value}</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block' }}>
+          {label}
+        </Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2, mt: 0.25 }}>
+          {value}
+        </Typography>
       </Box>
     </Box>
   )
@@ -35,12 +56,17 @@ export function StatCard({ label, value, color, icon }: Stat) {
 
 export function StatCardGrid({ stats }: { stats: Stat[] }) {
   return (
-    <Box sx={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-      gap: 2, mb: 3,
-    }}>
-      {stats.map(s => <StatCard key={s.label} {...s} />)}
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(auto-fit, minmax(160px, 1fr))' },
+        gap: 2,
+        mb: 3,
+      }}
+    >
+      {stats.map(s => (
+        <StatCard key={s.label} {...s} />
+      ))}
     </Box>
   )
 }

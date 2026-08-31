@@ -3,8 +3,11 @@ import { Platform } from "react-native";
 import { getForegroundService } from "../../../services/foregroundService";
 import {
   playConnectingFiller,
+  playDisconnectingFiller,
   stopConnectingFiller,
-} from "../lib/connectingFillerAudio";
+  stopDisconnectingFiller,
+  handoffConnectingFillerForLiveKit,
+} from "../lib/czenFillerAudio";
 import {
   Room,
   RoomEvent,
@@ -16,6 +19,7 @@ import {
   stopAudioSession,
 } from "../lib/livekitRuntime";
 import { voiceService } from "../../../services/api/voice";
+import { getVoiceRoutingLang } from "../../../services/voiceLang";
 import { useWakeWordSettingsStore } from "../../assistant-wakeword/wakeWordSettingsStore";
 import { searchContacts } from "../services/contactsSearch";
 import { devlog } from "../../../services/devlog";
@@ -132,6 +136,8 @@ let room: Room | null = null;
 // overlapping peer connections and a WebRTC "Local fingerprint does not
 // match identity" failure.
 let connecting = false;
+/** Play disconnect MP3 after LiveKit audio session is released (user hang-up). */
+let pendingUserDisconnectFiller = false;
 const audioEls = new Set<HTMLAudioElement>();
 const messageListeners = new Set<VoiceMessageListener>();
 
@@ -184,7 +190,7 @@ interface VoiceSessionState {
    */
   isMicMuted: boolean;
   connect: (driverPhone: string) => Promise<void>;
-  disconnect: () => void;
+  disconnect: (opts?: { userInitiated?: boolean }) => void;
   setMicMuted: (muted: boolean) => Promise<void>;
   sendText: (text: string) => Promise<boolean>;
 }
@@ -231,6 +237,16 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       agentSpeaking: false,
       isMicMuted: false,
     });
+    if (pendingUserDisconnectFiller) {
+      pendingUserDisconnectFiller = false;
+      try {
+        await playDisconnectingFiller();
+      } finally {
+        stopDisconnectingFiller();
+      }
+    } else {
+      stopDisconnectingFiller();
+    }
   };
 
   const connectWithToken = async (
@@ -289,12 +305,16 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       agentSpeaking: false,
       isMicMuted: false,
     });
-    void playConnectingFiller();
+    stopConnectingFiller();
     try {
+      // Filler during token fetch only — stop before LiveKit owns playAndRecord.
+      // Calling startAudioSession twice (refreshVoiceAudioRoute) caused OSStatus -50 on iOS.
       const [{ token, livekit_url }] = await Promise.all([
         getToken(),
-        startAudioSession(),
+        playConnectingFiller(),
       ]);
+      await handoffConnectingFillerForLiveKit();
+      await startAudioSession();
       const r = new Room();
       room = r;
 
@@ -341,8 +361,14 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         }
       });
 
-      r.on(RoomEvent.TrackSubscribed, (track) => {
+      r.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
         if (track.kind !== Track.Kind.Audio) return;
+        if (participant?.identity === r.localParticipant.identity) return;
+        devlog.event("voice_agent_track", {
+          ok: true,
+          participant: participant?.identity ?? "-",
+          source: String(publication?.source ?? "-"),
+        });
         if (Platform.OS === "web") {
           const audioEl = track.attach() as HTMLAudioElement;
           audioEls.add(audioEl);
@@ -474,7 +500,6 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       bind({ room: r.name || "-", conv: r.name || "-" });
       await r.localParticipant.setMicrophoneEnabled(true);
       await startCallForegroundService();
-      stopConnectingFiller();
       set({ status: "connected", isMicMuted: false });
       devlog.event("voice_connect", {
         ok: true,
@@ -529,6 +554,7 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       await stopAudioSession();
       stopCallForegroundService();
       stopConnectingFiller();
+      stopDisconnectingFiller();
       set({
         status: cancelled ? "idle" : "error",
         agentAudioLevel: 0,
@@ -549,14 +575,24 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     isMicMuted: false,
 
     connect: (driverPhone: string) =>
-      connectWithToken(() => voiceService.getDriverToken(driverPhone)),
+      connectWithToken(() =>
+        voiceService.getDriverToken(driverPhone, getVoiceRoutingLang()),
+      ),
 
     // The AI button in the tab bar must gate its own hangup on `isCallActive`
     // before calling this — see AssistantTabButton.tsx's handlePress.
     // `disconnect()` itself stays unconditional (also used for cleanup paths
     // like unmount/logout that must always be able to tear the room down).
-    disconnect: () => {
-      room?.disconnect();
+    disconnect: (opts?: { userInitiated?: boolean }) => {
+      void (async () => {
+        const { status } = get();
+        pendingUserDisconnectFiller = !!(
+          opts?.userInitiated &&
+          (status === "connected" || status === "connecting")
+        );
+        stopConnectingFiller();
+        await room?.disconnect();
+      })();
     },
 
     setMicMuted: async (muted: boolean) => {

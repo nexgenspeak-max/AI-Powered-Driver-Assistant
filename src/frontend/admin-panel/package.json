@@ -3,11 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": { 
+  "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify:layout": "tsx scripts/layout-selfcheck.ts",
+    "verify:i18n": "tsx scripts/i18n-selfcheck.ts",
+    "verify": "npm run lint && npm run build && bash scripts/ui-check.sh && npm run verify:layout && npm run verify:i18n"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -33,6 +36,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"

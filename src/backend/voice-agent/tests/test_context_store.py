@@ -235,7 +235,38 @@ def test_resolve_call_target_disambiguates_without_selection():
     )
     resolved = context_store.resolve_call_target(userdata, lang="vi")
     assert isinstance(resolved, str)
-    assert "nhiều chuyến" in resolved
+    assert "khách nào" in resolved
+
+
+def test_resolve_call_target_filters_by_pickup_address():
+    def _lieu_trip(tid: str, name: str) -> dict:
+        return {
+            "trip_id": tid,
+            "status": "confirmed",
+            "customer_name": name,
+            "customer_phone": "+84901234567",
+            "pickup_address": f"Lotte 54 Liễu Giai — {name}",
+        }
+
+    userdata = _driver_userdata(
+        current_trip=None,
+        upcoming_trips=[
+            _lieu_trip("t1", "NexGen Speak"),
+            _lieu_trip("t2", "Trương Bá Chính"),
+            _trip("t3", "Other", status="confirmed"),
+        ],
+    )
+    userdata["context"]["upcoming_trips"][2]["pickup_address"] = "123 Lê Lợi"
+    resolved = context_store.resolve_call_target(
+        userdata,
+        utterance="Tôi cần gọi cho khách đón ở Liễu Giai",
+        lang="vi",
+    )
+    assert isinstance(resolved, str)
+    assert "NexGen Speak" in resolved
+    assert "Trương Bá Chính" in resolved
+    assert "Lê Lợi" not in resolved
+    assert "nhiều chuyến" not in resolved
 
 
 def test_resolve_trip_prefers_selected_over_first_schedule():

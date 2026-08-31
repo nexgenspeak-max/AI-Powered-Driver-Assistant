@@ -133,7 +133,7 @@ def build_my_trip_response(trip: dict | None, *, lang: str = "vi", error: str = 
     if error or not trip:
         return R("get_my_trip", error or "No trip.", lang=lc, action=customer_trip_actions(lang=lc))
 
-    from app.voicebot.vn.constants import TRIP_STATUS_MAP
+    from app.voicebot.locales.vn.constants import TRIP_STATUS_MAP
 
     status_txt = TRIP_STATUS_MAP.get(trip.get("status", ""), trip.get("status", ""))
     eta = trip.get("eta_minutes")

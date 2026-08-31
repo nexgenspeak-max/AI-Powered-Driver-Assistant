@@ -6,6 +6,7 @@ import { cacheGet, cacheDel, driverPendingNudgeKey, driverSessionKey } from '../
 import { invalidateDriverContext } from '../services/driverContextService';
 import { dispatchAgent, getRoomAgentState } from '../services/voiceSessionService';
 import { bind, getLogger } from '../services/logger';
+import { resolveVoiceRoutingLang } from '../services/voiceLang';
 
 const router = Router();
 const log = getLogger('voice');
@@ -45,7 +46,8 @@ function makeToken(identity: string, name: string, roomName: string): Promise<st
 
 router.post('/token', async (req: Request, res: Response) => {
   try {
-    const { driver_phone } = req.query;
+    const { driver_phone, lang } = req.query;
+    const voiceLang = resolveVoiceRoutingLang(lang);
     if (!config.livekitApiKey || !config.livekitApiSecret) {
       return res.status(503).json({ detail: 'LiveKit not configured' });
     }
@@ -123,9 +125,32 @@ router.post('/token', async (req: Request, res: Response) => {
           nudge_kind: primary.kind,
           ...primary.payload,
           nudges,
+          lang: voiceLang,
         });
         await roomService.createRoom({ name: roomName, metadata });
         log.info('delivering pending nudge(s)', { kinds: nudges.map((n) => n.kind).join(',') });
+      } else {
+        const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
+        await roomService.createRoom({
+          name: roomName,
+          metadata: JSON.stringify({ lang: voiceLang }),
+        });
+      }
+    } else {
+      // Reused room — sync lang metadata (fixes stale en from earlier builds).
+      try {
+        const roomService = new RoomServiceClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
+        const rooms = await roomService.listRooms([roomName]);
+        const existing = rooms[0];
+        const meta = existing?.metadata ? JSON.parse(existing.metadata) : {};
+        if (meta.lang !== voiceLang) {
+          await roomService.updateRoomMetadata(roomName, JSON.stringify({ ...meta, lang: voiceLang }));
+          log.info('updated room lang metadata', { lang: voiceLang });
+        }
+      } catch (err) {
+        log.warning('could not update room lang metadata', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 

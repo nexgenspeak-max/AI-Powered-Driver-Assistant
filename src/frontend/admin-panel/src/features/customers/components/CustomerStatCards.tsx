@@ -4,17 +4,19 @@ import LockIcon from '@mui/icons-material/Lock'
 import type { Customer } from '../../../types'
 import { PALETTE } from '../../../styles/palette'
 import { StatCardGrid } from '../../../components/StatCard'
+import { useAdminContent } from '../../../i18n/useAdminContent'
 
 type Props = { customers: Customer[] }
 
 export function CustomerStatCards({ customers }: Props) {
-  const online = customers.filter(c => c.status === 'online').length
-  const locked = customers.filter(c => c.status === 'locked').length
+  const { c } = useAdminContent()
+  const online = customers.filter(cust => cust.status === 'online').length
+  const locked = customers.filter(cust => cust.status === 'locked').length
 
   const stats = [
-    { label: 'Total Customers', value: customers.length, color: PALETTE.base, icon: <PeopleIcon fontSize="small" /> },
-    { label: 'Online',          value: online,           color: '#4ade80',    icon: <WifiIcon fontSize="small" /> },
-    { label: 'Locked',          value: locked,           color: '#f87171',    icon: <LockIcon fontSize="small" /> },
+    { label: c.stats.totalCustomers, value: customers.length, color: PALETTE.light, icon: <PeopleIcon fontSize="small" /> },
+    { label: c.common.online,        value: online,           color: PALETTE.success, icon: <WifiIcon fontSize="small" /> },
+    { label: c.common.locked,        value: locked,           color: PALETTE.danger, icon: <LockIcon fontSize="small" /> },
   ]
 
   return <StatCardGrid stats={stats} />

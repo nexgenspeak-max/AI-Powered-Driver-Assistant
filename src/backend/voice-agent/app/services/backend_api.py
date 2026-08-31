@@ -443,6 +443,18 @@ async def get_active_bonuses(driver_phone: str) -> list[dict]:
     return r.json()
 
 
+async def prewarm_trip_service() -> None:
+    """Open pooled HTTP/TLS to trip-service before the first tool/session call."""
+    base = _trip_base()
+    if not base:
+        return
+    try:
+        c = _get_client()
+        await c.get(f"{base}/health", timeout=3.0)
+    except Exception:
+        logger.debug("trip-service prewarm failed", exc_info=True)
+
+
 async def register_driver_session(driver_phone: str, room_name: str) -> None:
     """Mark this room as the driver's currently open voice session — read by
     trip-service's driverReachService.reachDriver() to decide whether to

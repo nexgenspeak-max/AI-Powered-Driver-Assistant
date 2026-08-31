@@ -375,13 +375,78 @@ def needs_tool_llm(text: str, lang: str) -> bool:
     return any(h in t for h in hints)
 
 
+_STT_TAIL_FRAGMENTS_VN = frozenset({
+    "cua toi",
+    "cua em",
+    "cua ban",
+    "của tôi",
+    "của em",
+    "của bạn",
+    "nhe",
+    "nhé",
+    "a",
+    "a a",
+    "uh",
+    "um",
+    "u",
+    "o",
+    "roi",
+    "rồi",
+    "the",
+    "thế",
+    "the a",
+    "thế à",
+    "vay",
+    "vậy",
+    "vay a",
+    "vậy à",
+    "dung roi",
+    "đúng rồi",
+    "dung vay",
+    "đúng vậy",
+})
+
+_STT_TAIL_FRAGMENTS_EN = frozenset({
+    "mine",
+    "of mine",
+    "yeah",
+    "yep",
+    "uh huh",
+    "uh",
+    "um",
+    "ok",
+    "okay",
+    "right",
+})
+
+
+def is_stt_tail_fragment(text: str, lang: str) -> bool:
+    """Drop STT tails split from the prior utterance (e.g. 'của tôi' after lịch trình)."""
+    t = _norm(text)
+    if not t or len(t) > 24 or "?" in text:
+        return False
+    if classify_driver_intent(text, lang) is not None:
+        return False
+    if needs_tool_llm(text, lang):
+        return False
+    words = t.split()
+    if len(words) > 4:
+        return False
+    fragments = _STT_TAIL_FRAGMENTS_EN if lang == "en" else _STT_TAIL_FRAGMENTS_VN
+    if t in fragments:
+        return True
+    if lang != "en" and len(words) <= 3 and words[0] in {"cua", "của"}:
+        return True
+    return False
+
+
 def route_conversational_llm(session: Any, text: str, lang: str) -> None:
     """Small-talk Luna turn without ~4k tokens of tool JSON."""
     mark_user_stopped(session)
     if lang == "en":
-        from app.voicebot.en.constants import CONVERSATIONAL_LLM_INSTRUCTIONS
+        from app.voicebot.locales.en.constants import CONVERSATIONAL_LLM_INSTRUCTIONS
     else:
-        from app.voicebot.vn.constants import CONVERSATIONAL_LLM_INSTRUCTIONS
+        from app.voicebot.locales.vn.constants import CONVERSATIONAL_LLM_INSTRUCTIONS
     session.generate_reply(
         user_input=text,
         tools=[],
@@ -424,7 +489,10 @@ def call_tool_arguments(text: str, lang: str = "vn", userdata: dict | None = Non
             args["message"] = msg
         break
 
-    args["mode"] = resolve_call_mode(text, lang=lang)
+    default_mode = "agent"
+    if userdata is not None:
+        default_mode = context_store.get_default_customer_call_mode(userdata)
+    args["mode"] = resolve_call_mode(text, lang=lang, default_mode=default_mode)
     if args.get("message") and args["mode"] != "bridge":
         args["mode"] = "agent"
     if userdata is not None:
@@ -487,7 +555,7 @@ async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) ->
     logger.info("pending_action execute intent=%s args=%s", intent, args)
 
     if intent == "call_customer":
-        fn = _tool(lang, "app.voicebot.vn.tools.call_customer", "app.voicebot.en.tools.call_customer", "call_customer")
+        fn = _tool(lang, "app.voicebot.locales.vn.tools.call_customer", "app.voicebot.locales.en.tools.call_customer", "call_customer")
         utterance = context_store.get_last_driver_utterance(userdata) or pending.get("source") or ""
         context_store.set_pending_call_utterance(userdata, utterance)
         result = await fn.__wrapped__(args, ctx)
@@ -496,8 +564,8 @@ async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) ->
     if intent == "upcoming":
         fn = _tool(
             lang,
-            "app.voicebot.vn.tools.check_upcoming_trips",
-            "app.voicebot.en.tools.check_upcoming_trips",
+            "app.voicebot.locales.vn.tools.check_upcoming_trips",
+            "app.voicebot.locales.en.tools.check_upcoming_trips",
             "check_upcoming_trips",
         )
         await fn.__wrapped__(args, ctx)
@@ -519,11 +587,11 @@ async def _try_interrupt(session: Any, *, reason: str) -> None:
 
 async def _execute_end_conversation(ctx: SimpleNamespace, *, lang: str) -> None:
     if lang == "en":
-        from app.voicebot.en.tools.end_call import end_call
+        from app.voicebot.locales.en.tools.end_call import end_call
 
         await end_call.__wrapped__({}, ctx)
         return
-    from app.voicebot.vn.tools.end_conversation import end_conversation
+    from app.voicebot.locales.vn.tools.end_conversation import end_conversation
 
     await end_conversation.__wrapped__({}, ctx)
 
@@ -586,11 +654,11 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         await _try_interrupt(session, reason=intent)
 
     if intent == "confirm":
-        fn = _tool(lang, "app.voicebot.vn.tools.confirm_trip", "app.voicebot.en.tools.confirm_trip", "confirm_trip")
+        fn = _tool(lang, "app.voicebot.locales.vn.tools.confirm_trip", "app.voicebot.locales.en.tools.confirm_trip", "confirm_trip")
         await fn.__wrapped__({}, ctx)
         return
     if intent == "reject":
-        fn = _tool(lang, "app.voicebot.vn.tools.reject_trip", "app.voicebot.en.tools.reject_trip", "reject_trip")
+        fn = _tool(lang, "app.voicebot.locales.vn.tools.reject_trip", "app.voicebot.locales.en.tools.reject_trip", "reject_trip")
         await fn.__wrapped__({}, ctx)
         return
     if intent == "customer_phone":
@@ -601,7 +669,7 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         )
         return
     if intent == "call_customer":
-        fn = _tool(lang, "app.voicebot.vn.tools.call_customer", "app.voicebot.en.tools.call_customer", "call_customer")
+        fn = _tool(lang, "app.voicebot.locales.vn.tools.call_customer", "app.voicebot.locales.en.tools.call_customer", "call_customer")
         context_store.set_pending_call_utterance(userdata, text)
         context_store.clear_pending_driver_action(userdata)
         result = await fn.__wrapped__(call_tool_arguments(text, lang=lang, userdata=userdata), ctx)
@@ -610,8 +678,8 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
     if intent == "upcoming":
         fn = _tool(
             lang,
-            "app.voicebot.vn.tools.check_upcoming_trips",
-            "app.voicebot.en.tools.check_upcoming_trips",
+            "app.voicebot.locales.vn.tools.check_upcoming_trips",
+            "app.voicebot.locales.en.tools.check_upcoming_trips",
             "check_upcoming_trips",
         )
         args: dict = {"scope": "all"}
@@ -624,8 +692,8 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
     if intent == "earnings":
         fn = _tool(
             lang,
-            "app.voicebot.vn.tools.get_today_earnings",
-            "app.voicebot.en.tools.get_today_earnings",
+            "app.voicebot.locales.vn.tools.get_today_earnings",
+            "app.voicebot.locales.en.tools.get_today_earnings",
             "get_today_earnings",
         )
         await fn.__wrapped__({}, ctx)
@@ -645,8 +713,8 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         return
     fn = _tool(
         lang,
-        "app.voicebot.vn.tools.get_current_trip_info",
-        "app.voicebot.en.tools.get_current_trip_info",
+        "app.voicebot.locales.vn.tools.get_current_trip_info",
+        "app.voicebot.locales.en.tools.get_current_trip_info",
         "get_current_trip_info",
     )
     await fn.__wrapped__({}, ctx)
@@ -676,6 +744,9 @@ async def driver_text_input_cb(sess: Any, ev: Any) -> None:
         except StopResponse:
             return
         if intent is not None:
+            return
+        if is_stt_tail_fragment(ev.text, lang):
+            logger.debug("skip stt tail fragment (chat): %r", ev.text)
             return
         if needs_tool_llm(ev.text, lang):
             hint = context_store.get_last_tool_response_hint(
@@ -748,6 +819,9 @@ class SpokenIntentMixin:
         except StopResponse:
             raise
         if intent is not None:
+            raise StopResponse()
+        if is_stt_tail_fragment(text, self._spoken_intent_lang):
+            logger.debug("skip stt tail fragment: %r", text)
             raise StopResponse()
         if needs_tool_llm(text, self._spoken_intent_lang):
             hint = context_store.get_last_tool_response_hint(

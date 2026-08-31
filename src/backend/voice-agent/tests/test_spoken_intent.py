@@ -164,6 +164,16 @@ def test_vn_call_does_not_fire_on_questions_or_fragments():
     assert classify_driver_intent("gì? À bạn gọi cho tôi số 0888887798", "vn") is None
 
 
+def test_stt_tail_fragment_dropped():
+    from app.voicebot.processors.spoken_intent import is_stt_tail_fragment
+
+    assert is_stt_tail_fragment("của tôi", "vn")
+    assert is_stt_tail_fragment("của em", "vn")
+    assert is_stt_tail_fragment("uh huh", "en")
+    assert not is_stt_tail_fragment("Tôi muốn kiểm tra lịch trình hôm nay.", "vn")
+    assert not is_stt_tail_fragment("Bảy chuyến nào nhỉ?", "vn")
+
+
 def test_en_confirm_and_reject():
     assert classify_driver_intent("Confirm the trip", "en") == "confirm"
     assert classify_driver_intent("I'll take it", "en") == "confirm"
@@ -351,7 +361,7 @@ def test_handle_end_conversation_fast_path():
         message = SimpleNamespace(text_content="tắt máy tắt máy")
 
         with patch(
-            "app.voicebot.vn.tools.end_conversation.end_conversation.__wrapped__",
+            "app.voicebot.locales.vn.tools.end_conversation.end_conversation.__wrapped__",
             new=AsyncMock(),
         ) as mock_end:
             try:
@@ -496,7 +506,7 @@ async def test_call_customer_fast_path_speaks_natural_not_xml():
         pass
     spoken = session.say.await_args.args[0]
     assert_no_raw_template(spoken)
-    assert "nhiều chuyến" in spoken
+    assert "khách nào" in spoken
 
 
 def test_preemptive_cancel_skipped_for_customer_mode():

@@ -1,19 +1,13 @@
 """
 Language router — selects the correct voicebot module based on lang code.
 
-Usage:
-    from app.voicebot import get_voicebot
-    module = get_voicebot("vn")   # or "en"
-    agent  = module.DriverAgent(trip=trip, driver_phone=phone)
+Prefer `app.voicebot.registry.get_voicebot_module` for new code.
 """
-from importlib import import_module
 from types import ModuleType
 
-_SUPPORTED = {"vn", "en"}
-_DEFAULT   = "vn"
+from app.voicebot.registry import get_voicebot_module
 
 
 def get_voicebot(lang: str) -> ModuleType:
-    """Return the voicebot module for the given language code."""
-    code = lang.lower() if lang and lang.lower() in _SUPPORTED else _DEFAULT
-    return import_module(f"app.voicebot.{code}")
+    """Return the voicebot module for the given routing lang (`vn` | `en`)."""
+    return get_voicebot_module(lang)

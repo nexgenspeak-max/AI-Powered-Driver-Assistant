@@ -92,6 +92,7 @@ def test_execute_nudge_triggers_pending():
     userdata = _userdata()
     context_store.set_pending_driver_action(userdata, "call_customer", {"mode": "agent"})
     assert pending_action.should_execute(userdata, "Thì gọi đi.", "vn")
+    assert pending_action.should_execute(userdata, "Bạn gọi hộ đi.", "vn")
     assert pending_action.should_execute(userdata, "Kiểm tra lại xem nào.", "vn")
 
 
@@ -109,7 +110,7 @@ def test_ok_executes_pending_check_not_ack():
         message = SimpleNamespace(text_content="Ok.")
 
         with patch(
-            "app.voicebot.vn.tools.check_upcoming_trips.check_upcoming_trips.__wrapped__",
+            "app.voicebot.locales.vn.tools.check_upcoming_trips.check_upcoming_trips.__wrapped__",
             new=AsyncMock(side_effect=StopResponse()),
         ) as mock_check:
             try:

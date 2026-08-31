@@ -3,29 +3,20 @@ import { AssistantChatPanel } from '../../src/features/home/components/Assistant
 import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
 import { Tabs } from 'expo-router'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { Ionicons } from '@expo/vector-icons'
 import { LiquidGlassProvider, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
+import { DriverTabBarIcon, type DriverTabRoute } from '../../src/components/tabBarIcons'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
 import { usePushLocationOnNewTrip } from '../../src/features/dashboard/hooks/usePushLocationOnNewTrip'
 import { useAutoConnectOnNudge } from '../../src/features/home/hooks/useAutoConnectOnNudge'
 import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptureVoiceMessages'
+import { preloadCzenFillers } from '../../src/features/home/lib/czenFillerAudio'
+import { useReturnHomeOnVoiceEnd } from '../../src/features/home/hooks/useReturnHomeOnVoiceEnd'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { useEffect } from 'react'
 
-// One vector icon set (Ionicons) for both themes — replaces the two raster
-// PNG sets (flat colour for light, white silhouettes for dark). `color` and
-// `size` come straight from LiquidGlassTabBar (focused → `$primary`).
-type TabRoute = 'index' | 'dashboard' | 'earnings' | 'profile'
-const TAB_ICON: Record<TabRoute, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
-  index: { on: 'home', off: 'home-outline' },
-  dashboard: { on: 'car-sport', off: 'car-sport-outline' },
-  earnings: { on: 'wallet', off: 'wallet-outline' },
-  profile: { on: 'person', off: 'person-outline' },
-}
-
-function TabIcon({ route, size, color, focused }: { route: TabRoute; size: number; color: string; focused: boolean }) {
-  const g = TAB_ICON[route]
-  return <Ionicons name={focused ? g.on : g.off} size={size} color={color} />
+function TabIcon({ route, size, color, focused }: { route: DriverTabRoute; size: number; color: string; focused: boolean }) {
+  return <DriverTabBarIcon route={route} size={size} color={color} focused={focused} />
 }
 
 const renderTabBar = (props: BottomTabBarProps) => <LiquidGlassTabBar {...props} />
@@ -58,6 +49,10 @@ export default function AppLayout() {
   // see useCaptureVoiceMessages.ts for why this can't live inside
   // AssistantChatPanel anymore.
   useCaptureVoiceMessages()
+  useReturnHomeOnVoiceEnd()
+  useEffect(() => {
+    preloadCzenFillers()
+  }, [])
 
   return (
     <LiquidGlassProvider>

@@ -37,7 +37,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GLASS_BORDER_COLOR } from './LiquidGlass'
-import { AssistantTabButton, AssistantTabLabel } from './AssistantTabButton'
+import { AssistantTabButton } from './AssistantTabButton'
+import { TabBarAiSlotSpacer } from './tabBarIcons'
 import Animated, {
   Easing,
   runOnJS,
@@ -511,11 +512,9 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
             <View style={[styles.row, { height: CONTENT_HEIGHT }]}>
               {Array.from({ length: slotCount }).map((_, slot) => {
                 if (slot === aiSlotIndex) {
-                  // Spacer + label — Siri-style orb renders above (AssistantTabButton).
                   return (
                     <View key="ai-slot" pointerEvents="none" style={styles.tab}>
-                      <View style={{ height: 24 }} />
-                      <AssistantTabLabel color="#8B5CF6" />
+                      <TabBarAiSlotSpacer />
                     </View>
                   )
                 }
@@ -527,7 +526,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                 const tintColor = isFocused
                   ? (options.tabBarActiveTintColor ?? '#8B5CF6')
                   : (options.tabBarInactiveTintColor ?? '#888888')
-                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: 26 })
+                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: 24 })
 
                 return (
                   <View

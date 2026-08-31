@@ -1,11 +1,15 @@
-export function formatDate(iso: string): string {
+export function formatDate(iso: string | undefined | null): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export function formatDateTime(iso: string): string {
+export function formatDateTime(iso: string | undefined | null): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 export function formatRoute(etaMinutes?: number, distanceKm?: number): string {

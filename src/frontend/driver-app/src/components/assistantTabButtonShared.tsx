@@ -115,9 +115,7 @@ export function useAssistantTabButton() {
 
   const handlePress = () => {
     if (voice.status === 'connecting') {
-      // Panel may have been closed while the handshake is still in flight —
-      // reopen it; connecting feedback is spoken, not duplicated on-screen.
-      useAssistantChatStore.getState().openPanel()
+      voice.disconnect({ userInitiated: true })
       return
     }
     if (voice.status === 'connected') {
@@ -125,7 +123,7 @@ export function useAssistantTabButton() {
         Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
         return
       }
-      voice.disconnect()
+      voice.disconnect({ userInitiated: true })
       return
     }
     if (!driver?.phone) {

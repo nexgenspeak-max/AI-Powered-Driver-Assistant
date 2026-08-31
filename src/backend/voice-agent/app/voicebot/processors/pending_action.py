@@ -36,6 +36,11 @@ _CALL_BOT_VN = (
 _CONFIRM_VN = ("ok", "okay", "vâng", "dạ", "đúng rồi", "đúng", "ừ", "uh", "được", "yes", "yeah")
 _EXECUTE_NUDGE_VN = (
     "gọi đi",
+    "gọi hộ đi",
+    "gọi hộ",
+    "hộ đi",
+    "bạn gọi hộ",
+    "bạn gọi",
     "làm đi",
     "thì gọi",
     "gọi ngay",
@@ -118,8 +123,6 @@ def _call_customer_args(userdata: dict, *, message: str = "", utterance: str = "
     if message and not args.get("message"):
         args["message"] = message
     if args.get("message") and args.get("mode") != "bridge":
-        args["mode"] = "agent"
-    if "mode" not in args:
         args["mode"] = "agent"
     return args
 

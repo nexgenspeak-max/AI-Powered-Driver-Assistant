@@ -6,6 +6,8 @@ const router = Router();
 
 const BOOLEAN_FIELDS = ['hands_free_mode', 'notify_on_pickup_approach', 'auto_suggest_next_stop'] as const;
 const RADIUS_FIELDS = ['notify_on_pickup_approach_radius_m', 'auto_suggest_next_stop_radius_m'] as const;
+const CALL_MODE_FIELDS = ['default_customer_call_mode'] as const;
+const VALID_CALL_MODES = new Set(['agent', 'bridge']);
 
 router.get('/:accountId', authenticate, async (req: Request, res: Response) => {
   const isSelf = req.user!.sub === req.params.accountId;
@@ -42,6 +44,14 @@ router.patch('/:accountId', authenticate, async (req: Request, res: Response) =>
         return res.status(400).json({ detail: `${key} must be a positive number` });
       }
       fields[key] = body[key] as number;
+    }
+  }
+  for (const key of CALL_MODE_FIELDS) {
+    if (body[key] !== undefined) {
+      if (typeof body[key] !== 'string' || !VALID_CALL_MODES.has(body[key] as string)) {
+        return res.status(400).json({ detail: `${key} must be "agent" or "bridge"` });
+      }
+      fields[key] = body[key] as settingsService.EditableSettings[typeof key];
     }
   }
 

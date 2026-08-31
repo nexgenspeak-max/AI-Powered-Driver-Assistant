@@ -10,6 +10,7 @@
  */
 import { currentConv, currentRoom } from './context';
 import { formatLine, type LogFields } from './format';
+import { writeLogLine } from './sink';
 
 export { bind, currentConv, currentRoom, runWithLogContext } from './context';
 export { attachLogContext } from './middleware';
@@ -38,13 +39,12 @@ export function getLogger(fn: string, service = SERVICE) {
     });
     if (level === 'error') {
       console.error(line);
-      return;
-    }
-    if (level === 'warning') {
+    } else if (level === 'warning') {
       console.warn(line);
-      return;
+    } else {
+      console.log(line);
     }
-    console.log(line);
+    writeLogLine(service, line);
   };
 
   return {

@@ -19,7 +19,7 @@ from app.voicebot.processors.spoken_intent import (
 from app.voicebot.processors.trip_format import format_trip_count_summary, format_trip_detail
 from app.voicebot.speech_text_fix import fix_speech_text
 from app.voicebot.testing.conversation_quality import assert_natural_vn, assert_tts_safe_vn
-from app.voicebot.vn import constants as vn_constants
+from app.voicebot.locales.vn import constants as vn_constants
 from tests.fixtures.driver_scenarios_vn import FAST_PATH, LLM_CHITCHAT, LLM_TOOL, MULTI_TURN
 
 

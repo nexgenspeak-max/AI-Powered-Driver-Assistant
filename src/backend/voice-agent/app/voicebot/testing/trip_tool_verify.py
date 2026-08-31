@@ -381,7 +381,7 @@ def _run_tool_imports(report: Report) -> None:
         p for p in VN_TOOLS_DIR.glob("*.py") if p.name != "__init__.py"
     )
     for path in tool_files:
-        mod_name = f"app.voicebot.vn.tools.{path.stem}"
+        mod_name = f"app.voicebot.locales.vn.tools.{path.stem}"
         case_id = path.stem
         try:
             mod = importlib.import_module(mod_name)

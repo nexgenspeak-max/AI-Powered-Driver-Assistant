@@ -1,6 +1,7 @@
-import { Box, Card } from '@mui/material'
+import { Box } from '@mui/material'
 import { TripStatCards } from '../features/trips/components/TripStatCards'
 import { TripTable } from '../features/trips/components/TripTable'
+import { SettingsPanel } from '../layouts/SettingsPanel'
 import { useTrips } from '../features/trips/hooks/useTrips'
 import { useDispatchTrip } from '../features/trips/hooks/useDispatchTrip'
 import { useDrivers } from '../features/drivers/hooks/useDrivers'
@@ -25,7 +26,7 @@ export default function TripBoardPage() {
   return (
     <Box>
       <TripStatCards trips={allTrips} drivers={drivers} />
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
+      <SettingsPanel sx={{ borderRadius: 2 }}>
         <TripTable
           trips={trips}
           drivers={drivers}
@@ -36,7 +37,7 @@ export default function TripBoardPage() {
           onDispatch={dispatch}
           dispatching={dispatching}
         />
-      </Card>
+      </SettingsPanel>
     </Box>
   )
 }

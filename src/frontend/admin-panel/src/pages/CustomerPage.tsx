@@ -1,6 +1,7 @@
-import { Box, Card } from '@mui/material'
+import { Box } from '@mui/material'
 import { CustomerStatCards } from '../features/customers/components/CustomerStatCards'
 import { CustomerTable } from '../features/customers/components/CustomerTable'
+import { SettingsPanel } from '../layouts/SettingsPanel'
 import { useCustomers } from '../features/customers/hooks/useCustomers'
 
 export default function CustomerPage() {
@@ -9,9 +10,9 @@ export default function CustomerPage() {
   return (
     <Box>
       <CustomerStatCards customers={customers} />
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
+      <SettingsPanel>
         <CustomerTable customers={customers} loading={isLoading} />
-      </Card>
+      </SettingsPanel>
     </Box>
   )
 }

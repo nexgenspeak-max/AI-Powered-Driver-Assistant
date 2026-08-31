@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from livekit.agents import StopResponse
 
-from app.voicebot.en.tools.answer_app_faq import answer_app_faq as answer_app_faq_en
-from app.voicebot.vn.tools.answer_app_faq import answer_app_faq as answer_app_faq_vn
+from app.voicebot.locales.en.tools.answer_app_faq import answer_app_faq as answer_app_faq_en
+from app.voicebot.locales.vn.tools.answer_app_faq import answer_app_faq as answer_app_faq_vn
 
 
 async def _run(fn, args, context):
@@ -33,7 +33,7 @@ async def test_vn_faq_speaks_rag_reply_and_stops_llm_rewrite():
         "Ứng dụng hỗ trợ đặt xe, theo dõi chuyến, và cung cấp trợ lý giọng nói."
     )
     with patch(
-        "app.voicebot.vn.tools.answer_app_faq.get_faq_rag_service"
+        "app.voicebot.locales.vn.tools.answer_app_faq.get_faq_rag_service"
     ) as get_svc:
         get_svc.return_value.answer = AsyncMock(return_value=reply)
         await _run(answer_app_faq_vn, {"question": "Bạn cung cấp những dịch vụ nào?"}, context)
@@ -53,7 +53,7 @@ async def test_en_faq_speaks_rag_reply_and_stops_llm_rewrite():
     context = _context()
     reply = "The app helps with bookings, trip tracking, and a voice assistant."
     with patch(
-        "app.voicebot.en.tools.answer_app_faq.get_faq_rag_service"
+        "app.voicebot.locales.en.tools.answer_app_faq.get_faq_rag_service"
     ) as get_svc:
         get_svc.return_value.answer = AsyncMock(return_value=reply)
         await _run(answer_app_faq_en, {"question": "What services do you provide?"}, context)

@@ -25,6 +25,21 @@ def test_resolve_call_mode_explicit_override():
     assert resolve_call_mode("anything", lang="vn", explicit="bridge") == "bridge"
 
 
+def test_resolve_call_mode_uses_driver_settings_default():
+    assert resolve_call_mode("gọi khách giúp tôi", lang="vn", default_mode="bridge") == "bridge"
+    assert resolve_call_mode("gọi khách giúp tôi", lang="vn", default_mode="agent") == "agent"
+    # Explicit speech still overrides saved default
+    assert resolve_call_mode("gọi khách để tôi nói", lang="vn", default_mode="agent") == "bridge"
+
+
+def test_call_tool_arguments_uses_driver_settings_default():
+    from app.voicebot.processors.spoken_intent import call_tool_arguments
+
+    userdata = {"context": {"driver_settings": {"default_customer_call_mode": "bridge"}}}
+    assert call_tool_arguments("gọi khách giúp tôi", userdata=userdata)["mode"] == "bridge"
+    assert call_tool_arguments("gọi khách để tôi nói", userdata=userdata)["mode"] == "bridge"
+
+
 def test_customer_call_agent_has_transfer_tool():
     src = inspect.getsource(CustomerCallAgent.__init__)
     assert "transfer_to_driver" in src

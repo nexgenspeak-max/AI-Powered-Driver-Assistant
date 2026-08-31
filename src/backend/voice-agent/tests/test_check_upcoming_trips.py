@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from livekit.agents import StopResponse
 
 from app.voicebot.processors import context_store
-from app.voicebot.vn.tools.check_upcoming_trips import check_upcoming_trips
+from app.voicebot.locales.vn.tools.check_upcoming_trips import check_upcoming_trips
 
 
 def _userdata():

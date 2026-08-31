@@ -10,7 +10,7 @@ _EXTRA_TOOL_NAMES = frozenset({"end_call"})
 
 
 def _known_tool_names() -> frozenset[str]:
-    from app.voicebot.vn.tools_definition import raw_schema
+    from app.voicebot.locales.vn.tools_definition import raw_schema
 
     return frozenset(raw_schema.keys()) | _EXTRA_TOOL_NAMES
 

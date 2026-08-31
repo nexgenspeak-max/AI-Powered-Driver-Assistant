@@ -27,6 +27,7 @@ from app.config.settings import get_settings
 from app.providers import get_stt, get_llm, get_tts
 from app.services import backend_api
 from app.voicebot import get_voicebot
+from app.voicebot.session_lang import resolve_routing_lang, to_spoken_lang
 from app.voicebot.processors import prefetch as prefetch_processor
 from app.voicebot.processors import context_store
 from app.voicebot.processors.call_state import CallAwareUserData
@@ -165,6 +166,15 @@ def prewarm(proc: JobProcess) -> None:
     from app.config.logging import setup_logging
     setup_logging()
     proc.userdata["vad"] = silero.VAD.load()
+    # Import locale packs once per job worker process — avoids ~8–10s cold
+    # import of 37+ tools on every first connect in a fresh subprocess.
+    try:
+        from app.voicebot.registry import get_voicebot_module
+
+        for code in ("vn", "en"):
+            get_voicebot_module(code)
+    except Exception:
+        logger.warning("voicebot prewarm import failed", exc_info=True)
 
 
 async def _register_driver_session_safe(phone: str, room_name: str) -> None:
@@ -207,11 +217,11 @@ async def entrypoint(ctx: JobContext) -> None:
     # share one overwritable Redis slot). `proactive_nudge` above stays as the
     # first/primary one for anything still reading the singular.
     proactive_nudges: list[dict] = []
-    lang = "vn"
+    lang = resolve_routing_lang()
     if mode == "custcall":
         try:
             meta = json.loads(ctx.room.metadata or "{}")
-            lang = meta.get("lang", "vn")
+            lang = resolve_routing_lang(room_meta_lang=meta.get("lang"))
             trip = {
                 "trip_id":         meta.get("trip_id", ""),
                 "customer_name":   meta.get("customer_name", ""),
@@ -270,9 +280,11 @@ async def entrypoint(ctx: JobContext) -> None:
                     ",".join(n.get("nudge_kind", "") for n in proactive_nudges) or "-",
                     phone,
                 )
-            lang = meta.get("lang", "vn")
+            lang = resolve_routing_lang(room_meta_lang=meta.get("lang"))
         except Exception:
             pass
+
+    asyncio.create_task(backend_api.prewarm_trip_service())
 
     # Fire-and-forget presence registration — lets trip-service's
     # driverReachService.ts push a nudge into THIS room instead of dialing a
@@ -349,11 +361,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 "driver_room_name": meta.get("driver_room_name", ""),
             }
 
-        # Warm the LLM while prefetch runs so the first spoken turn is not a
-        # cold TLS+TTFT (~2.45s live on gpt-5.6-luna). Awaited before
-        # session.start so greeting/first turn share the pooled client.
+        # Warm the LLM while agent module loads. For inbound driver we defer
+        # prefetch so connect filler TTS can start first — do NOT await warmup
+        # before session.start there (greeting is fixed TTS; warmup runs during
+        # the two-phase hello + prefetch).
         llm = get_llm()
         warmup = asyncio.create_task(warmup_llm(llm))
+        voicebot_task = asyncio.create_task(asyncio.to_thread(get_voicebot, lang))
         session = AgentSession(
             stt=get_stt(),
             llm=llm,
@@ -374,11 +388,9 @@ async def entrypoint(ctx: JobContext) -> None:
             await prefetch_processor.run_customer(session, phone)
         elif role == "driver" and phone and not defer_driver_prefetch:
             await prefetch_processor.run_driver(session, phone)
-        if not defer_driver_prefetch:
-            await warmup
 
         # ── Build the right agent for this room ───────────────────────────────
-        voicebot = get_voicebot(lang)
+        voicebot = await voicebot_task
         logger.info("voicebot lang=%s module=%s", lang, voicebot.__name__)
 
         if mode == "custcall":
@@ -424,15 +436,15 @@ async def entrypoint(ctx: JobContext) -> None:
             max_silences_default = 3
         else:
             context_hint = context_store.build_context_hint(
-                session_userdata, lang="en" if lang == "en" else "vi"
+                session_userdata, lang=to_spoken_lang(lang)
             )
             agent = voicebot.DriverAgent(
                 trip=trip, driver_phone=phone, context_hint=context_hint,
                 proactive_nudge=proactive_nudge,
                 proactive_nudges=proactive_nudges,
             )
-            silence_seconds = 10.0
-            # 10s im lặng → hỏi "Bạn còn đó không?" đúng 1 lần (TTS cố định,
+            silence_seconds = 15.0
+            # 15s im lặng → hỏi "Bạn còn đó không?" đúng 1 lần (TTS cố định,
             # không qua LLM — tránh bot hỏi lặp). Thêm 10s im lặng nữa → chào
             # tạm biệt và ngắt (~20s tổng).
             max_silences_default = 2
@@ -469,6 +481,9 @@ async def entrypoint(ctx: JobContext) -> None:
         )
         if mode == "driver":
             room_input.text_input_cb = driver_text_input_cb
+
+        if not defer_driver_prefetch:
+            await warmup
 
         await session.start(
             agent=agent,
@@ -687,13 +702,28 @@ async def entrypoint(ctx: JobContext) -> None:
 
                         asyncio.create_task(_hangup_after_goodbye())
 
+            _user_speaking = False
+
             @session.on("user_input_transcribed")
             def _on_user_transcribed(ev) -> None:
-                if ev.is_final and ev.transcript.strip():
+                if ev.transcript.strip():
                     silence_tracker.reset_silence_timer(
-                        source=f"user_input_transcribed:{ev.transcript!r}"
+                        source=(
+                            f"user_input_transcribed:final={ev.is_final}:"
+                            f"{ev.transcript!r}"
+                        ),
                     )
+                if ev.is_final and ev.transcript.strip():
                     session_userdata["_customer_spoke"] = True
+
+            @session.on("user_state_changed")
+            def _on_user_state_silence(ev) -> None:
+                nonlocal _user_speaking
+                if ev.new_state == "speaking":
+                    _user_speaking = True
+                    silence_tracker.pause()
+                elif ev.new_state == "listening":
+                    _user_speaking = False
 
             @session.on("agent_state_changed")
             def _on_agent_state(ev) -> None:
@@ -732,7 +762,11 @@ async def entrypoint(ctx: JobContext) -> None:
                         # comment above). wait_for_sip_pickup resumes it
                         # explicitly once pickup is confirmed.
                         return
-                    if not ud.get("customer_call_active") and not ud.get("bridge_call_active"):
+                    if (
+                        not _user_speaking
+                        and not ud.get("customer_call_active")
+                        and not ud.get("bridge_call_active")
+                    ):
                         silence_tracker.resume()
                     elif ud.get("customer_call_active") and ud.get("_agent_call_answered"):
                         # Real silence since the AI's last utterance during

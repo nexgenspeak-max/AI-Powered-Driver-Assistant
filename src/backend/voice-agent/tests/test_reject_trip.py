@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from livekit.agents import StopResponse
 
 from app.voicebot.processors import context_store
-from app.voicebot.vn.constants import TRIP_REJECTED
-from app.voicebot.vn.tools.reject_trip import reject_trip
+from app.voicebot.locales.vn.constants import TRIP_REJECTED
+from app.voicebot.locales.vn.tools.reject_trip import reject_trip
 
 
 def _userdata_with_pending_trip():

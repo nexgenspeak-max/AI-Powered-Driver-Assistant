@@ -8,16 +8,20 @@ import {
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import { AdminLocalePicker } from '../components/AdminLocalePicker'
+import { useAdminLocale } from '../i18n/useAdminLocale'
 import { useAuthStore } from '../stores/authStore'
 import { authService } from '../services/api/auth'
 import { ROUTES } from '../constants'
 import { PALETTE } from '../styles/palette'
+import { getErrorDetail } from '../utils/errors'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const setAdmin = useAuthStore(s => s.setAdmin)
   const setTokens = useAuthStore(s => s.setTokens)
   const logout = useAuthStore(s => s.logout)
+  const { t } = useAdminLocale()
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
 
@@ -26,19 +30,12 @@ export default function LoginPage() {
 
   const { mutate: login, isPending, error } = useMutation({
     mutationFn: async () => {
-      // Login is token-only now (see services/api/auth.ts) — the profile
-      // has to be fetched via me() before the role can even be checked, so
-      // the token goes into the store first and comes back out (logout())
-      // if the check below fails.
       const { access_token, refresh_token } = await authService.login({ role: 'admin', email: form.email, password: form.password })
       setTokens(access_token, refresh_token)
       const user = await authService.me()
-      // auth-service's admin login looks up the account by email only (not scoped
-      // by role), so a driver/customer account with the same email could otherwise
-      // authenticate here — reject anything that isn't actually role=admin.
       if (user.role !== 'admin') {
         logout()
-        throw new Error('Tài khoản này không có quyền truy cập Admin Panel.')
+        throw new Error(t.login.accessDenied)
       }
       return user
     },
@@ -61,9 +58,7 @@ export default function LoginPage() {
     login()
   }
 
-  const errorMsg = error
-    ? ((error as any).response?.data?.detail ?? (error as Error).message ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
-    : null
+  const errorMsg = error ? getErrorDetail(error, t.login.failed) : null
 
   return (
     <Box sx={{
@@ -79,9 +74,9 @@ export default function LoginPage() {
           }}>
             <AdminPanelSettingsIcon sx={{ color: '#fff', fontSize: 34 }} />
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>Admin Panel</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>{t.login.title}</Typography>
           <Typography variant="body2" sx={{ color: PALETTE.light, mt: 0.5 }}>
-            Đăng nhập để quản lý hệ thống
+            {t.login.subtitle}
           </Typography>
         </Box>
 
@@ -89,13 +84,15 @@ export default function LoginPage() {
           <CardContent sx={{ p: 4 }}>
             <Box component="form" onSubmit={handleSubmit}>
               <Stack spacing={2.5}>
+                <AdminLocalePicker variant="compact" />
+
                 <TextField
-                  label="Email" type="email" required fullWidth size="small"
+                  label={t.login.email} type="email" required fullWidth size="small"
                   value={form.email} onChange={set('email')}
                   placeholder="admin@example.com"
                 />
                 <TextField
-                  label="Mật khẩu" type={showPassword ? 'text' : 'password'} required fullWidth size="small"
+                  label={t.login.password} type={showPassword ? 'text' : 'password'} required fullWidth size="small"
                   value={form.password} onChange={set('password')}
                   slotProps={{
                     input: {
@@ -118,7 +115,7 @@ export default function LoginPage() {
                     background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
                     '&:hover': { background: `linear-gradient(135deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 100%)` },
                   }}>
-                  {isPending ? <CircularProgress size={22} color="inherit" /> : 'Đăng nhập'}
+                  {isPending ? <CircularProgress size={22} color="inherit" /> : t.login.submit}
                 </Button>
               </Stack>
             </Box>

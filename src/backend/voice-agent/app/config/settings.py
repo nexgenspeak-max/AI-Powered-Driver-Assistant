@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     # Max seconds before auto handback if customer never hangs up (0 = disabled).
     bridge_call_max_seconds: int = 600
 
+    # ── Agent locale (routing) ───────────────────────────────────────────────
+    # Default voice-agent language when room.metadata.lang is absent.
+    # Pair with STT_LANGUAGE + GOOGLE_TTS_VOICE (or provider voice) for the
+    # same locale bundle — see envs/.env.example "Locale bundles".
+    voice_agent_lang: str = "vn"  # vn | en
+
     env: str = "local"
 
     model_config = SettingsConfigDict(

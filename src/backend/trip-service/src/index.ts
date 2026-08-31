@@ -11,6 +11,7 @@ import customersRouter from './routes/customers';
 import deliveryOrdersRouter from './routes/deliveryOrders';
 import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
+import { cacheGet } from './cache/redis';
 import { attachLogContext } from './services/logger';
 
 const corsOptions = {
@@ -39,5 +40,7 @@ app.use('/api/v1/reminders', remindersRouter);
 app.use('/api/v1/customers', customersRouter);
 app.use('/api/v1/delivery-orders', deliveryOrdersRouter);
 app.use('/api/v1/places', placesRouter);
+
+void cacheGet('__warmup__');
 
 export const handler = serverless(app);

@@ -1,0 +1,74 @@
+import { useState } from 'react'
+import {
+  Box, Chip, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography,
+} from '@mui/material'
+import { LOG_SERVICE_IDS } from '../types/ops'
+import { useOpsLocale } from '../i18n/useOpsLocale'
+import { PALETTE } from '../styles/palette'
+import { useLogStream } from '../features/logs/useLogStream'
+
+export default function LogsPage() {
+  const { t } = useOpsLocale()
+  const [service, setService] = useState('')
+  const [room, setRoom] = useState('')
+  const [conv, setConv] = useState('')
+  const [q, setQ] = useState('')
+  const { lines, status, bottomRef } = useLogStream({ service, room, conv, q, enabled: true })
+
+  const statusLabel =
+    status === 'live' ? t.logs.live : status === 'connecting' ? t.logs.connecting : t.logs.disconnected
+
+  return (
+    <Stack spacing={2}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>{t.logs.service}</InputLabel>
+          <Select
+            label={t.logs.service}
+            value={service}
+            onChange={e => setService(e.target.value)}
+          >
+            <MenuItem value="">{t.logs.allServices}</MenuItem>
+            {LOG_SERVICE_IDS.map(id => (
+              <MenuItem key={id} value={id}>{id}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField size="small" label={t.logs.room} value={room} onChange={e => setRoom(e.target.value)} />
+        <TextField size="small" label={t.logs.conv} value={conv} onChange={e => setConv(e.target.value)} />
+        <TextField size="small" label={t.logs.query} value={q} onChange={e => setQ(e.target.value)} sx={{ flex: 1 }} />
+        <Chip
+          label={statusLabel}
+          color={status === 'live' ? 'success' : status === 'connecting' ? 'default' : 'error'}
+          sx={{ alignSelf: { xs: 'flex-start', md: 'center' }, minHeight: 44 }}
+        />
+      </Stack>
+
+      <Box
+        sx={{
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: 13,
+          lineHeight: 1.5,
+          bgcolor: PALETTE.darkest,
+          border: `1px solid ${PALETTE.shellBorder}`,
+          borderRadius: 2,
+          p: 2,
+          height: { xs: 420, md: 560 },
+          overflow: 'auto',
+          color: PALETTE.pale,
+        }}
+      >
+        {lines.length === 0 ? (
+          <Typography variant="body2" sx={{ color: PALETTE.shellMuted }}>{t.logs.empty}</Typography>
+        ) : (
+          lines.map((line, i) => (
+            <Box key={`${i}-${line.slice(0, 24)}`} component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {line}
+            </Box>
+          ))
+        )}
+        <div ref={bottomRef} />
+      </Box>
+    </Stack>
+  )
+}

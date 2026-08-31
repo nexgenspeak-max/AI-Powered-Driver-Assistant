@@ -12,6 +12,7 @@ const router = Router();
 
 const DEFAULT_PERMISSIONS: Record<userService.Role, string[]> = {
   admin: ['*'],
+  super_admin: ['ops:*'],
   driver: ['trip:read', 'trip:update:own'],
   customer: ['trip:read:own', 'trip:create'],
 };
@@ -58,6 +59,10 @@ router.post('/register', async (req: Request, res: Response) => {
       vehicle_type?: string; vehicle_plate?: string; vehicle_name?: string;
     };
     if (!role || !name) return res.status(400).json({ detail: 'role and name are required' });
+
+    if (role === 'super_admin') {
+      return res.status(403).json({ detail: 'super_admin cannot be registered via this endpoint' });
+    }
 
     if (role === 'admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required for admin' });
@@ -108,9 +113,9 @@ router.post('/login', async (req: Request, res: Response) => {
     };
     if (!role) return res.status(400).json({ detail: 'role is required' });
 
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'super_admin') {
       if (!email || !password) return res.status(400).json({ detail: 'email and password are required' });
-      const user = await userService.getByEmail(email, 'admin');
+      const user = await userService.getByEmail(email, role);
       if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).json({ detail: 'Invalid credentials' });
       }

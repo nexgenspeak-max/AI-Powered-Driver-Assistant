@@ -1,0 +1,59 @@
+# Phase 1 scaffold — patterns extracted from spoken_intent.py (VN).
+# Router will load this file; Python constants remain source of truth until Phase 1 cutover.
+intents:
+  confirm:
+    any_contains:
+      - xác nhận nhận chuyến
+      - xác nhận chuyến
+      - nhận chuyến
+      - xác nhận nhận
+  reject:
+    any_contains:
+      - từ chối chuyến
+      - từ chối nhận
+      - không nhận chuyến
+      - không nhận
+      - tôi bận
+      - từ chối
+  call_customer:
+    any_contains:
+      - gọi khách
+      - gọi cho khách
+      - gọi giúp
+      - nhấc máy gọi
+      - nói chuyện với khách
+  upcoming:
+    any_contains:
+      - chuyến sắp tới
+      - các chuyến sắp
+      - có chuyến nào
+      - danh sách chuyến
+      - lịch chuyến
+      - lịch trình
+      - lịch hôm nay
+      - kiểm tra trình
+      - kiểm tra lịch
+      - xem lịch
+      - xem trình
+      - chuyến tiếp theo
+      - mấy chuyến
+      - bao nhiêu chuyến
+      - có bao nhiêu chuyến
+  end_conversation:
+    any_contains:
+      - tắt máy
+      - tắt trợ lý
+      - tắt đi
+      - tạm biệt
+      - kết thúc trợ lý
+      - kết thúc cuộc
+      - thôi tắt
+      - dừng lại nhé
+      - dừng lại đi
+  trip_lookup:
+    any_contains:
+      - chuyến nào
+      - khách nào
+      - chuyến thứ
+      - chuyến số
+    requires: trip_target

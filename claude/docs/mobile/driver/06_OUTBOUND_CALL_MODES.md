@@ -34,5 +34,5 @@ Helper: `app/voicebot/processors/call_mode.py::resolve_call_mode`
 
 ## Not in scope (phase 2)
 
-- UI picker 2 chế độ trên driver-app (voice-only for now)
+- **Cài đặt Trợ lý** (driver-app): option mặc định khi gọi khách — (1) **AI gọi hộ**: AI nói, tài xế nghe live và **chen vào khi cần**; (2) **Tài xế nói trực tiếp**: AI chỉ quay số, tài xế nói hoàn toàn. Bot **không hỏi lại** chế độ mỗi lần gọi; đọc từ config + override bằng lời ("nói trực tiếp" / `transfer_to_driver` mid-call).
 - Auto-pick `background` khi Trợ lý không connected

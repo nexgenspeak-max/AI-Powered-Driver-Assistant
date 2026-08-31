@@ -1,0 +1,43 @@
+# Phase 1 scaffold — patterns extracted from spoken_intent.py (EN).
+intents:
+  confirm:
+    any_contains:
+      - accept trip
+      - confirm trip
+      - take the trip
+      - yes accept
+  reject:
+    any_contains:
+      - reject trip
+      - decline trip
+      - can't take
+      - cannot take
+      - turn it down
+  call_customer:
+    any_contains:
+      - call customer
+      - call the customer
+      - call rider
+      - phone the customer
+  upcoming:
+    any_contains:
+      - upcoming trips
+      - my schedule
+      - check schedule
+      - how many trips
+      - next trip
+  end_conversation:
+    any_contains:
+      - goodbye
+      - hang up
+      - end the session
+      - end session
+      - that's all
+      - thats all
+      - turn off
+  trip_lookup:
+    any_contains:
+      - which trip
+      - what trip
+      - trip number
+    requires: trip_target

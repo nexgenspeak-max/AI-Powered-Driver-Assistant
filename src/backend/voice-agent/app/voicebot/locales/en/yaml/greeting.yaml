@@ -1,0 +1,7 @@
+# Inbound driver connect — context greeting (after connect filler).
+inbound_context:
+  default_customer: customer
+  scope_today: today
+  on_current_trip: "You're on a trip with {customer}."
+  no_trips_with_earnings: "No trips today. Earnings so far: {money}."
+  no_trips: "I don't see any trips on your schedule today."

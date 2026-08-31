@@ -60,8 +60,8 @@ def test_sip_identity_reads_driver_outbound_slot():
 
 
 def test_driver_opening_waits_for_sip_before_say():
-    from app.voicebot.vn.agent import DriverAgent
-    from app.voicebot.en.agent import DriverAgent as EnDriverAgent
+    from app.voicebot.locales.vn.agent import DriverAgent
+    from app.voicebot.locales.en.agent import DriverAgent as EnDriverAgent
     from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
 
     vn = inspect.getsource(DriverAgent.on_enter)

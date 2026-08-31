@@ -6,6 +6,7 @@ export interface Driver {
   name: string
   fcm_token: string
   status: DriverStatus
-  registered_at: string
+  registered_at?: string
+  created_at: string
   updated_at: string
 }

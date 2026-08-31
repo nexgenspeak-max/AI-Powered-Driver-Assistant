@@ -11,6 +11,7 @@ import deliveryOrdersRouter from './routes/deliveryOrders';
 import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
 import { attachLocalWebSocketServer } from './services/notify';
+import { cacheGet } from './cache/redis';
 import { attachLogContext, getLogger } from './services/logger';
 
 const corsOptions = {
@@ -40,5 +41,6 @@ app.use('/api/v1/places', placesRouter);
 
 const PORT = process.env.PORT || 8002;
 const log = getLogger('listen');
+void cacheGet('__warmup__');
 const server = app.listen(PORT, () => log.info('listening', { port: PORT }));
 attachLocalWebSocketServer(server);

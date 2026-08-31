@@ -1,5 +1,5 @@
 ---
-description: TypeScript backend (trip-service, call-center) standards
+description: TypeScript backend (trip-service, call-center, auth-service, call-logger, ops-service) standards
 globs: src/backend/**/*.ts
 alwaysApply: false
 ---

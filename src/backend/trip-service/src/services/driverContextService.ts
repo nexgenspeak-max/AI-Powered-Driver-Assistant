@@ -108,6 +108,7 @@ export async function buildDriverContext(driverPhone: string) {
       notify_on_pickup_approach_radius_m: config.proximityAlertMeters,
       auto_suggest_next_stop: false,
       auto_suggest_next_stop_radius_m: config.nextStopAnnounceMeters,
+      default_customer_call_mode: 'agent',
     },
     // Multi-stop visiting order across ALL active stops (confirmed/
     // arrived_pickup/picked_up), road-distance-based via Goong Distance

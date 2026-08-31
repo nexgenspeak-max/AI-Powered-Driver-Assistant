@@ -1,0 +1,18 @@
+# Supported voice-agent locale bundles.
+# Switch language: set VOICE_AGENT_LANG + matching STT/TTS env, restart worker.
+# Spoken copy / NLU patterns: locales/{vn,en}/yaml/*.yaml
+default: vn
+
+locales:
+  vn:
+    routing: vn
+    spoken: vi
+    stt: vi-VN
+    tts_voice: vi-VN-Chirp3-HD-Kore
+    turn_detection: none
+  en:
+    routing: en
+    spoken: en
+    stt: en-US
+    tts_voice: en-US-Chirp3-HD-Kore
+    turn_detection: multilingual

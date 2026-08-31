@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from livekit.agents import StopResponse
 
 from app.voicebot.processors import context_store
-from app.voicebot.vn.tools.confirm_trip import confirm_trip
+from app.voicebot.locales.vn.tools.confirm_trip import confirm_trip
 
 
 def _userdata_with_pending_trip():

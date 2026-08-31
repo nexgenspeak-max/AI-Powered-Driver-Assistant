@@ -1,0 +1,7 @@
+# Inbound driver connect — context greeting (after connect filler).
+inbound_context:
+  default_customer: khách
+  scope_today: hôm nay
+  on_current_trip: "Bạn đang có chuyến với {customer}."
+  no_trips_with_earnings: "Chưa thấy chuyến nào hôm nay. Thu nhập khoảng {money}."
+  no_trips: "Em chưa thấy chuyến nào hôm nay."

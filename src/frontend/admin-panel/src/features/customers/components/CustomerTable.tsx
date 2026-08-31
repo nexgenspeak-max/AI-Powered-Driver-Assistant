@@ -3,7 +3,9 @@ import {
   TableContainer, TableHead, TableRow, Typography,
 } from '@mui/material'
 import type { Customer, CustomerStatus } from '../../../types'
-import { PALETTE } from '../../../styles/palette'
+import { useAdminContent } from '../../../i18n/useAdminContent'
+import { tableEmptyCellSx, tableHeadCellSx, tableHeadRowSx, tableRowSx } from '../../../styles/shellStyles'
+import { formatDate } from '../../../utils/format'
 import { useLockCustomer } from '../hooks/useLockCustomer'
 
 type Props = { customers: Customer[]; loading: boolean }
@@ -16,46 +18,49 @@ const STATUS_COLOR: Record<CustomerStatus, 'success' | 'default' | 'error'> = {
 
 export function CustomerTable({ customers, loading }: Props) {
   const { mutate: lockCustomer, isPending } = useLockCustomer()
+  const { c, accountStatusLabel } = useAdminContent()
+  const cols = c.table.customer
+  const headers = [cols.name, cols.phone, cols.email, cols.status, cols.joined, cols.actions]
 
   return (
     <TableContainer>
       <Table size="small">
         <TableHead>
-          <TableRow sx={{ bgcolor: PALETTE.surface }}>
-            {['Name', 'Phone', 'Email', 'Status', 'Joined', 'Actions'].map((h, i) => (
-              <TableCell key={i} sx={{ fontWeight: 600, fontSize: 12, color: '#6b7280' }}>{h}</TableCell>
+          <TableRow sx={tableHeadRowSx}>
+            {headers.map((h, i) => (
+              <TableCell key={i} sx={tableHeadCellSx}>{h}</TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={6} align="center" sx={tableEmptyCellSx}>
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
           ) : customers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} align="center" sx={{ py: 6, color: '#9ca3af' }}>
-                No customers registered
+              <TableCell colSpan={6} align="center" sx={tableEmptyCellSx}>
+                {c.common.noCustomers}
               </TableCell>
             </TableRow>
           ) : (
-            customers.map(c => {
-              const locked = c.status === 'locked'
+            customers.map(cust => {
+              const locked = cust.status === 'locked'
               return (
-                <TableRow key={c.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                <TableRow key={cust.id} hover sx={tableRowSx}>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{c.name}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{cust.name}</Typography>
                   </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{c.phone}</TableCell>
-                  <TableCell sx={{ fontSize: 12, color: PALETTE.gray }}>{c.email || '—'}</TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{cust.phone}</TableCell>
+                  <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{cust.email || '—'}</TableCell>
                   <TableCell>
-                    <Chip label={c.status} size="small" color={STATUS_COLOR[c.status]} />
+                    <Chip label={accountStatusLabel(cust.status)} size="small" color={STATUS_COLOR[cust.status]} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(c.created_at).toLocaleDateString()}
+                      {formatDate(cust.created_at)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -65,11 +70,11 @@ export function CustomerTable({ customers, loading }: Props) {
                       color={locked ? 'success' : 'error'}
                       disabled={isPending}
                       onClick={() => {
-                        if (!locked && !window.confirm(`Lock ${c.name}'s account? They won't be able to log in.`)) return
-                        lockCustomer({ id: c.id, locked: !locked })
+                        if (!locked && !window.confirm(c.common.confirmLock(cust.name))) return
+                        lockCustomer({ id: cust.id, locked: !locked })
                       }}
                     >
-                      {locked ? 'Unlock' : 'Lock'}
+                      {locked ? c.common.unlock : c.common.lock}
                     </Button>
                   </TableCell>
                 </TableRow>

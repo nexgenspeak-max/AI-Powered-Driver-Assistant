@@ -63,8 +63,6 @@ dist/
 # ── Frontend build output ─────────────────────────────────────────────────────
 src/frontend/*/dist/
 src/frontend/*/build/
-src/frontend/mobile-app/*/dist/
-src/frontend/mobile-app/*/build/
 
 # ── LaTeX build artifacts ─────────────────────────────────────────────────────
 *.aux

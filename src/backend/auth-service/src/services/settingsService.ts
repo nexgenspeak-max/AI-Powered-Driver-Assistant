@@ -10,6 +10,8 @@ const docClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: config.awsRegion })
 );
 
+export type CustomerCallMode = 'agent' | 'bridge'
+
 export interface AccountSettings {
   id_account: string;
   // Rảnh tay: assistant stays voice-only, minimal manual taps required.
@@ -20,6 +22,8 @@ export interface AccountSettings {
   // Trợ lý tự đề xuất điểm dừng chân tiếp theo khi đến gần.
   auto_suggest_next_stop: boolean;
   auto_suggest_next_stop_radius_m: number;
+  /** Gọi khách: agent = AI nói, tài xế nghe/chen vào; bridge = tài xế nói trực tiếp. */
+  default_customer_call_mode: CustomerCallMode;
   updated_at: string;
   updated_by: string;
 }
@@ -36,6 +40,7 @@ export const DEFAULT_SETTINGS: EditableSettings = {
   notify_on_pickup_approach_radius_m: 1000,
   auto_suggest_next_stop: false,
   auto_suggest_next_stop_radius_m: 200,
+  default_customer_call_mode: 'agent',
 };
 
 function now(): string {
@@ -72,7 +77,11 @@ export async function getByAccountId(accountId: string): Promise<AccountSettings
   if (!result.Item) {
     return { id_account: accountId, ...DEFAULT_SETTINGS, updated_at: now(), updated_by: accountId };
   }
-  return result.Item as AccountSettings;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(result.Item as AccountSettings),
+    id_account: accountId,
+  };
 }
 
 export async function update(

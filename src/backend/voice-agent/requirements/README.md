@@ -2,8 +2,9 @@
 
 Requirements for the **DriverAgent** voice assistant: what drivers can ask, how the AI should respond, and which tools/backends are involved.
 
-**Primary language:** Vietnamese (`app/voicebot/vn/`)  
-**Secondary:** English (`app/voicebot/en/`) — same capability set, different prompts
+**Primary language:** Vietnamese (`app/voicebot/locales/vn/`) — 37 inbound driver tools  
+**Secondary:** English (`app/voicebot/locales/en/`) — full inbound parity (37 tools)  
+**Locale service:** `app/services/locale/` — routing + YAML strings; **không thêm `if lang` trong processors**
 
 ---
 
@@ -11,6 +12,7 @@ Requirements for the **DriverAgent** voice assistant: what drivers can ask, how 
 
 | File | Purpose |
 |------|---------|
+| [driver-tools-architecture-plan.md](./driver-tools-architecture-plan.md) | **Audited roadmap v1.1** — locale architecture, STT/TTS bundle, tool parity, migration phases, new tools |
 | [driver-support-scope.md](./driver-support-scope.md) | Scope, agent modes, design principles |
 | [faq-driver-vi.md](./faq-driver-vi.md) | Driver FAQ catalog (Vietnamese) — sample utterances |
 | [faq-driver-en.md](./faq-driver-en.md) | Driver FAQ catalog (English) |
@@ -57,10 +59,12 @@ Inbound is the main FAQ/support surface documented here.
 ## Related code
 
 ```
-app/voicebot/vn/agent.py              # DriverAgent tool list
-app/voicebot/vn/system_instructions.py
-app/voicebot/vn/tools_mapping.py      # keyword → tool hints for LLM
-app/voicebot/vn/tools_definition.py   # JSON schemas per tool
-app/voicebot/vn/tools/*.py            # Tool implementations
-app/services/backend_api.py           # trip-service HTTP client
+app/voicebot/locales/vn/agent.py              # DriverAgent tool list
+app/voicebot/locales/vn/system_instructions.py
+app/voicebot/locales/vn/tools_mapping.py      # keyword → tool hints for LLM
+app/voicebot/locales/vn/tools_definition.py   # JSON schemas per tool
+app/voicebot/locales/vn/tools/*.py            # Tool implementations
+app/voicebot/locales/vn/yaml/*.yaml           # Spoken copy + NLU patterns
+app/voicebot/registry.py                      # get_voicebot_module(lang)
+app/services/locale/                          # resolve + load YAML
 ```

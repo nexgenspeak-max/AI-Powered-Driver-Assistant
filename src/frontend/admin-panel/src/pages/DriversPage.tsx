@@ -1,6 +1,7 @@
-import { Box, Card } from '@mui/material'
+import { Box } from '@mui/material'
 import { DriverStatCards } from '../features/drivers/components/DriverStatCards'
 import { DriverTable } from '../features/drivers/components/DriverTable'
+import { SettingsPanel } from '../layouts/SettingsPanel'
 import { useDrivers } from '../features/drivers/hooks/useDrivers'
 
 export default function DriversPage() {
@@ -9,9 +10,9 @@ export default function DriversPage() {
   return (
     <Box>
       <DriverStatCards drivers={drivers} />
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
+      <SettingsPanel>
         <DriverTable drivers={drivers} loading={isLoading} />
-      </Card>
+      </SettingsPanel>
     </Box>
   )
 }

@@ -368,9 +368,9 @@ def get_current_location(userdata: dict) -> dict | None:
 def get_driver_settings(userdata: dict) -> dict:
     """Per-driver feature toggles from auth-service's driver-settings table
     (hands_free_mode, notify_on_pickup_approach, auto_suggest_next_stop +
-    radii), passed through unchanged inside the /drivers/me/context payload.
-    All-false shape if missing so callers can treat a stale/failed prefetch
-    the same as an explicitly-off setting."""
+    radii, default_customer_call_mode), passed through unchanged inside the
+    /drivers/me/context payload. All-false shape if missing so callers can
+    treat a stale/failed prefetch the same as an explicitly-off setting."""
     settings = get(userdata, "driver_settings")
     if isinstance(settings, dict):
         return settings
@@ -378,7 +378,14 @@ def get_driver_settings(userdata: dict) -> dict:
         "hands_free_mode": False,
         "notify_on_pickup_approach": False,
         "auto_suggest_next_stop": False,
+        "default_customer_call_mode": "agent",
     }
+
+
+def get_default_customer_call_mode(userdata: dict) -> str:
+    """Driver's saved outbound call preference — agent (AI speaks) or bridge (direct)."""
+    mode = get_driver_settings(userdata).get("default_customer_call_mode", "agent")
+    return mode if mode in ("agent", "bridge") else "agent"
 
 
 def get_optimized_route(userdata: dict) -> dict | None:
@@ -585,6 +592,96 @@ def get_callable_trips(userdata: dict) -> list[dict]:
     ]
 
 
+def _format_call_disambiguation(
+    trip_rows: list[tuple[int, dict]],
+    lang: str,
+    *,
+    location_hint: str = "",
+) -> str:
+    """Short prompt when several callable trips match — not the full schedule."""
+    from app.voicebot.processors.trip_format import short_address
+
+    if lang == "en":
+        if len(trip_rows) == 2 and location_hint:
+            n1 = trip_rows[0][1].get("customer_name") or "customer"
+            n2 = trip_rows[1][1].get("customer_name") or "customer"
+            return f"Which customer should I call — {n1} or {n2} at {location_hint}?"
+        lines = [
+            f"{i}. {t.get('customer_name') or 'unnamed customer'} "
+            f"(pickup {short_address(t.get('pickup_address', ''), 30)})"
+            for i, t in trip_rows
+        ]
+        return (
+            "Which customer would you like to call: "
+            + "; ".join(lines)
+            + "? Tell me the number or the customer's name."
+        )
+
+    if len(trip_rows) == 2 and location_hint:
+        n1 = trip_rows[0][1].get("customer_name") or "khách"
+        n2 = trip_rows[1][1].get("customer_name") or "khách"
+        return f"Bạn muốn gọi khách {n1} hay {n2} ở {location_hint}?"
+    lines = [
+        f"{i}. khách {t.get('customer_name') or 'không rõ tên'} "
+        f"(đón {short_address(t.get('pickup_address', ''), 30)})"
+        for i, t in trip_rows
+    ]
+    return (
+        "Bạn muốn gọi khách nào: "
+        + "; ".join(lines)
+        + "? Bạn nói số thứ tự hoặc tên khách giúp em."
+    )
+
+
+def _resolve_call_target_from_utterance(
+    userdata: dict,
+    utterance: str,
+    trips: list[dict],
+    lang: str,
+) -> dict | str | None:
+    """Filter callable trips by address/name in utterance before listing all."""
+    from app.voicebot.processors.trip_target import resolve_trips_from_text
+    from app.voicebot.processors.trip_format import short_address
+
+    result = resolve_trips_from_text(userdata, utterance, callable_only=True)
+    if result.kind == "matched" and result.trip:
+        set_target_trip(userdata, result.trip)
+        return result.trip
+
+    pool = list(result.candidates)
+    if not pool:
+        matched = match_callable_trip_by_text(userdata, utterance)
+        if matched:
+            sid = matched.get("trip_id")
+            for t in trips:
+                if t.get("trip_id") == sid:
+                    set_target_trip(userdata, t)
+                    return t
+        return None
+
+    addr_hits = [c for c in pool if "address" in c.signals]
+    if addr_hits:
+        pool = addr_hits
+
+    if len(pool) == 1:
+        set_target_trip(userdata, pool[0].trip)
+        return pool[0].trip
+
+    schedule = get_schedule_trips(userdata)
+    id_to_index = {t.get("trip_id"): i + 1 for i, t in enumerate(schedule)}
+    rows = sorted(
+        (
+            (id_to_index.get(c.trip.get("trip_id"), c.schedule_index), c.trip)
+            for c in pool
+        ),
+        key=lambda row: row[0],
+    )
+    location_hint = ""
+    if addr_hits:
+        location_hint = short_address(addr_hits[0].trip.get("pickup_address", ""), 24)
+    return _format_call_disambiguation(rows, lang, location_hint=location_hint)
+
+
 def resolve_call_target(
     userdata: dict,
     *,
@@ -594,7 +691,6 @@ def resolve_call_target(
     lang: str = "vi",
 ) -> dict | str | None:
     """Pick trip for call_customer — by index, nudge, target trip, or disambiguation."""
-    from app.voicebot.processors.trip_format import short_address
 
     trips = get_callable_trips(userdata)
     if not trips:
@@ -618,12 +714,11 @@ def resolve_call_target(
         return target
 
     if utterance.strip():
-        matched = match_callable_trip_by_text(userdata, utterance)
-        if matched:
-            sid = matched.get("trip_id")
-            for t in trips:
-                if t.get("trip_id") == sid:
-                    return t
+        scoped = _resolve_call_target_from_utterance(
+            userdata, utterance, trips, lang
+        )
+        if scoped is not None:
+            return scoped
 
     if nudge_trip_id and any(t.get("trip_id") == nudge_trip_id for t in trips):
         target = next(t for t in trips if t.get("trip_id") == nudge_trip_id)
@@ -649,24 +744,10 @@ def resolve_call_target(
                     return t
 
     if lang == "en":
-        lines = [
-            f"{i}. {t.get('customer_name') or 'unnamed customer'} (pickup {short_address(t.get('pickup_address', ''), 30)})"
-            for i, t in enumerate(trips, 1)
-        ]
-        return (
-            "You have multiple trips right now — which customer would you like to call: "
-            + "; ".join(lines)
-            + "? Tell me the number or the customer's name."
-        )
-    lines = [
-        f"{i}. khách {t.get('customer_name') or 'không rõ tên'} (đón {short_address(t.get('pickup_address', ''), 30)})"
-        for i, t in enumerate(trips, 1)
-    ]
-    return (
-        "Bạn đang có nhiều chuyến, muốn gọi cho khách nào: "
-        + "; ".join(lines)
-        + "? Bạn nói số thứ tự hoặc tên khách giúp em."
-    )
+        rows = [(i, t) for i, t in enumerate(trips, 1)]
+        return _format_call_disambiguation(rows, lang)
+    rows = [(i, t) for i, t in enumerate(trips, 1)]
+    return _format_call_disambiguation(rows, lang)
 
 
 def build_context_hint(userdata: dict, lang: str = "vi") -> str:

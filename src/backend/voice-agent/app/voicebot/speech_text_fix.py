@@ -220,7 +220,7 @@ def _vn_spoken_terms(text: str) -> str:
 
 
 def _vn_abbreviations(text: str) -> str:
-    from app.voicebot.vn.pronunciations import ABBREVIATION_PATTERNS
+    from app.voicebot.locales.vn.pronunciations import ABBREVIATION_PATTERNS
 
     for pattern, replacement in ABBREVIATION_PATTERNS:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
@@ -270,11 +270,11 @@ async def _buffered_fix(
 
 
 def pronunciations_for_lang(lang: str) -> list[tuple[str, str]]:
-    """Lazy import to avoid a circular import with app.voicebot.vn/en at module load time."""
+    """Lazy import to avoid a circular import with app.voicebot.locales.vn/en at module load time."""
     if lang == "en":
-        from app.voicebot.en.pronunciations import PRONUNCIATIONS
+        from app.voicebot.locales.en.pronunciations import PRONUNCIATIONS
     else:
-        from app.voicebot.vn.pronunciations import PRONUNCIATIONS
+        from app.voicebot.locales.vn.pronunciations import PRONUNCIATIONS
     return PRONUNCIATIONS
 
 
