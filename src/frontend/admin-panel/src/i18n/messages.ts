@@ -80,7 +80,6 @@ export type AdminContentMessages = {
       customerPhone: string
       pickup: string
       dropoff: string
-      pickupTime: string
     }
   }
   transcript: {
@@ -117,6 +116,8 @@ export type AdminMessages = {
     submit: string
     accessDenied: string
     failed: string
+    networkError: string
+    invalidCredentials: string
   }
   content: AdminContentMessages
 }
@@ -219,7 +220,7 @@ const CONTENT_EN: AdminContentMessages = {
     customerPhone: 'Customer phone',
     pickupAddress: 'Pickup address',
     dropoffAddress: 'Dropoff address',
-    pickupTime: 'Pickup time',
+    pickupTime: 'Pickup date & time',
     cancel: 'Cancel',
     submit: 'Create & notify driver',
     submitting: 'Creating…',
@@ -229,7 +230,6 @@ const CONTENT_EN: AdminContentMessages = {
       customerPhone: '+84901234567',
       pickup: '123 Lê Lợi, District 1',
       dropoff: '45 Nguyễn Huệ, District 1',
-      pickupTime: '14:30',
     },
   },
   transcript: {
@@ -310,7 +310,7 @@ const CONTENT_VI: AdminContentMessages = {
     customerPhone: 'SĐT khách',
     pickupAddress: 'Điểm đón',
     dropoffAddress: 'Điểm trả',
-    pickupTime: 'Giờ đón',
+    pickupTime: 'Ngày giờ đón',
     cancel: 'Hủy',
     submit: 'Tạo & thông báo tài xế',
     submitting: 'Đang tạo…',
@@ -320,7 +320,6 @@ const CONTENT_VI: AdminContentMessages = {
       customerPhone: '+84901234567',
       pickup: '123 Lê Lợi, Quận 1',
       dropoff: '45 Nguyễn Huệ, Quận 1',
-      pickupTime: '14:30',
     },
   },
   transcript: {
@@ -383,6 +382,8 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       submit: 'Sign in',
       accessDenied: 'This account does not have Admin Panel access.',
       failed: 'Sign-in failed. Please check your credentials.',
+      networkError: 'Cannot reach auth-service. Start it: cd src/backend/auth-service && npm run dev (port 8003).',
+      invalidCredentials: 'Invalid email or password.',
     },
     content: CONTENT_EN,
   },
@@ -435,6 +436,8 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       submit: 'Đăng nhập',
       accessDenied: 'Tài khoản này không có quyền truy cập Admin Panel.',
       failed: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.',
+      networkError: 'Không kết nối được auth-service. Chạy: cd src/backend/auth-service && npm run dev (cổng 8003).',
+      invalidCredentials: 'Email hoặc mật khẩu không đúng.',
     },
     content: CONTENT_VI,
   },

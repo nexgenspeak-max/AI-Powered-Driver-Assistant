@@ -14,7 +14,7 @@ import { useAuthStore } from '../stores/authStore'
 import { authService } from '../services/api/auth'
 import { ROUTES } from '../constants'
 import { PALETTE } from '../styles/palette'
-import { getErrorDetail } from '../utils/errors'
+import { getLoginErrorMessage } from '../utils/errors'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -58,7 +58,7 @@ export default function LoginPage() {
     login()
   }
 
-  const errorMsg = error ? getErrorDetail(error, t.login.failed) : null
+  const errorMsg = error ? getLoginErrorMessage(error, t.login) : null
 
   return (
     <Box sx={{

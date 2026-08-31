@@ -12,6 +12,7 @@ import { ROUTES } from '../constants'
 import { SettingsPanel } from '../layouts/SettingsPanel'
 import { useAdminContent } from '../i18n/useAdminContent'
 import { getErrorDetail } from '../utils/errors'
+import { isoFromDatetimeLocalValue, minDatetimeLocalValue, toDatetimeLocalValue } from '../utils/datetimeLocal'
 import type { Driver } from '../types'
 
 const formGridSx = {
@@ -112,9 +113,18 @@ export default function CreateTripPage() {
 
           <TextField
             label={f.pickupTime}
-            value={form.pickup_time}
-            onChange={set('pickup_time')}
-            placeholder={f.ph.pickupTime}
+            type="datetime-local"
+            value={toDatetimeLocalValue(form.pickup_time)}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                pickup_time: isoFromDatetimeLocalValue(e.target.value),
+              }))
+            }
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { min: minDatetimeLocalValue() },
+            }}
             fullWidth
             size="small"
             sx={{ gridColumn: { xs: '1', md: '1 / 2' }, maxWidth: { md: 360 } }}
