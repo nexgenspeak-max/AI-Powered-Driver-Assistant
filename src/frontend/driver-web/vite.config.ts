@@ -16,8 +16,8 @@ export default defineConfig({
       manifest: {
         name: 'Driver Dashboard',
         short_name: 'Driver',
-        theme_color: '#1a1f36',
-        background_color: '#f0f2f8',
+        theme_color: '#8B5CF6',
+        background_color: '#f4f6fb',
         display: 'standalone',
         icons: [{ src: '/vite.svg', sizes: '192x192', type: 'image/svg+xml' }],
       },

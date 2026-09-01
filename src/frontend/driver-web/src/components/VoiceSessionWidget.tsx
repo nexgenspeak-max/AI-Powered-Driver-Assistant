@@ -1,6 +1,6 @@
 import { Box, Chip, IconButton, Tooltip } from '@mui/material'
 import CallEndIcon from '@mui/icons-material/CallEnd'
-import { Link as RouterLink, useLocation } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import { useVoiceSessionStore } from '../features/home/stores/voiceSessionStore'
 
 const LABEL: Record<'connecting' | 'connected' | 'error', string> = {
@@ -17,9 +17,8 @@ const LABEL: Record<'connecting' | 'connected' | 'error', string> = {
 export default function VoiceSessionWidget() {
   const status = useVoiceSessionStore(s => s.status)
   const disconnect = useVoiceSessionStore(s => s.disconnect)
-  const location = useLocation()
 
-  if (status === 'idle' || location.pathname === '/') return null
+  if (status === 'idle') return null
 
   return (
     <Box sx={{
@@ -36,7 +35,7 @@ export default function VoiceSessionWidget() {
         sx={{ bgcolor: 'transparent', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
       />
       <Tooltip title="Kết thúc cuộc gọi">
-        <IconButton size="small" onClick={disconnect} sx={{ color: '#e05252' }}>
+        <IconButton size="small" onClick={() => disconnect({ userInitiated: true })} sx={{ color: '#e05252' }}>
           <CallEndIcon fontSize="small" />
         </IconButton>
       </Tooltip>

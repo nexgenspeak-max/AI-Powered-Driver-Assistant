@@ -2,8 +2,11 @@ import { create } from 'zustand'
 import { Room, RoomEvent, Track } from 'livekit-client'
 import { voiceService } from '../../../services/api/voice'
 import { audioLevels, analyzeTrack } from '../state/audioLevels'
-import { useAssistantAnimStore } from './assistantAnimStore'
-import { detectEmotion } from '../utils/emotion'
+import {
+  playConnectingFiller,
+  playDisconnectingFiller,
+  stopConnectingFiller,
+} from '../../../utils/czenFillerAudio'
 
 export type VoiceSessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 export type VoiceMessageSource = 'user' | 'agent'
@@ -26,57 +29,25 @@ function isFinalTranscriptStream(reader: {
   return reader.info.attributes?.[TRANSCRIPTION_FINAL_ATTR] !== 'false'
 }
 
-// RMS thresholds distinguishing "silence" from "someone is actually talking".
-// Tuned for typical mic/speech levels — adjust if speaking/listening states
-// feel too sticky or too twitchy in practice.
-const MIC_THRESHOLD = 0.02
-const AGENT_THRESHOLD = 0.02
-
 // Module-level (not React state) so the LiveKit session survives page
 // navigation — only the store's `status` needs to be reactive.
 let room: Room | null = null
 const audioEls = new Set<HTMLAudioElement>()
 const messageListeners = new Set<VoiceMessageListener>()
 let stopAnalyzers: Array<() => void> = []
-let stateInterval: ReturnType<typeof setInterval> | null = null
+let pendingUserDisconnectFiller = false
 
 function stopAudioAnalysis() {
   stopAnalyzers.forEach(stop => stop())
   stopAnalyzers = []
-  if (stateInterval) {
-    clearInterval(stateInterval)
-    stateInterval = null
-  }
   audioLevels.mic = 0
   audioLevels.agent = 0
-  useAssistantAnimStore.getState().setState('idle')
-}
-
-function startStateMachine() {
-  let wasListening = false
-  stateInterval = setInterval(() => {
-    const { setState } = useAssistantAnimStore.getState()
-    const speaking = audioLevels.agent > AGENT_THRESHOLD
-    const listening = !speaking && audioLevels.mic > MIC_THRESHOLD
-
-    if (speaking) {
-      setState('speaking')
-      wasListening = false
-    } else if (listening) {
-      setState('listening')
-      wasListening = true
-    } else if (wasListening) {
-      setState('thinking')
-    } else {
-      setState('idle')
-    }
-  }, 150)
 }
 
 interface VoiceSessionState {
   status: VoiceSessionStatus
   connect: (customerPhone: string) => Promise<void>
-  disconnect: () => void
+  disconnect: (opts?: { userInitiated?: boolean }) => void
   sendText: (text: string) => Promise<boolean>
 }
 
@@ -87,6 +58,8 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
     if (room) return
 
     set({ status: 'connecting' })
+    stopConnectingFiller()
+    playConnectingFiller()
     try {
       const { token, livekit_url } = await voiceService.getCustomerToken(customerPhone)
       const r = new Room()
@@ -117,7 +90,12 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
         audioEls.forEach(el => el.remove())
         audioEls.clear()
         stopAudioAnalysis()
+        stopConnectingFiller()
         set({ status: 'idle' })
+        if (pendingUserDisconnectFiller) {
+          pendingUserDisconnectFiller = false
+          void playDisconnectingFiller()
+        }
       })
 
       // Both the customer's own speech-to-text and the agent's replies arrive on
@@ -139,9 +117,6 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
             }
           }
           messageListeners.forEach(listener => listener(text, from, { isFinal, segmentId }))
-          if (from === 'agent' && isFinal) {
-            useAssistantAnimStore.getState().setEmotion(detectEmotion(text))
-          }
         }
         if (reader.info.topic !== TRANSCRIPTION_TOPIC) {
           emit(await reader.readAll(), true)
@@ -166,18 +141,25 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
           analyzeTrack(micTrack.mediaStreamTrack, rms => { audioLevels.mic = rms }),
         )
       }
-      startStateMachine()
 
       set({ status: 'connected' })
+      stopConnectingFiller()
     } catch (err) {
       console.error('[voice-session] connect failed', err)
       room?.disconnect()
       room = null
+      stopConnectingFiller()
       set({ status: 'error' })
     }
   },
 
-  disconnect: () => {
+  disconnect: (opts?: { userInitiated?: boolean }) => {
+    const { status } = get()
+    pendingUserDisconnectFiller = !!(
+      opts?.userInitiated &&
+      (status === 'connected' || status === 'connecting')
+    )
+    stopConnectingFiller()
     room?.disconnect()
   },
 

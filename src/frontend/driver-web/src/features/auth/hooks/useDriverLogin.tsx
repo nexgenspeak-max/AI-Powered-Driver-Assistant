@@ -1,22 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '../../../stores/authStore'
+import { queryClient } from '../../../providers/queryClient'
 import { authService } from '../../../services/api/auth'
-import type { AuthUser } from '../../../services/api/auth'
-import type { Driver } from '../../../types'
-
-function toDriver(user: AuthUser): Driver {
-  return {
-    id: user.id,
-    phone: user.phone ?? '',
-    name: user.name,
-    status: user.status === 'locked' ? 'offline' : user.status,
-    vehicle_type: user.vehicle_type,
-    vehicle_plate: user.vehicle_plate,
-    vehicle_name: user.vehicle_name,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-  }
-}
+import { toDriver } from './useCurrentUser'
 
 export const useDriverLogin = () => {
   const setDriver = useAuthStore(s => s.setDriver)
@@ -30,7 +16,9 @@ export const useDriverLogin = () => {
       // it separately once the token is in place.
       setTokens(access_token, refresh_token)
       const user = await authService.me()
-      setDriver(toDriver(user))
+      const driver = toDriver(user)
+      setDriver(driver)
+      queryClient.setQueryData(['me'], driver)
     },
   })
 }

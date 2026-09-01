@@ -42,4 +42,7 @@ export const authService = {
 
   setStatus: (id: string, status: 'online' | 'offline') =>
     authClient.patch(`/accounts/${id}`, { status }).then(r => r.data),
+
+  updateProfile: (id: string, payload: { name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
 }

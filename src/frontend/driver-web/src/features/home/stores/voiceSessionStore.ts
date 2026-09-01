@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { Room, RoomEvent, Track } from 'livekit-client'
 import { voiceService } from '../../../services/api/voice'
+import {
+  playConnectingFiller,
+  playDisconnectingFiller,
+  stopConnectingFiller,
+} from '../../../utils/czenFillerAudio'
 
 export type VoiceSessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 export type VoiceMessageSource = 'user' | 'agent'
@@ -28,11 +33,12 @@ function isFinalTranscriptStream(reader: {
 let room: Room | null = null
 const audioEls = new Set<HTMLAudioElement>()
 const messageListeners = new Set<VoiceMessageListener>()
+let pendingUserDisconnectFiller = false
 
 interface VoiceSessionState {
   status: VoiceSessionStatus
   connect: (driverPhone: string) => Promise<void>
-  disconnect: () => void
+  disconnect: (opts?: { userInitiated?: boolean }) => void
   sendText: (text: string) => Promise<boolean>
 }
 
@@ -43,6 +49,8 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
     if (room) return
 
     set({ status: 'connecting' })
+    stopConnectingFiller()
+    playConnectingFiller()
     try {
       const { token, livekit_url } = await voiceService.getDriverToken(driverPhone)
       const r = new Room()
@@ -69,7 +77,12 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
         room = null
         audioEls.forEach(el => el.remove())
         audioEls.clear()
+        stopConnectingFiller()
         set({ status: 'idle' })
+        if (pendingUserDisconnectFiller) {
+          pendingUserDisconnectFiller = false
+          void playDisconnectingFiller()
+        }
       })
 
       // Both the driver's own speech-to-text and the agent's replies arrive on
@@ -108,16 +121,24 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => ({
 
       await r.connect(livekit_url, token)
       await r.localParticipant.setMicrophoneEnabled(true)
+      stopConnectingFiller()
       set({ status: 'connected' })
     } catch (err) {
       console.error('[voice-session] connect failed', err)
       room?.disconnect()
       room = null
+      stopConnectingFiller()
       set({ status: 'error' })
     }
   },
 
-  disconnect: () => {
+  disconnect: (opts?: { userInitiated?: boolean }) => {
+    const { status } = get()
+    pendingUserDisconnectFiller = !!(
+      opts?.userInitiated &&
+      (status === 'connected' || status === 'connecting')
+    )
+    stopConnectingFiller()
     room?.disconnect()
   },
 

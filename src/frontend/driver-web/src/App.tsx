@@ -1,20 +1,25 @@
 import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider, CssBaseline } from '@mui/material'
 import { QueryProvider } from './providers/QueryProvider'
+import AppThemeProvider from './components/AppThemeProvider'
 import { AppRoutes } from './routes'
-import { theme } from './styles/theme'
 import VoiceSessionWidget from './components/VoiceSessionWidget'
+import DispatchHooks from './components/DispatchHooks'
+import TripOfferBanner from './features/dashboard/components/TripOfferBanner'
+import { preloadCzenFillers } from './utils/czenFillerAudio'
+
+preloadCzenFillers()
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <AppThemeProvider>
       <QueryProvider>
         <BrowserRouter>
+          <DispatchHooks />
           <AppRoutes />
           <VoiceSessionWidget />
+          <TripOfferBanner />
         </BrowserRouter>
       </QueryProvider>
-    </ThemeProvider>
+    </AppThemeProvider>
   )
 }

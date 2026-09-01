@@ -41,4 +41,10 @@ export const authService = {
     authClient.post<AuthTokens>('/auth/refresh', { refresh_token }).then(r => r.data),
 
   me: () => authClient.get<AuthUser>('/auth/me').then(r => r.data),
+
+  updateProfile: (id: string, payload: { name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
+
+  updateVehicle: (id: string, payload: { vehicle_type: string; vehicle_plate: string; vehicle_name: string }) =>
+    authClient.patch<AuthUser>(`/accounts/${id}`, payload).then(r => r.data),
 }

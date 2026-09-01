@@ -36,7 +36,7 @@ export default function VoiceSessionWidget() {
         sx={{ bgcolor: 'transparent', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
       />
       <Tooltip title="Kết thúc cuộc gọi">
-        <IconButton size="small" onClick={disconnect} sx={{ color: '#e05252' }}>
+        <IconButton size="small" onClick={() => disconnect({ userInitiated: true })} sx={{ color: '#e05252' }}>
           <CallEndIcon fontSize="small" />
         </IconButton>
       </Tooltip>

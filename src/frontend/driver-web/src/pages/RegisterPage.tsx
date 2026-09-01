@@ -1,35 +1,26 @@
 import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Box, Button, Card, CardContent, CircularProgress, IconButton, InputAdornment, MenuItem, Stack, TextField, Typography } from '@mui/material'
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
+import { Button, CircularProgress, IconButton, InputAdornment, Link as MuiLink, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useDriverRegister } from '../features/auth/hooks/useDriverRegister'
-import { Link } from 'react-router'
+import AuthLayout from '../components/AuthLayout'
+import { fieldSx, primaryButtonSx } from '../styles/forms'
 import { PALETTE } from '../styles/palette'
-
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '14px',
-    backgroundColor: '#faf9fc',
-    '& fieldset': { borderColor: '#e6e1ee' },
-    '&:hover fieldset': { borderColor: PALETTE.light },
-    '&.Mui-focused fieldset': { borderColor: PALETTE.base, borderWidth: '1.5px' },
-  },
-}
 
 const VEHICLE_TYPES = ['Xe máy', 'Ô tô 4 chỗ', 'Ô tô 7 chỗ', 'Xe tải'] as const
 
 const schema = z.object({
-  name:          z.string().min(2, 'Name required'),
-  phone:         z.string().min(8, 'Valid phone required'),
-  email:         z.string().email('Valid email required'),
-  password:      z.string().min(6, 'Password must be at least 6 characters'),
-  vehicle_type:  z.string().min(1, 'Vehicle type required'),
-  vehicle_plate: z.string().min(4, 'Valid license plate required'),
-  vehicle_name:  z.string().min(2, 'Vehicle name required'),
+  name: z.string().min(2, 'Vui lòng nhập tên'),
+  phone: z.string().min(8, 'Số điện thoại chưa hợp lệ'),
+  email: z.string().email('Email chưa hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
+  vehicle_type: z.string().min(1, 'Vui lòng chọn loại xe'),
+  vehicle_plate: z.string().min(4, 'Biển số chưa hợp lệ'),
+  vehicle_name: z.string().min(2, 'Vui lòng nhập tên xe'),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -42,113 +33,71 @@ export default function RegisterPage() {
     defaultValues: { name: '', phone: '', email: '', password: '', vehicle_type: '', vehicle_plate: '', vehicle_name: '' },
   })
 
-  const onSubmit = (data: FormValues) => register(data)
-
   return (
-    <Box sx={{
-      minHeight: '100dvh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', p: 3, position: 'relative', overflow: 'hidden',
-      background: `linear-gradient(150deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 55%, ${PALETTE.mid} 100%)`,
-    }}>
-      <Box sx={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', top: -120, left: -100,
-        background: `radial-gradient(circle, ${PALETTE.mid}66 0%, transparent 70%)`, filter: 'blur(10px)' }} />
-      <Box sx={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', bottom: -100, right: -80,
-        background: `radial-gradient(circle, ${PALETTE.light}55 0%, transparent 70%)`, filter: 'blur(10px)' }} />
+    <AuthLayout
+      wide
+      title="Czen Driver"
+      subtitle="Đăng ký xe để bắt đầu nhận chuyến"
+    >
+      <Stack component="form" onSubmit={handleSubmit(data => register(data))} spacing={2}>
+        <Controller name="name" control={control} render={({ field }) => (
+          <TextField {...field} label="Họ tên" sx={fieldSx} error={!!errors.name} helperText={errors.name?.message} />
+        )} />
+        <Controller name="phone" control={control} render={({ field }) => (
+          <TextField {...field} label="Số điện thoại" type="tel" sx={fieldSx}
+            placeholder="+84901234567" error={!!errors.phone} helperText={errors.phone?.message} />
+        )} />
+        <Controller name="email" control={control} render={({ field }) => (
+          <TextField {...field} label="Email" type="email" sx={fieldSx}
+            placeholder="you@example.com" error={!!errors.email} helperText={errors.email?.message} />
+        )} />
+        <Controller name="password" control={control} render={({ field }) => (
+          <TextField {...field} label="Mật khẩu" type={showPassword ? 'text' : 'password'} sx={fieldSx}
+            error={!!errors.password} helperText={errors.password?.message}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(v => !v)} edge="end" size="small">
+                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }} />
+        )} />
+        <Controller name="vehicle_type" control={control} render={({ field }) => (
+          <TextField {...field} select label="Loại xe" sx={fieldSx}
+            error={!!errors.vehicle_type} helperText={errors.vehicle_type?.message}>
+            {VEHICLE_TYPES.map(type => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+          </TextField>
+        )} />
+        <Controller name="vehicle_name" control={control} render={({ field }) => (
+          <TextField {...field} label="Tên xe" sx={fieldSx}
+            placeholder="Honda Wave, Toyota Vios..." error={!!errors.vehicle_name} helperText={errors.vehicle_name?.message} />
+        )} />
+        <Controller name="vehicle_plate" control={control} render={({ field }) => (
+          <TextField {...field} label="Biển số" sx={fieldSx}
+            placeholder="59-X1 123.45" error={!!errors.vehicle_plate} helperText={errors.vehicle_plate?.message} />
+        )} />
 
-      <Box sx={{ textAlign: 'center', mb: 3.5, position: 'relative', zIndex: 1 }}>
-        <Box sx={{ width: 76, height: 76, borderRadius: '22px', mx: 'auto', mb: 2.5,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: `linear-gradient(135deg, ${PALETTE.light} 0%, ${PALETTE.base} 100%)`,
-          boxShadow: `0 12px 28px -8px ${PALETTE.base}aa` }}>
-          <DirectionsCarIcon sx={{ color: 'white', fontSize: 38 }} />
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>
-          Driver Sign Up
+        {isError && (
+          <Typography variant="caption" color="error">
+            {(error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Đăng ký thất bại. Kiểm tra lại thông tin.'}
+          </Typography>
+        )}
+
+        <Button type="submit" variant="contained" size="large" disabled={isPending} sx={primaryButtonSx}>
+          {isPending ? <CircularProgress size={22} color="inherit" /> : 'Tạo tài khoản'}
+        </Button>
+
+        <Typography variant="body1" sx={{ textAlign: 'center', color: PALETTE.textSecondary }}>
+          Đã có tài khoản?{' '}
+          <MuiLink component={Link} to="/login" sx={{ color: PALETTE.primary, fontWeight: 700 }}>
+            Đăng nhập
+          </MuiLink>
         </Typography>
-        <Typography variant="body2" sx={{ color: PALETTE.light, mt: 0.75 }}>
-          Register your vehicle to start receiving trips
-        </Typography>
-      </Box>
-
-      <Card sx={{
-        borderRadius: '28px', width: '100%', maxWidth: 400, position: 'relative', zIndex: 1,
-        boxShadow: `0 24px 60px -20px ${PALETTE.darkest}aa`,
-      }}>
-        <CardContent sx={{ p: 4 }}>
-          <Stack component="form" onSubmit={handleSubmit(onSubmit)} spacing={2.5}>
-            <Controller name="name" control={control} render={({ field }) => (
-              <TextField {...field} label="Your name" autoCapitalize="words" sx={fieldSx}
-                error={!!errors.name} helperText={errors.name?.message} />
-            )} />
-            <Controller name="phone" control={control} render={({ field }) => (
-              <TextField {...field} label="Phone number" type="tel" sx={fieldSx}
-                placeholder="+84901234567"
-                error={!!errors.phone} helperText={errors.phone?.message} />
-            )} />
-            <Controller name="email" control={control} render={({ field }) => (
-              <TextField {...field} label="Email" type="email" sx={fieldSx}
-                placeholder="you@example.com"
-                error={!!errors.email} helperText={errors.email?.message} />
-            )} />
-            <Controller name="password" control={control} render={({ field }) => (
-              <TextField {...field} label="Password" type={showPassword ? 'text' : 'password'} sx={fieldSx}
-                error={!!errors.password} helperText={errors.password?.message}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(v => !v)} edge="end" size="small">
-                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }} />
-            )} />
-            <Controller name="vehicle_type" control={control} render={({ field }) => (
-              <TextField {...field} select label="Vehicle type" sx={fieldSx}
-                error={!!errors.vehicle_type} helperText={errors.vehicle_type?.message}>
-                {VEHICLE_TYPES.map(type => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
-                ))}
-              </TextField>
-            )} />
-            <Controller name="vehicle_name" control={control} render={({ field }) => (
-              <TextField {...field} label="Vehicle name" sx={fieldSx}
-                placeholder="Honda Wave, Toyota Vios..."
-                error={!!errors.vehicle_name} helperText={errors.vehicle_name?.message} />
-            )} />
-            <Controller name="vehicle_plate" control={control} render={({ field }) => (
-              <TextField {...field} label="License plate" sx={fieldSx}
-                placeholder="59-X1 123.45"
-                error={!!errors.vehicle_plate} helperText={errors.vehicle_plate?.message} />
-            )} />
-
-            {isError && (
-              <Typography variant="body2" color="error">
-                {(error as any)?.response?.data?.detail ?? 'Registration failed. Check your details.'}
-              </Typography>
-            )}
-
-            <Button type="submit" variant="contained" size="large" disabled={isPending}
-              sx={{
-                py: 1.5, fontSize: 16, fontWeight: 700, borderRadius: '14px', textTransform: 'none',
-                background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
-                boxShadow: `0 10px 24px -10px ${PALETTE.base}cc`,
-                '&:hover': { background: `linear-gradient(135deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 100%)` },
-              }}>
-              {isPending ? <CircularProgress size={22} color="inherit" /> : 'Create Account'}
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Typography variant="body2" sx={{ color: PALETTE.light, mt: 3, position: 'relative', zIndex: 1 }}>
-        Already have an account?{' '}
-        <Link to="/login" style={{ textDecoration: 'underline', color: '#fff', fontWeight: 600 }}>
-          Log in here
-        </Link>
-      </Typography>
-    </Box>
+      </Stack>
+    </AuthLayout>
   )
 }

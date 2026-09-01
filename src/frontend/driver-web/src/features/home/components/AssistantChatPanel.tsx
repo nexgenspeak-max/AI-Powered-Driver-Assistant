@@ -1,32 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, IconButton, Snackbar, Alert, TextField, Typography, Tooltip } from '@mui/material'
+import {
+  Box, CardContent, IconButton, InputAdornment, Snackbar, Alert,
+  TextField, Typography, Tooltip,
+} from '@mui/material'
 import MicIcon from '@mui/icons-material/Mic'
 import SendIcon from '@mui/icons-material/Send'
 import { useAssistantChatStore } from '../stores/assistantChatStore'
 import { useVoiceSessionStore, subscribeVoiceMessages } from '../stores/voiceSessionStore'
 import { useAuthStore } from '../../../stores/authStore'
 import { getAssistantReply } from '../../../services/api/assistant'
-
-const DARK = {
-  bubbleBot: 'rgb(31, 31, 31)',
-  bubbleMe: '#35a4f3',
-  panelFadeFrom: 'rgba(0,0,0,0)',
-  panelFadeTo: 'rgba(0,0,0,0.85)',
-}
-
-const MIC_COLOR = {
-  idle: '#fff',
-  connecting: '#f5a623',
-  connected: '#35a4f3',
-  error: '#e05252',
-}
+import SurfaceCard from '../../../components/SurfaceCard'
+import { PALETTE } from '../../../styles/palette'
 
 const MIC_LABEL = {
   idle: 'Bấm để nói chuyện với AI',
   connecting: 'Đang kết nối...',
   connected: 'Đang trong phiên thoại — bấm để ngắt',
   error: 'Kết nối lỗi, thử lại',
-}
+} as const
 
 export default function AssistantChatPanel() {
   const driver = useAuthStore(s => s.driver)
@@ -36,6 +27,7 @@ export default function AssistantChatPanel() {
   const [error, setError] = useState<string | null>(null)
   const [stubLoading, setStubLoading] = useState(false)
   const chatBoxRef = useRef<HTMLDivElement>(null)
+  const sendingRef = useRef(false)
 
   useEffect(() => {
     return subscribeVoiceMessages((text, from, { isFinal, segmentId }) => {
@@ -48,34 +40,35 @@ export default function AssistantChatPanel() {
   }, [chats])
 
   const handleSend = async () => {
+    if (sendingRef.current) return
     if (!msg.trim()) {
       setError('Bạn chưa nhập nội dung.')
       return
     }
+    sendingRef.current = true
     const text = msg
     setMsg('')
-
-    if (voice.status === 'connected') {
-      upsertStreamingMessage('me', text, true)
-      if (await voice.sendText(text)) {
-        return
-      }
-    } else {
-      addUserMessage(text)
-    }
-
-    setStubLoading(true)
+    setError(null)
     try {
+      if (voice.status === 'connected') {
+        upsertStreamingMessage('me', text, true)
+        if (await voice.sendText(text)) return
+      } else {
+        addUserMessage(text)
+      }
+
+      setStubLoading(true)
       const reply = await getAssistantReply(text)
       addBotMessage(reply)
     } finally {
       setStubLoading(false)
+      sendingRef.current = false
     }
   }
 
   const handleMicClick = () => {
     if (voice.status === 'connected' || voice.status === 'connecting') {
-      voice.disconnect()
+      voice.disconnect({ userInitiated: true })
       return
     }
     if (!driver?.phone) {
@@ -85,62 +78,106 @@ export default function AssistantChatPanel() {
     voice.connect(driver.phone)
   }
 
+  const micColor =
+    voice.status === 'connected' ? PALETTE.info
+      : voice.status === 'connecting' ? PALETTE.warning
+        : voice.status === 'error' ? PALETTE.danger
+          : PALETTE.textSecondary
+
   return (
     <>
-      <Box sx={{
-        position: 'absolute', right: 0, bottom: 0, height: '100%', width: { xs: '100%', sm: 380, md: 450 },
-        display: 'flex', flexDirection: 'column',
-        background: { xs: 'none', sm: 'none', md: `linear-gradient(to right, ${DARK.panelFadeFrom}, ${DARK.panelFadeTo} 60%, ${DARK.panelFadeTo})` },
-        zIndex: 2,
-      }}>
-        <Box ref={chatBoxRef} sx={{
-          flex: { xs: '0 1 auto', sm: '0 1 auto', md: 1 },
-          maxHeight: { xs: 176, sm: 200, md: 'none' },
-          mt: { xs: 'auto', sm: 'auto', md: 0 },
-          overflowY: 'auto', display: 'flex', flexDirection: 'column', px: 1.5, pt: 2,
-        }}>
-          {chats.map((chat, i) => (
-            <Box
-              key={i}
-              sx={{
-                maxWidth: 320, width: 'fit-content', color: '#fff', borderRadius: '10px',
-                px: 2, py: 1.25, my: 0.5,
-                bgcolor: chat.who === 'me' ? DARK.bubbleMe : DARK.bubbleBot,
-                ml: chat.who === 'me' ? 'auto' : 0,
-                mr: chat.who === 'me' ? 1.25 : 0,
-              }}
-            >
-              <Typography variant="body2">{chat.msg}</Typography>
-            </Box>
-          ))}
-          {stubLoading && (
-            <Typography variant="caption" sx={{ color: '#999', px: 1.5 }}>Đang trả lời...</Typography>
-          )}
-        </Box>
+      <SurfaceCard sx={{ display: 'flex', flexDirection: 'column', minHeight: { xs: 380, md: 520 } }}>
+        <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 0, '&:last-child': { pb: 0 } }}>
+          <Box sx={{ px: 3, pt: 3, pb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Trợ lý AI</Typography>
+            <Typography variant="body2" sx={{ color: PALETTE.textSecondary, mt: 0.5 }}>
+              Hỏi bằng giọng nói hoặc tin nhắn
+            </Typography>
+          </Box>
 
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1, mx: { xs: 1, sm: 1.5 }, mb: { xs: 1.5, sm: 2 }, px: 1, height: 50,
-          borderRadius: 999, border: '1px solid rgba(255,255,255,0.7)', bgcolor: 'rgba(50,49,49,0.68)',
-        }}>
-          <Tooltip title={MIC_LABEL[voice.status]}>
-            <IconButton size="small" onClick={handleMicClick} sx={{ color: MIC_COLOR[voice.status] }}>
-              <MicIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <TextField
-            variant="standard"
-            fullWidth
-            value={msg}
-            onChange={e => setMsg(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
-            placeholder="Nói gì đó..."
-            slotProps={{ input: { disableUnderline: true, sx: { color: '#fff' } } }}
-          />
-          <IconButton size="small" onClick={handleSend} sx={{ color: '#fff' }}>
-            <SendIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      </Box>
+          <Box
+            ref={chatBoxRef}
+            sx={{
+              flex: 1,
+              overflowY: 'auto',
+              px: 3,
+              py: 1,
+              minHeight: 220,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+            }}
+          >
+            {chats.length === 0 ? (
+              <Typography variant="body2" sx={{ color: PALETTE.textMuted, textAlign: 'center', py: 4 }}>
+                Bắt đầu cuộc trò chuyện với trợ lý Czen
+              </Typography>
+            ) : null}
+            {chats.map((chat, i) => (
+              <Box
+                key={i}
+                sx={{
+                  maxWidth: '85%',
+                  alignSelf: chat.who === 'me' ? 'flex-end' : 'flex-start',
+                  px: 2,
+                  py: 1.25,
+                  borderRadius: 2,
+                  bgcolor: chat.who === 'me' ? PALETTE.chipBg : PALETTE.surfaceVariant,
+                  color: PALETTE.textPrimary,
+                }}
+              >
+                <Typography variant="body2">{chat.msg}</Typography>
+              </Box>
+            ))}
+            {stubLoading ? (
+              <Typography variant="caption" sx={{ color: PALETTE.textMuted, px: 1 }}>Đang trả lời...</Typography>
+            ) : null}
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              p: 2,
+              borderTop: `1px solid ${PALETTE.border}`,
+            }}
+          >
+            <Tooltip title={MIC_LABEL[voice.status]}>
+              <IconButton
+                onClick={handleMicClick}
+                aria-label={MIC_LABEL[voice.status]}
+                sx={{ width: 44, height: 44, color: micColor, flexShrink: 0 }}
+              >
+                <MicIcon />
+              </IconButton>
+            </Tooltip>
+            <TextField
+              fullWidth
+              size="small"
+              value={msg}
+              onChange={e => setMsg(e.target.value)}
+              onKeyDown={e => {
+                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
+                e.preventDefault()
+                void handleSend()
+              }}
+              placeholder="Nhập tin nhắn..."
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => void handleSend()} aria-label="Gửi" sx={{ width: 40, height: 40 }}>
+                        <SendIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+          </Box>
+        </CardContent>
+      </SurfaceCard>
 
       <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
         <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>
