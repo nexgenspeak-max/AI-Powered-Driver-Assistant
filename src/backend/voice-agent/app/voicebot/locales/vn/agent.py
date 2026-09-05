@@ -22,6 +22,9 @@ from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.locales.vn.tools.check_upcoming_trips       import check_upcoming_trips
+from app.voicebot.locales.vn.tools.check_delivery_orders      import check_delivery_orders
+from app.voicebot.locales.vn.tools.call_delivery_party         import call_delivery_party
+from app.voicebot.locales.vn.tools.update_delivery_order_status import update_delivery_order_status
 from app.voicebot.locales.vn.tools.refresh_latest_data        import refresh_latest_data
 from app.voicebot.locales.vn.tools.get_current_trip_info      import get_current_trip_info
 from app.voicebot.locales.vn.tools.suggest_next_stop          import suggest_next_stop
@@ -56,6 +59,8 @@ from app.voicebot.locales.vn.tools.confirm_cancel_my_trip     import confirm_can
 from app.voicebot.locales.vn.tools.get_driver_eta             import get_driver_eta
 from app.voicebot.locales.vn.tools.call_driver                import call_driver
 from app.voicebot.locales.vn.tools.get_today_earnings         import get_today_earnings
+from app.voicebot.locales.vn.tools.get_earnings_summary       import get_earnings_summary
+from app.voicebot.locales.vn.tools.check_trip_history         import check_trip_history
 from app.voicebot.locales.vn.tools.get_driver_stats           import get_driver_stats
 from app.voicebot.locales.vn.tools.get_bonus_info             import get_bonus_info
 from app.voicebot.locales.vn.tools.report_customer_no_show    import report_customer_no_show
@@ -83,6 +88,9 @@ def _registered_phone_hint(customer_phone: str) -> str:
 _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
+    check_delivery_orders,
+    call_delivery_party,
+    update_delivery_order_status,
     refresh_latest_data,
     get_current_trip_info,
     suggest_next_stop,
@@ -118,6 +126,8 @@ _DRIVER_INBOUND_TOOLS = [
     report_trip_issue,
     # Earnings & profile
     get_today_earnings,
+    get_earnings_summary,
+    check_trip_history,
     get_driver_stats,
     get_bonus_info,
     # Availability

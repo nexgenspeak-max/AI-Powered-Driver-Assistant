@@ -31,10 +31,14 @@ Intent = Literal[
     "confirm",
     "reject",
     "call_customer",
+    "call_delivery_party",
+    "update_delivery_status",
     "upcoming",
+    "delivery_orders",
     "current",
     "customer_phone",
     "earnings",
+    "trip_history",
     "driving_advice",
     "conversational_ack",
     "end_conversation",
@@ -43,10 +47,13 @@ Intent = Literal[
 
 _CONFIRM_VN = (
     "xác nhận nhận chuyến",
-    "xác nhận chuyến",
-    "nhận chuyến",
     "xác nhận nhận",
+    "nhận chuyến",
+    "đồng ý nhận",
 )
+_CONFIRM_EXACT_VN = frozenset({"xác nhận", "confirm", "xác nhận đi", "xác nhận nhé", "xác nhận nha"})
+# "xác nhận chuyến sắp tới" is schedule talk, not accept-offer.
+_CONFIRM_NOT_VN = ("sắp tới", "đang chạy", "xem chuyến", "chuyến nào", "mấy chuyến")
 _REJECT_VN = (
     "từ chối chuyến",
     "từ chối nhận",
@@ -156,15 +163,91 @@ _REJECT_EN = (
 )
 _CALL_EN = ("call the customer", "call customer", "phone the customer")
 _UPCOMING_EN = ("upcoming trips", "my trips", "what trips", "how many trips")
+
+_DELIVERY_ORDERS_VN = (
+    "đơn hàng",
+    "đơn giao hàng",
+    "đơn giao",
+    "mấy đơn",
+    "bao nhiêu đơn",
+    "có bao nhiêu đơn",
+    "còn mấy đơn",
+    "đơn đang giao",
+    "các đơn",
+)
+_DELIVERY_ORDERS_EN = (
+    "delivery order",
+    "delivery orders",
+    "how many deliveries",
+    "my deliveries",
+    "active deliveries",
+)
+_DELIVERY_CALL_SENDER_VN = (
+    "gọi người gửi",
+    "gọi người giao",
+    "gọi bên gửi",
+    "gọi cho người gửi",
+    "gọi cho người giao",
+    "gọi cho bên gửi",
+)
+_DELIVERY_CALL_RECIPIENT_VN = (
+    "gọi người nhận",
+    "gọi bên nhận",
+    "gọi cho người nhận",
+    "gọi cho bên nhận",
+)
+_DELIVERY_CALL_SENDER_EN = (
+    "call the sender",
+    "call sender",
+    "call the shipper",
+    "call shipper",
+)
+_DELIVERY_CALL_RECIPIENT_EN = (
+    "call the recipient",
+    "call recipient",
+    "call the consignee",
+)
 _CURRENT_EN = ("current trip", "this trip", "active trip")
 
 _CONFIRM_BLOCK_VN = ("chưa xác nhận", "không xác nhận", "hủy xác nhận")
 _CONFIRM_BLOCK_EN = ("dont confirm", "do not confirm", "not confirming")
 
+
+def _earnings_period_from_text(text: str, lang: str) -> str:
+    """Return today | week | month | lifetime for earnings fast-path routing."""
+    t = _norm(text)
+    if lang == "en":
+        if any(p in t for p in ("all time", "lifetime", "since i started", "total ever")):
+            return "lifetime"
+        if any(p in t for p in ("this month", "past month", "last 30", "monthly")):
+            return "month"
+        if any(p in t for p in ("this week", "past week", "last 7", "weekly")):
+            return "week"
+        return "today"
+    if any(p in t for p in ("từ trước", "từ đầu", "tổng đời", "tổng doanh thu từ", "từ khi bắt đầu")):
+        return "lifetime"
+    if any(p in t for p in ("tháng này", "tháng rồi", "30 ngày", "cả tháng")):
+        return "month"
+    if any(p in t for p in ("tuần này", "tuần rồi", "7 ngày", "cả tuần")):
+        return "week"
+    return "today"
+
+
+def _is_cancelled_history(text: str, lang: str) -> bool:
+    t = _norm(text)
+    if lang == "en":
+        return "cancel" in t
+    return "hủy" in t or "huỷ" in t
+
+
 _TOOL_LLM_HINTS_VN = (
     "chuyến",
     "thu nhập",
     "kiếm",
+    "doanh thu",
+    "hoàn thành",
+    "hủy",
+    "huỷ",
     "thống kê",
     "thưởng",
     "bonus",
@@ -201,6 +284,13 @@ _TOOL_LLM_HINTS_VN = (
     "nghỉ",
     "offline",
     "báo cáo",
+    "đơn",
+    "đơn hàng",
+    "giao hàng",
+    "người gửi",
+    "người giao",
+    "người nhận",
+    "delivery",
     "sự cố",
     "vắng",
     "giúp gì",
@@ -225,6 +315,10 @@ _TOOL_LLM_HINTS_EN = (
     "driver",
     "refresh",
     "update",
+    "delivery",
+    "sender",
+    "recipient",
+    "shipper",
 )
 
 
@@ -248,6 +342,33 @@ def parse_trip_index(text: str) -> int | None:
             return idx
     if re.fullmatch(r"\d+", t):
         return int(t)
+    return None
+
+
+def parse_order_index(text: str) -> int | None:
+    """Follow-up: 'đơn 1', 'order 2'."""
+    t = _norm(text)
+    m = re.search(r"(?:đơn|don|order)\s*(?:số|number|#)?\s*(\d+)", t)
+    if m:
+        idx = int(m.group(1))
+        if idx <= 99:
+            return idx
+    return None
+
+
+def delivery_call_party_from_text(text: str, lang: str) -> str | None:
+    """Return sender|recipient when utterance is a delivery-party call, else None."""
+    t = _norm(text)
+    if lang == "en":
+        if any(p in t for p in _DELIVERY_CALL_SENDER_EN):
+            return "sender"
+        if any(p in t for p in _DELIVERY_CALL_RECIPIENT_EN):
+            return "recipient"
+        return None
+    if any(p in t for p in _DELIVERY_CALL_SENDER_VN):
+        return "sender"
+    if any(p in t for p in _DELIVERY_CALL_RECIPIENT_VN):
+        return "recipient"
     return None
 
 
@@ -328,6 +449,14 @@ def classify_driver_intent(
             return "reject"
         if any(p in t for p in _CONFIRM_EN):
             return "confirm"
+        if delivery_call_party_from_text(text, "en"):
+            return "call_delivery_party"
+        from app.voicebot.processors.delivery_orders import delivery_status_from_text
+
+        if delivery_status_from_text(text, "en"):
+            return "update_delivery_status"
+        if any(p in t for p in _DELIVERY_ORDERS_EN):
+            return "delivery_orders"
         if _is_phone_lookup(t, "en"):
             return "customer_phone"
         if _is_call_request(t, "en"):
@@ -336,6 +465,8 @@ def classify_driver_intent(
             return "upcoming"
         if any(p in t for p in _EARNINGS_EN):
             return "earnings"
+        if any(p in t for p in ("completed today", "finished today", "cancelled today", "cancellations today")):
+            return "trip_history"
         if any(p in t for p in _CURRENT_EN):
             return "current"
         return None
@@ -343,8 +474,25 @@ def classify_driver_intent(
         return None
     if any(p in t for p in _REJECT_VN):
         return "reject"
-    if any(p in t for p in _CONFIRM_VN) or t in {"xác nhận", "confirm"}:
+    # Schedule/browse phrases ("xác nhận chuyến sắp tới") must not fast-path accept-offer.
+    # "nhận chuyến" must not match inside "xác nhận chuyến".
+    if not any(b in t for b in _CONFIRM_NOT_VN) and (
+        t in _CONFIRM_EXACT_VN
+        or any(
+            (p == "nhận chuyến" and re.search(r"(?<!xác )nhận chuyến", t) is not None)
+            or (p != "nhận chuyến" and p in t)
+            for p in _CONFIRM_VN
+        )
+    ):
         return "confirm"
+    if delivery_call_party_from_text(text, "vn"):
+        return "call_delivery_party"
+    from app.voicebot.processors.delivery_orders import delivery_status_from_text
+
+    if delivery_status_from_text(text, "vn"):
+        return "update_delivery_status"
+    if any(p in t for p in _DELIVERY_ORDERS_VN) or parse_order_index(text) is not None:
+        return "delivery_orders"
     if _is_phone_lookup(t, "vn"):
         return "customer_phone"
     if _is_call_request(t, "vn"):
@@ -355,6 +503,8 @@ def classify_driver_intent(
         return "upcoming"
     if any(p in t for p in _EARNINGS_VN):
         return "earnings"
+    if any(p in t for p in ("hoàn thành hôm nay", "chuyến hoàn thành", "chuyến bị hủy", "hủy hôm nay")):
+        return "trip_history"
     if any(p in t for p in _CURRENT_VN):
         return "current"
     if _classify_trip_lookup(text, lang, userdata):
@@ -561,6 +711,15 @@ async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) ->
         result = await fn.__wrapped__(args, ctx)
         await _apply_call_customer_result(session, result)
         return
+    if intent == "update_delivery_order_status":
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.update_delivery_order_status",
+            "app.voicebot.locales.en.tools.update_delivery_order_status",
+            "update_delivery_order_status",
+        )
+        await fn.__wrapped__(args, ctx)
+        return
     if intent == "upcoming":
         fn = _tool(
             lang,
@@ -675,6 +834,39 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         result = await fn.__wrapped__(call_tool_arguments(text, lang=lang, userdata=userdata), ctx)
         await _apply_call_customer_result(session, result)
         return
+    if intent == "call_delivery_party":
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.call_delivery_party",
+            "app.voicebot.locales.en.tools.call_delivery_party",
+            "call_delivery_party",
+        )
+        party = delivery_call_party_from_text(text, lang) or "recipient"
+        args: dict = {"party": party}
+        oidx = parse_order_index(text)
+        if oidx is not None:
+            args["order_index"] = oidx
+        context_store.clear_pending_driver_action(userdata)
+        result = await fn.__wrapped__(args, ctx)
+        await _apply_call_customer_result(session, result)
+        return
+    if intent == "update_delivery_status":
+        from app.voicebot.processors.delivery_orders import delivery_status_from_text
+
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.update_delivery_order_status",
+            "app.voicebot.locales.en.tools.update_delivery_order_status",
+            "update_delivery_order_status",
+        )
+        status = delivery_status_from_text(text, lang) or "delivered"
+        dargs: dict = {"status": status}
+        oidx = parse_order_index(text)
+        if oidx is not None:
+            dargs["order_index"] = oidx
+        context_store.clear_pending_driver_action(userdata)
+        await fn.__wrapped__(dargs, ctx)
+        return
     if intent == "upcoming":
         fn = _tool(
             lang,
@@ -682,14 +874,46 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
             "app.voicebot.locales.en.tools.check_upcoming_trips",
             "check_upcoming_trips",
         )
-        args: dict = {"scope": "all"}
+        args = {"scope": "all"}
         idx = parse_trip_index(text)
         if idx is not None:
             args["trip_index"] = idx
         context_store.clear_pending_driver_action(userdata)
         await fn.__wrapped__(args, ctx)
         return
+    if intent == "delivery_orders":
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.check_delivery_orders",
+            "app.voicebot.locales.en.tools.check_delivery_orders",
+            "check_delivery_orders",
+        )
+        dargs: dict = {"active_only": True}
+        oidx = parse_order_index(text)
+        if oidx is not None:
+            dargs["order_index"] = oidx
+        context_store.clear_pending_driver_action(userdata)
+        await fn.__wrapped__(dargs, ctx)
+        return
     if intent == "earnings":
+        period = _earnings_period_from_text(text, lang)
+        if period == "lifetime":
+            msg = (
+                "I only have today, this week, or this month — not lifetime totals."
+                if lang == "en"
+                else "Em chỉ xem được hôm nay, tuần này hoặc tháng này — chưa có tổng từ trước đến nay."
+            )
+            await context_store.speak_and_stop(session, msg)
+            return
+        if period in ("week", "month"):
+            fn = _tool(
+                lang,
+                "app.voicebot.locales.vn.tools.get_earnings_summary",
+                "app.voicebot.locales.en.tools.get_earnings_summary",
+                "get_earnings_summary",
+            )
+            await fn.__wrapped__({"period": period}, ctx)
+            return
         fn = _tool(
             lang,
             "app.voicebot.locales.vn.tools.get_today_earnings",
@@ -697,6 +921,16 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
             "get_today_earnings",
         )
         await fn.__wrapped__({}, ctx)
+        return
+    if intent == "trip_history":
+        scope = "cancelled_today" if _is_cancelled_history(text, lang) else "completed_today"
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.check_trip_history",
+            "app.voicebot.locales.en.tools.check_trip_history",
+            "check_trip_history",
+        )
+        await fn.__wrapped__({"scope": scope}, ctx)
         return
     if intent == "driving_advice":
         reply = driving_advice_reply(text, lang)

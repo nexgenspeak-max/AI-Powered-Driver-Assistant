@@ -179,6 +179,41 @@ async def get_driver_context(driver_phone: str) -> dict:
     return r.json()
 
 
+async def list_delivery_orders(driver_phone: str, limit: int = 50) -> list:
+    """Driver's delivery orders (newest first). Service token + X-Driver-Phone."""
+    c = _get_client()
+    r = await c.get(
+        f"{_trip_base()}/api/v1/delivery-orders",
+        params={"limit": limit, "driver_phone": driver_phone},
+        headers=auth_headers({"X-Driver-Phone": driver_phone}),
+        timeout=8,
+    )
+    r.raise_for_status()
+    data = r.json()
+    return data if isinstance(data, list) else []
+
+
+async def update_delivery_order_status(order_id: str, status: str) -> dict:
+    """PATCH delivery order status (pending→…→delivered / returned)."""
+    c = _get_client()
+    r = await c.patch(
+        f"{_trip_base()}/api/v1/delivery-orders/{order_id}",
+        json={"status": status},
+        headers=auth_headers(),
+        timeout=8,
+    )
+    r.raise_for_status()
+    logger.info("delivery %s → %s", order_id, status)
+    try:
+        payload = r.json()
+    except Exception:
+        payload = None
+    if not isinstance(payload, dict):
+        payload = {"order_id": order_id, "status": status}
+    payload.setdefault("status", status)
+    return payload
+
+
 async def get_current_trip(driver_phone: str) -> dict | None:
     c = _get_client()
     r = await c.get(

@@ -4,7 +4,7 @@ from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.locales.vn.constants import ERR_SMS_SEND_FAILED
 from app.services import backend_api
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, contact_sms_actions, trip_actions
+from app.voicebot.processors.tool_reply import contact_sms_actions, trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.send_sms_to_customer")
@@ -15,9 +15,9 @@ async def send_sms_to_customer(raw_arguments: dict, context: RunContext) -> str:
     message = (raw_arguments.get("message") or "").strip()
     actions = contact_sms_actions(lang="vi") + trip_actions(lang="vi")
     if not message:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Bạn muốn nhắn nội dung gì cho khách?",
                 tool="send_sms_to_customer",
                 lang="vi",
@@ -27,9 +27,9 @@ async def send_sms_to_customer(raw_arguments: dict, context: RunContext) -> str:
 
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Không có chuyến đang hoạt động để nhắn tin cho khách.",
                 tool="send_sms_to_customer",
                 lang="vi",
@@ -48,9 +48,9 @@ async def send_sms_to_customer(raw_arguments: dict, context: RunContext) -> str:
         await backend_api.send_sms(message, trip_id=trip_id)
     except Exception:
         logger.error("send_sms_to_customer API failed", exc_info=True)
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_SMS_SEND_FAILED,
                 tool="send_sms_to_customer",
                 lang="vi",
@@ -58,9 +58,9 @@ async def send_sms_to_customer(raw_arguments: dict, context: RunContext) -> str:
             ),
         )
 
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             f"Đã gửi tin nhắn cho {customer}.",
             tool="send_sms_to_customer",
             lang="vi",

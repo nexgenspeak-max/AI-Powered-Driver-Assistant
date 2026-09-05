@@ -23,7 +23,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: 'Làm sao để tối ưu lộ trình khi chuyến có nhiều điểm giao?',
-    answer: 'Với chuyến có nhiều điểm dừng, vào mục "Thêm điểm giao" để xem lộ trình tối ưu do hệ thống tự tính toán, hoặc nhờ trợ lý AI sắp xếp thứ tự các điểm giúp bạn đi quãng đường ngắn nhất.',
+    answer: 'Với chuyến có nhiều điểm dừng, mở tab Chuyến đi → Đang chạy để xem lộ trình tối ưu do hệ thống sắp xếp, hoặc nhờ trợ lý AI đọc thứ tự các điểm giúp bạn đi quãng đường ngắn nhất. Trên bản đồ vẫn thấy đường và số thứ tự điểm.',
   },
   {
     question: 'Ứng dụng có chỉ đường từng chặng không?',

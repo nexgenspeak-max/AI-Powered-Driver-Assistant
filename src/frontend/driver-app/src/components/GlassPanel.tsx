@@ -7,7 +7,7 @@ import { getElevation } from '../theme/elevation'
 
 // The ONLY frosted-glass container after this redesign. Reserved for layers
 // that genuinely float over other content — the tab bar, map overlays
-// (NavigationHud, OptimizedRoutePanel), the trip-offer banner, the assistant
+// (NavigationHud), the trip-offer banner, the assistant
 // chat panel. Screen content uses the opaque <Surface> instead.
 //
 // Unlike GlassMaterial it does NOT center its children — it's a plain container

@@ -1,5 +1,6 @@
 /**
- * Mic (idle) ↔ voice wave bars (connected), driven by agentAudioLevel.
+ * Mic (idle / connecting / error) ↔ voice wave bars (connected).
+ * Always mic affordance — never refresh/reconnect glyph; orb stays brand purple.
  */
 import { useEffect } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
@@ -12,16 +13,16 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated'
-import { Ionicons } from '@expo/vector-icons'
+import { MaterialIcons } from '@expo/vector-icons'
 import { useVoiceSessionStore, type VoiceSessionStatus } from '../features/home/stores/voiceSessionStore'
 import { useAppForeground } from '../hooks/useAppForeground'
 
-const BAR_COUNT = 5
-const BAR_WIDTH = 3
-const BAR_GAP = 3
-const BAR_MIN = 5
-const BAR_MAX = 20
+const BAR_WIDTH = 3.5
+const BAR_GAP = 3.5
+const BAR_MIN = 6
+const BAR_MAX = 22
 const BAR_WEIGHT = [0.72, 1, 0.88, 0.95, 0.78]
+const MIC_SIZE = 28
 
 function useBarHeights() {
   const h0 = useSharedValue(BAR_MIN)
@@ -99,10 +100,10 @@ function WaveBar({
       width: BAR_WIDTH,
       borderRadius: BAR_WIDTH,
       backgroundColor: color,
-      opacity: 0.92,
+      opacity: 0.95,
+      marginHorizontal: BAR_GAP / 2,
     }
   })
-
   return <Animated.View style={barStyle} />
 }
 
@@ -124,7 +125,7 @@ function PulsingMic({ color }: { color: string }) {
 
   return (
     <Animated.View style={style}>
-      <Ionicons name="mic" size={22} color={color} />
+      <MaterialIcons name="mic" size={MIC_SIZE} color={color} />
     </Animated.View>
   )
 }
@@ -132,7 +133,7 @@ function PulsingMic({ color }: { color: string }) {
 function PulsingMicWeb({ color }: { color: string }) {
   return (
     <View style={{ animation: 'assistantMicPulse 0.96s ease-in-out infinite' } as object}>
-      <Ionicons name="mic" size={22} color={color} />
+      <MaterialIcons name="mic" size={MIC_SIZE} color={color} />
     </View>
   )
 }
@@ -149,6 +150,7 @@ function VoiceWaveBarsWeb({ color }: { color: string }) {
               borderRadius: BAR_WIDTH,
               backgroundColor: color,
               opacity: 0.92,
+              marginHorizontal: BAR_GAP / 2,
               animation: `assistantWave${i} 1.${4 + i}s ease-in-out infinite`,
             } as object
           }
@@ -210,8 +212,6 @@ export function AssistantOrbCenter({
     return <ConnectedCenter iconColor={iconColor} reduceMotion={reduceMotion} />
   }
 
-  const iconName = status === 'error' ? 'refresh' : 'mic'
-
   return (
     <View style={styles.center} pointerEvents="none">
       {status === 'connecting' && !reduceMotion ? (
@@ -221,7 +221,7 @@ export function AssistantOrbCenter({
           <PulsingMic color={iconColor} />
         )
       ) : (
-        <Ionicons name={iconName} size={22} color={iconColor} />
+        <MaterialIcons name="mic" size={MIC_SIZE} color={iconColor} />
       )}
     </View>
   )
@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: BAR_GAP,
     height: BAR_MAX + 2,
   },
 })

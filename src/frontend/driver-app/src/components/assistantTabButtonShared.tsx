@@ -20,10 +20,13 @@ import { useAssistantChatStore } from '../features/home/stores/assistantChatStor
 import { useCurrentUser } from '../features/auth/hooks/useCurrentUser'
 import { useAppForeground } from '../hooks/useAppForeground'
 
-export const ORB_SIZE = 58
+export const ORB_SIZE = 64
 export const BUTTON_SIZE = ORB_SIZE
-export const BUTTON_RISE = 29
-export const BUTTON_LABEL_OVERHANG = 0
+/** Horizontal wrap wider than the orb so “Trợ lý AI” caption fits. */
+export const ORB_WRAP_WIDTH = 80
+export const BUTTON_RISE = 32
+/** Space below the orb for the “Trợ lý AI” caption (clears tab bar). */
+export const BUTTON_LABEL_OVERHANG = 18
 
 export const EXPANDED_TEXT_MS = 4500
 export const CARD_WIDTH = 220
@@ -43,9 +46,9 @@ export const SPIN_DURATION: Record<VoiceSessionStatus, number> = {
   error: 0,
 }
 export const STATUS_ACCESSIBILITY_LABEL: Record<VoiceSessionStatus, string> = {
-  idle: 'Trợ lý AI, đang tắt. Nhấn để bắt đầu.',
-  connecting: 'Trợ lý AI, đang kết nối với Czen.',
-  connected: 'Trợ lý AI, đang kết nối. Nhấn để tắt.',
+  idle: 'Trợ lý AI, đang tắt. Nhấn để bắt đầu hội thoại.',
+  connecting: 'Trợ lý AI đang kết nối, vui lòng chờ.',
+  connected: 'Trợ lý AI, đang bật. Nhấn để kết thúc phiên.',
   error: 'Trợ lý AI, đã xảy ra lỗi. Nhấn để thử lại.',
 }
 
@@ -75,6 +78,7 @@ export function useAssistantTabButton() {
   const theme = useTheme()
   const voice = useVoiceSessionStore()
   const chats = useAssistantChatStore(s => s.chats)
+  const panelOpen = useAssistantChatStore(s => s.panelOpen)
   const { data: driver } = useCurrentUser()
   const pathname = usePathname()
   const isHome = pathname === '/'
@@ -102,7 +106,7 @@ export function useAssistantTabButton() {
   const beatOn = voice.status === 'connected' && !reduceMotion && appForeground
   const motionOn = voice.status !== 'error' && !reduceMotion && appForeground
   const connectedMuted = voice.status === 'connected' && voice.isMicMuted
-  const isError = voice.status === 'error'
+  const isConnecting = voice.status === 'connecting'
 
   const frame = useFrameCallback(() => {
     'worklet'
@@ -113,12 +117,20 @@ export function useAssistantTabButton() {
     level.value = Math.abs(next - t) < 0.001 ? t : next
   }, false)
 
+  /**
+   * Simple flow:
+   * - connecting → button disabled until handshake finishes
+   * - connected + chat minimized → open chat
+   * - connected + chat open → hang up
+   * - not connected (idle/error) → open chat + connect / reconnect
+   */
   const handlePress = () => {
-    if (voice.status === 'connecting') {
-      voice.disconnect({ userInitiated: true })
-      return
-    }
+    if (isConnecting) return
     if (voice.status === 'connected') {
+      if (!useAssistantChatStore.getState().panelOpen) {
+        useAssistantChatStore.getState().openPanel()
+        return
+      }
       if (voice.isCallActive) {
         Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
         return
@@ -272,6 +284,13 @@ export function useAssistantTabButton() {
     transform: [{ rotate: `${spinB.value}deg` }],
   }))
 
+  const accessibilityLabel = connectedMuted
+    ? 'Trợ lý AI đang kết nối, micro tắt. Nhấn để kết thúc phiên.'
+    : voice.status === 'connected' && !panelOpen
+      ? 'Trợ lý AI đang kết nối. Nhấn để mở lại hội thoại.'
+      : STATUS_ACCESSIBILITY_LABEL[voice.status]
+
+  // Always brand-purple orb + mic (see AssistantOrbCenter) — no isError red/refresh.
   return {
     theme,
     voice,
@@ -279,9 +298,10 @@ export function useAssistantTabButton() {
     cardHeight,
     setCardHeight,
     handlePress,
+    accessibilityLabel,
     reduceMotion,
     connectedMuted,
-    isError,
+    isConnecting,
     orbStyle,
     bloomStyle,
     ringStyle,
@@ -292,7 +312,6 @@ export function useAssistantTabButton() {
 
 /** Tab-bar slot label — tints with voice session state. */
 export function AssistantTabLabel({ color, connectingColor }: { color: string; connectingColor?: string }) {
-  const theme = useTheme()
   const status = useVoiceSessionStore(s => s.status)
   const pulse = useSharedValue(1)
 
@@ -314,7 +333,7 @@ export function AssistantTabLabel({ color, connectingColor }: { color: string; c
     opacity: status === 'connecting' ? pulse.value : 1,
   }))
 
-  const resolvedColor = status === 'error' ? theme.danger.val : status === 'connected' ? color : connectingColor ?? color
+  const resolvedColor = status === 'connected' ? color : connectingColor ?? color
 
   return (
     <Animated.Text

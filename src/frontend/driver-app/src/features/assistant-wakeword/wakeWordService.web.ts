@@ -5,3 +5,5 @@
 export async function enableWakeWord() {}
 
 export async function disableWakeWord() {}
+
+export async function releaseMicForLiveKit() {}

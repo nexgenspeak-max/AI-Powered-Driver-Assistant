@@ -2,9 +2,9 @@ import logging
 import unicodedata
 
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.voicebot.locales.en.tools_definition import raw_schema
-from app.voicebot.processors.tool_reply import as_llm
 from app.voicebot.processors.tool_response_builders import build_contact_pick_response
 
 logger = logging.getLogger("voice-agent.en.tools.select_contact_match_for_sms")
@@ -29,9 +29,9 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
     matches = context.userdata.get("pending_contact_sms_matches") or []
 
     if not matches:
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 "There's no list to pick from. Please say the contact name again.",
                 tool="select_contact_match_for_sms",
                 lang="en",
@@ -40,9 +40,9 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
         )
 
     if not selection:
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 "Who in that list would you like to text?",
                 tool="select_contact_match_for_sms",
                 lang="en",
@@ -69,9 +69,9 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
 
     if not picked:
         names = ", ".join(m.get("name", "") for m in matches)
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 f"I'm not sure who you mean from: {names}. Please say the name more clearly.",
                 tool="select_contact_match_for_sms",
                 lang="en",
@@ -84,9 +84,9 @@ async def select_contact_match_for_sms(raw_arguments: dict, context: RunContext)
         "name": picked.get("name", ""),
         "phone_number": picked.get("phone_number", ""),
     }
-    return as_llm(
-        context.userdata,
-        build_contact_pick_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_contact_pick_response(
             f"I found {picked.get('name', '')}. "
             "Is that who you want to text? What should the message say?",
             tool="select_contact_match_for_sms",

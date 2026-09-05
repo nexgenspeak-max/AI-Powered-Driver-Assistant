@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.services import backend_api
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, trip_actions
+from app.voicebot.processors.tool_reply import trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.extend_wait_time")
@@ -18,9 +18,9 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
 
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Không có chuyến đang hoạt động.",
                 tool="extend_wait_time",
                 lang="vi",
@@ -53,9 +53,9 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
         f"Đã gia hạn thêm {minutes} phút. "
         f"Tổng thời gian chờ {customer}: {total_wait} phút."
     )
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="extend_wait_time",
             lang="vi",

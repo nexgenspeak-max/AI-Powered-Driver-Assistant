@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.locales.vn.constants import ERR_NO_CANCELLABLE
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, customer_trip_actions
+from app.voicebot.processors.tool_reply import customer_trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.request_cancel_my_trip")
@@ -23,9 +23,9 @@ async def request_cancel_my_trip(raw_arguments: dict, context: RunContext) -> st
     active = [t for t in trips if t.get("status") in CUSTOMER_CANCELLABLE_STATUSES]
     actions = customer_trip_actions(lang="vi")
     if not active:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_CANCELLABLE,
                 tool="request_cancel_my_trip",
                 lang="vi",
@@ -41,9 +41,9 @@ async def request_cancel_my_trip(raw_arguments: dict, context: RunContext) -> st
         f"Bạn có chắc muốn hủy chuyến từ {pickup} đến {dropoff} không? "
         "Nói 'có' để xác nhận hủy."
     )
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="request_cancel_my_trip",
             lang="vi",

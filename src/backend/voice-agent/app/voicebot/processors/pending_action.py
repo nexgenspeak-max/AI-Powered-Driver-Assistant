@@ -34,6 +34,32 @@ _CALL_BOT_VN = (
     "call the customer",
 )
 _CONFIRM_VN = ("ok", "okay", "vâng", "dạ", "đúng rồi", "đúng", "ừ", "uh", "được", "yes", "yeah")
+_DELIVERY_DONE_CONFIRM_VN = (
+    "đã giao",
+    "giao xong",
+    "giao rồi",
+    "xong rồi",
+    "xong",
+    "rồi",
+    "đúng rồi",
+    "ừ",
+    "uh",
+    "vâng",
+    "dạ",
+    "ok",
+    "okay",
+    "yes",
+)
+_DELIVERY_DONE_CONFIRM_EN = (
+    "delivered",
+    "yes",
+    "yeah",
+    "yep",
+    "done",
+    "finished",
+    "ok",
+    "okay",
+)
 _EXECUTE_NUDGE_VN = (
     "gọi đi",
     "gọi hộ đi",
@@ -183,6 +209,11 @@ def should_execute(userdata: dict, text: str, lang: str) -> bool:
     pending = context_store.get_pending_driver_action(userdata)
     if not pending:
         return False
+    if pending.get("intent") == "update_delivery_order_status":
+        t = _norm(text)
+        confirms = _DELIVERY_DONE_CONFIRM_EN if lang == "en" else _DELIVERY_DONE_CONFIRM_VN
+        if t in confirms or any(p in t for p in ("giao xong", "đã giao", "delivered", "finished")):
+            return True
     return is_action_confirm(text, lang)
 
 

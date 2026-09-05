@@ -39,7 +39,7 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
     if not topic:
         return await context_store.speak_and_stop(
             context.session,
-            R("refresh_latest_data", ERR_NO_PENDING_REFRESH, lang="vi", action=["refresh_latest_data()"]),
+                R("refresh_latest_data", ERR_NO_PENDING_REFRESH, lang="vi", action=["refresh_latest_data()"]),
         )
 
     driver_phone = context.userdata.get("driver_phone", "")
@@ -50,8 +50,7 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
             context_store.set_context(context.userdata, "today_earnings", fresh)
         except Exception:
             logger.warning("refresh_latest_data(today_earnings) failed, using cached data", exc_info=True)
-        return await context_store.speak_and_stop(
-            context.session, _format_earnings_reply(context.userdata)
+        return await context_store.speak_and_stop(context.session, _format_earnings_reply(context.userdata)
         )
 
     if topic == "upcoming_trips":
@@ -62,7 +61,7 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
             logger.warning("refresh_latest_data(upcoming_trips) failed, using cached data", exc_info=True)
         return await context_store.speak_and_stop(
             context.session,
-            format_schedule_reply(context.userdata, args, lang="vi"),
+                format_schedule_reply(context.userdata, args, lang="vi"),
         )
 
     if topic in (
@@ -127,8 +126,7 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
             context_store.set_context(context.userdata, "active_bonuses", fresh)
         except Exception:
             logger.warning("refresh_latest_data(active_bonuses) failed, using cached data", exc_info=True)
-        return await context_store.speak_and_stop(
-            context.session, _format_bonus_reply(context.userdata)
+        return await context_store.speak_and_stop(context.session, _format_bonus_reply(context.userdata)
         )
 
     if topic == "driver_profile":
@@ -139,7 +137,7 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
             logger.warning("refresh_latest_data(driver_profile) failed, using cached data", exc_info=True)
         return await context_store.speak_and_stop(
             context.session,
-            build_stats_response(
+                build_stats_response(
                 context_store.get(context.userdata, "driver_profile", {}), lang="vi"
             ),
         )

@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_SUMMARY_FAIL, ERR_NO_SUMMARY
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_summarize_call_response
 
 logger = logging.getLogger("voice-agent.en.tools.summarize_last_call")
@@ -18,7 +18,7 @@ async def summarize_last_call(raw_arguments: dict, context: RunContext) -> str:
     except Exception:
         logger.error("summarize_last_call failed", exc_info=True)
         resp = build_summarize_call_response(ERR_SUMMARY_FAIL, lang="en")
-        return tool_reply.as_llm(context.userdata, resp)
+        return await context_store.speak_and_stop(context.session, resp)
 
     if record.get("status") == "in_progress":
         spoken = (
@@ -26,7 +26,7 @@ async def summarize_last_call(raw_arguments: dict, context: RunContext) -> str:
             "You can ask other questions — try again in a few minutes."
         )
         resp = build_summarize_call_response(spoken, lang="en", in_progress=True)
-        return tool_reply.as_llm(context.userdata, resp)
+        return await context_store.speak_and_stop(context.session, resp)
 
     summary = record.get("summary", "")
     if summary:
@@ -38,14 +38,14 @@ async def summarize_last_call(raw_arguments: dict, context: RunContext) -> str:
         )
         spoken = f"The last call: {summary}"
         resp = build_summarize_call_response(spoken, lang="en", summary=summary)
-        return tool_reply.as_llm(context.userdata, resp)
+        return await context_store.speak_and_stop(context.session, resp)
 
     last_call = context_store.get(context.userdata, "last_call", {}) or {}
     if last_call.get("summary"):
         summary = last_call["summary"]
         spoken = f"The last call: {summary}"
         resp = build_summarize_call_response(spoken, lang="en", summary=summary)
-        return tool_reply.as_llm(context.userdata, resp)
+        return await context_store.speak_and_stop(context.session, resp)
 
     resp = build_summarize_call_response(ERR_NO_SUMMARY, lang="en")
-    return tool_reply.as_llm(context.userdata, resp)
+    return await context_store.speak_and_stop(context.session, resp)

@@ -3,10 +3,10 @@ import logging
 
 from livekit import rtc
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.locales.vn.constants import ERR_CONTACT_RPC_FAILED
-from app.voicebot.processors.tool_reply import as_llm
 from app.voicebot.processors.tool_response_builders import build_contact_find_response
 
 logger = logging.getLogger("voice-agent.vn.tools.find_contact")
@@ -35,9 +35,9 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
     context.userdata["pending_contact_matches"] = None
 
     if not contact_name:
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(
                 "Bạn muốn gọi cho ai? Đọc giúp em tên người cần gọi.",
                 tool="find_contact",
                 lang="vi",
@@ -49,9 +49,9 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
     driver = _driver_participant(room) if room else None
     if not driver:
         logger.error("find_contact — no driver participant in room")
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
         )
 
     try:
@@ -63,33 +63,33 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
         )
     except rtc.RpcError:
         logger.error("find_contact — perform_rpc failed", exc_info=True)
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
         )
 
     try:
         parsed = json.loads(response)
     except (TypeError, ValueError):
         logger.error("find_contact — malformed RPC response: %r", response)
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
         )
 
     if parsed.get("error"):
         logger.warning("find_contact — client reported error: %s", parsed["error"])
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(ERR_CONTACT_RPC_FAILED, tool="find_contact", lang="vi"),
         )
 
     matches = parsed.get("matches") or []
 
     if not matches:
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(
                 f"Không tìm thấy {contact_name} trong danh bạ.",
                 tool="find_contact",
                 lang="vi",
@@ -102,9 +102,9 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
             "name": match.get("name", contact_name),
             "phone_number": match.get("phone_number", ""),
         }
-        return as_llm(
-            context.userdata,
-            build_contact_find_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_find_response(
                 f"Tôi tìm thấy {match.get('name', contact_name)}. Có đúng người bạn muốn gọi không?",
                 tool="find_contact",
                 lang="vi",
@@ -117,9 +117,9 @@ async def find_contact(raw_arguments: dict, context: RunContext) -> str:
         {"name": m.get("name", ""), "phone_number": m.get("phone_number", "")} for m in limited
     ]
     names = ", ".join(m.get("name", "") for m in limited)
-    return as_llm(
-        context.userdata,
-        build_contact_find_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_contact_find_response(
             f"Tôi tìm thấy nhiều người tên {contact_name}: {names}. Bạn muốn gọi ai?",
             tool="find_contact",
             lang="vi",

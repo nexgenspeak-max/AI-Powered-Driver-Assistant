@@ -9,15 +9,14 @@ import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
 import { Toggle } from '../../src/components/Toggle'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
-import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { confirmDestructive } from '../../src/utils/confirmDialog'
 import { useWakeWordSettingsStore, WAKE_WORD_FEATURE_ENABLED } from '../../src/features/assistant-wakeword/wakeWordSettingsStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { logoutAndReset } from '../../src/features/auth/logoutAndReset'
 
 export default function ProfileScreen() {
   const { data: customer } = useCurrentUser()
-  const logout = useAuthStore(s => s.logout)
   const wakeWordEnabled = useWakeWordSettingsStore(s => s.enabled)
   const setWakeWordEnabled = useWakeWordSettingsStore(s => s.setEnabled)
   const themeMode = useThemeStore(s => s.mode)
@@ -99,7 +98,7 @@ export default function ProfileScreen() {
               message: 'Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng ứng dụng.',
               cancelLabel: 'Ở lại',
               confirmLabel: 'Đăng xuất',
-              onConfirm: () => logout(),
+              onConfirm: () => logoutAndReset(),
             })
           }
         />

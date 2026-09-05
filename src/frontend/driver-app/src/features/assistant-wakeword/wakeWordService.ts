@@ -385,6 +385,18 @@ function stopListening() {
   }
 }
 
+/**
+ * LiveKit connect must not race Vosk's native AudioRecord teardown — that
+ * left published mic tracks with silence (STT audio_duration_ms=0) while
+ * typed chat still worked. Call after status flips to `connecting`.
+ */
+export async function releaseMicForLiveKit(): Promise<void> {
+  stopListening();
+  // Native stop is async; a short settle is enough for the AudioRecord
+  // release without blocking connect on SESSION_ACTIVE_RESET_MS (2.5s).
+  await new Promise<void>((resolve) => setTimeout(resolve, 350));
+}
+
 /** Call once the driver is logged in and has opted into hands-free wake-word. */
 export async function enableWakeWord() {
   desiredListening = true;

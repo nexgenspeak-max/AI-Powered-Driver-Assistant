@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
 import { KeyboardSafeView } from '../../../components/KeyboardSafeView'
+import { AuthScreenBackground } from '../../../components/AuthScreenBackground'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
@@ -45,55 +46,60 @@ export function LoginForm() {
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
-      <KeyboardSafeView>
-        <ScrollView
-          style={{ flex: 1, backgroundColor: isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark }}
-          contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <YStack alignItems="center" gap="$2">
-            <AppText
-              variant="display"
-              color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
-            >
-              Czen Driver
-            </AppText>
-            <AppText variant="body" color="$textSecondary">
-              Đăng nhập để bắt đầu nhận chuyến
-            </AppText>
-          </YStack>
-
-          <Card
-            width="100%"
-            maxWidth={authGlassTheme.card.maxWidth}
-            gap="$4"
-            shadowIntensity="strong"
-            backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+      <AuthScreenBackground>
+        <KeyboardSafeView>
+          <ScrollView
+            style={{ flex: 1, backgroundColor: 'transparent' }}
+            contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+            keyboardShouldPersistTaps="handled"
           >
-            <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
-                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
-            )} />
-            <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-              <GlassAuthInput label="Mật khẩu" secureTextEntry
-                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
-            )} />
-
-            {isError && (
-              <AppText variant="caption" color="$danger">
-                Đăng nhập thất bại. Kiểm tra lại thông tin.
+            <YStack alignItems="center" gap="$2">
+              <AppText
+                variant="display"
+                color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
+              >
+                Czen Driver
               </AppText>
-            )}
+              <AppText variant="body" color="$textSecondary">
+                Đăng nhập để bắt đầu nhận chuyến
+              </AppText>
+            </YStack>
 
-            <GlassButton label="Đăng nhập" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+            <Card
+              width="100%"
+              maxWidth={authGlassTheme.card.maxWidth}
+              gap="$4"
+              shadowIntensity="strong"
+              backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+            >
+              <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
+                <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
+                  value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
+              )} />
+              <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
+                <GlassAuthInput label="Mật khẩu" secureTextEntry
+                  value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
+              )} />
 
-            <AppText variant="body" textAlign="center" color="$textSecondary">
-              Chưa có tài khoản?{' '}
-              <Link href="/register" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng ký</Link>
-            </AppText>
-          </Card>
-        </ScrollView>
-      </KeyboardSafeView>
+              {isError && (
+                <AppText variant="caption" color="$danger">
+                  Đăng nhập thất bại. Kiểm tra lại thông tin.
+                </AppText>
+              )}
+
+              <GlassButton label="Đăng nhập" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+
+              <AppText variant="body" textAlign="center" color="$textSecondary">
+                Chưa có tài khoản?{' '}
+                <Link href="/register" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng ký</Link>
+              </AppText>
+              <AppText variant="caption" textAlign="center" color="$textMuted">
+                <Link href="/(auth)" style={{ color: authGlassTheme.linkColor }}>← Quay lại</Link>
+              </AppText>
+            </Card>
+          </ScrollView>
+        </KeyboardSafeView>
+      </AuthScreenBackground>
     </>
   )
 }

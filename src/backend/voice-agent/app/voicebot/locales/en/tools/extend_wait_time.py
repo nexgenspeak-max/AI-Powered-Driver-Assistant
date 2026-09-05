@@ -2,7 +2,7 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 from app.voicebot.processors.tool_reply import trip_actions
 
@@ -18,9 +18,9 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
 
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "No active trip found.",
                 tool="extend_wait_time",
                 lang="en",
@@ -53,9 +53,9 @@ async def extend_wait_time(raw_arguments: dict, context: RunContext) -> str:
         f"Wait time extended by {minutes} minute(s). "
         f"Total wait for {customer}: {total_wait} minutes."
     )
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="extend_wait_time",
             lang="en",

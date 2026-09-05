@@ -206,7 +206,16 @@ async def wait_for_sip_pickup(
     being called finished. Callers MUST treat a False return as "pickup was
     never confirmed" and hold off acting like the customer is on the line —
     not as license to proceed anyway.
+
+    On success, sets ``userdata["_sip_leg_answered"]=True`` so later hangup
+    summaries still know pickup happened even when LiveKit clears
+    ``sip.callStatus`` before ``participant_disconnected`` (live 2026-09-05:
+    agent pickup ok → transfer_to_driver → disconnect reported answered=False
+    → driver heard "khách không bắt máy").
     """
+    if userdata.get("_sip_leg_answered"):
+        return True
+
     sip_identity = sip_identity_of(userdata)
     if not sip_identity:
         return False
@@ -242,6 +251,7 @@ async def wait_for_sip_pickup(
 
     if post_answer_delay > 0:
         await asyncio.sleep(post_answer_delay)
+    userdata["_sip_leg_answered"] = True
     dev_event(
         "sip_pickup",
         ok=True,
@@ -292,6 +302,21 @@ def _was_answered(participant: rtc.RemoteParticipant) -> bool:
     above), so the last-known value is still readable here even though the
     participant is already on its way out."""
     return participant.attributes.get(_SIP_CALL_STATUS_ATTR) == _SIP_CALL_STATUS_ACTIVE
+
+
+def call_leg_was_answered(userdata: dict, participant: rtc.RemoteParticipant) -> bool:
+    """Prefer live attribute, then sticky pickup flag from wait_for_sip_pickup.
+
+    Hangup often clears ``sip.callStatus`` before our disconnect handler runs,
+    so attribute-only checks falsely report unanswered after a real conversation.
+    """
+    if _was_answered(participant):
+        return True
+    return bool(
+        userdata.get("_sip_leg_answered")
+        or userdata.get("_agent_call_answered")
+        or userdata.get("_isolated_call_answered")
+    )
 
 
 def _disconnect_summary(lang: str, mode: str, *, answered: bool) -> str:
@@ -540,7 +565,9 @@ def register_sip_call_watchers(
                 )
                 return
             lang = userdata.get("lang", "vn")
-            summary = _disconnect_summary(lang, "background", answered=_was_answered(participant))
+            summary = _disconnect_summary(
+                lang, "background", answered=call_leg_was_answered(userdata, participant)
+            )
             _run_logged(
                 complete_isolated_call(session, userdata, summary),
                 name="auto_complete_isolated",
@@ -567,7 +594,7 @@ def register_sip_call_watchers(
 
         lang = userdata.get("lang", "vn")
         mode = (userdata.get("customer_call") or {}).get("mode", "agent")
-        answered = _was_answered(participant)
+        answered = call_leg_was_answered(userdata, participant)
         summary = _disconnect_summary(lang, mode, answered=answered)
         logger.info(
             "customer SIP disconnected | identity=%s mode=%s answered=%s",
@@ -616,7 +643,8 @@ def register_customer_room_sip_watchers(
             return
 
         lang = userdata.get("lang", "vn")
-        if _was_answered(participant):
+        answered = call_leg_was_answered(userdata, participant)
+        if answered:
             summary = (
                 "Driver hung up. Bridge call ended."
                 if lang == "en"
@@ -628,7 +656,11 @@ def register_customer_room_sip_watchers(
                 if lang == "en"
                 else "Không kết nối được với tài xế — tài xế không bắt máy. Cuộc gọi kết nối trực tiếp đã hủy."
             )
-        logger.info("driver SIP disconnected | identity=%s answered=%s", participant.identity, _was_answered(participant))
+        logger.info(
+            "driver SIP disconnected | identity=%s answered=%s",
+            participant.identity,
+            answered,
+        )
 
         _run_logged(
             handback_to_customer(

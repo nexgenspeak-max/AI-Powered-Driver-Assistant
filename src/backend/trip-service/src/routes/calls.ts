@@ -1,10 +1,46 @@
 import { Router, Request, Response } from 'express';
 import * as callService from '../services/callService';
+import { TelephonyError } from '../services/callService';
 import * as tripService from '../services/tripService';
 import { cacheGet, driverLastCallKey } from '../cache/redis';
 import { config } from '../config';
+import { markCallConsentGranted, requestCallConsent } from '../services/zalo';
+import type { TelephonyChannel } from '../services/telephony';
 
 const router = Router();
+
+function telephonyErrorStatus(err: unknown): number {
+  if (err instanceof TelephonyError) {
+    if (err.code === 'CONSENT_REQUIRED') return 403;
+    if (err.code === 'INVALID_TARGET') return 400;
+    if (err.code === 'CONFIG') return 503;
+  }
+  return 503;
+}
+
+router.post('/zalo/request-consent', async (req: Request, res: Response) => {
+  try {
+    const phone = (req.body.phone as string)?.trim();
+    if (!phone) return res.status(400).json({ detail: 'phone is required' });
+    const result = await requestCallConsent(phone);
+    if (!result.ok) return res.status(result.cached ? 200 : 503).json(result);
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ detail: String(err) });
+  }
+});
+
+/** Dev/webhook: mark consent granted after user accepts on Zalo. */
+router.post('/zalo/mark-consent', async (req: Request, res: Response) => {
+  try {
+    const phone = (req.body.phone as string)?.trim();
+    if (!phone) return res.status(400).json({ detail: 'phone is required' });
+    await markCallConsentGranted(phone);
+    return res.json({ ok: true, phone });
+  } catch (err) {
+    return res.status(500).json({ detail: String(err) });
+  }
+});
 
 router.post('/start', async (req: Request, res: Response) => {
   try {
@@ -15,6 +51,8 @@ router.post('/start', async (req: Request, res: Response) => {
       phoneNumber,
       mode = 'bridge',
       roomName = '',
+      channel,
+      zaloUid,
     } = req.body;
     let phone = (phoneNumber as string)?.trim() ?? '';
 
@@ -46,10 +84,15 @@ router.post('/start', async (req: Request, res: Response) => {
       customerName: (req.body.customerName as string) || '',
       pickupAddress: (req.body.pickupAddress as string) || '',
       customMessage: (req.body.customMessage as string) || '',
+      channel: channel as TelephonyChannel | undefined,
+      zaloUid: (zaloUid as string) || undefined,
     });
     return res.json(result);
   } catch (err) {
     const msg = String(err);
+    if (err instanceof TelephonyError) {
+      return res.status(telephonyErrorStatus(err)).json({ detail: msg, code: err.code });
+    }
     if (msg.includes('customer phone')) return res.status(400).json({ detail: msg });
     return res.status(503).json({ detail: msg });
   }

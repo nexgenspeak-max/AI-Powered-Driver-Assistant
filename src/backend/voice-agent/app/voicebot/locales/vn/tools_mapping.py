@@ -9,6 +9,9 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 Tool tự nói kết quả. Đã nói xong → IM LẶNG, không nhắc lại danh sách.
 
 check_upcoming_trips — lịch/chuyến/mấy chuyến/giá. Mặc định tool chỉ nói số chuyến; chi tiết khi có trip_index.
+check_delivery_orders — đơn hàng/đơn giao/mấy đơn (KHÁC chuyến taxi). Mặc định nói số đơn đang giao.
+call_delivery_party — gọi người gửi (sender/người giao) hoặc người nhận trên đơn. party=sender|recipient.
+update_delivery_order_status — đã lấy / bắt đầu giao / giao xong / giao lại / trả hàng.
 refresh_latest_data — khi tài xế muốn dữ liệu mới sau câu trả lời cache ("làm mới", "cập nhật", "lấy mới").
 get_current_trip_info — chuyến đang chạy, số điện thoại khách (không xếp theo GPS).
 suggest_next_stop — nên đi đâu / đang đón ai (theo GPS).
@@ -30,6 +33,8 @@ check_customer_call_status — gọi nền xong chưa.
 create_reminder — nhắc trước giờ đón.
 request_cancel_trip → confirm_cancel_trip — hủy chuyến đã nhận; luôn hỏi xác nhận.
 get_today_earnings — thu nhập hôm nay.
+get_earnings_summary — thu nhập tuần/tháng (period=week|month). Không bịa tổng đời.
+check_trip_history — chuyến hoàn thành/hủy hôm nay (scope=completed_today|cancelled_today).
 get_driver_stats — điểm, rating, thống kê.
 get_bonus_info — thưởng, surge, khuyến mãi.
 report_customer_no_show — khách không ra; xác nhận trước.

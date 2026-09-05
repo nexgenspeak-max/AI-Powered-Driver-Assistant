@@ -23,6 +23,14 @@ export const config = {
   livekitApiSecret: process.env.LIVEKIT_API_SECRET || '',
   livekitAgentName: process.env.LIVEKIT_AGENT_NAME || 'driver-assistant',
   sipTrunkId: process.env.SIP_TRUNK_ID || '',
+  /** Zalo Cloud Connect outbound trunk (LiveKit) — parallel to Twilio PSTN trunk. */
+  zaloSipTrunkId: process.env.ZALO_SIP_TRUNK_ID || '',
+  zaloAppId: process.env.ZALO_APP_ID || '',
+  zaloAccessToken: process.env.ZALO_ACCESS_TOKEN || '',
+  zaloConsentReasonCode: Number(process.env.ZALO_CONSENT_REASON_CODE || 103),
+  /** Local dev only — skip Zalo phone consent gate. Never true in production. */
+  zaloSkipConsentCheck: process.env.ZALO_SKIP_CONSENT_CHECK === 'true',
+  telephonyDefaultChannel: (process.env.TELEPHONY_DEFAULT_CHANNEL === 'zalo' ? 'zalo' : 'phone') as 'phone' | 'zalo',
 
   mapsProvider: process.env.MAPS_PROVIDER || 'google',
   mapsApiKey: process.env.MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',
@@ -68,10 +76,8 @@ export const config = {
 
   redisUrl: process.env.REDIS_URL || '',
   cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 120),
-  // TEMP fallback (hardcoded, not just env-configured) — used by POST /trips
-  // when the caller doesn't pick a driver (currently just voice-agent's
-  // phone-in booking, backend_api.py::create_trip — customer-app always
-  // sends an explicit driver_phone via its DriverPicker). Remove once
-  // voice-agent has its own driver selection.
-  phoneDriver: process.env.DEFAULT_DRIVER_PHONE || '0382759152',
+  // Fallback only when the booker omits driver_phone (voice booking).
+  // Local may use DEFAULT_DRIVER_PHONE from env; never ship a baked-in
+  // production number — empty means POST /trips must receive driver_phone.
+  phoneDriver: process.env.DEFAULT_DRIVER_PHONE || '',
 };

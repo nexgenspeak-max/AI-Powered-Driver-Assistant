@@ -2,7 +2,7 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_driver_status_response
 
 logger = logging.getLogger("voice-agent.vn.tools.set_driver_status")
@@ -24,4 +24,4 @@ async def set_driver_status(raw_arguments: dict, context: RunContext) -> str:
     context_store.schedule_sync(_sync())
 
     resp = build_driver_status_response(online, lang="vi")
-    return tool_reply.as_llm(context.userdata, resp)
+    return await context_store.speak_and_stop(context.session, resp)

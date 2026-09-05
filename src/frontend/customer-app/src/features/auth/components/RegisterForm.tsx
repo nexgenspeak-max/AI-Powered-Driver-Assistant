@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { router, Link } from 'expo-router'
+import { AuthScreenBackground } from '../../../components/AuthScreenBackground'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Card } from '../../../components/Card'
@@ -60,60 +61,66 @@ export function RegisterForm() {
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
-      <ScrollView
-        style={{ flex: 1, backgroundColor: isLight ? authGlassTheme.screenBackground.light : authGlassTheme.screenBackground.dark }}
-        contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
-      >
-        <YStack alignItems="center" gap="$2" marginTop="$10">
-          <AppText
-            variant="display"
-            color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
-          >
-            Tạo tài khoản
-          </AppText>
-          <AppText variant="body" color="$textSecondary">
-            Đăng ký để đặt chuyến đầu tiên
-          </AppText>
-        </YStack>
-
-        <Card
-          width="100%"
-          maxWidth={authGlassTheme.card.maxWidth}
-          gap="$4"
-          shadowIntensity="strong"
-          backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+      <AuthScreenBackground>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Họ và tên" placeholder="Nguyễn Văn A"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
-          )} />
-          <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
-          )} />
-          <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Email" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none"
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.email?.message} />
-          )} />
-          <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
-            <GlassAuthInput label="Mật khẩu" secureTextEntry
-              value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
-          )} />
-
-          {isError && (
-            <AppText variant="caption" color="$danger">
-              Đăng ký thất bại. Kiểm tra lại thông tin.
+          <YStack alignItems="center" gap="$2">
+            <AppText
+              variant="display"
+              color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
+            >
+              Tạo tài khoản
             </AppText>
-          )}
+            <AppText variant="body" color="$textSecondary">
+              Đăng ký để đặt chuyến đầu tiên
+            </AppText>
+          </YStack>
 
-          <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+          <Card
+            width="100%"
+            maxWidth={authGlassTheme.card.maxWidth}
+            gap="$4"
+            shadowIntensity="strong"
+            backgroundColor={isLight ? authGlassTheme.card.background.light : authGlassTheme.card.background.dark}
+          >
+            <Controller name="name" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Họ và tên" placeholder="Nguyễn Văn A"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
+            )} />
+            <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
+            )} />
+            <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Email" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none"
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.email?.message} />
+            )} />
+            <Controller name="password" control={control} render={({ field: { onChange, onBlur, value } }) => (
+              <GlassAuthInput label="Mật khẩu" secureTextEntry
+                value={value} onChangeText={onChange} onBlur={onBlur} error={errors.password?.message} />
+            )} />
 
-          <AppText variant="body" textAlign="center" color="$textSecondary">
-            Đã có tài khoản?{' '}
-            <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng nhập</Link>
-          </AppText>
-        </Card>
-      </ScrollView>
+            {isError && (
+              <AppText variant="caption" color="$danger">
+                Đăng ký thất bại. Kiểm tra lại thông tin.
+              </AppText>
+            )}
+
+            <GlassButton label="Đăng ký" colors={authGlassTheme.cta.gradient} onPress={handleSubmit(onSubmit)} loading={isPending} />
+
+            <AppText variant="body" textAlign="center" color="$textSecondary">
+              Đã có tài khoản?{' '}
+              <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng nhập</Link>
+            </AppText>
+            <AppText variant="caption" textAlign="center" color="$textMuted">
+              <Link href="/(auth)" style={{ color: authGlassTheme.linkColor }}>← Quay lại</Link>
+            </AppText>
+          </Card>
+        </ScrollView>
+      </AuthScreenBackground>
     </>
   )
 }

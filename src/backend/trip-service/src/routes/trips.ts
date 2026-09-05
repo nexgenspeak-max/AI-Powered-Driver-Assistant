@@ -74,9 +74,9 @@ const ARRIVAL_LOCATION_TARGET: Partial<Record<string, 'pickup' | 'dropoff'>> = {
   completed: 'dropoff',
 };
 
-// TODO(temporary): there's no real driver-matching/dispatch logic yet, so every
-// booking with no explicit driver_phone is auto-assigned to this hardcoded number.
-// Replace with real nearest-available-driver selection once that's built.
+// Local seed/booking may omit driver_phone only when DEFAULT_DRIVER_PHONE is set.
+// Production clients must always send driver_phone; never bake a number into code.
+// Real dispatch / nearest-driver matching is still TODO.
 
 // Requests from a real customer session carry their own account id in the token.
 // Service callers (voice-agent, admin panel) authenticate as themselves, not the
@@ -115,6 +115,19 @@ function isTripOwner(req: Request, trip: tripService.Trip): boolean {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
+    const driverPhone = String(body.driver_phone || config.phoneDriver || '').trim();
+    if (!driverPhone) {
+      return res.status(400).json({
+        detail: 'driver_phone is required (set body.driver_phone or DEFAULT_DRIVER_PHONE for local)',
+      });
+    }
+    const customerPhone = String(body.customer_phone || '').trim();
+    if (customerPhone && normalizePhone(customerPhone) === normalizePhone(driverPhone)) {
+      // Live 2026-09-05: self-call SIP loop when trip used the driver's own number as customer.
+      return res.status(400).json({
+        detail: 'customer_phone must differ from driver_phone',
+      });
+    }
     const route = await mapsService.getRoute(
       body.pickup_address, body.dropoff_address,
       coordsFromBody(body, 'pickup_lat', 'pickup_lng'), coordsFromBody(body, 'dropoff_lat', 'dropoff_lng'),
@@ -122,7 +135,7 @@ router.post('/', async (req: Request, res: Response) => {
     const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
     const trip = await tripService.create({
       ...body,
-      driver_phone: body.driver_phone || config.phoneDriver,
+      driver_phone: driverPhone,
       ...(idAccount ? { id_account: idAccount } : {}),
       distance_km: route.distance_km ?? 0,
       eta_minutes: route.eta_minutes ?? 0,

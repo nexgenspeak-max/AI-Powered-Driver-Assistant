@@ -40,6 +40,94 @@ raw_schema = {
         },
     },
 
+    "check_delivery_orders": {
+        "type": "function",
+        "name": "check_delivery_orders",
+        "description": (
+            "Đếm/xem đơn giao hàng (delivery) của tài xế — KHÁC chuyến taxi. "
+            "Câu 'mấy đơn', 'đơn hàng', 'đơn giao hàng' → tool này. "
+            "Mặc định chỉ nói SỐ đơn đang giao; order_index = chi tiết một đơn."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "active_only": {
+                    "type": "boolean",
+                    "description": "true (mặc định) = chỉ đơn pending/picked_up/delivering/redelivery.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "Số thứ tự đơn (1 = đầu) khi tài xế muốn chi tiết.",
+                },
+                "list_all": {
+                    "type": "boolean",
+                    "description": "true chỉ khi tài xế bảo đọc hết từng đơn.",
+                },
+            },
+            "required": [],
+        },
+    },
+
+    "call_delivery_party": {
+        "type": "function",
+        "name": "call_delivery_party",
+        "description": (
+            "Gọi người gửi (sender / người giao) hoặc người nhận trên đơn giao hàng. "
+            "KHÔNG dùng cho khách taxi — đó là call_customer. "
+            "party=sender khi nói người gửi/người giao; party=recipient khi nói người nhận."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "party": {
+                    "type": "string",
+                    "enum": ["sender", "recipient"],
+                    "description": "sender = người gửi/giao; recipient = người nhận.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "Số thứ tự đơn khi có nhiều đơn đang giao.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["agent", "bridge"],
+                    "description": "agent = AI gọi hộ (mặc định); bridge = tài xế nói trực tiếp.",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "Chỉ mode=agent: nội dung AI nói khi bắt máy.",
+                },
+            },
+            "required": ["party"],
+        },
+    },
+
+    "update_delivery_order_status": {
+        "type": "function",
+        "name": "update_delivery_order_status",
+        "description": (
+            "Cập nhật trạng thái đơn giao hàng: đã lấy (picked_up), đang giao (delivering), "
+            "đã giao (delivered), giao lại (redelivery), trả hàng (returned). "
+            "Khi tài xế nói 'giao xong đơn 1' / 'đã lấy hàng' → gọi tool này. "
+            "Không dùng cho chuyến taxi (update_trip_status)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["picked_up", "delivering", "delivered", "redelivery", "returned"],
+                    "description": "Trạng thái mới theo lifecycle đơn.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "Số thứ tự đơn đang active (1 = đầu) khi có nhiều đơn.",
+                },
+            },
+            "required": ["status"],
+        },
+    },
+
     "refresh_latest_data": {
         "type": "function",
         "name": "refresh_latest_data",
@@ -518,6 +606,47 @@ raw_schema = {
             "Gọi khi tài xế hỏi 'hôm nay tôi kiếm được bao nhiêu', 'thu nhập hôm nay', 'doanh thu hôm nay'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_earnings_summary": {
+        "type": "function",
+        "name": "get_earnings_summary",
+        "description": (
+            "Xem thu nhập theo tuần (7 ngày) hoặc tháng (30 ngày). "
+            "Gọi khi hỏi 'tuần này kiếm bao nhiêu', 'tháng này doanh thu'. "
+            "KHÔNG dùng cho 'tổng từ trước đến nay' — nói rõ hệ thống chưa hỗ trợ lifetime."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["week", "month"],
+                    "description": "week = 7 ngày gần đây; month = 30 ngày gần đây.",
+                }
+            },
+            "required": ["period"],
+        },
+    },
+
+    "check_trip_history": {
+        "type": "function",
+        "name": "check_trip_history",
+        "description": (
+            "Xem chuyến đã hoàn thành hôm nay hoặc chuyến bị hủy hôm nay. "
+            "Gọi khi hỏi 'hôm nay hoàn thành mấy chuyến', 'có chuyến nào bị hủy không'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["completed_today", "cancelled_today"],
+                    "description": "completed_today hoặc cancelled_today.",
+                }
+            },
+            "required": ["scope"],
+        },
     },
 
     "get_driver_stats": {

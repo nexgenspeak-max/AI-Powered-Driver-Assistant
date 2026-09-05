@@ -1,9 +1,10 @@
 import logging
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_INVALID_CUSTOM_PHONE, ERR_CUSTOM_CALL_LIMIT
 from app.voicebot.processors import custom_call
-from app.voicebot.processors.tool_reply import as_llm, contact_call_actions
+from app.voicebot.processors.tool_reply import contact_call_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.en.tools.call_custom_number")
@@ -16,9 +17,9 @@ async def call_custom_number(raw_arguments: dict, context: RunContext) -> str:
     actions = contact_call_actions(lang="en")
 
     if not custom_call.is_valid_vn_phone(phone_number):
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_INVALID_CUSTOM_PHONE,
                 tool="call_custom_number",
                 lang="en",
@@ -28,9 +29,9 @@ async def call_custom_number(raw_arguments: dict, context: RunContext) -> str:
 
     call_count = context.userdata.get("custom_call_count", 0)
     if call_count >= custom_call.MAX_CUSTOM_CALLS_PER_SESSION:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_CUSTOM_CALL_LIMIT,
                 tool="call_custom_number",
                 lang="en",
@@ -46,9 +47,9 @@ async def call_custom_number(raw_arguments: dict, context: RunContext) -> str:
 
     spoken = custom_call.format_for_speech(normalized)
     who = f" for {contact_name}" if contact_name else ""
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             f"You want me to call{who} at {spoken}, right? "
             "Say 'yes' or 'call it' to dial, or read the number again if I misheard.",
             tool="call_custom_number",

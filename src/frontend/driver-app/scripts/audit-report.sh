@@ -95,7 +95,8 @@ echo ""
 echo "## Gate M6: Screen shell coverage"
 APP_SCREENS=$(find app -name '*.tsx' ! -name '_layout.tsx' ! -path '*/_layout.tsx' | wc -l | tr -d ' ')
 SCREEN_SHELL=$(rg -l '<Screen' app --glob '*.tsx' --glob '!**/_layout.tsx' 2>/dev/null | wc -l | tr -d ' ')
-EXCEPTIONS=4
+# Auth landing/login/register + map home + map-preview use custom shells (not <Screen>).
+EXCEPTIONS=5
 EXPECTED=$((APP_SCREENS - EXCEPTIONS))
 if [[ "$SCREEN_SHELL" -ge "$EXPECTED" ]]; then
   pass "Screen shell — ${SCREEN_SHELL}/${APP_SCREENS} (${EXCEPTIONS} exceptions)"

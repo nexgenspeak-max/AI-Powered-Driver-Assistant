@@ -1,10 +1,10 @@
 import {
   RoomServiceClient,
   AgentDispatchClient,
-  SipClient,
 } from 'livekit-server-sdk';
 import { config } from '../config';
 import { bind, getLogger } from './logger';
+import { dialSipParticipant, resolveDialPlan } from './telephony';
 
 const log = getLogger('dispatch');
 
@@ -60,13 +60,15 @@ export async function dispatchCall(trip: TripData): Promise<string> {
   }
 
   if (config.sipTrunkId) {
-    const sipClient = new SipClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
-    await sipClient.createSipParticipant(config.sipTrunkId, trip.driver_phone, roomName, {
-      participantIdentity: sipIdentity,
-      participantName: 'driver',
-      playRingtone: true,
-    });
-    log.info('outbound SIP call initiated');
+    const plan = resolveDialPlan({ phone: trip.driver_phone, channel: 'phone' });
+    const lk = await dialSipParticipant(roomName, plan, 'driver');
+    if (lk.sipIdentity !== sipIdentity) {
+      log.warning('SIP identity mismatch vs metadata', {
+        expected: sipIdentity,
+        actual: lk.sipIdentity,
+      });
+    }
+    log.info('outbound SIP call initiated', { channel: plan.channel });
   } else {
     log.warning('SIP_TRUNK_ID not set — skipping SIP dial, agent-only room created');
   }

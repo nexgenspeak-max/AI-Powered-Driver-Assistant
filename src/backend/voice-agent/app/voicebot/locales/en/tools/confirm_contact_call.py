@@ -1,21 +1,22 @@
 import logging
 
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_NO_PENDING_CONTACT_CALL
 from app.voicebot.processors import custom_call, contact_call
-from app.voicebot.processors.tool_reply import as_llm, call_follow_up_actions, contact_call_actions
+from app.voicebot.processors.tool_reply import call_follow_up_actions, contact_call_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.en.tools.confirm_contact_call")
 
 
-def _wrap_call_result(userdata: dict, result, *, tool: str):
+async def _wrap_call_result(context, result, *, tool: str):
     if isinstance(result, str):
-        return as_llm(
-            userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 result,
                 tool=tool,
                 lang="en",
@@ -29,9 +30,9 @@ def _wrap_call_result(userdata: dict, result, *, tool: str):
 async def confirm_contact_call(raw_arguments: dict, context: RunContext):
     pending = context.userdata.get("pending_contact_call")
     if not pending or not pending.get("phone_number"):
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_PENDING_CONTACT_CALL,
                 tool="confirm_contact_call",
                 lang="en",
@@ -59,4 +60,4 @@ async def confirm_contact_call(raw_arguments: dict, context: RunContext):
             context, phone_number, contact_name=name, lang="en",
         )
 
-    return _wrap_call_result(context.userdata, result, tool="confirm_contact_call")
+    return await _wrap_call_result(context, result, tool="confirm_contact_call")

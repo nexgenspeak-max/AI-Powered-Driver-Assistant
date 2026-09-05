@@ -71,7 +71,13 @@ export function TripOfferBanner() {
       try {
         // Drivers commonly keep the phone on silent/vibrate — without this
         // the alert would be muted exactly when it matters most.
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' })
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: 'mixWithOthers',
+          // Must stay true — omitting this defaults recording off on iOS and
+          // kills LiveKit mic uplink for the next assistant session.
+          allowsRecording: true,
+        })
         console.log('[new-trip-alert] audio mode set, isLoaded=', alertPlayer.isLoaded, 'duration=', alertPlayer.duration)
         // A fresh player (never played yet, still finishing its initial
         // load) already sits at position 0 — calling seekTo(0) on it anyway

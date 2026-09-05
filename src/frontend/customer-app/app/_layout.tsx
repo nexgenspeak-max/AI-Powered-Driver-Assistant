@@ -51,14 +51,16 @@ function AppShell() {
   // can show up regardless of which screen the customer is currently on.
   useCustomerDispatchSocket(customer?.id)
 
+  // Auth first when logged out: Stack.Protected falls back to the first
+  // available screen — keep Landing ahead of (app).
   return (
     <View flex={1}>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={!!accessToken}>
-          <Stack.Screen name="(app)" />
-        </Stack.Protected>
         <Stack.Protected guard={!accessToken}>
           <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!!accessToken}>
+          <Stack.Screen name="(app)" />
         </Stack.Protected>
       </Stack>
       <TripNotificationBanner />

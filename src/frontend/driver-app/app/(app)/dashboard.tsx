@@ -11,6 +11,7 @@ import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { useDriverContext } from "../../src/features/dashboard/hooks/useDriverContext";
 import { useProximityTracking } from "../../src/features/dashboard/hooks/useProximityTracking";
 import { ActiveTripCard } from "../../src/features/dashboard/components/ActiveTripCard";
+import { OptimizedRouteCard } from "../../src/features/dashboard/components/OptimizedRouteCard";
 import { TripCard } from "../../src/features/dashboard/components/TripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -101,7 +102,19 @@ export default function DashboardScreen() {
   // Hooks). Tracks while the driver is online, regardless of trip status.
   useProximityTracking(isOnline);
 
-  if (!driver) return null;
+  if (!driver) {
+    return (
+      <Screen scroll>
+        <YStack gap="$4">
+          <Skeleton height={48} width="55%" radius={12} />
+          <Skeleton height={48} radius={14} />
+          <Skeleton height={44} radius={12} />
+          <Skeleton height={120} radius={24} />
+          <Skeleton height={120} radius={24} />
+        </YStack>
+      </Screen>
+    )
+  }
   const pending =
     context?.upcoming_trips.filter((t) =>
       PENDING_STATUSES.includes(t.status),
@@ -220,9 +233,9 @@ export default function DashboardScreen() {
             value={tripStatusTab}
             onChange={setTripStatusTab}
             options={[
-              { value: "pending", label: `Chờ xác nhận (${pending.length})` },
+              { value: "pending", label: `Chờ (${pending.length})` },
               { value: "active", label: `Đang chạy (${active.length})` },
-              { value: "completed", label: `Hoàn thành (${completed.length})` },
+              { value: "completed", label: `Xong (${completed.length})` },
             ]}
           />
 
@@ -247,6 +260,9 @@ export default function DashboardScreen() {
               <NoSearchMatch />
             ) : (
               <YStack gap="$4">
+                {context.optimized_route ? (
+                  <OptimizedRouteCard route={context.optimized_route} />
+                ) : null}
                 {filteredActive.map((trip) => (
                   <ActiveTripCard key={trip.trip_id} trip={trip} />
                 ))}

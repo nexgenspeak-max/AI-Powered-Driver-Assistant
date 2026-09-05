@@ -170,6 +170,12 @@ T: Có. Trợ lý AI chính hỗ trợ tiếng Việt; một số cấu hình h�
 
 ### 6.2 Tài xế
 
+**H: Làm sao xem thu nhập hôm nay / tuần / tháng?**  
+T: Hỏi AI: *"Hôm nay kiếm bao nhiêu?"*, *"Tuần này thu nhập?"*, *"Tháng này doanh thu?"*. AI chỉ có 3 khoảng này — chưa có tổng từ trước đến nay.
+
+**H: Xem chuyến hoàn thành hoặc bị hủy hôm nay?**  
+T: Hỏi *"Chuyến hoàn thành hôm nay"* hoặc *"Chuyến bị hủy hôm nay"*.
+
 **H: Làm sao bật nhận chuyến?**  
 T: Trong app chọn Online, hoặc nói với AI: *"Bật nhận chuyến"* / *"Tôi sẵn sàng"*.
 

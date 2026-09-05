@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { TouchableOpacity, ActivityIndicator, StyleSheet, View as RNView } from 'react-native'
-import { Text, useThemeName } from 'tamagui'
+import { useThemeName } from 'tamagui'
 import { LinearGradient } from 'expo-linear-gradient'
+import { AppText } from './AppText'
 
 const BUTTON_HEIGHT = 52
 // Purple CTA exception: the gradient fill never changes between themes —
@@ -113,7 +114,9 @@ export function GlassButton({ label, onPress, loading, disabled, colors }: Glass
         }}
       >
         {loading && <ActivityIndicator size="small" color="#ffffff" />}
-        <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>{label}</Text>
+        <AppText variant="title" color="#ffffff">
+          {label}
+        </AppText>
       </RNView>
     </TouchableOpacity>
   )

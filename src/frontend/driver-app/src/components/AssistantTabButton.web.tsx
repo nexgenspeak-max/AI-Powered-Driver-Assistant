@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react'
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native'
-import { Text } from 'tamagui'
+import { AppText } from './AppText'
 import { GlassMaterial } from './LiquidGlass'
 import { AssistantOrbCenter } from './AssistantOrbCenter'
 import {
@@ -14,8 +14,8 @@ import {
   CARD_WIDTH,
   ORB_CONIC_A,
   ORB_SIZE,
+  ORB_WRAP_WIDTH,
   SPIN_DURATION,
-  STATUS_ACCESSIBILITY_LABEL,
   useAssistantTabButton,
 } from './assistantTabButtonShared'
 
@@ -25,6 +25,7 @@ export {
   BUTTON_RISE,
   BUTTON_SIZE,
   ORB_SIZE,
+  ORB_WRAP_WIDTH,
 } from './assistantTabButtonShared'
 
 const STYLE_ID = 'assistant-siri-orb-keyframes'
@@ -60,19 +61,16 @@ type WebCssViewStyle = Record<string, unknown>
 function SiriOrbWeb({
   status,
   reduceMotion,
-  isError,
-  errorColors,
   iconColor,
   pageVisible,
 }: {
   status: keyof typeof SPIN_DURATION
   reduceMotion: boolean
-  isError: boolean
-  errorColors: [string, string]
   iconColor: string
   pageVisible: boolean
 }) {
-  const spinActive = pageVisible && !reduceMotion && !isError && (status === 'connecting' || status === 'connected')
+  // Always brand purple — never danger/red, even on error (retry still looks like Trợ lý).
+  const spinActive = pageVisible && !reduceMotion && (status === 'connecting' || status === 'connected')
   const spinMs = SPIN_DURATION[status] || 10000
 
   const orbShellCss: WebCssViewStyle = {
@@ -84,26 +82,21 @@ function SiriOrbWeb({
     boxShadow: '0 8px 28px rgba(124, 58, 237, 0.42), inset 0 1px 0 rgba(255,255,255,0.4)',
   }
 
-  const fillCss: WebCssViewStyle = isError
+  const fillCss: WebCssViewStyle = spinActive
     ? {
-        ...StyleSheet.absoluteFillObject,
-        backgroundImage: `linear-gradient(135deg, ${errorColors[0]}, ${errorColors[1]})`,
+        position: 'absolute',
+        width: '180%',
+        height: '180%',
+        left: '-40%',
+        top: '-40%',
+        backgroundImage: ORB_CONIC_A,
+        animation: `assistantSiriSpin ${spinMs}ms linear infinite`,
+        animationPlayState: pageVisible ? 'running' : 'paused',
       }
-    : spinActive
-      ? {
-          position: 'absolute',
-          width: '180%',
-          height: '180%',
-          left: '-40%',
-          top: '-40%',
-          backgroundImage: ORB_CONIC_A,
-          animation: `assistantSiriSpin ${spinMs}ms linear infinite`,
-          animationPlayState: pageVisible ? 'running' : 'paused',
-        }
-      : {
-          ...StyleSheet.absoluteFillObject,
-          backgroundImage: IDLE_GRADIENT,
-        }
+    : {
+        ...StyleSheet.absoluteFillObject,
+        backgroundImage: IDLE_GRADIENT,
+      }
 
   const glassStack: WebCssViewStyle = {
     ...StyleSheet.absoluteFillObject,
@@ -136,16 +129,16 @@ export function AssistantTabButton({ centerX, barWidth }: { centerX: number; bar
     cardHeight,
     setCardHeight,
     handlePress,
+    accessibilityLabel,
     reduceMotion,
     connectedMuted,
-    isError,
+    isConnecting,
   } = useAssistantTabButton()
 
   if (barWidth <= 0) return null
 
-  const left = centerX - ORB_SIZE / 2
+  const left = centerX - ORB_WRAP_WIDTH / 2
   const cardLeft = Math.min(Math.max(centerX - CARD_WIDTH / 2, CARD_MARGIN), barWidth - CARD_WIDTH - CARD_MARGIN)
-  const errorGradient: [string, string] = [theme.danger.val, theme.onDangerContainer.val]
   const showRing = voice.status === 'connecting' || voice.status === 'connected'
 
   return (
@@ -157,46 +150,47 @@ export function AssistantTabButton({ centerX, barWidth }: { centerX: number; bar
           pointerEvents="none"
         >
           <GlassMaterial borderRadius={18}>
-            <Text numberOfLines={4} color="$textPrimary" fontSize="$1" padding={10} textAlign="center">
+            <AppText variant="caption" numberOfLines={4} color="$textPrimary" padding={10} textAlign="center">
               {expandedText}
-            </Text>
+            </AppText>
           </GlassMaterial>
         </View>
       ) : null}
 
       <Pressable
         onPress={handlePress}
+        disabled={isConnecting}
         hitSlop={8}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={
-          connectedMuted ? 'Trợ lý AI đang kết nối, micro tắt. Nhấn để tắt phiên.' : STATUS_ACCESSIBILITY_LABEL[voice.status]
-        }
-        onAccessibilityTap={handlePress}
+        accessibilityState={{ disabled: isConnecting, busy: isConnecting }}
+        accessibilityLabel={accessibilityLabel}
+        onAccessibilityTap={isConnecting ? undefined : handlePress}
         style={({ pressed }) => [
           styles.wrap,
           { left, top: -BUTTON_RISE },
-          { cursor: voice.status === 'connecting' ? 'wait' : 'pointer' } as object,
-          pressed ? { opacity: 0.94, transform: [{ scale: 0.95 }] } : null,
+          { cursor: isConnecting ? 'wait' : 'pointer' } as object,
+          isConnecting ? { opacity: 0.72 } : null,
+          !isConnecting && pressed ? { opacity: 0.94, transform: [{ scale: 0.97 }] } : null,
         ]}
       >
-        {showRing ? (
-          <View
-            pointerEvents="none"
-            style={[styles.liveRing, { borderColor: theme.secondary.val }]}
+        <View style={styles.orbStack}>
+          {showRing ? (
+            <View pointerEvents="none" style={[styles.liveRing, { borderColor: theme.secondary.val }]} />
+          ) : null}
+          <SiriOrbWeb
+            status={voice.status}
+            reduceMotion={reduceMotion}
+            iconColor={theme.textInverse.val}
+            pageVisible={pageVisible}
           />
-        ) : null}
-        <SiriOrbWeb
-          status={voice.status}
-          reduceMotion={reduceMotion}
-          isError={isError}
-          errorColors={errorGradient}
-          iconColor={theme.textInverse.val}
-          pageVisible={pageVisible}
-        />
-        {connectedMuted ? (
-          <View style={[styles.muteDot, { backgroundColor: theme.danger.val, borderColor: theme.textInverse.val }]} />
-        ) : null}
+          {connectedMuted ? (
+            <View style={[styles.muteDot, { backgroundColor: theme.danger.val, borderColor: theme.textInverse.val }]} />
+          ) : null}
+        </View>
+        <View style={styles.labelSlot} pointerEvents="none">
+          <AssistantTabLabel color={theme.textPrimary.val} connectingColor={theme.primary.val} />
+        </View>
       </Pressable>
     </>
   )
@@ -205,11 +199,21 @@ export function AssistantTabButton({ centerX, barWidth }: { centerX: number; bar
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    width: ORB_SIZE,
-    height: ORB_SIZE,
+    width: ORB_WRAP_WIDTH,
     zIndex: 60,
     alignItems: 'center',
+  },
+  orbStack: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  labelSlot: {
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 14,
   },
   liveRing: {
     position: 'absolute',

@@ -31,7 +31,7 @@ import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { haptics } from '../utils/haptics'
 import { AssistantTabButton } from './AssistantTabButton'
-import { TabBarAiSlotSpacer } from './tabBarIcons'
+import { TAB_BAR_ICON_SIZE, TabBarAiSlotSpacer } from './tabBarIcons'
 
 // Kept only so existing `<LiquidGlassProvider>` in _layout.tsx keeps working.
 export function LiquidGlassProvider({ children }: { children: ReactNode }) {
@@ -239,14 +239,14 @@ function LiquidGlassTabBarInner({ state, descriptors, navigation }: BottomTabBar
             const isFocused = routeIndex === activeIndex
             const label = options.title ?? route.name
             const color = isFocused ? p.active : p.inactive
-            const icon = options.tabBarIcon?.({ focused: isFocused, color, size: 24 })
-            return (
-              <Pressable
-                key={route.key}
-                onPress={() => onPress(route.name, route.key, isFocused)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isFocused }}
-                accessibilityLabel={label}
+                const icon = options.tabBarIcon?.({ focused: isFocused, color, size: TAB_BAR_ICON_SIZE })
+                return (
+                  <Pressable
+                    key={route.key}
+                    onPress={() => onPress(route.name, route.key, isFocused)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isFocused }}
+                    accessibilityLabel={label}
                 style={({ pressed }) => ({
                   flex: 1,
                   alignItems: 'center',

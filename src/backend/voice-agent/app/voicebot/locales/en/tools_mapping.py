@@ -8,6 +8,9 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 Cache-read tools speak themselves. After they speak → stay silent; do not repeat the list.
 
 check_upcoming_trips — schedule/trip count/fare. Tool says count first; trip_index for one trip's details.
+check_delivery_orders — delivery orders count ("how many deliveries") — NOT taxi trips.
+call_delivery_party — call sender (shipper) or recipient on a delivery order. party=sender|recipient.
+update_delivery_order_status — picked up / out for delivery / delivered / redelivery / returned.
 refresh_latest_data — when the driver wants fresh data after a cache answer ("refresh", "update", "get the latest").
 get_current_trip_info — in-progress trip, customer phone (not GPS-ranked).
 suggest_next_stop — where to go / who I'm picking up (GPS).
@@ -29,6 +32,8 @@ check_customer_call_status — is the background call done.
 create_reminder — remind me before pickup.
 request_cancel_trip → confirm_cancel_trip — cancel an accepted trip; always confirm first.
 get_today_earnings — today's earnings.
+get_earnings_summary — week/month earnings (period=week|month). Never invent lifetime totals.
+check_trip_history — completed/cancelled today (scope=completed_today|cancelled_today).
 get_driver_stats — rating, stats.
 get_bonus_info — bonus, surge, promo.
 report_customer_no_show — rider didn't show; confirm first.

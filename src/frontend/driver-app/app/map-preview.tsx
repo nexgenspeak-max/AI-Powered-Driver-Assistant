@@ -45,8 +45,10 @@ export default function MapPreviewScreen() {
     }
   }, [params.orb, params.muted, params.speak])
 
+  // Production: send visitors to auth Landing (not bare `/`, which used to
+  // fall through to this same ungated preview when it was first in the Stack).
   if (!__DEV__) {
-    return <Redirect href="/" />
+    return <Redirect href="/(auth)" />
   }
 
   return (

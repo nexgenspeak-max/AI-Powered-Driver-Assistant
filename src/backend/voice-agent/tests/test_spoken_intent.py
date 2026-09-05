@@ -14,9 +14,25 @@ from app.voicebot.processors.spoken_intent import (
 
 def test_vn_confirm_phrases():
     assert classify_driver_intent("Xác nhận nhận chuyến", "vn") == "confirm"
-    assert classify_driver_intent("xác nhận chuyến.", "vn") == "confirm"
     assert classify_driver_intent("nhận chuyến", "vn") == "confirm"
     assert classify_driver_intent("xác nhận", "vn") == "confirm"
+    assert classify_driver_intent("xác nhận chuyến.", "vn") is None
+    assert classify_driver_intent("xác nhận chuyến sắp tới", "vn") == "upcoming"
+
+
+def test_vn_earnings_period_routing():
+    from app.voicebot.processors.spoken_intent import _earnings_period_from_text
+
+    assert _earnings_period_from_text("hôm nay kiếm bao nhiêu", "vn") == "today"
+    assert _earnings_period_from_text("tuần này thu nhập", "vn") == "week"
+    assert _earnings_period_from_text("tháng này doanh thu", "vn") == "month"
+    assert _earnings_period_from_text("từ khi bắt đầu kiếm bao nhiêu", "vn") == "lifetime"
+
+
+def test_vn_trip_history_intent():
+    assert classify_driver_intent("chuyến hoàn thành hôm nay", "vn") == "trip_history"
+    assert classify_driver_intent("chuyến bị hủy hôm nay", "vn") == "trip_history"
+    assert classify_driver_intent("thu nhập tuần này", "vn") == "earnings"
 
 
 def test_vn_reject_wins_over_confirm_substring():
@@ -263,7 +279,7 @@ async def test_driver_text_input_cb_runs_spoken_intent_before_llm():
 def test_vn_driving_advice_matches_without_trip_hijack():
     assert classify_driver_intent("Chờ khách lâu quá tôi nên làm gì", "vn") == "driving_advice"
     assert classify_driver_intent("Đi cao tốc cần lưu ý gì", "vn") == "driving_advice"
-    assert classify_driver_intent("xác nhận chuyến sắp tới", "vn") == "confirm"
+    assert classify_driver_intent("xác nhận chuyến sắp tới", "vn") == "upcoming"
 
 
 async def test_handle_driving_advice_speaks_and_stops():

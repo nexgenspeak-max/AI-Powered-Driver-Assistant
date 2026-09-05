@@ -1,11 +1,18 @@
 import {
   RoomServiceClient,
   AgentDispatchClient,
-  SipClient,
 } from 'livekit-server-sdk';
 import { config } from '../config';
 import { cacheGet, cacheSet, driverLastCallKey } from '../cache/redis';
 import { bind, getLogger } from './logger';
+import {
+  dialSipParticipant,
+  normalizePhone,
+  resolveDialPlan,
+  TelephonyError,
+  type TelephonyChannel,
+} from './telephony';
+import { hasCallConsent } from './zalo';
 
 const log = getLogger('calls');
 
@@ -17,52 +24,18 @@ const log = getLogger('calls');
 // once the in-session context is gone — 24h comfortably covers a full shift.
 const DRIVER_LAST_CALL_TTL_SECONDS = 24 * 60 * 60;
 
-function normalizePhone(phone: string): string {
-  let p = phone.trim().replace(/[\s\-()]/g, '');
-  if (!p) return '';
-  if (p.startsWith('00')) p = '+' + p.slice(2);
-  const bare = p.replace(/^\+/, '');
-  if (bare.startsWith('84')) return `+${bare}`;
-  if (bare.startsWith('0') && bare.length >= 10) return `+84${bare.slice(1)}`;
-  if (!p.startsWith('+')) return `+${bare}`;
-  return p;
-}
-
-function resolveDialTo(customerPhone: string): [string, string | null] {
-  const target = normalizePhone(customerPhone);
-  if (!target) throw new Error('customer phone is empty');
-
-  const verified = config.twilioVerifiedTo ? normalizePhone(config.twilioVerifiedTo) : '';
-  if (config.callForceVerifiedTo && verified && target !== verified) {
-    log.warning('Twilio trial override — dialing verified number instead of customer');
-    return [verified, `Đang gọi số Twilio đã xác minh ${verified} (trên đơn ghi ${target}).`];
-  }
-  return [target, null];
-}
-
-async function dialCustomerViaLiveKit(
-  roomName: string,
-  dialTo: string,
-  identityPrefix: 'customer' | 'driver' = 'customer',
-): Promise<{ callId: string; sipIdentity: string }> {
-  if (!config.livekitApiKey || !config.livekitApiSecret) {
-    throw new Error('LIVEKIT_API_KEY and LIVEKIT_API_SECRET required for in-room customer call');
-  }
-  if (!config.sipTrunkId) {
-    throw new Error('SIP_TRUNK_ID required for in-room customer call');
-  }
-
-  const sipIdentity = `${identityPrefix}-${dialTo.replace(/\D/g, '')}`;
-  const sipClient = new SipClient(config.livekitUrl, config.livekitApiKey, config.livekitApiSecret);
-  await sipClient.createSipParticipant(config.sipTrunkId, dialTo, roomName, {
-    participantIdentity: sipIdentity,
-    participantName: 'customer',
-    playRingtone: true,
+async function resolveCustomerDialPlan(opts: {
+  customerPhone: string;
+  channel?: TelephonyChannel;
+  zaloUid?: string;
+}) {
+  const consentGranted = await hasCallConsent(opts.customerPhone);
+  return resolveDialPlan({
+    channel: opts.channel,
+    phone: opts.customerPhone,
+    zaloUid: opts.zaloUid,
+    zaloConsentGranted: consentGranted,
   });
-
-  bind({ room: roomName, conv: `${roomName}-${sipIdentity}` });
-  log.info('SIP participant dialed into room');
-  return { callId: `${roomName}-${sipIdentity}`, sipIdentity };
 }
 
 async function createBackgroundCallRoom(meta: Record<string, string>): Promise<string> {
@@ -108,6 +81,7 @@ export interface CallRecord {
   dialed_number?: string;
   livekit_room?: string;
   sip_identity?: string;
+  channel?: TelephonyChannel;
 }
 
 export async function completeCustomerCall(
@@ -153,8 +127,20 @@ export async function startCustomerCall(opts: {
   customerName?: string;
   pickupAddress?: string;
   customMessage?: string;
+  channel?: TelephonyChannel;
+  zaloUid?: string;
 }) {
-  const [dialTo, overrideNote] = resolveDialTo(opts.customerPhone);
+  let dialPlan;
+  try {
+    dialPlan = await resolveCustomerDialPlan({
+      customerPhone: opts.customerPhone,
+      channel: opts.channel,
+      zaloUid: opts.zaloUid,
+    });
+  } catch (err) {
+    if (err instanceof TelephonyError) throw err;
+    throw err;
+  }
 
   if (opts.mode === 'background') {
     const baseMeta: Record<string, string> = {
@@ -182,10 +168,11 @@ export async function startCustomerCall(opts: {
       // driver's room once the call ends, so the driver's own agent can
       // announce it proactively instead of only on request.
       driver_room_name: opts.roomName ?? '',
+      telephony_channel: dialPlan.channel,
     };
 
     const bgRoom = await createBackgroundCallRoom(baseMeta);
-    const lk = await dialCustomerViaLiveKit(bgRoom, dialTo);
+    const lk = await dialSipParticipant(bgRoom, dialPlan);
 
     const fullMeta = {
       ...baseMeta,
@@ -199,9 +186,10 @@ export async function startCustomerCall(opts: {
       trip_id: opts.tripId,
       mode: 'background',
       status: 'in_progress',
-      dialed_number: dialTo,
+      dialed_number: dialPlan.dialTo,
       livekit_room: bgRoom,
       sip_identity: lk.sipIdentity,
+      channel: dialPlan.channel,
     };
 
     // Cache only the pointer (call_id/status) — see completeCustomerCall's
@@ -214,7 +202,7 @@ export async function startCustomerCall(opts: {
 
     return {
       ...record,
-      override_note: overrideNote,
+      override_note: dialPlan.overrideNote,
       customer_phone: normalizePhone(opts.customerPhone),
       driver_phone: opts.driverPhone,
     };
@@ -228,7 +216,7 @@ export async function startCustomerCall(opts: {
     throw new Error(`Unsupported call mode: ${opts.mode}`);
   }
 
-  const lk = await dialCustomerViaLiveKit(opts.roomName.trim(), dialTo);
+  const lk = await dialSipParticipant(opts.roomName.trim(), dialPlan);
   const callId = lk.callId;
 
   const record: CallRecord = {
@@ -236,9 +224,10 @@ export async function startCustomerCall(opts: {
     trip_id: opts.tripId,
     mode: opts.mode,
     status: 'in_progress',
-    dialed_number: dialTo,
+    dialed_number: dialPlan.dialTo,
     livekit_room: opts.roomName.trim(),
     sip_identity: lk.sipIdentity,
+    channel: dialPlan.channel,
   };
 
   // Cache only the pointer (call_id/status) — see completeCustomerCall's
@@ -253,9 +242,10 @@ export async function startCustomerCall(opts: {
     call_id: callId,
     status: 'initiated',
     mode: opts.mode,
-    dialed_number: dialTo,
+    dialed_number: dialPlan.dialTo,
+    channel: dialPlan.channel,
     customer_phone: normalizePhone(opts.customerPhone),
-    override_note: overrideNote,
+    override_note: dialPlan.overrideNote,
     trip_id: opts.tripId,
     driver_phone: opts.driverPhone,
     livekit_room: opts.roomName.trim(),
@@ -269,23 +259,30 @@ export async function startDriverCall(opts: {
   customerPhone: string;
   tripId: string;
   roomName: string;
+  channel?: TelephonyChannel;
 }) {
   if (!opts.roomName?.trim()) {
     throw new Error('roomName is required to call the driver');
   }
-  const [dialTo, overrideNote] = resolveDialTo(opts.driverPhone);
-  const lk = await dialCustomerViaLiveKit(opts.roomName.trim(), dialTo, 'driver');
+  const dialPlan = resolveDialPlan({
+    channel: opts.channel ?? 'phone',
+    phone: opts.driverPhone,
+  });
+  const lk = await dialSipParticipant(opts.roomName.trim(), dialPlan, 'driver');
 
   return {
     call_id: lk.callId,
     status: 'initiated',
     mode: 'bridge',
-    dialed_number: dialTo,
+    dialed_number: dialPlan.dialTo,
+    channel: dialPlan.channel,
     driver_phone: normalizePhone(opts.driverPhone),
-    override_note: overrideNote,
+    override_note: dialPlan.overrideNote,
     trip_id: opts.tripId,
     customer_phone: normalizePhone(opts.customerPhone),
     livekit_room: opts.roomName.trim(),
     sip_identity: lk.sipIdentity,
   };
 }
+
+export { TelephonyError };

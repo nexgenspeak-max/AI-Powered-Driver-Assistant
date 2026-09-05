@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { styled, Text, View, useTheme, GetProps } from 'tamagui'
+import { styled, View, useTheme, GetProps } from 'tamagui'
 import { View as RNView, ActivityIndicator, StyleSheet, type LayoutChangeEvent } from 'react-native'
 import { GestureDetector } from 'react-native-gesture-handler'
 import Animated from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
+import { AppText } from './AppText'
 import { CTA_GRADIENT, GlassSheen, GlowOverlay, getGlassShadow, useGlassPress } from './LiquidGlass'
 
 // Same purple-tinted outer shadow as GlassButton (the "Bắt đầu" CTA) —
@@ -169,7 +170,16 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
             isDisabled ? undefined : dynamicProps,
           ]}
         >
-          <ButtonFrame variant={variant} isDisabled={isDisabled} full={full} onLayout={handleLayout} {...rest}>
+          <ButtonFrame
+            variant={variant}
+            isDisabled={isDisabled}
+            full={full}
+            onLayout={handleLayout}
+            accessibilityRole="button"
+            accessibilityLabel={loading ? `${label}, đang tải` : label}
+            accessibilityState={{ disabled: isDisabled, busy: !!loading }}
+            {...rest}
+          >
             {variant === 'primary' && !isDisabled && (
               // Explicit borderRadius here too, not just relying on
               // ButtonFrame's `overflow: hidden` to clip it — on web the
@@ -202,14 +212,13 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
             )}
             {loading && <ActivityIndicator size="small" color={spinnerColor} />}
             {!loading && icon}
-            <Text
-              fontWeight="600"
-              fontSize="$4"
+            <AppText
+              variant="title"
               color={isDisabled ? '$disabledText' : labelColor}
               zIndex={1}
             >
               {label}
-            </Text>
+            </AppText>
           </ButtonFrame>
         </RNView>
       </Animated.View>

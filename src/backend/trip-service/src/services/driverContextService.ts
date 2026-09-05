@@ -4,6 +4,7 @@ import * as tripService from './tripService';
 import * as earningsService from './earningsService';
 import * as driverSettingsService from './driverSettingsService';
 import * as routeOptimizationService from './routeOptimizationService';
+import * as deliveryOrderService from './deliveryOrderService';
 import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverOptimizedRouteKey, driverPendingNudgeKey } from '../cache/redis';
 import { phoneVariants } from '../utils/phone';
 
@@ -43,7 +44,7 @@ async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
 }
 
 export async function buildDriverContext(driverPhone: string) {
-  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings] = await Promise.all([
+  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings, deliveryOrders] = await Promise.all([
     driverService.get(driverPhone),
     tripsForDriver(driverPhone),
     earningsService.todayForDriver(driverPhone),
@@ -51,6 +52,7 @@ export async function buildDriverContext(driverPhone: string) {
     cacheGet<DriverLiveLocation>(driverLiveLocationKey(driverPhone)),
     cacheGet<{ kind: string }>(driverPendingNudgeKey(driverPhone)),
     driverSettingsService.getByPhone(driverPhone),
+    deliveryOrderService.listByDriver(driverPhone, 50),
   ]);
 
   const upcoming = trips
@@ -65,6 +67,11 @@ export async function buildDriverContext(driverPhone: string) {
   // that's meant to read as "trips I've done". `trips` is already this
   // driver's most recent 50 (tripsForDriver above), newest first.
   const completed = trips.filter(t => t.status === 'completed');
+  // Terminal cancels in the same ~50-trip window — voice "chuyến hủy hôm nay"
+  // without inventing a second Dynamo query.
+  const cancelled = trips.filter(t =>
+    t.status === 'cancelled' || t.status === 'cancelled_by_driver' || t.status === 'no_show',
+  );
   const currentRaw = trips.find(t => IN_PROGRESS.has(t.status)) ?? null;
   const current = currentRaw ? earningsService.enrichTrip(currentRaw) : null;
 
@@ -86,6 +93,7 @@ export async function buildDriverContext(driverPhone: string) {
     upcoming_trips: upcoming.map(earningsService.enrichTrip),
     active_trips: inProgress.map(earningsService.enrichTrip),
     completed_trips: completed.map(earningsService.enrichTrip),
+    cancelled_trips: cancelled.map(earningsService.enrichTrip),
     current_trip: current,
     // From the ~10-min online GPS ping (POST /drivers/me/location) — used by
     // voice-agent's suggest_next_stop tool to pick the nearest pending
@@ -117,6 +125,8 @@ export async function buildDriverContext(driverPhone: string) {
     // active-stop-set change (see invalidateTripParties below) — NOT
     // recomputed on every GPS ping.
     optimized_route: optimizedRoute,
+    // Last-mile delivery orders for this driver (voice list/call + app dashboard).
+    delivery_orders: deliveryOrders,
     fetched_at: new Date().toISOString(),
   };
 }

@@ -1,11 +1,11 @@
-import { CHAT_TOGGLE_BUTTON_SIZE } from '../features/home/components/ChatToggleButton'
 import { BUTTON_RISE, BUTTON_LABEL_OVERHANG } from '../components/AssistantTabButton'
 
-// ChatToggleButton (Home screen only) sits at `insets.top + 12`, is
-// CHAT_TOGGLE_BUTTON_SIZE tall — anything else top-anchored on that same
-// screen needs to clear its whole footprint plus a gap, not just butt up
-// against it. Add to `insets.top`.
-export const TOP_CLEARANCE_BELOW_CHAT_BUTTON = 12 + CHAT_TOGGLE_BUTTON_SIZE + 12
+// Top-anchored map overlays (e.g. NavigationHud). Chat opens from the tab-bar
+// orb only (no floating FAB) — keep a modest gap under the status bar.
+// Add to `insets.top`.
+export const TOP_OVERLAY_CLEARANCE = 12
+/** @deprecated Use TOP_OVERLAY_CLEARANCE — chat FAB removed. */
+export const TOP_CLEARANCE_BELOW_CHAT_BUTTON = TOP_OVERLAY_CLEARANCE
 
 // LiquidGlassTabBar.tsx is a "floating island" that renders ON TOP of screen
 // content instead of reserving layout space for itself — anything
@@ -19,9 +19,7 @@ export const TOP_CLEARANCE_BELOW_CHAT_BUTTON = 12 + CHAT_TOGGLE_BUTTON_SIZE + 12
 // CONTENT_HEIGHT) — taller than native's 72, used here as the safe upper
 // bound since this one constant covers both platforms. `BUTTON_RISE` is
 // imported (not copied) so this stays correct if the button's rise is ever
-// retuned. Reported bug this fixes: OptimizedRoutePanel (the "N điểm dừng"
-// stop list) sat low enough that the AI button's own poked-up top clipped
-// into/behind its bottom edge.
+// retuned.
 export const MAP_OVERLAY_BOTTOM_CLEARANCE = 16 + 84 + BUTTON_RISE + 12
 
 // Scrollable tab screens must clear the floating tab bar plus the raised

@@ -8,9 +8,10 @@
   "mcpAllowlist": ["*:*"],
   "autoRun": {
     "allow_instructions": [
-      "Chinh granted full autonomy for AI-Powered-Driver-Assistant (2026-08-29): auto-run all terminal, MCP, and fetch calls for dev, verify, debug, tests, and local servers in this workspace without asking.",
-      "All commands under src/backend, src/frontend, src/e2e, scripts/, and standard git read-only inspection are always allowed.",
-      "Reading and searching files in this workspace is always allowed."
+      "Chinh granted full autonomy for AI-Powered-Driver-Assistant (2026-08-29, reinforced 2026-09-05): auto-run all terminal, MCP, network, fetch, venv/pip, and file writes in this workspace without asking — including Assignment/ thesis DOCX builds.",
+      "All commands under src/backend, src/frontend, src/e2e, scripts/, Assignment/, infra/, and standard git inspection are always allowed.",
+      "Reading, searching, creating, and editing files in this workspace is always allowed.",
+      "Creating Python venvs, pip install of build tools (e.g. python-docx), and regenerating LUAN_VAN_THAC_SI_FINAL.docx are always allowed."
     ],
     "block_instructions": [
       "git push --force to main or master.",

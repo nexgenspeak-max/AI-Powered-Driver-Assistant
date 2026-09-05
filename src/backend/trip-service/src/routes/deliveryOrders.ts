@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import * as deliveryOrderService from '../services/deliveryOrderService';
 import * as imageExtractionService from '../services/imageExtractionService';
+import { invalidateDriverContext } from '../services/driverContextService';
 import { DeliveryOrderStatus } from '../services/deliveryOrderService';
 
 const router = Router();
@@ -59,6 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ detail: 'recipient_phone and recipient_address are required' });
     }
     const order = await deliveryOrderService.create({ ...req.body, driver_phone: driverPhone });
+    await invalidateDriverContext(driverPhone);
     return res.status(201).json(order);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -103,6 +105,7 @@ router.patch('/:orderId', async (req: Request, res: Response) => {
       return res.status(409).json({ detail: `Cannot set status=${status} from status=${order.status}` });
     }
     const updated = await deliveryOrderService.updateStatus(req.params.orderId, status);
+    await invalidateDriverContext(order.driver_phone);
     return res.json(updated);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
@@ -115,6 +118,7 @@ router.delete('/:orderId', async (req: Request, res: Response) => {
     if (!order) return res.status(404).json({ detail: 'Delivery order not found' });
     if (!isOwner(req, order)) return res.status(403).json({ detail: 'Not authorized to delete this order' });
     await deliveryOrderService.remove(req.params.orderId);
+    await invalidateDriverContext(order.driver_phone);
     return res.status(204).send();
   } catch (err) {
     return res.status(500).json({ error: String(err) });

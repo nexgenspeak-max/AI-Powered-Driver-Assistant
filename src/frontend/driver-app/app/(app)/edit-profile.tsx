@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
+import { Skeleton } from '../../src/components/Skeleton'
 import { GlossyAvatar } from '../../src/features/profile/components/GlossyAvatar'
 import { Input } from '../../src/components/Input'
 import { Button } from '../../src/components/Button'
@@ -26,7 +27,14 @@ export default function EditProfileScreen() {
   })
 
   if (!driver) {
-    return null
+    return (
+      <Screen scroll backButton>
+        <Skeleton height={28} width="45%" radius={8} />
+        <Skeleton height={88} width={88} radius={44} />
+        <Skeleton height={52} radius={16} />
+        <Skeleton height={52} radius={999} />
+      </Screen>
+    )
   }
 
   const trimmedName = name.trim()

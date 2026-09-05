@@ -23,7 +23,7 @@ from app.voicebot.processors.spoken_intent import (
 )
 from app.voicebot.processors.trip_target import resolve_trips_from_text
 
-VN_TOOLS_DIR = Path(__file__).resolve().parents[1] / "vn" / "tools"
+VN_TOOLS_DIR = Path(__file__).resolve().parents[1] / "locales" / "vn" / "tools"
 
 # Tools that must call resolve_customer_trip or resolve_call_target (grep-audited).
 TRIP_AWARE_TOOLS = frozenset(

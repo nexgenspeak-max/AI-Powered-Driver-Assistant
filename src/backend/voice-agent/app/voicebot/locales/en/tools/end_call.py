@@ -4,7 +4,7 @@ from livekit.agents import RunContext, function_tool
 
 from app.services.session_control import end_room_session
 from app.voicebot.locales.en.tools_definition import raw_schema
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.en.tools.end_call")
@@ -22,9 +22,9 @@ async def end_call(raw_arguments: dict, context: RunContext) -> str:
             "Can't end the session right now — a customer or contact call is still in progress. "
             "Wait for that call to finish, then you can end the session."
         )
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 spoken,
                 tool="end_call",
                 lang="en",
@@ -48,7 +48,7 @@ async def end_call(raw_arguments: dict, context: RunContext) -> str:
         await end_room_session(ctx, reason="ended by driver voice command")
 
     spoken = "Ended the conversation at the driver's request."
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(spoken, tool="end_call", lang="en"),
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(spoken, tool="end_call", lang="en"),
     )

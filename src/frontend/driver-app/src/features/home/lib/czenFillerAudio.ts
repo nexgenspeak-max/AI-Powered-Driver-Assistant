@@ -17,7 +17,7 @@ const DISCONNECTING_FALLBACK_MS = 2500;
 const FADE_MS = 100;
 const FADE_STEPS = 5;
 /** Brief pause after connect filler fade so iOS AVAudioSession can settle before LiveKit. */
-const HANDOFF_SETTLE_MS = 40;
+const HANDOFF_SETTLE_MS = 160;
 
 type Player = AudioPlayer;
 
@@ -53,9 +53,13 @@ async function getOrCreatePlayer(
 }
 
 async function ensurePlaybackAudioMode(): Promise<void> {
+  // Never leave allowsRecording=false — that sticks on iOS AVAudioSession and
+  // the next LiveKit publish captures silence (STT audio_duration_ms=0) while
+  // text chat still works. Playback cues must coexist with recording entitlement.
   await setAudioModeAsync({
     playsInSilentMode: true,
     interruptionMode: "mixWithOthers",
+    allowsRecording: true,
   });
 }
 

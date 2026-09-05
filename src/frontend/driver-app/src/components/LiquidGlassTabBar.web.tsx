@@ -38,7 +38,7 @@ import { useThemeName } from 'tamagui'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GLASS_BORDER_COLOR } from './LiquidGlass'
 import { AssistantTabButton } from './AssistantTabButton'
-import { TabBarAiSlotSpacer } from './tabBarIcons'
+import { TAB_BAR_ICON_SIZE, TabBarAiSlotSpacer } from './tabBarIcons'
 import Animated, {
   Easing,
   runOnJS,
@@ -526,7 +526,7 @@ export function LiquidGlassTabBar({ state, descriptors, navigation }: BottomTabB
                 const tintColor = isFocused
                   ? (options.tabBarActiveTintColor ?? '#8B5CF6')
                   : (options.tabBarInactiveTintColor ?? '#888888')
-                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: 24 })
+                const icon = options.tabBarIcon?.({ focused: isFocused, color: tintColor, size: TAB_BAR_ICON_SIZE })
 
                 return (
                   <View

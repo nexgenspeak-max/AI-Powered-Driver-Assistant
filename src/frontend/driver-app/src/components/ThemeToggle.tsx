@@ -54,7 +54,13 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
   const gradientOpacityStyle = useAnimatedStyle(() => ({ opacity: progress.value }))
 
   return (
-    <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="switch" accessibilityState={{ checked: isDark }}>
+    <Pressable
+      onPress={onToggle}
+      hitSlop={8}
+      accessibilityRole="switch"
+      accessibilityLabel="Chuyển giao diện sáng tối"
+      accessibilityState={{ checked: isDark }}
+    >
       <View style={{ width: TRACK_WIDTH, height: TRACK_HEIGHT }}>
         <GlassMaterial borderRadius={TRACK_RADIUS} style={{ width: TRACK_WIDTH, height: TRACK_HEIGHT }}>
           <View

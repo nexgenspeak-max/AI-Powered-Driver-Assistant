@@ -1,21 +1,22 @@
 import logging
 
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.locales.vn.constants import ERR_NO_PENDING_CONTACT_CALL
 from app.voicebot.processors import custom_call, contact_call
-from app.voicebot.processors.tool_reply import as_llm, call_follow_up_actions, contact_call_actions
+from app.voicebot.processors.tool_reply import call_follow_up_actions, contact_call_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.confirm_contact_call")
 
 
-def _wrap_call_result(userdata: dict, result, *, tool: str):
+async def _wrap_call_result(context, result, *, tool: str):
     if isinstance(result, str):
-        return as_llm(
-            userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 result,
                 tool=tool,
                 lang="vi",
@@ -31,9 +32,9 @@ async def confirm_contact_call(raw_arguments: dict, context: RunContext):
     logger.info("DIAL-TRACE confirm_contact_call: entered | pending=%r raw_arguments=%r", pending, raw_arguments)
     if not pending or not pending.get("phone_number"):
         logger.warning("DIAL-TRACE confirm_contact_call: no pending_contact_call, bailing")
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_PENDING_CONTACT_CALL,
                 tool="confirm_contact_call",
                 lang="vi",
@@ -66,4 +67,4 @@ async def confirm_contact_call(raw_arguments: dict, context: RunContext):
         raise
 
     logger.info("DIAL-TRACE confirm_contact_call: dispatch returned type=%s", type(result).__name__)
-    return _wrap_call_result(context.userdata, result, tool="confirm_contact_call")
+    return await _wrap_call_result(context, result, tool="confirm_contact_call")

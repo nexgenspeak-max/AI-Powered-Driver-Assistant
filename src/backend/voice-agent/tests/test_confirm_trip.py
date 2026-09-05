@@ -35,7 +35,11 @@ def _userdata_with_pending_trip():
 
 async def _run_confirm(context, args=None):
     try:
-        await confirm_trip.__wrapped__(args or {"trip_index": 1}, context)
+        # Use `is None` — empty {} must reach the tool (ambiguous multi-trip path).
+        await confirm_trip.__wrapped__(
+            {"trip_index": 1} if args is None else args,
+            context,
+        )
     except StopResponse:
         return
     raise AssertionError("confirm_trip should StopResponse after speaking")
@@ -184,3 +188,41 @@ async def test_confirm_trip_speaks_when_none_waiting():
 
     context.session.say.assert_awaited_once()
     assert "Không có chuyến" in context.session.say.await_args.args[0]
+
+
+async def test_confirm_trip_asks_which_when_ambiguous():
+    """Multiple notified trips without index → ask, do not PATCH."""
+    userdata: dict = {"driver_phone": "0888887798"}
+    context_store.load_driver_context(
+        userdata,
+        {
+            "upcoming_trips": [
+                {
+                    "trip_id": "a",
+                    "status": "notified",
+                    "customer_name": "An",
+                    "pickup_address": "Quận 1",
+                },
+                {
+                    "trip_id": "b",
+                    "status": "notified",
+                    "customer_name": "Bình",
+                    "pickup_address": "Quận 3",
+                },
+            ]
+        },
+    )
+    context = MagicMock()
+    context.userdata = userdata
+    context.session.say = AsyncMock()
+
+    with patch(
+        "app.voicebot.processors.confirm_trip_flow.backend_api.update_trip_status",
+        new_callable=AsyncMock,
+    ) as patch_status:
+        await _run_confirm(context, args={})
+
+    patch_status.assert_not_awaited()
+    spoken = context.session.say.await_args.args[0]
+    assert "An" in spoken
+    assert "Bình" in spoken

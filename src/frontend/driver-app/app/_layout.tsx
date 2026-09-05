@@ -31,15 +31,19 @@ function AppShell() {
     }
   }, [accessToken, wakeWordEnabled])
 
+  // Screen order matters for Stack.Protected: when a guard flips false, Expo
+  // Router falls back to the *first available* screen in this list. Putting
+  // ungated `map-preview` first made logout land on the DEV map instead of
+  // the auth Landing. Auth must be the first available route when logged out.
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="map-preview" />
-      <Stack.Protected guard={!!accessToken}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
       <Stack.Protected guard={!accessToken}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      <Stack.Protected guard={!!accessToken}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Screen name="map-preview" />
     </Stack>
   )
 }

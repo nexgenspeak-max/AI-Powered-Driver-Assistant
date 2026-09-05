@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.services import backend_api
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, trip_actions
+from app.voicebot.processors.tool_reply import trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.report_trip_issue")
@@ -26,9 +26,9 @@ async def report_trip_issue(raw_arguments: dict, context: RunContext) -> str:
 
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Không có chuyến đang hoạt động để báo cáo.",
                 tool="report_trip_issue",
                 lang="vi",
@@ -57,9 +57,9 @@ async def report_trip_issue(raw_arguments: dict, context: RunContext) -> str:
         f"Đã ghi nhận báo cáo sự cố: {label}. "
         "Đội hỗ trợ sẽ xem xét và liên hệ nếu cần thêm thông tin."
     )
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="report_trip_issue",
             lang="vi",

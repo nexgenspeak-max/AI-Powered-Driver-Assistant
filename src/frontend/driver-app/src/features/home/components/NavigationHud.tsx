@@ -4,7 +4,7 @@ import { XStack, YStack, View, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
 import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
-import { TOP_CLEARANCE_BELOW_CHAT_BUTTON, MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
+import { TOP_OVERLAY_CLEARANCE } from '../../../constants'
 import type { RouteStep } from '../../../types'
 
 // Goong's own maneuver vocabulary is short ("left"/"right"/"straight"/
@@ -29,6 +29,31 @@ function maneuverIcon(maneuver: string): keyof typeof Ionicons.glyphMap {
 
 function formatManeuverDistance(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.max(10, Math.round(meters / 10) * 10)} m`
+}
+
+/** Short Vietnamese action for the next maneuver (paired with distance in the HUD). */
+function maneuverAction(maneuver: string): string {
+  const m = maneuver.toLowerCase()
+  if (m.includes('uturn')) return 'Quay đầu'
+  if (m.includes('roundabout')) return 'Vào vòng xuyến'
+  if (m.includes('merge') || m.includes('fork') || m.includes('ramp')) return 'Nhập làn'
+  if (m.includes('left')) return 'Rẽ trái'
+  if (m.includes('right')) return 'Rẽ phải'
+  if (m.includes('straight') || m.includes('continue')) return 'Đi thẳng'
+  return 'Tiếp tục'
+}
+
+/** e.g. "Rẽ trái trong 200 m", "Đi thẳng 200 m" */
+function formatNextAction(maneuver: string, meters: number | null): string {
+  const action = maneuverAction(maneuver)
+  if (meters == null) return action
+  const dist = formatManeuverDistance(meters)
+  if (action === 'Đi thẳng' || action === 'Tiếp tục') return `${action} ${dist}`
+  return `${action} trong ${dist}`
+}
+
+function formatRemaining(km: number, min: number): string {
+  return `${km} km · ${min} phút`
 }
 
 function IconButton({
@@ -63,6 +88,10 @@ function IconButton({
   )
 }
 
+/**
+ * Single top HUD while navigating: next turn + remaining trip in one card.
+ * No bottom ETA strip — drivers should not split attention top/bottom.
+ */
 export function NavigationHud({
   loading,
   error,
@@ -88,52 +117,56 @@ export function NavigationHud({
   const theme = useTheme()
   const purple = theme.primary.val
   const onPrimary = theme.textInverse.val
+
+  const remainingLabel =
+    !loading && !error && !arrived && remainingKm != null && remainingMin != null
+      ? formatRemaining(remainingKm, remainingMin)
+      : null
+
   return (
-    <>
-      <SolidCard style={{ position: 'absolute', left: 16, right: 16, top: insets.top + TOP_CLEARANCE_BELOW_CHAT_BUTTON }}>
-        <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$3">
-          <View width={44} height={44} borderRadius={22} alignItems="center" justifyContent="center" backgroundColor={purple}>
-            <Ionicons
-              name={arrived ? 'flag' : error ? 'warning' : maneuverIcon(step?.maneuver ?? '')}
-              size={22}
-              color={onPrimary}
-            />
-          </View>
-          <YStack flex={1}>
-            {loading && <AppText variant="bodyStrong">Đang tính đường...</AppText>}
-            {!loading && error && (
-              <AppText variant="bodyStrong">Không lấy được chỉ đường</AppText>
-            )}
-            {!loading && !error && arrived && (
-              <AppText variant="bodyStrong">Đã đến nơi</AppText>
-            )}
-            {!loading && !error && !arrived && step && (
-              <>
+    <SolidCard style={{ position: 'absolute', left: 16, right: 16, top: insets.top + TOP_OVERLAY_CLEARANCE }}>
+      <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$3">
+        <View width={44} height={44} borderRadius={22} alignItems="center" justifyContent="center" backgroundColor={purple}>
+          <Ionicons
+            name={arrived ? 'flag' : error ? 'warning' : maneuverIcon(step?.maneuver ?? '')}
+            size={22}
+            color={onPrimary}
+          />
+        </View>
+        <YStack flex={1} gap="$1">
+          {loading && <AppText variant="bodyStrong">Đang tính đường...</AppText>}
+          {!loading && error && (
+            <AppText variant="bodyStrong">Không lấy được chỉ đường</AppText>
+          )}
+          {!loading && !error && arrived && (
+            <AppText variant="bodyStrong">Đã đến nơi</AppText>
+          )}
+          {!loading && !error && !arrived && step && (
+            <>
+              <AppText variant="title" numberOfLines={2}>
+                {formatNextAction(step.maneuver, distanceToManeuverM)}
+              </AppText>
+              {remainingLabel ? (
                 <AppText variant="caption" color="$textSecondary">
-                  {distanceToManeuverM != null ? formatManeuverDistance(distanceToManeuverM) : ''}
+                  Còn {remainingLabel}
                 </AppText>
-                <AppText variant="title" numberOfLines={2}>
+              ) : null}
+              {step.instruction ? (
+                <AppText variant="caption" color="$textMuted" numberOfLines={1}>
                   {step.instruction}
                 </AppText>
-              </>
-            )}
-          </YStack>
-          <XStack gap="$2">
-            {error && <IconButton name="refresh" onPress={onRefresh} color={purple} label="Tính lại đường đi" />}
-            <IconButton name="close" onPress={onExit} color={purple} label="Thoát chỉ đường" />
-          </XStack>
+              ) : null}
+            </>
+          )}
+          {!loading && !error && !arrived && !step && remainingLabel && (
+            <AppText variant="bodyStrong">Còn {remainingLabel}</AppText>
+          )}
+        </YStack>
+        <XStack gap="$2">
+          {error && <IconButton name="refresh" onPress={onRefresh} color={purple} label="Tính lại đường đi" />}
+          <IconButton name="close" onPress={onExit} color={purple} label="Thoát chỉ đường" />
         </XStack>
-      </SolidCard>
-
-      {!loading && !error && !arrived && remainingKm != null && remainingMin != null && (
-        <SolidCard style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE }}>
-          <XStack justifyContent="center" paddingVertical="$3">
-            <AppText variant="bodyStrong">
-              {remainingKm} km · {remainingMin} phút còn lại
-            </AppText>
-          </XStack>
-        </SolidCard>
-      )}
-    </>
+      </XStack>
+    </SolidCard>
   )
 }

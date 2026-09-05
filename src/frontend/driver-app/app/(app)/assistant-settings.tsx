@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
+import { Skeleton } from '../../src/components/Skeleton'
 import { Toggle } from '../../src/components/Toggle'
 import { VoiceLocalePicker } from '../../src/features/assistant-settings/components/VoiceLocalePicker'
 import { CustomerCallModePicker } from '../../src/features/assistant-settings/components/CustomerCallModePicker'
@@ -77,7 +78,16 @@ export default function AssistantSettingsScreen() {
     onSuccess: data => queryClient.setQueryData(queryKey, data),
   })
 
-  if (!driver) return null
+  if (!driver) {
+    return (
+      <Screen scroll backButton>
+        <Skeleton height={28} width="50%" radius={8} />
+        <Skeleton height={48} radius={12} />
+        <Skeleton height={160} radius={24} />
+        <Skeleton height={120} radius={24} />
+      </Screen>
+    )
+  }
 
   return (
     <Screen scroll backButton>

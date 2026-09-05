@@ -9,9 +9,18 @@ function ensureLiveKitGlobals() {
   globalsRegistered = true
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export { Room, RoomEvent, Track, ConnectionState, ConnectionError, ConnectionErrorReason } from 'livekit-client'
 
-export async function startAudioSession() {
+/**
+ * Known-good iOS config (verified ~18:59 2026-09-05 with filler + spoken STT).
+ * Keep `mixWithOthers` — removing it was a regression guess and did not fix
+ * silent mic; the working session used this category options set.
+ */
+async function configureAndStart(): Promise<void> {
   ensureLiveKitGlobals()
   // Force speaker output on both platforms — this is a hands-free driving
   // assistant, not a phone call held to the ear. Without this, iOS's default
@@ -46,6 +55,30 @@ export async function startAudioSession() {
   await AudioSession.startAudioSession()
 }
 
+/**
+ * Never throw — iOS often rejects stop when the session was never started or
+ * expo-audio already released it ("Session deactivation failed"). Callers
+ * (disconnect, connect catch) must not surface that as an uncaught rejection.
+ */
 export async function stopAudioSession() {
-  await AudioSession.stopAudioSession()
+  try {
+    await AudioSession.stopAudioSession()
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Start LiveKit audio. Do **not** preemptively stop first — that caused
+ * OSStatus -50 / "Session deactivation failed" and correlated with silent
+ * mic after ~19:05 2026-09-05. On start failure only: soft-stop, settle, retry once.
+ */
+export async function startAudioSession() {
+  try {
+    await configureAndStart()
+  } catch {
+    await stopAudioSession()
+    await sleep(200)
+    await configureAndStart()
+  }
 }

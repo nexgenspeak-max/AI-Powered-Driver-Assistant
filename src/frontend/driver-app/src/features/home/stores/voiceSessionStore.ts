@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Platform } from "react-native";
+import { requestRecordingPermissionsAsync } from "expo-audio";
 import { getForegroundService } from "../../../services/foregroundService";
 import {
   playConnectingFiller,
@@ -138,6 +139,11 @@ let room: Room | null = null;
 let connecting = false;
 /** Play disconnect MP3 after LiveKit audio session is released (user hang-up). */
 let pendingUserDisconnectFiller = false;
+/**
+ * User tapped Trợ lý to hang up — close chat + return home on idle.
+ * Silence timeout / remote drop leaves the chat open so orb can reconnect.
+ */
+let pendingClosePanelOnIdle = false;
 const audioEls = new Set<HTMLAudioElement>();
 const messageListeners = new Set<VoiceMessageListener>();
 
@@ -307,12 +313,30 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     });
     stopConnectingFiller();
     try {
+      // Wake-word subscribe already stopListening() on `connecting`. Brief
+      // settle so native AudioRecord can release before LiveKit publishes —
+      // avoid dynamic-importing wakeWordService here (circular with this
+      // store; Metro/Hermes then threw ReferenceError: Property 'Platform'
+      // doesn't exist mid-connect).
+      await new Promise<void>((resolve) => setTimeout(resolve, 350));
       // Filler during token fetch only — stop before LiveKit owns playAndRecord.
       // Calling startAudioSession twice (refreshVoiceAudioRoute) caused OSStatus -50 on iOS.
-      const [{ token, livekit_url }] = await Promise.all([
+      const [{ token, livekit_url }, micPerm] = await Promise.all([
         getToken(),
-        playConnectingFiller(),
+        playConnectingFiller().then(() =>
+          requestRecordingPermissionsAsync().catch(() => ({
+            granted: false,
+            status: "undetermined",
+          })),
+        ),
       ]);
+      if (!micPerm.granted) {
+        devlog.event("voice_mic", {
+          ok: false,
+          error: "permission_denied",
+          detail: String(micPerm.status ?? "denied"),
+        });
+      }
       await handoffConnectingFillerForLiveKit();
       await startAudioSession();
       const r = new Room();
@@ -499,6 +523,20 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
       await r.connect(livekit_url, token);
       bind({ room: r.name || "-", conv: r.name || "-" });
       await r.localParticipant.setMicrophoneEnabled(true);
+      let micPub = r.localParticipant.getTrackPublication(Track.Source.Microphone);
+      // One remic retry if publish succeeded as muted/missing — common after
+      // filler/Vosk handoff left AVAudioSession shared on iOS.
+      if (!micPub || micPub.isMuted) {
+        await r.localParticipant.setMicrophoneEnabled(false);
+        await new Promise<void>((resolve) => setTimeout(resolve, 200));
+        await r.localParticipant.setMicrophoneEnabled(true);
+        micPub = r.localParticipant.getTrackPublication(Track.Source.Microphone);
+      }
+      devlog.event("voice_mic", {
+        ok: !!micPub && !micPub.isMuted,
+        muted: !!micPub?.isMuted,
+        has_publication: !!micPub,
+      });
       await startCallForegroundService();
       set({ status: "connected", isMicMuted: false });
       devlog.event("voice_connect", {
@@ -549,7 +587,11 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
         });
       }
       clearWatchdog();
-      await room?.disconnect();
+      try {
+        await room?.disconnect();
+      } catch {
+        // ignore teardown races during failed connect
+      }
       room = null;
       await stopAudioSession();
       stopCallForegroundService();
@@ -586,10 +628,12 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     disconnect: (opts?: { userInitiated?: boolean }) => {
       void (async () => {
         const { status } = get();
-        pendingUserDisconnectFiller = !!(
+        const userHangup = !!(
           opts?.userInitiated &&
           (status === "connected" || status === "connecting")
         );
+        pendingUserDisconnectFiller = userHangup;
+        pendingClosePanelOnIdle = userHangup;
         stopConnectingFiller();
         await room?.disconnect();
       })();
@@ -623,4 +667,11 @@ export function subscribeVoiceMessages(
 ): () => void {
   messageListeners.add(listener);
   return () => messageListeners.delete(listener);
+}
+
+/** True once after user hang-up — chat should close when status hits idle. */
+export function consumeClosePanelOnVoiceIdle(): boolean {
+  const v = pendingClosePanelOnIdle;
+  pendingClosePanelOnIdle = false;
+  return v;
 }

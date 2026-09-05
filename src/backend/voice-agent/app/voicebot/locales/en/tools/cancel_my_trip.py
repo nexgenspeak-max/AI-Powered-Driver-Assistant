@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_NO_CANCELLABLE, ERR_CUSTOMER_CANCEL_FAIL
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 from app.voicebot.processors.tool_reply import customer_trip_actions
 
@@ -23,9 +23,9 @@ async def cancel_my_trip(raw_arguments: dict, context: RunContext) -> str:
     trips = context_store.get(context.userdata, "trips", [])
     active = [t for t in trips if t.get("status") in CUSTOMER_CANCELLABLE_STATUSES]
     if not active:
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_CANCELLABLE,
                 tool="cancel_my_trip",
                 lang="en",
@@ -45,9 +45,9 @@ async def cancel_my_trip(raw_arguments: dict, context: RunContext) -> str:
         await backend_api.update_trip_status(trip_id, "cancelled")
     except Exception:
         logger.error("cancel_my_trip — update failed", exc_info=True)
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_CUSTOMER_CANCEL_FAIL,
                 tool="cancel_my_trip",
                 lang="en",
@@ -59,9 +59,9 @@ async def cancel_my_trip(raw_arguments: dict, context: RunContext) -> str:
     context_store.patch_trip_by_id(context.userdata, trip_id, status="cancelled")
     context_store.remove_trip_from_lists(context.userdata, trip_id)
     spoken = "Your trip has been cancelled. Thank you for using our service."
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="cancel_my_trip",
             lang="en",

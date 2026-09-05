@@ -1,11 +1,15 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "expo-router";
-import { useVoiceSessionStore } from "../stores/voiceSessionStore";
+import {
+  consumeClosePanelOnVoiceIdle,
+  useVoiceSessionStore,
+} from "../stores/voiceSessionStore";
 import { useAssistantChatStore } from "../stores/assistantChatStore";
 
 /**
- * After the driver hangs up or the bot ends the session (silence timeout),
- * close the chat overlay and return to Home so the map is visible again.
+ * After the driver hangs up (orb while chat open), close the chat overlay and
+ * return to Home. Silence timeout / remote drop leaves the panel open so
+ * tapping Trợ lý can reconnect without hunting for the orb flow.
  */
 export function useReturnHomeOnVoiceEnd() {
   const router = useRouter();
@@ -19,6 +23,8 @@ export function useReturnHomeOnVoiceEnd() {
 
     const wasInSession = prev === "connected" || prev === "connecting";
     if (!wasInSession || status !== "idle") return;
+
+    if (!consumeClosePanelOnVoiceIdle()) return;
 
     useAssistantChatStore.getState().closePanel();
     if (pathname !== "/") {

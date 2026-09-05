@@ -2,7 +2,7 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 from app.voicebot.processors.tool_reply import trip_actions
 
@@ -15,9 +15,9 @@ async def confirm_trip_with_customer(raw_arguments: dict, context: RunContext) -
 
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "No active trip to confirm with the customer.",
                 tool="confirm_trip_with_customer",
                 lang="en",
@@ -36,9 +36,9 @@ async def confirm_trip_with_customer(raw_arguments: dict, context: RunContext) -
 
     context_store.schedule_sync(_sync())
     spoken = f"Confirmation message sent to {customer}."
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="confirm_trip_with_customer",
             lang="en",

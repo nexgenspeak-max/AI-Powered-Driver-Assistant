@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { router } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { refreshAccessToken } from './tokenRefresh'
+import { logoutAndReset } from '../../features/auth/logoutAndReset'
 
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
@@ -28,7 +28,7 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient.request(original)
       }
-      router.replace('/login')
+      logoutAndReset()
     }
 
     console.error('[API]', err.config?.url, err.response?.status, err.message)

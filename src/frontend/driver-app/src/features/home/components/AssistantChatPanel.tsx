@@ -3,6 +3,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Keyboard,
 } from "react-native";
 import { View, XStack, Theme, useTheme } from "tamagui";
@@ -11,39 +12,16 @@ import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
 import { AppText } from "../../../components/AppText";
 import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useAssistantChatStore } from "../stores/assistantChatStore";
 import { useVoiceSessionStore } from "../stores/voiceSessionStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { getAssistantReply } from "../../../services/api/assistant";
-import { MAP_OVERLAY_BOTTOM_CLEARANCE } from "../../../constants";
-
-const MIC_LABEL = {
-  idle: "Chạm nút Trợ lý bên dưới để kết nối",
-  connected: "Đang trong phiên thoại — chạm nút Trợ lý để ngắt",
-  error: "Kết nối lỗi, thử lại",
-};
 
 interface Props {
   onClose?: () => void;
-}
-
-function ChatStatusRow({ text }: { text: string }) {
-  return (
-    <XStack
-      alignSelf="center"
-      alignItems="center"
-      maxWidth="90%"
-      paddingHorizontal="$4"
-      paddingVertical="$2"
-      accessibilityRole="text"
-    >
-      <AppText variant="caption" color="$textSecondary" textAlign="center">
-        {text}
-      </AppText>
-    </XStack>
-  );
 }
 
 export function AssistantChatPanel({ onClose }: Props = {}) {
@@ -106,51 +84,57 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         style={{ backgroundColor: theme.surface.val }}
         keyboardVerticalOffset={60}
       >
-        <View width="100%" paddingTop={insets.top} position="relative">
-          {voice.status !== "connecting" ? (
-            <AppText
-              variant="caption"
-              textAlign="center"
-              color="$textSecondary"
-              marginTop="$2"
-              paddingTop="$2"
-            >
-              {voice.status === "connected" && voice.isCallActive
-                ? "Đang trong cuộc gọi — không thể tắt"
-                : voice.status === "connected" && voice.isMicMuted
-                  ? "Mic đang tắt — phiên vẫn kết nối"
-                  : MIC_LABEL[voice.status]}
-            </AppText>
-          ) : null}
-          {onClose && (
-            <TouchableOpacity
+        <XStack
+          width="100%"
+          paddingTop={insets.top}
+          paddingHorizontal="$3"
+          minHeight={44}
+          alignItems="center"
+          gap="$2"
+        >
+          <View flex={1} alignItems="center" justifyContent="center" minHeight={44}>
+            {voice.status === "connected" && voice.isCallActive ? (
+              <AppText variant="caption" textAlign="center" color="$textSecondary">
+                Đang trong cuộc gọi — không thể tắt
+              </AppText>
+            ) : voice.status === "connected" && voice.isMicMuted ? (
+              <AppText variant="caption" textAlign="center" color="$textSecondary">
+                Mic đang tắt
+              </AppText>
+            ) : null}
+          </View>
+          {onClose ? (
+            <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Đóng trò chuyện"
-              hitSlop={8}
+              accessibilityLabel="Thu nhỏ hội thoại"
+              hitSlop={12}
               style={{
-                position: "absolute",
-                right: 12,
-                top: insets.top,
                 width: 44,
                 height: 44,
+                borderRadius: 22,
                 alignItems: "center",
                 justifyContent: "center",
+                backgroundColor: theme.surfaceElevated.val,
+                borderWidth: 1,
+                borderColor: theme.border.val,
               }}
             >
-              <Ionicons name="close" size={22} color={theme.textPrimary.val} />
-            </TouchableOpacity>
-          )}
-        </View>
+              <MaterialCommunityIcons
+                name="chevron-down"
+                size={22}
+                color={theme.textSecondary.val}
+                pointerEvents="none"
+              />
+            </Pressable>
+          ) : null}
+        </XStack>
 
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1, paddingHorizontal: 20, marginTop: 16 }}
           contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
         >
-          {voice.status === "idle" && chats.length === 0 ? (
-            <ChatStatusRow text="Chạm nút Trợ lý AI bên dưới để bắt đầu trò chuyện" />
-          ) : null}
           {chats.map((chat, i) =>
             chat.who === "me" ? (
               // User bubble: purple gradient, always white text regardless of
@@ -226,12 +210,10 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
           alignItems="center"
           gap="$2"
           marginHorizontal={20}
-          // Was a hardcoded 100 — didn't account for the tab bar's raised
-          // center "Trợ lý" button, which floats above the bar's own top
-          // edge and could sit low enough to cover this composer once the
-          // bar/button geometry changed. Same clearance constant the map
-          // overlay cards (OptimizedRoutePanel, NavigationHud) already use.
-          marginBottom={insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE}
+          // Overlay already stops above the floating tab bar + orb
+          // (`MAP_OVERLAY_BOTTOM_CLEARANCE` on AssistantChatOverlay) — only
+          // need a small gap above that cut line, not a second full clearance.
+          marginBottom="$3"
           paddingHorizontal="$2"
           height={48}
           borderRadius="$pill"

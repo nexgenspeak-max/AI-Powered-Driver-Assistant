@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { TouchableOpacity, ActivityIndicator, StyleSheet, View as RNView } from 'react-native'
-import { Text, useThemeName } from 'tamagui'
+import { useThemeName } from 'tamagui'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia'
+import { AppText } from './AppText'
 import { CTA_GRADIENT } from './LiquidGlass'
 
 const BUTTON_HEIGHT = 52
@@ -85,10 +86,9 @@ half4 main(float2 fragCoord) {
 }
 `
 
+// Soft-fail: a missing RuntimeEffect must not crash the auth CTA path —
+// gradient + label still render; glass cues are optional polish.
 const effect = Skia.RuntimeEffect.Make(SHADER_SOURCE)
-if (!effect) {
-  throw new Error('GlassButton: failed to compile the glass-overlay SkSL shader')
-}
 
 // Purple CTA exception's glass tuning — dimmer specular ("opacity thấp
 // hơn... rgba(255,255,255,0.5) thay vì gần như trắng đặc" vs. the white
@@ -149,6 +149,9 @@ export function GlassButton({ label, onPress, loading, disabled, colors }: Glass
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={loading ? `${label}, đang tải` : label}
+      accessibilityState={{ disabled: isDisabled, busy: !!loading }}
       style={[
         { minHeight: BUTTON_HEIGHT, width: '100%', borderRadius: 999, overflow: 'hidden' },
         !isDisabled && getButtonOuterShadow(isLight),
@@ -161,12 +164,10 @@ export function GlassButton({ label, onPress, loading, disabled, colors }: Glass
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      {!isDisabled && layout.width > 0 && (
+      {!isDisabled && effect && layout.width > 0 && (
         <Canvas style={StyleSheet.absoluteFillObject} pointerEvents="none">
           <Fill>
-            {/* Non-null assertion: `effect` is validated once at module
-                load (throws if compilation failed) — see guard above. */}
-            <Shader source={effect!} uniforms={uniforms} />
+            <Shader source={effect} uniforms={uniforms} />
           </Fill>
         </Canvas>
       )}
@@ -181,7 +182,9 @@ export function GlassButton({ label, onPress, loading, disabled, colors }: Glass
         }}
       >
         {loading && <ActivityIndicator size="small" color="#ffffff" />}
-        <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>{label}</Text>
+        <AppText variant="title" color="#ffffff">
+          {label}
+        </AppText>
       </RNView>
     </TouchableOpacity>
   )

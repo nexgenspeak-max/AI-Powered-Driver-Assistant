@@ -18,7 +18,7 @@ async def answer_app_faq(raw_arguments: dict, context: RunContext) -> str:
     if not question:
         return await context_store.speak_and_stop(
             context.session,
-            build_faq_response(_CLARIFY, lang="en"),
+                build_faq_response(_CLARIFY, lang="en"),
         )
 
     logger.info("answer_app_faq | question=%r", question)

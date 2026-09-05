@@ -1,5 +1,30 @@
 """Prompts for CustomerCallAgent — AI speaks to customer while driver listens in-room."""
 
+from __future__ import annotations
+
+from app.voicebot.processors.trip_format import build_outbound_nav_info, short_address
+
+
+def _trip_facts_block(trip: dict | None, lang: str) -> str:
+    """Known trip fields the customer agent may speak — never invent beyond this."""
+    if not trip or not trip.get("trip_id"):
+        return ""
+    dropoff = short_address(str(trip.get("dropoff_address") or ""), 50)
+    nav = build_outbound_nav_info(trip, "en" if lang == "en" else "vn")
+    if lang == "en":
+        lines = ["Known trip facts (answer from these only; do not invent):"]
+        if dropoff:
+            lines.append(f"- Dropoff: {dropoff}")
+        if nav:
+            lines.append(nav)
+        return "\n".join(lines) + "\n"
+    lines = ["Thông tin chuyến đã biết (chỉ trả lời từ đây; không bịa thêm):"]
+    if dropoff:
+        lines.append(f"- Điểm trả: {dropoff}")
+    if nav:
+        lines.append(nav)
+    return "\n".join(lines) + "\n"
+
 
 def build_customer_call_opening(
     *,
@@ -54,27 +79,19 @@ def build_customer_call_prompt(
     driver_name: str,
     pickup_address: str,
     trip_id: str,
+    trip: dict | None = None,
     isolated: bool = False,
     custom_message: str = "",
 ) -> str:
     # Contact calls (no trip attached) pass trip_id="" — printing an empty
     # "Trip: " line read as a rendering glitch rather than "not applicable",
     # so these lines are omitted entirely when there's no trip context.
-    # Existing trip-customer calls always pass a real trip_id, so this is a
-    # no-op there — output stays byte-identical to before.
     trip_line = f"Trip: {trip_id}\n" if trip_id else ""
     pickup_line = f"Pickup: {pickup_address}\n" if pickup_address else ""
     trip_line_vi = f"Chuyến: {trip_id}\n" if trip_id else ""
     pickup_line_vi = f"Điểm đón: {pickup_address}\n" if pickup_address else ""
+    facts = _trip_facts_block(trip, lang)
 
-    # Contact calls (trip_id=="") were defaulting to the same "confirm
-    # pickup" framing as real trip-customer calls whenever the driver hadn't
-    # dictated a custom_message — the AI would open an isolated background
-    # call to a personal contact with "gọi để xác nhận đón bạn", which is
-    # nonsensical for someone who isn't a ride customer (confirmed live: the
-    # contact replied confused, AI doubled down on "xác nhận đón... cho
-    # chuyến"). Only affects the trip_id=="" branch below — real
-    # trip-customer calls (trip_id always set) keep byte-identical output.
     is_contact = not trip_id
 
     if lang == "en":
@@ -84,9 +101,6 @@ def build_customer_call_prompt(
             if isolated
             else "The driver is listening live in the same call — keep messages concise and professional."
         )
-        # A driver-dictated message (contact calls only) replaces the generic
-        # "explain the driver asked you to call" goal with the actual content
-        # to relay — verbatim intent, not necessarily verbatim wording.
         if custom_message:
             goal_line = (
                 f'- Open with this message from the driver: "{custom_message}" '
@@ -105,11 +119,13 @@ def build_customer_call_prompt(
 
 {trip_line}Customer: {customer_name}
 {pickup_line}Driver: {driver_name or "your assigned driver"}
-
+{facts}
 Goals:
 - Greet the customer when they answer.
 {goal_line}
 - Ask one clear question at a time; wait for answers.
+- Trip ETA / fare / pickup / dropoff: answer ONLY from Known trip facts above. If a field is missing, say you don't have it and offer to note it for the driver via record_customer_request — do not guess.
+- App how-to / cancel / wait / payment / safety questions: call answer_customer_faq BEFORE answering, then paraphrase the result in one short sentence.
 - If the customer's answer is unclear, garbled, cuts out, or doesn't relate to what you just
   asked: do NOT treat that as them being done or having nothing to say, and NEVER call
   end_customer_call just because of this — ask them to repeat (e.g. "Sorry, I didn't catch that —
@@ -125,8 +141,12 @@ Goals:
   thank-you + goodbye and hangs up — you do NOT need to say goodbye yourself, do NOT ask the
   closing question a second time, do NOT ask "are you sure" or any follow-up. Once they've said
   they don't need anything, end the call.
-- ONLY if they DO have a question or a message: answer/note it, then ask the closing question one
-  more time, and end as above.
+- ONLY if they DO have a question or a message: call record_customer_request
+  (wait_minutes and/or note) BEFORE acknowledging to the customer, then ask the closing
+  question one more time, and end as above.
+- When the customer asks for N more minutes of wait: you MUST call
+  record_customer_request(wait_minutes=N) before saying you noted it. Do not claim
+  you saved anything without the tool.
 - When the conversation is done, call end_customer_call with a short summary for the driver —
   list EVERY question/request/message the customer raised across the WHOLE call, not just the
   most recent one — if they asked for multiple different things in different turns (e.g. asked to
@@ -139,9 +159,9 @@ Rules:
 - Do not invent trip details — use the context above.
 - If the customer hangs up or refuses to talk, call end_customer_call with what happened — the
   "ask before ending" requirement above only applies when wrapping up normally, not here.
-- If the customer asks to speak with the driver directly, the question is beyond what you can
-  answer from trip context, or the driver interrupts asking to speak: call transfer_to_driver
-  immediately — do NOT keep trying to handle it yourself.
+- Call transfer_to_driver only when: the customer asks to speak with the driver, the question is
+  beyond trip facts AND FAQ, or the driver interrupts asking to speak. Do NOT transfer just
+  because the customer asked a normal app/trip question you can answer with tools or facts.
 - Do NOT assume "no answer" on your own just because you have not heard the customer speak yet —
   dialing takes time. Only conclude the customer did not answer after you receive the
   <speech_not_detected> signal (sent automatically after real silence); if you get it 2-3 times in
@@ -172,11 +192,13 @@ Rules:
 
 {trip_line_vi}Khách: {customer_name}
 {pickup_line_vi}Tài xế: {driver_name or "tài xế được phân công"}
-
+{facts}
 Nhiệm vụ:
 - Chào khách khi họ nghe máy.
 {goal_line_vi}
 - Hỏi từng câu một, chờ khách trả lời.
+- ETA / giá / điểm đón / điểm trả: CHỈ trả lời từ khối thông tin chuyến ở trên. Thiếu trường nào thì nói chưa có và đề nghị ghi nhận cho tài xế qua record_customer_request — không đoán.
+- Câu hỏi cách dùng app / hủy / chờ / thanh toán / an toàn: gọi answer_customer_faq TRƯỚC khi trả lời, rồi diễn đạt lại kết quả thành một câu ngắn.
 - Nếu câu trả lời của khách không rõ, nghe không hiểu, bị nhiễu/đứt quãng,
   hoặc không liên quan gì tới câu vừa hỏi: KHÔNG được coi như khách đã trả
   lời xong hay không còn gì để nói, và TUYỆT ĐỐI không gọi end_customer_call
@@ -193,8 +215,11 @@ Nhiệm vụ:
   lời cảm ơn + tạm biệt và ngắt máy — bạn KHÔNG cần tự chào tạm biệt, TUYỆT
   ĐỐI KHÔNG hỏi lại câu chốt lần nữa, KHÔNG hỏi "bạn chắc chưa" hay bất kỳ
   câu thăm dò nào. Khách đã nói không cần gì thì kết thúc luôn.
-- CHỈ khi khách CÓ câu hỏi hoặc có điều muốn nhắn: trả lời/ghi nhận xong, hỏi
-  lại câu chốt trên đúng một lần nữa, rồi kết thúc như trên.
+- CHỈ khi khách CÓ câu hỏi hoặc có điều muốn nhắn: gọi record_customer_request
+  (wait_minutes và/hoặc note) TRƯỚC khi xác nhận với khách, rồi hỏi lại câu chốt
+  trên đúng một lần nữa, rồi kết thúc như trên.
+- Khi khách xin chờ thêm N phút: BẮT BUỘC record_customer_request(wait_minutes=N)
+  trước khi nói "em đã ghi nhận". Không được chỉ nói miệng mà không gọi tool.
 - Khi xong, gọi end_customer_call kèm tóm tắt ngắn cho tài xế — tóm tắt phải
   liệt kê ĐẦY ĐỦ TẤT CẢ câu hỏi/yêu cầu/lời nhắn khách đã nói trong SUỐT cuộc
   gọi, không chỉ điều khách nói GẦN NHẤT — nếu khách nhắn nhiều việc khác
@@ -223,9 +248,9 @@ Quy tắc:
 - Nếu khách cúp máy hoặc từ chối, vẫn gọi end_customer_call và ghi lại diễn
   biến — yêu cầu "phải hỏi trước khi kết thúc" ở trên chỉ áp dụng khi kết
   thúc bình thường, không áp dụng ở trường hợp này.
-- Nếu khách muốn nói trực tiếp với tài xế, câu hỏi vượt quá thông tin chuyến
-  bạn có, hoặc tài xế xen vào muốn tự nói: gọi transfer_to_driver ngay — KHÔNG
-  cố xử lý thêm.
+- Chỉ gọi transfer_to_driver khi: khách muốn nói trực tiếp với tài xế, câu hỏi
+  vượt quá thông tin chuyến VÀ FAQ, hoặc tài xế xen vào muốn tự nói. KHÔNG
+  chuyển máy chỉ vì khách hỏi app/chuyến mà bạn trả lời được bằng tool hoặc facts.
 - KHÔNG tự đoán "khách không nghe máy" chỉ vì chưa nghe thấy khách nói — quá trình đổ chuông/kết nối
   cần thời gian. Chỉ được kết luận khách không bắt máy sau khi nhận tín hiệu <speech_not_detected>
   (hệ thống tự gửi khi im lặng thật sự); nếu nhận liên tiếp 2-3 lần mà vẫn không ai nói, lúc đó mới

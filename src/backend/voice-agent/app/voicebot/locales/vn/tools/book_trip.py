@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.services import backend_api
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, customer_trip_actions
+from app.voicebot.processors.tool_reply import customer_trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.book_trip")
@@ -28,9 +28,9 @@ async def book_trip(raw_arguments: dict, context: RunContext) -> str:
         )
     except Exception:
         logger.error("book_trip failed", exc_info=True)
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Không thể đặt xe lúc này. Vui lòng thử lại sau.",
                 tool="book_trip",
                 lang="vi",
@@ -51,9 +51,9 @@ async def book_trip(raw_arguments: dict, context: RunContext) -> str:
         if eta and int(eta) > 0:
             spoken += f" Tài xế dự kiến đến trong khoảng {eta} phút."
 
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="book_trip",
             lang="vi",

@@ -11,6 +11,7 @@ from app.services import backend_api
 from app.voicebot.bridge_call_agent import BridgeCallAgent
 from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.voicebot.processors import context_store
+from app.voicebot.processors.custom_call import normalize_vn_phone
 from app.voicebot.processors.pre_dial import announce_pre_dial
 from app.voicebot.processors.sip_call_watch import schedule_no_answer_watch
 from app.voicebot.prompts.bridge_call import bridge_greeting
@@ -34,6 +35,14 @@ def _phone_missing(name: str, lang: str) -> str:
         f"Không tìm thấy số điện thoại của {name}."
         if lang == "vn"
         else f"No phone number found for {name}."
+    )
+
+
+def _self_call_blocked(name: str, lang: str) -> str:
+    return (
+        f"Số của {name} trên chuyến trùng số tài xế — không gọi được. Kiểm tra lại số khách trên ứng dụng."
+        if lang == "vn"
+        else f"{name}'s trip phone matches the driver's number — cannot place the call. Check the customer phone in the app."
     )
 
 
@@ -73,6 +82,8 @@ def _save_call_context(
     call_id = str(result.get("call_id") or result.get("call_sid") or "")
     room_name = context.userdata.get("room_name", "")
     conv_service = context.userdata.get("_conv_service")
+    # Fresh dial — clear sticky pickup from a prior leg in this session.
+    context.userdata["_sip_leg_answered"] = False
     context.userdata["customer_call"] = {
         "call_id": call_id,
         "trip_id": current.get("trip_id", ""),
@@ -179,6 +190,20 @@ async def _dial_customer_in_room(
     name = current.get("customer_name", "khách" if lang == "vn" else "the customer")
     if not phone:
         return _phone_missing(name, lang)
+
+    # Live 2026-09-05: NexGen Speak trip had customer_phone == driver_phone
+    # (0888887798). Dialing that number loops the driver into their own SIP
+    # leg, AI "talks to customer", then hangup reports confusing summaries.
+    driver_norm = normalize_vn_phone(driver_phone)
+    customer_norm = normalize_vn_phone(phone)
+    if driver_norm and customer_norm and driver_norm == customer_norm:
+        logger.warning(
+            "refusing self-call | driver=%s customer=%s trip=%s",
+            driver_norm,
+            customer_norm,
+            current.get("trip_id", ""),
+        )
+        return _self_call_blocked(name, lang)
 
     # Speak — and wait for it to finish — before dialing, so the driver
     # always hears "calling/connecting X" before the SIP INVITE (and its

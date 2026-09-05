@@ -126,17 +126,10 @@ export function SegmentedControl<T extends string>({
                 color={active ? '#ffffff' : theme.textSecondary.val}
               />
             )}
-            {/* `numberOfLines`/`adjustsFontSizeToFit` — 3+ segments with longer
-                labels (e.g. trip-status tabs) previously wrapped to 2 lines
-                inside this control's fixed HEIGHT, overflowing (no
-                overflow:hidden on the track) and visually overlapping the
-                neighboring segment/pill instead of just looking cramped. */}
             <AppText
               variant="label"
               color={active ? '#ffffff' : '$textSecondary'}
               numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.85}
             >
               {opt.label}
             </AppText>

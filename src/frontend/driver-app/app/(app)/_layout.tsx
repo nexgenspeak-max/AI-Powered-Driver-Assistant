@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
 import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
 import { Tabs } from 'expo-router'
@@ -13,6 +13,7 @@ import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptur
 import { preloadCzenFillers } from '../../src/features/home/lib/czenFillerAudio'
 import { useReturnHomeOnVoiceEnd } from '../../src/features/home/hooks/useReturnHomeOnVoiceEnd'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../src/constants'
 import { useEffect } from 'react'
 
 function TabIcon({ route, size, color, focused }: { route: DriverTabRoute; size: number; color: string; focused: boolean }) {
@@ -25,8 +26,21 @@ function AssistantChatOverlay() {
   const panelOpen = useAssistantChatStore(s => s.panelOpen)
   const closePanel = useAssistantChatStore(s => s.closePanel)
   if (!panelOpen) return null
+  // Stop above the floating tab bar + raised Trợ lý orb so hang-up / reopen
+  // stays visible while chat is open. AbsoluteFill covered the orb (zIndex 100
+  // regression). Touches in the bottom gap fall through to the tab bar.
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 50, elevation: 50 }]}>
+    <View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: MAP_OVERLAY_BOTTOM_CLEARANCE,
+        zIndex: 50,
+        elevation: 50,
+      }}
+    >
       <AssistantChatPanel onClose={closePanel} />
     </View>
   )

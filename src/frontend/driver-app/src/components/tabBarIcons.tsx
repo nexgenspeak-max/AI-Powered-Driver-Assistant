@@ -1,21 +1,26 @@
 import { View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
-/** Fixed slot so map / chuyến / thu nhập / cá nhân align with the center orb column. */
-export const TAB_BAR_ICON_SIZE = 24
-export const TAB_BAR_ICON_SLOT = 28
+/** Fixed slot — Material icons at 26px per ui-mobile (icon-only tabs). */
+export const TAB_BAR_ICON_SIZE = 26
+export const TAB_BAR_ICON_SLOT = 30
 
 export type DriverTabRoute = 'index' | 'dashboard' | 'earnings' | 'profile'
 
-/** Semantic Ionicons — one place to tune first-impression tab bar. */
+type MaterialName = keyof typeof MaterialCommunityIcons.glyphMap
+
+/**
+ * Material Community Icons (Material Design family) — filled / outline pairs.
+ * Prefer this over Ionicons for tab chrome (foundation / M3-adjacent look).
+ */
 export const DRIVER_TAB_ICONS: Record<
   DriverTabRoute,
-  { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap; a11y: string }
+  { on: MaterialName; off: MaterialName; a11y: string }
 > = {
   index: { on: 'map', off: 'map-outline', a11y: 'Trang chủ, bản đồ' },
   dashboard: { on: 'car', off: 'car-outline', a11y: 'Chuyến đi' },
-  earnings: { on: 'cash', off: 'cash-outline', a11y: 'Thu nhập' },
-  profile: { on: 'person-circle', off: 'person-circle-outline', a11y: 'Cá nhân' },
+  earnings: { on: 'cash-multiple', off: 'cash', a11y: 'Thu nhập' },
+  profile: { on: 'account-circle', off: 'account-circle-outline', a11y: 'Cá nhân' },
 }
 
 export function DriverTabBarIcon({
@@ -36,12 +41,12 @@ export function DriverTabBarIcon({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Ionicons name={focused ? g.on : g.off} size={size} color={color} />
+      <MaterialCommunityIcons name={focused ? g.on : g.off} size={size} color={color} />
     </View>
   )
 }
 
-/** Empty slot under the raised Trợ lý orb — same footprint as tab icons (no label). */
+/** Empty slot under the raised Trợ lý orb — same footprint as tab icons. */
 export function TabBarAiSlotSpacer() {
   return <View style={{ width: TAB_BAR_ICON_SLOT, height: TAB_BAR_ICON_SLOT }} />
 }

@@ -7,6 +7,7 @@ from livekit import api
 from livekit.agents import Agent, RunContext, function_tool
 from livekit.agents.job import get_job_context
 
+from app.rag import get_faq_rag_service
 from app.services import backend_api
 from app.voicebot.processors.handback import (
     build_driver_agent,
@@ -99,6 +100,145 @@ _MIN_ISOLATED_QUIET_SECONDS = 10.0
 # the LLM's own initiative until either the customer has said something, or
 # this many silent seconds have passed since the call actually connected.
 _MIN_AGENT_CALL_SECONDS = 10.0
+
+
+def _append_customer_request(userdata: dict, note: str) -> None:
+    notes = list(userdata.get("_customer_requests") or [])
+    notes.append(note.strip())
+    userdata["_customer_requests"] = notes
+
+
+@function_tool(
+    name="answer_customer_faq",
+    description=(
+        "Look up the ride-app FAQ playbook for a customer question during this call "
+        "(cancel, wait, payment, safety, how the app works). Do NOT use this for trip "
+        "ETA/fare/pickup/dropoff — those are already in your instructions. Returns text "
+        "you must paraphrase in ONE short spoken sentence to the customer; this tool does "
+        "not speak aloud by itself."
+    ),
+)
+async def answer_customer_faq(context: RunContext, question: str) -> str:
+    """Return FAQ text for the LLM to speak — never session.say / speak_and_stop here.
+
+    Driver-side answer_app_faq uses speak_and_stop; that would freeze the customer leg.
+    """
+    lang = context.userdata.get("lang", "vn")
+    q = (question or "").strip()
+    if not q:
+        return (
+            "Refused: question is empty. Ask the customer to repeat."
+            if lang == "en"
+            else "Thiếu câu hỏi. Nhờ khách nói lại."
+        )
+
+    rag_lang = "en" if lang == "en" else "vi"
+    try:
+        reply = await get_faq_rag_service().answer(q, language=rag_lang)
+    except Exception:
+        logger.error("answer_customer_faq failed", exc_info=True)
+        return (
+            "FAQ lookup failed. Tell the customer you'll note it for the driver, "
+            "or call transfer_to_driver if they need a human."
+            if lang == "en"
+            else "Không tra được FAQ. Báo khách sẽ ghi nhận cho tài xế, "
+            "hoặc transfer_to_driver nếu cần người thật."
+        )
+
+    logger.info("answer_customer_faq | q_len=%s reply_len=%s", len(q), len(reply or ""))
+    return (
+        f"FAQ result — paraphrase in one short spoken sentence to the customer, "
+        f"then continue the call: {reply}"
+        if lang == "en"
+        else f"Kết quả FAQ — diễn đạt lại thành MỘT câu nói ngắn với khách, "
+        f"rồi tiếp tục cuộc gọi: {reply}"
+    )
+
+
+def _merge_request_notes_into_summary(userdata: dict, summary: str) -> str:
+    notes = [n for n in (userdata.get("_customer_requests") or []) if n]
+    if not notes:
+        return summary
+    block = "; ".join(notes)
+    base = (summary or "").strip()
+    if not base:
+        return f"Yêu cầu khách đã ghi: {block}"
+    if block.lower() in base.lower():
+        return base
+    return f"{base} Yêu cầu đã ghi nhận: {block}."
+
+
+@function_tool(
+    name="record_customer_request",
+    description=(
+        "Persist a concrete customer request during this call — especially extra wait minutes "
+        "at pickup, or a short note for the driver. Call this BEFORE acknowledging the request "
+        "to the customer. Use wait_minutes when they ask the driver to wait longer; use note for "
+        "any other message to relay."
+    ),
+)
+async def record_customer_request(
+    context: RunContext,
+    wait_minutes: int = 0,
+    note: str = "",
+) -> str:
+    lang = context.userdata.get("lang", "vn")
+    call_meta = context.userdata.get("customer_call") or {}
+    trip_id = str(call_meta.get("trip_id") or "").strip()
+    driver_phone = str(context.userdata.get("driver_phone") or "").strip()
+    minutes = max(0, min(int(wait_minutes or 0), 10))
+    note = (note or "").strip()
+
+    if minutes <= 0 and not note:
+        return (
+            "Refused: provide wait_minutes and/or note."
+            if lang == "en"
+            else "Thiếu nội dung: cần wait_minutes và/hoặc note."
+        )
+
+    parts: list[str] = []
+    if minutes > 0:
+        if not trip_id or not driver_phone:
+            return (
+                "Refused: no trip on this call to extend wait."
+                if lang == "en"
+                else "Không có chuyến trên cuộc gọi này để gia hạn chờ."
+            )
+        try:
+            result = await backend_api.extend_wait_time(
+                trip_id=trip_id,
+                driver_phone=driver_phone,
+                extra_minutes=minutes,
+            )
+            total = int(result.get("total_wait_minutes") or minutes)
+            parts.append(
+                f"wait +{minutes}m (total {total}m)"
+                if lang == "en"
+                else f"chờ thêm {minutes} phút (tổng {total} phút)"
+            )
+        except Exception:
+            logger.error("record_customer_request extend_wait failed", exc_info=True)
+            return (
+                "Could not save the extra wait time. Tell the customer you'll note it for the driver verbally."
+                if lang == "en"
+                else "Không lưu được thời gian chờ thêm. Báo khách sẽ nhắn miệng cho tài xế."
+            )
+
+    if note:
+        parts.append(note)
+
+    joined = "; ".join(parts)
+    _append_customer_request(context.userdata, joined)
+    logger.info(
+        "record_customer_request | trip=%s detail=%s",
+        trip_id[:8] if trip_id else "-",
+        joined[:120],
+    )
+    return (
+        f"Saved for the driver: {joined}. You may now confirm that to the customer in one short sentence."
+        if lang == "en"
+        else f"Đã ghi nhận cho tài xế: {joined}. Bạn có thể xác nhận ngắn với khách."
+    )
 
 
 async def _finish_isolated_call(context: RunContext, summary: str) -> str:
@@ -316,6 +456,7 @@ async def end_customer_call(
                     f"question a second time. (Only {elapsed:.0f}s of silence so far.)"
                 )
         try:
+            summary = _merge_request_notes_into_summary(context.userdata, summary)
             await _say_goodbye_and_wait(context, context.userdata.get("lang", "vn"))
             await _finish_isolated_call(context, summary)
         except Exception:
@@ -353,6 +494,7 @@ async def end_customer_call(
 
     lang = context.userdata.get("lang", "vn")
     try:
+        summary = _merge_request_notes_into_summary(context.userdata, summary)
         await store_call_summary(context.userdata, summary, mode="agent")
         context.userdata["customer_call_active"] = False
         context.userdata["bridge_call_active"] = False

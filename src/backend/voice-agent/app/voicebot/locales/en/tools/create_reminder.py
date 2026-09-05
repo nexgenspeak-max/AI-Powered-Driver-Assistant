@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_NO_TRIP_REMINDER
 from app.services import backend_api
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 from app.voicebot.processors.tool_reply import trip_actions
 
@@ -18,9 +18,9 @@ async def create_reminder(raw_arguments: dict, context: RunContext) -> str:
 
     current = context_store.resolve_driver_trip(context.userdata)
     if not current:
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_TRIP_REMINDER,
                 tool="create_reminder",
                 lang="en",
@@ -42,9 +42,9 @@ async def create_reminder(raw_arguments: dict, context: RunContext) -> str:
 
     context_store.schedule_sync(_sync())
     spoken = f"Reminder set for {minutes_before} minutes before pickup time."
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="create_reminder",
             lang="en",

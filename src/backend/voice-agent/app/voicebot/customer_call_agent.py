@@ -5,7 +5,12 @@ from livekit.agents import Agent
 
 from app.voicebot.prompts.customer_call import build_customer_call_opening, build_customer_call_prompt
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
-from app.voicebot.tools.customer_call_tools import end_customer_call, transfer_to_driver
+from app.voicebot.tools.customer_call_tools import (
+    answer_customer_faq,
+    end_customer_call,
+    record_customer_request,
+    transfer_to_driver,
+)
 
 logger = logging.getLogger("voice-agent.customer_call_agent")
 
@@ -38,10 +43,19 @@ class CustomerCallAgent(SpeechTextFixMixin, Agent):
             driver_name=driver_name,
             pickup_address=trip.get("pickup_address", ""),
             trip_id=trip.get("trip_id", ""),
+            trip=trip,
             isolated=isolated,
             custom_message=custom_message,
         )
-        super().__init__(instructions=instructions, tools=[end_customer_call, transfer_to_driver])
+        super().__init__(
+            instructions=instructions,
+            tools=[
+                answer_customer_faq,
+                record_customer_request,
+                end_customer_call,
+                transfer_to_driver,
+            ],
+        )
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return pronunciations_for_lang(self._lang)

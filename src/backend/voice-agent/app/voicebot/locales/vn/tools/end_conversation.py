@@ -1,10 +1,11 @@
 import logging
 
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.services.session_control import end_room_session
 from app.voicebot.locales.vn.tools_definition import raw_schema
-from app.voicebot.processors.tool_reply import as_llm, call_follow_up_actions
+from app.voicebot.processors.tool_reply import call_follow_up_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.end_conversation")
@@ -30,9 +31,9 @@ async def end_conversation(raw_arguments: dict, context: RunContext) -> str:
         or context.userdata.get("bridge_call_active")
     ):
         logger.info("end_conversation refused | a customer/contact call is still active")
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Chưa thể kết thúc phiên làm việc lúc này vì đang có cuộc gọi với khách/liên hệ "
                 "chưa xong — đợi cuộc gọi đó kết thúc rồi mới kết thúc phiên được.",
                 tool="end_conversation",
@@ -51,9 +52,9 @@ async def end_conversation(raw_arguments: dict, context: RunContext) -> str:
     if ctx:
         await end_room_session(ctx, reason="ended by driver voice command")
 
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             "Đã kết thúc cuộc trò chuyện theo yêu cầu của tài xế.",
             tool="end_conversation",
             lang="vi",

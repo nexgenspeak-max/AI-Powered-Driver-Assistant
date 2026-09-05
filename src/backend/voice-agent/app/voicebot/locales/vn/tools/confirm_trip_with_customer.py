@@ -3,7 +3,7 @@ from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.services import backend_api
 from app.voicebot.processors import context_store
-from app.voicebot.processors.tool_reply import as_llm, contact_sms_actions, trip_actions
+from app.voicebot.processors.tool_reply import contact_sms_actions, trip_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.vn.tools.confirm_trip_with_customer")
@@ -14,9 +14,9 @@ async def confirm_trip_with_customer(raw_arguments: dict, context: RunContext) -
     actions = trip_actions(lang="vi") + contact_sms_actions(lang="vi")
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip:
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 "Không có chuyến đang hoạt động để xác nhận.",
                 tool="confirm_trip_with_customer",
                 lang="vi",
@@ -34,9 +34,9 @@ async def confirm_trip_with_customer(raw_arguments: dict, context: RunContext) -
             logger.error("confirm_trip_with_customer API failed", exc_info=True)
 
     context_store.schedule_sync(_sync())
-    return as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             f"Đã gửi tin nhắn xác nhận chuyến đi cho {customer}.",
             tool="confirm_trip_with_customer",
             lang="vi",

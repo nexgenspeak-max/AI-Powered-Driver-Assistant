@@ -2,9 +2,9 @@ import logging
 import unicodedata
 
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 
 from app.voicebot.locales.vn.tools_definition import raw_schema
-from app.voicebot.processors.tool_reply import as_llm
 from app.voicebot.processors.tool_response_builders import build_contact_pick_response
 
 logger = logging.getLogger("voice-agent.vn.tools.select_contact_match")
@@ -33,9 +33,9 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
     matches = context.userdata.get("pending_contact_matches") or []
 
     if not matches:
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 "Không có danh sách người cần chọn. Bạn đọc lại tên cần gọi giúp em.",
                 tool="select_contact_match",
                 lang="vi",
@@ -43,9 +43,9 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
         )
 
     if not selection:
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 "Bạn muốn gọi ai trong danh sách vừa đọc?",
                 tool="select_contact_match",
                 lang="vi",
@@ -67,9 +67,9 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
 
     if not picked:
         names = ", ".join(m.get("name", "") for m in matches)
-        return as_llm(
-            context.userdata,
-            build_contact_pick_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_contact_pick_response(
                 f"Tôi chưa rõ bạn muốn gọi ai trong số: {names}. Bạn nói rõ tên hơn giúp em.",
                 tool="select_contact_match",
                 lang="vi",
@@ -81,9 +81,9 @@ async def select_contact_match(raw_arguments: dict, context: RunContext) -> str:
         "name": picked.get("name", ""),
         "phone_number": picked.get("phone_number", ""),
     }
-    return as_llm(
-        context.userdata,
-        build_contact_pick_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_contact_pick_response(
             f"Tôi tìm thấy {picked.get('name', '')}. Có đúng người bạn muốn gọi không?",
             tool="select_contact_match",
             lang="vi",

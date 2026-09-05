@@ -40,6 +40,93 @@ raw_schema = {
         },
     },
 
+    "check_delivery_orders": {
+        "type": "function",
+        "name": "check_delivery_orders",
+        "description": (
+            "Count/list the driver's last-mile delivery orders — NOT taxi trips. "
+            "Phrases like 'how many deliveries', 'delivery orders' → this tool. "
+            "Default: say the COUNT of active orders; order_index = one order's details."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "active_only": {
+                    "type": "boolean",
+                    "description": "true (default) = pending/picked_up/delivering/redelivery only.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "1-based index when the driver wants one order detailed.",
+                },
+                "list_all": {
+                    "type": "boolean",
+                    "description": "true only when the driver asks to hear every order listed.",
+                },
+            },
+            "required": [],
+        },
+    },
+
+    "call_delivery_party": {
+        "type": "function",
+        "name": "call_delivery_party",
+        "description": (
+            "Call the sender or recipient on a delivery order. "
+            "Do NOT use for taxi customers — that is call_customer. "
+            "party=sender for shipper/sender; party=recipient for the person receiving the parcel."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "party": {
+                    "type": "string",
+                    "enum": ["sender", "recipient"],
+                    "description": "sender = shipper; recipient = delivery recipient.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "1-based order index when several active deliveries exist.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["agent", "bridge"],
+                    "description": "agent = AI dials (default); bridge = driver talks directly.",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "agent mode only: what AI should say on pickup.",
+                },
+            },
+            "required": ["party"],
+        },
+    },
+
+    "update_delivery_order_status": {
+        "type": "function",
+        "name": "update_delivery_order_status",
+        "description": (
+            "Update a delivery order status: picked_up, delivering, delivered, redelivery, returned. "
+            "When the driver says 'delivered order 1' / 'picked up the parcel' → this tool. "
+            "Not for taxi trips (use update_trip_status)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["picked_up", "delivering", "delivered", "redelivery", "returned"],
+                    "description": "Next status in the delivery lifecycle.",
+                },
+                "order_index": {
+                    "type": "integer",
+                    "description": "1-based active order index when several exist.",
+                },
+            },
+            "required": ["status"],
+        },
+    },
+
     "refresh_latest_data": {
         "type": "function",
         "name": "refresh_latest_data",
@@ -469,6 +556,46 @@ raw_schema = {
             "Use when the driver asks 'how much have I earned today', 'today's income', 'my earnings'."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_earnings_summary": {
+        "type": "function",
+        "name": "get_earnings_summary",
+        "description": (
+            "View earnings for the last 7 days (week) or 30 days (month). "
+            "Use for 'this week', 'this month'. Do NOT invent lifetime totals — say unsupported."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["week", "month"],
+                    "description": "week = last 7 days; month = last 30 days.",
+                }
+            },
+            "required": ["period"],
+        },
+    },
+
+    "check_trip_history": {
+        "type": "function",
+        "name": "check_trip_history",
+        "description": (
+            "Count completed or cancelled trips today from loaded context. "
+            "Use for 'how many trips did I finish today' or 'any cancellations today'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["completed_today", "cancelled_today"],
+                    "description": "completed_today or cancelled_today.",
+                }
+            },
+            "required": ["scope"],
+        },
     },
 
     "get_driver_stats": {

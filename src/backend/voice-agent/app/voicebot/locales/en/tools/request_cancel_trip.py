@@ -2,7 +2,7 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_NO_ACTIVE_CANCEL
-from app.voicebot.processors import context_store, tool_reply
+from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.en.tools.request_cancel_trip")
@@ -20,9 +20,9 @@ DRIVER_CANCELLABLE_STATUSES = ("confirmed", "arrived_pickup", "picked_up")
 async def request_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
     trip = context_store.resolve_customer_trip(context.userdata, raw_arguments)
     if not trip or trip.get("status") not in DRIVER_CANCELLABLE_STATUSES:
-        return tool_reply.as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_ACTIVE_CANCEL,
                 tool="request_cancel_trip",
                 lang="en",
@@ -38,9 +38,9 @@ async def request_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
         + (f" at {pickup_time}" if pickup_time else "")
         + "? Say 'yes' to confirm cancellation."
     )
-    return tool_reply.as_llm(
-        context.userdata,
-        build_mutation_response(
+    return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
             spoken,
             tool="request_cancel_trip",
             lang="en",

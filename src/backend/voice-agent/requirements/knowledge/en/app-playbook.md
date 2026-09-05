@@ -170,6 +170,12 @@ A: Yes. The primary voice assistant supports Vietnamese; some configurations als
 
 ### 6.2 Drivers
 
+**Q: How do I check today's / weekly / monthly earnings?**  
+A: Ask the AI: *"How much did I make today?"*, *"This week's earnings?"*, *"This month's revenue?"*. Only those three ranges exist — not lifetime totals.
+
+**Q: How do I see completed or cancelled trips today?**  
+A: Ask *"Completed trips today"* or *"Cancelled trips today"*.
+
 **Q: How do I go online to accept trips?**  
 A: Select Online in the app, or tell the AI: *"Go online"* / *"I'm ready"*.
 

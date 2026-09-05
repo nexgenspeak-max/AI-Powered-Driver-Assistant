@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { router } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { refreshAccessToken } from './tokenRefresh'
+import { logoutAndReset } from '../../features/auth/logoutAndReset'
 import { attachHttpDevlog } from '../devlog'
 
 export const authClient = axios.create({
@@ -32,7 +32,7 @@ authClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return authClient.request(original)
       }
-      router.replace('/login')
+      logoutAndReset()
     }
 
     console.error('[authClient]', err.config?.url, err.response?.status, err.message)

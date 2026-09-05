@@ -1,19 +1,20 @@
 import logging
 from livekit.agents import RunContext, function_tool
+from app.voicebot.processors import context_store
 from app.voicebot.locales.en.tools_definition import raw_schema
 from app.voicebot.locales.en.constants import ERR_NO_PENDING_CUSTOM_CALL
 from app.voicebot.processors import custom_call
-from app.voicebot.processors.tool_reply import as_llm, call_follow_up_actions, contact_call_actions
+from app.voicebot.processors.tool_reply import call_follow_up_actions, contact_call_actions
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("voice-agent.en.tools.confirm_call_custom_number")
 
 
-def _wrap_call_result(userdata: dict, result, *, tool: str):
+async def _wrap_call_result(context, result, *, tool: str):
     if isinstance(result, str):
-        return as_llm(
-            userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 result,
                 tool=tool,
                 lang="en",
@@ -27,9 +28,9 @@ def _wrap_call_result(userdata: dict, result, *, tool: str):
 async def confirm_call_custom_number(raw_arguments: dict, context: RunContext):
     pending = context.userdata.get("pending_custom_call")
     if not pending or not pending.get("phone_number"):
-        return as_llm(
-            context.userdata,
-            build_mutation_response(
+        return await context_store.speak_and_stop(
+            context.session,
+                build_mutation_response(
                 ERR_NO_PENDING_CUSTOM_CALL,
                 tool="confirm_call_custom_number",
                 lang="en",
@@ -46,4 +47,4 @@ async def confirm_call_custom_number(raw_arguments: dict, context: RunContext):
         contact_name=pending.get("contact_name", ""),
         lang="en",
     )
-    return _wrap_call_result(context.userdata, result, tool="confirm_call_custom_number")
+    return await _wrap_call_result(context, result, tool="confirm_call_custom_number")

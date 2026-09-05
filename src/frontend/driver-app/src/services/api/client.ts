@@ -1,8 +1,8 @@
 import axios from 'axios'
-import { router } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { queryClient } from '../../providers/QueryProvider'
 import { refreshAccessToken } from './tokenRefresh'
+import { logoutAndReset } from '../../features/auth/logoutAndReset'
 import type { Driver } from '../../types'
 import { attachHttpDevlog } from '../devlog'
 
@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient.request(original)
       }
-      router.replace('/login')
+      logoutAndReset()
     }
 
     console.error('[API]', err.config?.url, err.response?.status, err.message)

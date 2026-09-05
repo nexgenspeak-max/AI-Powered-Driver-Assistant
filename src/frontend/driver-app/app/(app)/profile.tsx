@@ -10,16 +10,16 @@ import { SectionTitle } from '../../src/features/profile/components/SectionTitle
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
+import { Skeleton } from '../../src/components/Skeleton'
 import { ThemeToggle } from '../../src/components/ThemeToggle'
-import { useAuthStore } from '../../src/stores/authStore'
 import { useThemeStore } from '../../src/stores/themeStore'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
+import { logoutAndReset } from '../../src/features/auth/logoutAndReset'
 import { driversService } from '../../src/services/api/drivers'
 import { confirmDestructive } from '../../src/utils/confirmDialog'
 
 export default function ProfileScreen() {
   const { data: driver } = useCurrentUser()
-  const logout = useAuthStore(s => s.logout)
   // Best-effort: goes offline server-side before clearing tokens so a driver
   // who forgets to flip the dashboard toggle first doesn't keep showing as
   // available for dispatch after logging out. Never blocks the logout.
@@ -29,13 +29,22 @@ export default function ProfileScreen() {
         await driversService.update(driver.phone, { status: 'offline' }).catch(() => {})
       }
     },
-    onSettled: () => logout(),
+    onSettled: () => logoutAndReset(),
   })
   const { data: context, isError, refetch } = useDriverContext()
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
 
-  if (!driver) return null
+  if (!driver) {
+    return (
+      <Screen scroll>
+        <Skeleton height={88} width={88} radius={44} />
+        <Skeleton height={24} width="40%" radius={8} />
+        <Skeleton height={160} radius={24} />
+        <Skeleton height={120} radius={24} />
+      </Screen>
+    )
+  }
 
   return (
     <Screen scroll>

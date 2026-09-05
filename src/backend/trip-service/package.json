@@ -6,6 +6,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "build": "tsc",
     "verify:logger": "ts-node --transpile-only src/services/logger/selfcheck.ts",
+    "verify:telephony": "ts-node --transpile-only src/services/telephony/selfcheck.ts",
     "verify:ws": "ts-node --transpile-only src/services/notify/selfcheck.ts"
   },
   "dependencies": {

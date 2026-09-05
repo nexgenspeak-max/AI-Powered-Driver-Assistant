@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
+import { Skeleton } from '../../src/components/Skeleton'
 import { Input } from '../../src/components/Input'
 import { Button } from '../../src/components/Button'
 import { VehicleTypeSelect } from '../../src/features/auth/components/VehicleTypeSelect'
@@ -34,7 +35,13 @@ export default function VehicleScreen() {
   })
 
   if (!driver) {
-    return null
+    return (
+      <Screen scroll backButton>
+        <Skeleton height={28} width="40%" radius={8} />
+        <Skeleton height={200} radius={24} />
+        <Skeleton height={52} radius={999} />
+      </Screen>
+    )
   }
 
   const canSave =
