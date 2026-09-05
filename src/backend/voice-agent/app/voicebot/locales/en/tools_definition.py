@@ -40,6 +40,51 @@ raw_schema = {
         },
     },
 
+    "create_walkup_trip": {
+        "type": "function",
+        "name": "create_walkup_trip",
+        "description": (
+            "Add a street-hail / walk-up trip for the driver. Lands as confirmed (in progress), "
+            "no accept banner. Before calling you MUST have: customer phone, pickup, drop-off; "
+            "ask about bulky goods and traveling with children (default no). Name/note optional. "
+            "Not for customer booking or delivery orders."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customer_phone": {
+                    "type": "string",
+                    "description": "Walk-up customer phone number.",
+                },
+                "pickup_address": {
+                    "type": "string",
+                    "description": "Pickup address.",
+                },
+                "dropoff_address": {
+                    "type": "string",
+                    "description": "Drop-off address.",
+                },
+                "customer_name": {
+                    "type": "string",
+                    "description": "Customer name if known.",
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Optional free-form note.",
+                },
+                "has_bulky_goods": {
+                    "type": "boolean",
+                    "description": "true if the customer has bulky goods.",
+                },
+                "with_children": {
+                    "type": "boolean",
+                    "description": "true if traveling with children.",
+                },
+            },
+            "required": ["customer_phone", "pickup_address", "dropoff_address"],
+        },
+    },
+
     "check_delivery_orders": {
         "type": "function",
         "name": "check_delivery_orders",

@@ -71,14 +71,25 @@ export async function stopAudioSession() {
 /**
  * Start LiveKit audio. Do **not** preemptively stop first — that caused
  * OSStatus -50 / "Session deactivation failed" and correlated with silent
- * mic after ~19:05 2026-09-05. On start failure only: soft-stop, settle, retry once.
+ * mic after ~19:05 2026-09-05.
+ *
+ * On "Session activation failed" (common when Vosk / expo-audio / trip-alert
+ * still holds AVAudioSession): soft-stop, backoff, retry — up to 3 attempts.
  */
 export async function startAudioSession() {
-  try {
-    await configureAndStart()
-  } catch {
-    await stopAudioSession()
-    await sleep(200)
-    await configureAndStart()
+  const backoffsMs = [0, 400, 900]
+  let lastErr: unknown
+  for (let i = 0; i < backoffsMs.length; i += 1) {
+    if (backoffsMs[i] > 0) {
+      await stopAudioSession()
+      await sleep(backoffsMs[i])
+    }
+    try {
+      await configureAndStart()
+      return
+    } catch (err) {
+      lastErr = err
+    }
   }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
 }

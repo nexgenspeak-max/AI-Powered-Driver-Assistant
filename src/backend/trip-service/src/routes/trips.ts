@@ -115,13 +115,38 @@ function isTripOwner(req: Request, trip: tripService.Trip): boolean {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
-    const driverPhone = String(body.driver_phone || config.phoneDriver || '').trim();
+    const bookedVia = String(body.booked_via || 'app').trim() || 'app';
+    // Walk-up / street-hail: driver (or voice on their behalf) creates an
+    // already-accepted trip — no offer banner, no new_trip_offer nudge.
+    const isWalkUp = bookedVia === 'driver';
+
+    let driverPhone = String(body.driver_phone || config.phoneDriver || '').trim();
+    if (isWalkUp && req.user?.role === 'driver' && req.user.phone) {
+      // Bind to the authenticated driver — ignore spoofed body.driver_phone.
+      driverPhone = String(req.user.phone).trim();
+    }
     if (!driverPhone) {
       return res.status(400).json({
         detail: 'driver_phone is required (set body.driver_phone or DEFAULT_DRIVER_PHONE for local)',
       });
     }
+
     const customerPhone = String(body.customer_phone || '').trim();
+    const pickupAddress = String(body.pickup_address || '').trim();
+    const dropoffAddress = String(body.dropoff_address || '').trim();
+
+    if (isWalkUp) {
+      if (!customerPhone || customerPhone.length < 8) {
+        return res.status(400).json({ detail: 'customer_phone is required for driver walk-up trips' });
+      }
+      if (!pickupAddress || pickupAddress.length < 3) {
+        return res.status(400).json({ detail: 'pickup_address is required for driver walk-up trips' });
+      }
+      if (!dropoffAddress || dropoffAddress.length < 3) {
+        return res.status(400).json({ detail: 'dropoff_address is required for driver walk-up trips' });
+      }
+    }
+
     if (customerPhone && normalizePhone(customerPhone) === normalizePhone(driverPhone)) {
       // Live 2026-09-05: self-call SIP loop when trip used the driver's own number as customer.
       return res.status(400).json({
@@ -129,13 +154,22 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
     const route = await mapsService.getRoute(
-      body.pickup_address, body.dropoff_address,
-      coordsFromBody(body, 'pickup_lat', 'pickup_lng'), coordsFromBody(body, 'dropoff_lat', 'dropoff_lng'),
+      pickupAddress || body.pickup_address,
+      dropoffAddress || body.dropoff_address,
+      coordsFromBody(body, 'pickup_lat', 'pickup_lng'),
+      coordsFromBody(body, 'dropoff_lat', 'dropoff_lng'),
     );
     const idAccount = await resolveCustomerAccountId(req, body.customer_phone);
     const trip = await tripService.create({
       ...body,
+      booked_via: bookedVia,
+      customer_phone: customerPhone || body.customer_phone,
+      pickup_address: pickupAddress || body.pickup_address,
+      dropoff_address: dropoffAddress || body.dropoff_address,
       driver_phone: driverPhone,
+      ...(isWalkUp ? { status: 'confirmed' } : {}),
+      has_bulky_goods: body.has_bulky_goods === true,
+      with_children: body.with_children === true,
       ...(idAccount ? { id_account: idAccount } : {}),
       distance_km: route.distance_km ?? 0,
       eta_minutes: route.eta_minutes ?? 0,
@@ -146,6 +180,16 @@ router.post('/', async (req: Request, res: Response) => {
       dropoff_lat: route.dropoff_lat,
       dropoff_lng: route.dropoff_lng,
     });
+
+    if (isWalkUp) {
+      await driverContextService.invalidateTripParties(trip);
+      if (trip.driver_phone) {
+        // Refresh dashboard / open voice session — do NOT emit trip_offer.
+        await pushDriverScheduleUpdated(trip.driver_phone);
+      }
+      return res.status(201).json(trip);
+    }
+
     // Mark it 'notified' right away so it shows up on the assigned driver's dashboard.
     const notified = await tripService.updateStatus(trip.trip_id, 'notified');
     await driverContextService.invalidateTripParties(notified ?? trip);

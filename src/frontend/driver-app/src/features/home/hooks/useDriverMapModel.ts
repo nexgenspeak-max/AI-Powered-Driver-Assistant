@@ -9,6 +9,8 @@ import type { Trip } from '../../../types/trip'
 
 type ActiveTrip = Trip & { estimated_fare: number }
 
+const EMPTY_TRIPS: ActiveTrip[] = []
+
 export type MapStopMarker = {
   trip: ActiveTrip
   color: string
@@ -19,13 +21,17 @@ export function useDriverMapModel() {
   const { data: context } = useDriverContext()
   const live = useLiveDriverLocation(context?.driver.status === 'online')
 
-  const driverPoint: LngLat | null = live
-    ? [live.lng, live.lat]
-    : context?.current_location
-      ? [context.current_location.lng, context.current_location.lat]
-      : null
+  // Stable identity when lat/lng unchanged — DriverMap camera effect must not
+  // see a new array every render or setCameraStop loops ("Maximum update depth").
+  const driverPoint = useMemo<LngLat | null>(() => {
+    if (live) return [live.lng, live.lat]
+    if (context?.current_location) {
+      return [context.current_location.lng, context.current_location.lat]
+    }
+    return null
+  }, [live?.lng, live?.lat, context?.current_location?.lng, context?.current_location?.lat])
 
-  const trips = context?.active_trips ?? []
+  const trips = context?.active_trips ?? EMPTY_TRIPS
 
   const pickupPoints = useMemo<MapStopMarker[]>(
     () =>

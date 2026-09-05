@@ -21,6 +21,7 @@ from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
 from app.voicebot.locales.en.tools.check_upcoming_trips       import check_upcoming_trips
+from app.voicebot.locales.en.tools.create_walkup_trip         import create_walkup_trip
 from app.voicebot.locales.en.tools.check_delivery_orders      import check_delivery_orders
 from app.voicebot.locales.en.tools.call_delivery_party         import call_delivery_party
 from app.voicebot.locales.en.tools.update_delivery_order_status import update_delivery_order_status
@@ -71,6 +72,7 @@ logger = logging.getLogger("voice-agent.en.agent")
 _DRIVER_INBOUND_TOOLS = [
     # Trip management
     check_upcoming_trips,
+    create_walkup_trip,
     check_delivery_orders,
     call_delivery_party,
     update_delivery_order_status,

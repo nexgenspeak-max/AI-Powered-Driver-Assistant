@@ -5,26 +5,41 @@ import { AppText } from '../../../components/AppText'
 import { Skeleton } from '../../../components/Skeleton'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { formatCurrency } from '../../../utils/format'
-import type { EarningsSummary } from '../../../types'
+
+export type EarningsPeriod = 'today' | 'week' | 'month'
 
 interface Props {
-  period: 'week' | 'month'
-  onPeriodChange: (period: 'week' | 'month') => void
-  summary?: EarningsSummary
+  period: EarningsPeriod
+  onPeriodChange: (period: EarningsPeriod) => void
+  totalEarnings?: number
+  tripCount?: number
+  currency?: string
   isLoading: boolean
   isError?: boolean
   onRetry?: () => void
 }
 
-export function EarningsPeriodTabs({ period, onPeriodChange, summary, isLoading, isError, onRetry }: Props) {
+export function EarningsPeriodTabs({
+  period,
+  onPeriodChange,
+  totalEarnings,
+  tripCount,
+  currency = 'VND',
+  isLoading,
+  isError,
+  onRetry,
+}: Props) {
+  const hasTotals = totalEarnings != null && tripCount != null
+
   return (
     <Surface clip borderRadius={24} padding="$4" gap="$3">
-      <SegmentedControl<'week' | 'month'>
+      <SegmentedControl<EarningsPeriod>
         value={period}
         onChange={onPeriodChange}
         options={[
-          { value: 'week', label: '7 ngày qua' },
-          { value: 'month', label: '30 ngày qua' },
+          { value: 'today', label: 'Hôm nay' },
+          { value: 'week', label: '7 ngày' },
+          { value: 'month', label: '30 ngày' },
         ]}
       />
 
@@ -40,18 +55,19 @@ export function EarningsPeriodTabs({ period, onPeriodChange, summary, isLoading,
             Không thể tải dữ liệu. Nhấn để thử lại.
           </AppText>
         </TouchableOpacity>
-      ) : isLoading || !summary ? (
+      ) : isLoading || !hasTotals ? (
         <YStack gap="$2" paddingTop="$1">
           <Skeleton width={160} height={28} />
           <Skeleton width={120} height={14} />
         </YStack>
       ) : (
         <YStack gap="$1">
-          <AppText variant="h1">
-            {formatCurrency(summary.total_earnings, summary.currency)}
+          <AppText variant="label" color="$textSecondary">
+            Tổng thu nhập
           </AppText>
+          <AppText variant="h1">{formatCurrency(totalEarnings, currency)}</AppText>
           <AppText variant="caption" color="$textSecondary">
-            {summary.trip_count} chuyến hoàn thành
+            {tripCount} chuyến hoàn thành
           </AppText>
         </YStack>
       )}

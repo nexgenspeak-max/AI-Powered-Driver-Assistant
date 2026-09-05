@@ -131,6 +131,44 @@ async def create_trip(
     return r.json()
 
 
+async def create_walkup_trip(
+    *,
+    driver_phone: str,
+    customer_phone: str,
+    pickup_address: str,
+    dropoff_address: str,
+    customer_name: str = "",
+    note: str = "",
+    has_bulky_goods: bool = False,
+    with_children: bool = False,
+) -> dict:
+    """Driver street-hail / walk-up create — lands as confirmed (booked_via=driver)."""
+    c = _get_client()
+    r = await c.post(
+        f"{_trip_base()}/api/v1/trips",
+        json={
+            "driver_phone": driver_phone,
+            "customer_name": customer_name,
+            "customer_phone": customer_phone,
+            "pickup_address": pickup_address,
+            "dropoff_address": dropoff_address,
+            "note": note,
+            "has_bulky_goods": has_bulky_goods,
+            "with_children": with_children,
+            "booked_via": "driver",
+        },
+        headers=auth_headers(),
+        timeout=15,
+    )
+    r.raise_for_status()
+    logger.info(
+        "walkup trip created | driver=%s customer=%s",
+        driver_phone,
+        customer_phone,
+    )
+    return r.json()
+
+
 async def get_customer_context(customer_phone: str) -> dict:
     """Single prefetch endpoint — trips and active trip."""
     c = _get_client()

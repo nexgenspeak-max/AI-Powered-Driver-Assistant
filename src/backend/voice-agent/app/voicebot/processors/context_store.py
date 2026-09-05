@@ -812,6 +812,23 @@ def add_customer_trip(userdata: dict, trip: dict) -> None:
     trips.insert(0, trip)
 
 
+def add_driver_walkup_trip(userdata: dict, trip: dict) -> None:
+    """Insert a just-created walk-up trip into the driver's session schedule.
+
+    Walk-ups land as `confirmed`, so they belong in current/upcoming — not the
+    customer `trips`/`active_trip` keys used by the customer agent.
+    """
+    if not isinstance(trip, dict) or not trip.get("trip_id"):
+        return
+    if not get_current_trip(userdata):
+        set_current_trip(userdata, trip)
+    upcoming = list(get_upcoming_trips(userdata))
+    tid = trip["trip_id"]
+    upcoming = [t for t in upcoming if t.get("trip_id") != tid]
+    upcoming.insert(0, copy.deepcopy(trip))
+    set_upcoming_trips(userdata, upcoming)
+
+
 def resolve_driver_trip(userdata: dict) -> dict | None:
     """Current trip, else first upcoming, else outbound room trip metadata."""
     current = get_current_trip(userdata)

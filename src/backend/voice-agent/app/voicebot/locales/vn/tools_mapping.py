@@ -9,6 +9,7 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 Tool tự nói kết quả. Đã nói xong → IM LẶNG, không nhắc lại danh sách.
 
 check_upcoming_trips — lịch/chuyến/mấy chuyến/giá. Mặc định tool chỉ nói số chuyến; chi tiết khi có trip_index.
+create_walkup_trip — thêm chuyến khách vãng lai / đón đường (SĐT + đón + trả; hỏi hàng cồng kềnh / trẻ em).
 check_delivery_orders — đơn hàng/đơn giao/mấy đơn (KHÁC chuyến taxi). Mặc định nói số đơn đang giao.
 call_delivery_party — gọi người gửi (sender/người giao) hoặc người nhận trên đơn. party=sender|recipient.
 update_delivery_order_status — đã lấy / bắt đầu giao / giao xong / giao lại / trả hàng.

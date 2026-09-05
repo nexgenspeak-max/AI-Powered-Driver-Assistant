@@ -22,7 +22,21 @@ export interface Trip {
   eta_minutes: number
   traffic_note: string
   route_summary: string
+  note?: string
+  has_bulky_goods?: boolean
+  with_children?: boolean
   room_name: string
   created_at: string
   updated_at: string
+}
+
+/** Driver walk-up / street-hail create payload (`booked_via: driver`). */
+export interface CreateWalkupTripInput {
+  customer_phone: string
+  pickup_address: string
+  dropoff_address: string
+  customer_name?: string
+  note?: string
+  has_bulky_goods?: boolean
+  with_children?: boolean
 }

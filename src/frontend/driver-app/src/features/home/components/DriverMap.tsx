@@ -1,7 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View, Text, Image } from 'react-native'
+import { useIsFocused } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { Map, Camera, Marker, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native'
+import {
+  Map,
+  Camera,
+  Marker,
+  GeoJSONSource,
+  Layer,
+  type CameraCenterStop,
+  type CameraBoundsStop,
+} from '@maplibre/maplibre-react-native'
 import { useDriverMapModel } from '../hooks/useDriverMapModel'
 import { DriverMapOverlays } from './DriverMapOverlays'
 import {
@@ -16,9 +25,18 @@ import {
   NAV_LINE_COLOR,
   DRIVER_COLOR,
   boundsFromPoints,
+  type LngLat,
 } from '../lib/mapConstants'
 
 const DRIVER_VAN_ICON = require('../../../../assets/icons/driver-van.png')
+
+type CameraStopState = CameraCenterStop | CameraBoundsStop
+
+/**
+ * Controlled Camera props only — never CameraRef.easeTo / fitBounds.
+ * New Architecture + tab freezeOnBlur makes findNodeHandle → MLRNCameraModule
+ * reject with "Invalid reactTag … could not find MLRNCamera".
+ */
 
 function DriverMarker() {
   return (
@@ -87,6 +105,35 @@ function StopMarker({ kind, name, color, order }: { kind: 'pickup' | 'dropoff'; 
   )
 }
 
+function centerStop(
+  center: LngLat,
+  opts: { zoom?: number; pitch?: number; bearing?: number; duration: number },
+): CameraCenterStop {
+  return {
+    center,
+    duration: opts.duration,
+    easing: 'ease',
+    ...(opts.zoom != null ? { zoom: opts.zoom } : {}),
+    ...(opts.pitch != null ? { pitch: opts.pitch } : {}),
+    ...(opts.bearing != null ? { bearing: opts.bearing } : {}),
+  }
+}
+
+function fitStops(points: LngLat[], duration: number): CameraStopState | null {
+  if (points.length === 0) return null
+  if (points.length === 1) {
+    return centerStop(points[0], { zoom: SINGLE_POINT_ZOOM, duration })
+  }
+  const bounds = boundsFromPoints(points)
+  if (!bounds) return null
+  return {
+    bounds,
+    padding: FIT_PADDING,
+    duration,
+    easing: duration === 0 ? 'ease' : 'fly',
+  }
+}
+
 export function DriverMap() {
   const model = useDriverMapModel()
   const {
@@ -101,71 +148,103 @@ export function DriverMap() {
     routeOrderByKey,
     driverUpdatedAt,
     tripIdsKey,
-    hasDriverPoint,
   } = model
 
-  const cameraRef = useRef<CameraRef>(null)
-  const hasFitOnceRef = useRef(false)
-  const hasCenteredOnDriverRef = useRef(false)
+  const isFocused = useIsFocused()
+  const [cameraStop, setCameraStop] = useState<CameraStopState | null>(null)
+  const fittedTripIdsRef = useRef<string | null>(null)
+  const wasNavRef = useRef(false)
+  /** Skip setState when the camera target is unchanged — prevents update-depth loops. */
+  const appliedCamKeyRef = useRef<string>('')
+
+  const initialViewState = useMemo(
+    () => ({
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+    }),
+    [],
+  )
+
+  const applyCamera = (stop: CameraStopState, key: string) => {
+    if (appliedCamKeyRef.current === key) return
+    appliedCamKeyRef.current = key
+    setCameraStop(stop)
+  }
 
   useEffect(() => {
-    if (hasFitOnceRef.current) return
-    if (driverPoint) {
-      cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, duration: 0 })
-      hasFitOnceRef.current = true
-      hasCenteredOnDriverRef.current = true
-    } else if (allPoints.length > 0) {
-      const bounds = boundsFromPoints(allPoints)
-      if (bounds) cameraRef.current?.fitBounds(bounds, { padding: FIT_PADDING, duration: 0 })
-      hasFitOnceRef.current = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasDriverPoint, tripIdsKey])
+    if (!isFocused) return
 
-  useEffect(() => {
-    if (!hasFitOnceRef.current || !driverPoint || navActive) return
-    if (!hasCenteredOnDriverRef.current) {
-      cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, duration: 800 })
-      hasCenteredOnDriverRef.current = true
+    if (navActive && driverPoint) {
+      wasNavRef.current = true
+      const bearing = live?.heading ?? 0
+      applyCamera(
+        centerStop(driverPoint, {
+          zoom: NAV_ZOOM,
+          pitch: NAV_PITCH,
+          bearing,
+          duration: 500,
+        }),
+        `nav:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)},${bearing.toFixed(0)}`,
+      )
       return
     }
-    cameraRef.current?.easeTo({ center: driverPoint, duration: 800 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverUpdatedAt, navActive])
 
-  useEffect(() => {
-    if (!hasFitOnceRef.current || allPoints.length === 0 || navActive) return
-    if (allPoints.length === 1) {
-      cameraRef.current?.easeTo({ center: allPoints[0], zoom: SINGLE_POINT_ZOOM, duration: 500 })
-    } else {
-      const bounds = boundsFromPoints(allPoints)
-      if (bounds) cameraRef.current?.fitBounds(bounds, { padding: FIT_PADDING, duration: 500 })
+    if (wasNavRef.current) {
+      wasNavRef.current = false
+      if (driverPoint) {
+        applyCamera(
+          centerStop(driverPoint, {
+            zoom: DRIVER_INITIAL_ZOOM,
+            pitch: 0,
+            bearing: 0,
+            duration: 500,
+          }),
+          `nav-exit:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+        )
+      }
+      return
+    }
+
+    const tripsChanged = fittedTripIdsRef.current !== tripIdsKey
+    if (tripsChanged && allPoints.length > 0) {
+      const isFirst = fittedTripIdsRef.current == null
+      fittedTripIdsRef.current = tripIdsKey
+      if (isFirst && driverPoint) {
+        applyCamera(
+          centerStop(driverPoint, { zoom: DRIVER_INITIAL_ZOOM, duration: 0 }),
+          `init:${tripIdsKey}:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+        )
+      } else {
+        const stop = fitStops(allPoints, isFirst ? 0 : 500)
+        if (stop) applyCamera(stop, `fit:${tripIdsKey}`)
+      }
+      return
+    }
+
+    if (fittedTripIdsRef.current == null && driverPoint) {
+      fittedTripIdsRef.current = tripIdsKey
+      applyCamera(
+        centerStop(driverPoint, { zoom: DRIVER_INITIAL_ZOOM, duration: 0 }),
+        `init:${tripIdsKey}:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+      )
+      return
+    }
+
+    // Follow driver only when GPS timestamp / coords actually move — never
+    // setCameraStop on every effect tick (Maximum update depth).
+    if (driverPoint && fittedTripIdsRef.current != null && driverUpdatedAt != null) {
+      applyCamera(
+        centerStop(driverPoint, { duration: 800 }),
+        `follow:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+      )
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripIdsKey, navActive])
-
-  useEffect(() => {
-    if (!navActive || !driverPoint) return
-    cameraRef.current?.easeTo({
-      center: driverPoint,
-      zoom: NAV_ZOOM,
-      pitch: NAV_PITCH,
-      ...(live?.heading != null ? { bearing: live.heading } : {}),
-      duration: 500,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navActive, driverUpdatedAt])
-
-  useEffect(() => {
-    if (navActive || !driverPoint) return
-    cameraRef.current?.easeTo({ center: driverPoint, zoom: DRIVER_INITIAL_ZOOM, pitch: 0, bearing: 0, duration: 500 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navActive])
+  }, [isFocused, navActive, driverUpdatedAt, tripIdsKey, live?.heading])
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <Map style={{ flex: 1 }} mapStyle={GOONG_STYLE_URL} logo={false} compass={false}>
-        <Camera ref={cameraRef} initialViewState={{ center: driverPoint ?? DEFAULT_CENTER, zoom: DEFAULT_ZOOM }} />
+        <Camera initialViewState={initialViewState} {...(cameraStop ?? {})} />
 
         {!navActive && routeLineGeoJson && (
           <GeoJSONSource id="optimized-route-source" data={routeLineGeoJson}>

@@ -200,7 +200,17 @@ INTENT_FAST = [
     ("Gọi cho khách giúp tôi.", "call_customer"),
     ("thu nhập hôm nay", "earnings"),
     ("Xác nhận nhận chuyến", "confirm"),
+    ("tháng vừa rồi thu nhập", "earnings"),
+    ("toàn bộ thu nhập của tôi", "earnings"),
+    ("Tôi còn mấy đơn hàng?", "delivery_orders"),
+    (
+        "thu nhập tuần vừa rồi bao nhiêu đến từ giao hàng bao nhiêu đến từ chở khách",
+        "earnings",
+    ),
+    ("Không, bạn hiểu sai ý tôi rồi, tôi chưa hỏi về đơn giao hàng.", None),
+    ("tắt máy", "end_conversation"),
 ]
+
 
 INTENT_TOOL_LLM = [
     ("Tôi đến nơi rồi.", True),

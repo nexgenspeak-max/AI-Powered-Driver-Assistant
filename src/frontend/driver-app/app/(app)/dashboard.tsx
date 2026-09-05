@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, XStack, YStack } from "tamagui";
+import { XStack, YStack } from "tamagui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -35,6 +35,10 @@ type TripStatusTab = "pending" | "active" | "completed";
 // order between tabs on the next refetch.
 type DeliveryStatusTab = "active" | "delivered";
 
+/**
+ * Sticky chrome (greeting, mode, search, status tabs); only the card list scrolls.
+ * Same pattern as Thu nhập (`earnings.tsx`).
+ */
 export default function DashboardScreen() {
   // Profile is fetched (GET /auth/me), not persisted — see authStore.ts and
   // useCurrentUser.ts for why.
@@ -43,7 +47,8 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<DashboardMode>("trips");
   const [tripStatusTab, setTripStatusTab] = useState<TripStatusTab>("active");
-  const [deliveryStatusTab, setDeliveryStatusTab] = useState<DeliveryStatusTab>("active");
+  const [deliveryStatusTab, setDeliveryStatusTab] =
+    useState<DeliveryStatusTab>("active");
   const [tripQuery, setTripQuery] = useState("");
   const [deliveryQuery, setDeliveryQuery] = useState("");
   const {
@@ -62,7 +67,7 @@ export default function DashboardScreen() {
   const onPullRefresh = async () => {
     setPullRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), refetchDelivery()]);
     } finally {
       setPullRefreshing(false);
     }
@@ -113,14 +118,17 @@ export default function DashboardScreen() {
           <Skeleton height={120} radius={24} />
         </YStack>
       </Screen>
-    )
+    );
   }
   const pending =
     context?.upcoming_trips.filter((t) =>
       PENDING_STATUSES.includes(t.status),
     ) ?? [];
 
-  const matchesTripQuery = (t: { customer_name: string; customer_phone: string }) => {
+  const matchesTripQuery = (t: {
+    customer_name: string;
+    customer_phone: string;
+  }) => {
     const q = tripQuery.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -133,7 +141,10 @@ export default function DashboardScreen() {
   const filteredPending = pending.filter(matchesTripQuery);
   const filteredCompleted = completed.filter(matchesTripQuery);
 
-  const matchesDeliveryQuery = (o: { sender_phone?: string; recipient_phone: string }) => {
+  const matchesDeliveryQuery = (o: {
+    sender_phone?: string;
+    recipient_phone: string;
+  }) => {
     const q = deliveryQuery.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -141,17 +152,23 @@ export default function DashboardScreen() {
       o.recipient_phone?.toLowerCase().includes(q)
     );
   };
-  const deliveryActive = deliveryOrders.filter((o) => DELIVERY_ACTIVE_STATUSES.includes(o.status));
-  const deliveryDelivered = deliveryOrders.filter((o) => o.status === "delivered");
+  const deliveryActive = deliveryOrders.filter((o) =>
+    DELIVERY_ACTIVE_STATUSES.includes(o.status),
+  );
+  const deliveryDelivered = deliveryOrders.filter(
+    (o) => o.status === "delivered",
+  );
   const filteredDeliveryActive = deliveryActive.filter(matchesDeliveryQuery);
-  const filteredDeliveryDelivered = deliveryDelivered.filter(matchesDeliveryQuery);
+  const filteredDeliveryDelivered =
+    deliveryDelivered.filter(matchesDeliveryQuery);
 
   const header = (
-    <View
+    <YStack
       backgroundColor="$background"
       paddingTop={insets.top + 12}
       paddingHorizontal="$5"
       paddingBottom="$3"
+      gap="$3"
       borderBottomWidth={1}
       borderBottomColor="$border"
     >
@@ -178,19 +195,14 @@ export default function DashboardScreen() {
           />
         </XStack>
       </XStack>
-    </View>
-  );
 
-  return (
-    <Screen
-      scroll
-      header={header}
-      refreshing={pullRefreshing}
-      onRefresh={onPullRefresh}
-    >
       <SegmentedControl<DashboardMode>
         value={mode}
-        onChange={setMode}
+        onChange={(next) => {
+          setMode(next);
+          if (next === "trips") setTripQuery("");
+          else setDeliveryQuery("");
+        }}
         options={[
           { value: "trips", label: "Chuyến đi", icon: "car-sport" },
           { value: "delivery", label: "Giao hàng", icon: "cube" },
@@ -207,6 +219,59 @@ export default function DashboardScreen() {
         }
       />
 
+      {mode === "trips" ? (
+        <>
+          <GlassButton
+            label="+ Thêm chuyến (vãng lai)"
+            onPress={() => router.push("/add-trip")}
+          />
+          {/* Short labels, no icons — 3 segments is already tight; an icon +
+              "Chưa xác nhận (12)" wrapped to 2 lines inside the control's
+              fixed height and visually overlapped the neighboring segment. */}
+          <SegmentedControl<TripStatusTab>
+            value={tripStatusTab}
+            onChange={setTripStatusTab}
+            options={[
+              { value: "pending", label: `Chờ (${pending.length})` },
+              { value: "active", label: `Đang chạy (${active.length})` },
+              { value: "completed", label: `Xong (${completed.length})` },
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <GlassButton
+            label="+ Thêm đơn hàng"
+            onPress={() => router.push("/add-delivery")}
+          />
+          {deliveryOrders.length > 0 ? (
+            <SegmentedControl<DeliveryStatusTab>
+              value={deliveryStatusTab}
+              onChange={setDeliveryStatusTab}
+              options={[
+                {
+                  value: "active",
+                  label: `Đang giao (${deliveryActive.length})`,
+                },
+                {
+                  value: "delivered",
+                  label: `Đã giao (${deliveryDelivered.length})`,
+                },
+              ]}
+            />
+          ) : null}
+        </>
+      )}
+    </YStack>
+  );
+
+  return (
+    <Screen
+      scroll
+      header={header}
+      refreshing={pullRefreshing}
+      onRefresh={onPullRefresh}
+    >
       {mode === "trips" && showTripSkeleton && (
         <YStack gap="$4">
           <Skeleton height={120} radius={24} />
@@ -226,21 +291,8 @@ export default function DashboardScreen() {
 
       {mode === "trips" && !showTripSkeleton && !isError && context && (
         <>
-          {/* Short labels, no icons — 3 segments is already tight; an icon +
-              "Chưa xác nhận (12)" wrapped to 2 lines inside the control's
-              fixed height and visually overlapped the neighboring segment. */}
-          <SegmentedControl<TripStatusTab>
-            value={tripStatusTab}
-            onChange={setTripStatusTab}
-            options={[
-              { value: "pending", label: `Chờ (${pending.length})` },
-              { value: "active", label: `Đang chạy (${active.length})` },
-              { value: "completed", label: `Xong (${completed.length})` },
-            ]}
-          />
-
-          {tripStatusTab === "pending" && (
-            pending.length === 0 ? (
+          {tripStatusTab === "pending" &&
+            (pending.length === 0 ? (
               <EmptyTripsState isOnline={isOnline} />
             ) : filteredPending.length === 0 ? (
               <NoSearchMatch />
@@ -250,11 +302,10 @@ export default function DashboardScreen() {
                   <TripCard key={trip.trip_id} trip={trip} />
                 ))}
               </YStack>
-            )
-          )}
+            ))}
 
-          {tripStatusTab === "active" && (
-            active.length === 0 ? (
+          {tripStatusTab === "active" &&
+            (active.length === 0 ? (
               <EmptyTripsState isOnline={isOnline} />
             ) : filteredActive.length === 0 ? (
               <NoSearchMatch />
@@ -267,11 +318,10 @@ export default function DashboardScreen() {
                   <ActiveTripCard key={trip.trip_id} trip={trip} />
                 ))}
               </YStack>
-            )
-          )}
+            ))}
 
-          {tripStatusTab === "completed" && (
-            completed.length === 0 ? (
+          {tripStatusTab === "completed" &&
+            (completed.length === 0 ? (
               <AppText
                 variant="body"
                 color="$textSecondary"
@@ -288,8 +338,7 @@ export default function DashboardScreen() {
                   <ActiveTripCard key={trip.trip_id} trip={trip} />
                 ))}
               </YStack>
-            )
-          )}
+            ))}
         </>
       )}
 
@@ -304,55 +353,45 @@ export default function DashboardScreen() {
       )}
 
       {mode === "delivery" && !isDeliveryError && (
-        <YStack gap="$4">
-          <GlassButton
-            label="+ Thêm đơn hàng"
-            onPress={() => router.push("/add-delivery")}
-          />
-
+        <>
           {deliveryOrders.length === 0 ? (
             <EmptyDeliveryState />
           ) : (
             <>
-              <SegmentedControl<DeliveryStatusTab>
-                value={deliveryStatusTab}
-                onChange={setDeliveryStatusTab}
-                options={[
-                  { value: "active", label: `Đang giao (${deliveryActive.length})` },
-                  { value: "delivered", label: `Đã giao (${deliveryDelivered.length})` },
-                ]}
-              />
-
-              {deliveryStatusTab === "active" && (
-                deliveryActive.length === 0 ? (
+              {deliveryStatusTab === "active" &&
+                (deliveryActive.length === 0 ? (
                   <NoDeliveryMatch text="Không có đơn nào đang giao" />
                 ) : filteredDeliveryActive.length === 0 ? (
                   <NoDeliveryMatch text="Không tìm thấy đơn hàng phù hợp" />
                 ) : (
                   <YStack gap="$4">
                     {filteredDeliveryActive.map((order) => (
-                      <DeliveryOrderCard key={order.order_id} order={order} />
+                      <DeliveryOrderCard
+                        key={order.order_id}
+                        order={order}
+                      />
                     ))}
                   </YStack>
-                )
-              )}
+                ))}
 
-              {deliveryStatusTab === "delivered" && (
-                deliveryDelivered.length === 0 ? (
+              {deliveryStatusTab === "delivered" &&
+                (deliveryDelivered.length === 0 ? (
                   <NoDeliveryMatch text="Chưa có đơn nào đã giao" />
                 ) : filteredDeliveryDelivered.length === 0 ? (
                   <NoDeliveryMatch text="Không tìm thấy đơn hàng phù hợp" />
                 ) : (
                   <YStack gap="$4">
                     {filteredDeliveryDelivered.map((order) => (
-                      <DeliveryOrderCard key={order.order_id} order={order} />
+                      <DeliveryOrderCard
+                        key={order.order_id}
+                        order={order}
+                      />
                     ))}
                   </YStack>
-                )
-              )}
+                ))}
             </>
           )}
-        </YStack>
+        </>
       )}
     </Screen>
   );

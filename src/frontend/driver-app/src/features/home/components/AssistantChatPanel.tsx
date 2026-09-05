@@ -13,7 +13,6 @@ import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
 import { AppText } from "../../../components/AppText";
 import { Ionicons } from "@expo/vector-icons";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useAssistantChatStore } from "../stores/assistantChatStore";
@@ -103,22 +102,14 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         style={{ flex: 1, backgroundColor: theme.surface.val }}
         keyboardVerticalOffset={60}
       >
-        {/* Header — AppBar rhythm: safe area + 52pt row, hairline */}
+        {/* Header — same rhythm as AppBar (safe area + 52pt, $3 gutters, Ionicons) */}
         <View
           paddingTop={insets.top}
-          borderBottomWidth={StyleSheet.hairlineWidth}
+          borderBottomWidth={1}
           borderBottomColor="$border"
-          backgroundColor="$surface"
+          backgroundColor="$background"
         >
-          <XStack height={52} alignItems="center" paddingHorizontal="$4" gap="$3">
-            <YStack flex={1} gap="$1" justifyContent="center">
-              <AppText variant="title" numberOfLines={1}>
-                Trợ lý Czen
-              </AppText>
-              <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
-                {headerCaption(voice)}
-              </AppText>
-            </YStack>
+          <XStack height={52} alignItems="center" paddingHorizontal="$3" gap="$2">
             {onClose ? (
               <Pressable
                 onPress={onClose}
@@ -126,21 +117,32 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                 accessibilityLabel="Thu nhỏ hội thoại"
                 hitSlop={12}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
+                  width: 40,
+                  height: 40,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <MaterialCommunityIcons
+                <Ionicons
                   name="chevron-down"
                   size={26}
                   color={theme.textPrimary.val}
                   pointerEvents="none"
                 />
               </Pressable>
-            ) : null}
+            ) : (
+              <View width={40} />
+            )}
+            <YStack flex={1} justifyContent="center" gap="$1">
+              <AppText variant="h2" numberOfLines={1}>
+                Trợ lý Czen
+              </AppText>
+              <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
+                {headerCaption(voice)}
+              </AppText>
+            </YStack>
+            {/* Balance the leading 40pt control — same as AppBar right slot */}
+            <View width={40} />
           </XStack>
         </View>
 

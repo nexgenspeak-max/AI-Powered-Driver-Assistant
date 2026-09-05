@@ -40,6 +40,52 @@ raw_schema = {
         },
     },
 
+    "create_walkup_trip": {
+        "type": "function",
+        "name": "create_walkup_trip",
+        "description": (
+            "Thêm chuyến khách vãng lai / đón đường cho tài xế. Chuyến vào thẳng đang chạy "
+            "(confirmed), không banner nhận chuyến. "
+            "Trước khi gọi PHẢI có: SĐT khách, điểm đón, điểm trả; hỏi có hàng cồng kềnh "
+            "và đi cùng trẻ em không (mặc định không). Tên/ghi chú tuỳ chọn. "
+            "KHÔNG dùng cho đặt xe của khách (customer book_trip) hay đơn giao hàng."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customer_phone": {
+                    "type": "string",
+                    "description": "Số điện thoại khách vãng lai.",
+                },
+                "pickup_address": {
+                    "type": "string",
+                    "description": "Địa chỉ điểm đón.",
+                },
+                "dropoff_address": {
+                    "type": "string",
+                    "description": "Địa chỉ điểm trả.",
+                },
+                "customer_name": {
+                    "type": "string",
+                    "description": "Tên khách nếu có.",
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Ghi chú thêm nếu có.",
+                },
+                "has_bulky_goods": {
+                    "type": "boolean",
+                    "description": "true nếu khách có hàng cồng kềnh.",
+                },
+                "with_children": {
+                    "type": "boolean",
+                    "description": "true nếu khách đi cùng trẻ em.",
+                },
+            },
+            "required": ["customer_phone", "pickup_address", "dropoff_address"],
+        },
+    },
+
     "check_delivery_orders": {
         "type": "function",
         "name": "check_delivery_orders",

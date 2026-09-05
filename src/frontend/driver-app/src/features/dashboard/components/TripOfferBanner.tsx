@@ -27,6 +27,7 @@ import { pushImmediateLocation } from '../../../services/location/pushImmediateL
 import { confirmDestructive } from '../../../utils/confirmDialog'
 import { useTripOfferStore } from '../../../stores/tripOfferStore'
 import { useCurrentUser } from '../../auth/hooks/useCurrentUser'
+import { useVoiceSessionStore } from '../../home/stores/voiceSessionStore'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '../../../constants/status'
 
 // Same recorded-cue approach as AssistantChatPanel.tsx's connecting cue —
@@ -45,6 +46,7 @@ export function TripOfferBanner() {
   const qc = useQueryClient()
   const tripId = useTripOfferStore(s => s.tripId)
   const dismiss = useTripOfferStore(s => s.dismiss)
+  const voiceStatus = useVoiceSessionStore(s => s.status)
   const { data: driver } = useCurrentUser()
   const alertPlayer = useAudioPlayer(newTripAlertAsset)
   const alertedTripId = useRef<string | null>(null)
@@ -66,6 +68,13 @@ export function TripOfferBanner() {
       return
     }
     if (alertedTripId.current === tripId) return
+    // Do not fight LiveKit/Vosk for AVAudioSession mid-connect — that yields
+    // "Session activation failed" on the orb connect path.
+    if (voiceStatus === 'connecting' || voiceStatus === 'connected') {
+      alertedTripId.current = tripId
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+      return
+    }
     alertedTripId.current = tripId
     ;(async () => {
       try {
@@ -96,7 +105,7 @@ export function TripOfferBanner() {
       }
     })()
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
-  }, [tripId, alertPlayer])
+  }, [tripId, alertPlayer, voiceStatus])
 
   const { data: trip } = useQuery({
     queryKey: ['trip-offer', tripId],

@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Trip, TripStatus } from '../../types'
+import type { CreateWalkupTripInput, Trip, TripStatus } from '../../types'
 
 export const tripsService = {
   get: (tripId: string) =>
@@ -7,6 +7,13 @@ export const tripsService = {
 
   listByDriver: (phone: string, status?: TripStatus) =>
     apiClient.get<Trip[]>('/trips', { params: { driver_phone: phone, status } }).then(r => r.data),
+
+  // Street-hail / walk-up — lands as confirmed (no offer banner). Driver phone
+  // comes from the JWT on the backend.
+  createWalkup: (input: CreateWalkupTripInput) =>
+    apiClient
+      .post<Trip>('/trips', { ...input, booked_via: 'driver' })
+      .then(r => r.data),
 
   accept: (tripId: string) =>
     apiClient.patch<Trip>(`/trips/${tripId}`, { status: 'confirmed' }).then(r => r.data),

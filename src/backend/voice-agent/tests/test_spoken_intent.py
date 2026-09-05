@@ -28,6 +28,9 @@ def test_vn_earnings_period_routing():
     assert _earnings_period_from_text("tháng này doanh thu", "vn") == "month"
     assert _earnings_period_from_text("tháng vừa rồi thu nhập", "vn") == "month"
     assert _earnings_period_from_text("từ khi bắt đầu kiếm bao nhiêu", "vn") == "lifetime"
+    assert _earnings_period_from_text("toàn bộ thu nhập", "vn") == "lifetime"
+    assert _earnings_period_from_text("1 năm qua", "vn") == "lifetime"
+    assert _earnings_period_from_text("all-time earnings", "en") == "lifetime"
 
 
 def test_vn_trip_history_intent():

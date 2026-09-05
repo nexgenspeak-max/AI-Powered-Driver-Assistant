@@ -465,6 +465,11 @@ globalScope.__czenWakeWordUnsubscribe = useVoiceSessionStore.subscribe(
 
     if (state.status === "connecting") {
       stopListening();
+      // Free AVAudioSession for LiveKit immediately — waiting on the 2.5s
+      // SESSION_ACTIVE_RESET alone raced connect (~3–4s) and surfaced
+      // "Session activation failed" when Vosk still held the mic.
+      clearSessionActiveResetTimer();
+      sessionActive = false;
       return;
     }
 

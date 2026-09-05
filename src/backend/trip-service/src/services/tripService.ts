@@ -39,6 +39,9 @@ export interface Trip {
   room_name: string;
   driver_phone?: string;
   id_account?: string;
+  // Walk-up / street-hail flags (driver self-create). Default false when omitted.
+  has_bulky_goods?: boolean;
+  with_children?: boolean;
   wait_extra_minutes?: number;
   last_issue?: Record<string, unknown>;
   no_show_reported_at?: string;
@@ -49,8 +52,10 @@ export interface Trip {
 export async function create(data: Record<string, unknown>): Promise<Trip> {
   const trip: Trip = {
     trip_id: randomUUID(),
-    status: 'pending',
-    customer_name: data.customer_name as string,
+    // Default pending; walk-up (`booked_via: driver`) passes status=confirmed
+    // so the trip lands in the driver's active list without an offer banner.
+    status: (typeof data.status === 'string' && data.status) || 'pending',
+    customer_name: (data.customer_name as string) || '',
     customer_phone: (data.customer_phone as string) || '',
     pickup_address: data.pickup_address as string,
     dropoff_address: data.dropoff_address as string,
@@ -62,6 +67,8 @@ export async function create(data: Record<string, unknown>): Promise<Trip> {
     note: (data.note as string) || '',
     route_summary: (data.route_summary as string) || '',
     room_name: '',
+    has_bulky_goods: data.has_bulky_goods === true,
+    with_children: data.with_children === true,
     created_at: now(),
     updated_at: now(),
   };

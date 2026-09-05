@@ -142,6 +142,17 @@ export function ActiveTripCard({
 
       <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
 
+      {(trip.has_bulky_goods || trip.with_children) && (
+        <AppText variant="caption" color="$textSecondary">
+          {[
+            trip.has_bulky_goods ? "Hàng cồng kềnh" : null,
+            trip.with_children ? "Có trẻ em" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </AppText>
+      )}
+
       {action && (
         <Button
           label={action.label}

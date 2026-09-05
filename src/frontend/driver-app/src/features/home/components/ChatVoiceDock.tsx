@@ -5,8 +5,8 @@ import { useAssistantChatStore } from '../stores/assistantChatStore'
 
 /** Padding under the floating orb (above home indicator). */
 const DOCK_BOTTOM_PAD = 8
-/** Gap between composer and top of orb. */
-const COMPOSER_ORB_GAP = 5
+/** Gap between composer and top of orb / “Trợ lý AI” label. */
+const COMPOSER_ORB_GAP = 14
 
 /**
  * Bottom margin for the chat composer (add to `insets.bottom`).

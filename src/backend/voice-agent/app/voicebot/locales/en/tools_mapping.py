@@ -8,6 +8,7 @@ TOOLS_MAPPING_PROMPT = """<KeywordsMappingForToolUsage>
 Cache-read tools speak themselves. After they speak → stay silent; do not repeat the list.
 
 check_upcoming_trips — schedule/trip count/fare. Tool says count first; trip_index for one trip's details.
+create_walkup_trip — add street-hail / walk-up trip (phone + pickup + drop-off; ask bulky goods / children).
 check_delivery_orders — delivery orders count ("how many deliveries") — NOT taxi trips.
 call_delivery_party — call sender (shipper) or recipient on a delivery order. party=sender|recipient.
 update_delivery_order_status — picked up / out for delivery / delivered / redelivery / returned.
