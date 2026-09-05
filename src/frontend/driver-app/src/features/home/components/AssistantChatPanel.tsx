@@ -5,8 +5,9 @@ import {
   TouchableOpacity,
   Pressable,
   Keyboard,
+  StyleSheet,
 } from "react-native";
-import { View, XStack, Theme, useTheme } from "tamagui";
+import { View, XStack, YStack, Theme, useTheme } from "tamagui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
@@ -19,9 +20,31 @@ import { useAssistantChatStore } from "../stores/assistantChatStore";
 import { useVoiceSessionStore } from "../stores/voiceSessionStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { getAssistantReply } from "../../../services/api/assistant";
+import { CHAT_ORB_CLEARANCE } from "./ChatVoiceDock";
+
+const STATUS_CAPTION = {
+  idle: "Chạm nút Trợ lý bên dưới để kết nối",
+  connecting: "Đang kết nối với Czen…",
+  connected: "Đã kết nối với Czen — chạm nút Trợ lý để ngắt",
+  error: "Kết nối lỗi — chạm nút Trợ lý để thử lại",
+} as const;
 
 interface Props {
   onClose?: () => void;
+}
+
+function headerCaption(voice: {
+  status: "idle" | "connecting" | "connected" | "error";
+  isCallActive: boolean;
+  isMicMuted: boolean;
+}): string {
+  if (voice.status === "connected" && voice.isCallActive) {
+    return "Đang trong cuộc gọi — không thể tắt";
+  }
+  if (voice.status === "connected" && voice.isMicMuted) {
+    return "Mic đang tắt — phiên vẫn kết nối";
+  }
+  return STATUS_CAPTION[voice.status];
 }
 
 export function AssistantChatPanel({ onClose }: Props = {}) {
@@ -74,72 +97,67 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
   };
 
   return (
-    // Follows the app-wide light/dark toggle now (previously always forced
-    // dark, regardless of the user's setting). Chat bubble colors below are
-    // still fixed on purpose, not theme tokens: AI = white text on black,
-    // user = black text on purple, in light mode specifically.
     <Theme name={themeMode}>
       <StatusBar style={isLight ? "dark" : "light"} />
       <KeyboardSafeView
-        style={{ backgroundColor: theme.surface.val }}
+        style={{ flex: 1, backgroundColor: theme.surface.val }}
         keyboardVerticalOffset={60}
       >
-        <XStack
-          width="100%"
+        {/* Header — AppBar rhythm: safe area + 52pt row, hairline */}
+        <View
           paddingTop={insets.top}
-          paddingHorizontal="$3"
-          minHeight={44}
-          alignItems="center"
-          gap="$2"
+          borderBottomWidth={StyleSheet.hairlineWidth}
+          borderBottomColor="$border"
+          backgroundColor="$surface"
         >
-          <View flex={1} alignItems="center" justifyContent="center" minHeight={44}>
-            {voice.status === "connected" && voice.isCallActive ? (
-              <AppText variant="caption" textAlign="center" color="$textSecondary">
-                Đang trong cuộc gọi — không thể tắt
+          <XStack height={52} alignItems="center" paddingHorizontal="$4" gap="$3">
+            <YStack flex={1} gap="$1" justifyContent="center">
+              <AppText variant="title" numberOfLines={1}>
+                Trợ lý Czen
               </AppText>
-            ) : voice.status === "connected" && voice.isMicMuted ? (
-              <AppText variant="caption" textAlign="center" color="$textSecondary">
-                Mic đang tắt
+              <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
+                {headerCaption(voice)}
               </AppText>
+            </YStack>
+            {onClose ? (
+              <Pressable
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Thu nhỏ hội thoại"
+                hitSlop={12}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={26}
+                  color={theme.textPrimary.val}
+                  pointerEvents="none"
+                />
+              </Pressable>
             ) : null}
-          </View>
-          {onClose ? (
-            <Pressable
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Thu nhỏ hội thoại"
-              hitSlop={12}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: theme.surfaceElevated.val,
-                borderWidth: 1,
-                borderColor: theme.border.val,
-              }}
-            >
-              <MaterialCommunityIcons
-                name="chevron-down"
-                size={22}
-                color={theme.textSecondary.val}
-                pointerEvents="none"
-              />
-            </Pressable>
-          ) : null}
-        </XStack>
+          </XStack>
+        </View>
 
         <ScrollView
           ref={scrollRef}
-          style={{ flex: 1, paddingHorizontal: 20, marginTop: 16 }}
-          contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingTop: 16,
+            paddingBottom: 12,
+            gap: 8,
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
         >
           {chats.map((chat, i) =>
             chat.who === "me" ? (
-              // User bubble: purple gradient, always white text regardless of
-              // theme — the gradient itself doesn't change with light/dark,
-              // so the text shouldn't need to either.
               <View
                 key={i}
                 maxWidth="80%"
@@ -174,12 +192,6 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                 <AppText variant="body" color="$textPrimary">{chat.msg}</AppText>
               </View>
             ) : (
-              // AI bubble: light card + dark text in light mode, matching the
-              // rest of the light-mode UI (glass cards, dark $textPrimary) —
-              // was a hardcoded black bubble/white text even in light mode,
-              // which read as broken/out of place against an otherwise white
-              // screen. Dark mode keeps the theme-derived $accent/$textPrimary
-              // pair, unchanged.
               <View
                 key={i}
                 maxWidth="80%"
@@ -195,12 +207,12 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
             ),
           )}
           {stubLoading && (
-            <AppText variant="caption" color="$textSecondary" paddingHorizontal="$1">
+            <AppText variant="caption" color="$textSecondary">
               Đang trả lời...
             </AppText>
           )}
           {error && (
-            <AppText variant="caption" color="$danger" paddingHorizontal="$1">
+            <AppText variant="caption" color="$danger">
               {error}
             </AppText>
           )}
@@ -209,19 +221,14 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         <XStack
           alignItems="center"
           gap="$2"
-          marginHorizontal={20}
-          // Overlay already stops above the floating tab bar + orb
-          // (`MAP_OVERLAY_BOTTOM_CLEARANCE` on AssistantChatOverlay) — only
-          // need a small gap above that cut line, not a second full clearance.
-          marginBottom="$3"
+          marginHorizontal="$5"
+          marginBottom={insets.bottom + CHAT_ORB_CLEARANCE}
           paddingHorizontal="$2"
           height={48}
           borderRadius="$pill"
           backgroundColor="$surfaceElevated"
-          shadowColor="#000"
-          shadowOffset={{ width: 0, height: 8 }}
-          shadowOpacity={0.35}
-          shadowRadius={18}
+          borderWidth={StyleSheet.hairlineWidth}
+          borderColor="$border"
         >
           <GlassSheen borderRadius={24} />
           <TouchableOpacity
@@ -272,11 +279,6 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                   : "Kết nối Trợ lý AI để chat..."
             }
             placeholderTextColor={theme.textMuted.val}
-            // Highlighted-text (select-all) color — was left at the OS
-            // default (a generic blue), which clashed against this app's
-            // purple-branded glass fields. Brighter in dark mode (#C084FC vs
-            // #8B5CF6) since a highlight needs more contrast against a dark
-            // field than a light one.
             selectionColor={isLight ? theme.primary.val : theme.secondary.val}
             style={{ flex: 1, color: theme.textPrimary.val, paddingLeft: 8, fontSize: 15 }}
           />
@@ -295,11 +297,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
               opacity: voice.status === "connecting" ? 0.35 : 1,
             }}
           >
-            <Ionicons
-              name="send"
-              size={18}
-              color={isLight ? theme.textPrimary.val : theme.textInverse.val}
-            />
+            <Ionicons name="send" size={18} color={theme.textPrimary.val} />
           </TouchableOpacity>
         </XStack>
       </KeyboardSafeView>

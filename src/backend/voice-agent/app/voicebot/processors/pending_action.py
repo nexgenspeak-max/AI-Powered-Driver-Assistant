@@ -22,6 +22,23 @@ _CHECK_BOT_VN = (
     "let me check",
     "i'll check",
 )
+_CHECK_DELIVERY_BOT = (
+    "đơn hàng",
+    "đơn giao",
+    "delivery order",
+    "delivery orders",
+)
+_CHECK_EARNINGS_BOT = (
+    "thu nhập",
+    "doanh thu",
+    "earnings",
+    "theo tháng",
+    "theo tuần",
+    "tháng vừa rồi",
+    "tháng này",
+    "tuần này",
+    "tuần vừa rồi",
+)
 _CALL_BOT_VN = (
     "em nhắn khách",
     "nhắn khách",
@@ -161,6 +178,31 @@ def infer_from_bot_line(text: str, userdata: dict, *, lang: str = "vn") -> None:
     if not t:
         return
     if any(p in t for p in _CHECK_BOT_VN):
+        # Prefer specific domains over generic "upcoming" — live session
+        # 7937d495: "Em kiểm tra đơn hàng…" wrongly pending upcoming trip_index=2.
+        if any(p in t for p in _CHECK_DELIVERY_BOT):
+            context_store.set_pending_driver_action(
+                userdata,
+                "delivery_orders",
+                {"active_only": True},
+                source=text[:120],
+            )
+            logger.info("pending_action set intent=delivery_orders")
+            return
+        if any(p in t for p in _CHECK_EARNINGS_BOT):
+            from app.voicebot.processors.spoken_intent import _earnings_period_from_text
+
+            period = _earnings_period_from_text(text, lang)
+            if period == "lifetime":
+                period = "month"
+            context_store.set_pending_driver_action(
+                userdata,
+                "earnings",
+                {"period": period},
+                source=text[:120],
+            )
+            logger.info("pending_action set intent=earnings period=%s", period)
+            return
         args = _check_upcoming_args(userdata)
         context_store.set_pending_driver_action(
             userdata, "upcoming", args, source=text[:120]

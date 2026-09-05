@@ -67,7 +67,7 @@ export function RegisterForm() {
         updated_at: user.updated_at,
       }
       queryClient.setQueryData(['me'], driver)
-      router.replace('/')
+      router.replace('/(app)/')
     },
   })
 

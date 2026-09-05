@@ -14,9 +14,15 @@ _BLOCK_VN = (
     "số",
     "gọi",
     "thu nhập",
+    "doanh thu",
     "lịch",
     "chờ khách",
     "cao tốc",
+    "tháng",
+    "tuần",
+    "đơn hàng",
+    "đơn giao",
+    "kiếm",
 )
 
 _FAREWELL_BLOCK_VN = (
@@ -36,6 +42,10 @@ _CONTINUATION_VN = (
     "về đón",
     "tiếp theo",
 )
+
+# Short tokens must be exact / whole-word — "ừ" is a substring of "vừa"
+# ("tháng vừa rồi") and used to hijack earnings follow-ups as ack.
+_EXACT_ONLY_ACK_VN = frozenset({"ừ", "uh", "ok", "okay"})
 
 _ACK_VN: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
     (
@@ -60,6 +70,15 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", folded).strip()
 
 
+def _ack_needle_matches(needle: str, text: str) -> bool:
+    if needle in _EXACT_ONLY_ACK_VN:
+        if needle == text:
+            return True
+        # Whole token only (spaces / edges) — never inside "vừa", "được", …
+        return bool(re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", text))
+    return needle == text or needle in text
+
+
 def conversational_ack_reply(text: str, lang: str) -> str | None:
     """Short thanks/ok/vâng — varied VN, no LLM."""
     if lang != "vn":
@@ -76,7 +95,7 @@ def conversational_ack_reply(text: str, lang: str) -> str | None:
     if "?" in text or t.startswith(("sao", "tại sao", "làm sao", "anh ", "chị ", "em ")):
         return None
     for needles, replies in _ACK_VN:
-        if any(n == t or n in t for n in needles):
+        if any(_ack_needle_matches(n, t) for n in needles):
             idx = int(hashlib.md5(t.encode()).hexdigest(), 16) % len(replies)
             return replies[idx]
     return None

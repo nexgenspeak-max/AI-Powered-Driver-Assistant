@@ -26,6 +26,7 @@ def test_vn_earnings_period_routing():
     assert _earnings_period_from_text("hôm nay kiếm bao nhiêu", "vn") == "today"
     assert _earnings_period_from_text("tuần này thu nhập", "vn") == "week"
     assert _earnings_period_from_text("tháng này doanh thu", "vn") == "month"
+    assert _earnings_period_from_text("tháng vừa rồi thu nhập", "vn") == "month"
     assert _earnings_period_from_text("từ khi bắt đầu kiếm bao nhiêu", "vn") == "lifetime"
 
 

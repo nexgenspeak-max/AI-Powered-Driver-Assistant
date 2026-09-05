@@ -38,7 +38,7 @@ export function LoginForm() {
       // _layout.tsx reacts to that profile becoming available instead of
       // needing the id here).
       setTokens(access_token, refresh_token)
-      router.replace('/')
+      router.replace('/(app)/')
     },
   })
 

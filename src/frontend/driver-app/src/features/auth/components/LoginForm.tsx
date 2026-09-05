@@ -36,7 +36,9 @@ export function LoginForm() {
       // No profile in this response by design (see authService.ts) — fetched
       // separately via useCurrentUser() once inside (app).
       setTokens(access_token, refresh_token)
-      router.replace('/')
+      // Root Stack screens are `(auth)` / `(app)` — bare `/` becomes REPLACE
+      // name `index` and is not handled by the Stack (dev warning).
+      router.replace('/(app)/')
     },
   })
 

@@ -51,7 +51,7 @@ export function RegisterForm() {
       }
       queryClient.setQueryData(['me'], customer)
       authService.setStatus(user.id, 'online').catch(() => {})
-      router.replace('/')
+      router.replace('/(app)/')
     },
   })
 

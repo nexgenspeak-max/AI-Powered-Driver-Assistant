@@ -137,8 +137,103 @@ _EARNINGS_VN = (
     "kiếm được",
     "kiếm bao nhiêu",
     "thu nhập hôm nay",
+    "doanh thu",
 )
-_EARNINGS_EN = ("earnings", "how much did i make", "today's earnings")
+_EARNINGS_EN = ("earnings", "how much did i make", "today's earnings", "how much i made")
+# Period-only follow-ups after an earnings answer ("trong tháng vừa rồi mà").
+_EARNINGS_PERIOD_FOLLOWUP_VN = (
+    "tháng vừa rồi",
+    "tháng vừa qua",
+    "tháng trước",
+    "tháng rồi",
+    "theo tháng",
+    "trong tháng",
+    "tuần vừa rồi",
+    "tuần vừa qua",
+    "tuần trước",
+    "tuần rồi",
+    "theo tuần",
+    "trong tuần",
+    # Unsupported periods — still classify as earnings so we speak the limit, not LLM invent.
+    "toàn bộ",
+    "từ trước đến giờ",
+    "từ trước đến nay",
+    "năm qua",
+    "một năm",
+    "1 năm",
+    "cả năm",
+)
+_EARNINGS_PERIOD_FOLLOWUP_EN = (
+    "last month",
+    "this month",
+    "past month",
+    "last week",
+    "this week",
+    "past week",
+    "all time",
+    "all-time",
+    "lifetime",
+    "past year",
+    "last year",
+)
+_EARNINGS_LIFETIME_VN = (
+    "từ trước",
+    "từ đầu",
+    "tổng đời",
+    "tổng doanh thu từ",
+    "từ khi bắt đầu",
+    "toàn bộ",
+    "tổng thu nhập",
+    "tất cả thu nhập",
+    "năm qua",
+    "một năm",
+    "1 năm",
+    "cả năm",
+)
+_EARNINGS_LIFETIME_EN = (
+    "all time",
+    "all-time",
+    "alltime",
+    "lifetime",
+    "since i started",
+    "total ever",
+    "all earnings",
+    "past year",
+    "last year",
+    "one year",
+)
+# Income split / earnings questions that mention giao hàng must stay on earnings.
+_EARNINGS_OVER_DELIVERY_VN = (
+    "chở khách",
+    "bao nhiêu đến từ",
+    "bao nhiêu từ",
+    "từ giao hàng",
+    "từ đơn giao",
+    "từ đơn hàng",
+)
+_EARNINGS_OVER_DELIVERY_EN = (
+    "from deliveries",
+    "from delivery",
+    "from rides",
+    "passenger vs",
+    "delivery vs",
+)
+_DENY_DELIVERY_TOPIC_VN = (
+    "chưa hỏi về đơn",
+    "không hỏi về đơn",
+    "không hỏi đơn",
+    "chưa hỏi đơn",
+    "không phải đơn",
+    "chưa hỏi về giao hàng",
+    "không hỏi về giao hàng",
+    "hiểu sai",
+)
+_DENY_DELIVERY_TOPIC_EN = (
+    "not asking about delivery",
+    "not asking about order",
+    "wrong about delivery",
+    "misunderstood",
+)
 _CURRENT_VN = (
     "chuyến hiện tại",
     "chuyến đang chạy",
@@ -174,6 +269,10 @@ _DELIVERY_ORDERS_VN = (
     "còn mấy đơn",
     "đơn đang giao",
     "các đơn",
+    "hàng hóa",
+    "hàng hoá",
+    "cần giao",
+    "giao hàng",
 )
 _DELIVERY_ORDERS_EN = (
     "delivery order",
@@ -217,20 +316,76 @@ def _earnings_period_from_text(text: str, lang: str) -> str:
     """Return today | week | month | lifetime for earnings fast-path routing."""
     t = _norm(text)
     if lang == "en":
-        if any(p in t for p in ("all time", "lifetime", "since i started", "total ever")):
+        if any(p in t for p in _EARNINGS_LIFETIME_EN):
             return "lifetime"
-        if any(p in t for p in ("this month", "past month", "last 30", "monthly")):
+        if any(
+            p in t
+            for p in (
+                "this month",
+                "past month",
+                "last month",
+                "last 30",
+                "monthly",
+                "previous month",
+            )
+        ):
             return "month"
-        if any(p in t for p in ("this week", "past week", "last 7", "weekly")):
+        if any(p in t for p in ("this week", "past week", "last week", "last 7", "weekly")):
             return "week"
         return "today"
-    if any(p in t for p in ("từ trước", "từ đầu", "tổng đời", "tổng doanh thu từ", "từ khi bắt đầu")):
+    if any(p in t for p in _EARNINGS_LIFETIME_VN):
         return "lifetime"
-    if any(p in t for p in ("tháng này", "tháng rồi", "30 ngày", "cả tháng")):
+    # "tháng vừa rồi" must be listed — "tháng rồi" is NOT a substring of it.
+    if any(
+        p in t
+        for p in (
+            "tháng vừa rồi",
+            "tháng vừa qua",
+            "tháng trước",
+            "tháng này",
+            "tháng rồi",
+            "30 ngày",
+            "cả tháng",
+            "theo tháng",
+        )
+    ):
         return "month"
-    if any(p in t for p in ("tuần này", "tuần rồi", "7 ngày", "cả tuần")):
+    if any(
+        p in t
+        for p in (
+            "tuần vừa rồi",
+            "tuần vừa qua",
+            "tuần trước",
+            "tuần này",
+            "tuần rồi",
+            "7 ngày",
+            "cả tuần",
+            "theo tuần",
+        )
+    ):
         return "week"
     return "today"
+
+
+def _prefers_earnings_over_delivery(t: str, lang: str) -> bool:
+    """Thu nhập + giao hàng/chở khách = earnings split, not list delivery orders."""
+    if lang == "en":
+        if not any(p in t for p in _EARNINGS_EN):
+            return False
+        if any(p in t for p in _EARNINGS_OVER_DELIVERY_EN):
+            return True
+        return any(p in t for p in _DELIVERY_ORDERS_EN)
+    if not any(p in t for p in _EARNINGS_VN):
+        return False
+    if any(p in t for p in _EARNINGS_OVER_DELIVERY_VN):
+        return True
+    return "thu nhập" in t and any(p in t for p in _DELIVERY_ORDERS_VN)
+
+
+def _denies_delivery_topic(t: str, lang: str) -> bool:
+    """Driver correcting a wrong delivery interpretation — do not re-fire delivery_orders."""
+    needles = _DENY_DELIVERY_TOPIC_EN if lang == "en" else _DENY_DELIVERY_TOPIC_VN
+    return any(p in t for p in needles)
 
 
 def _is_cancelled_history(text: str, lang: str) -> bool:
@@ -455,7 +610,11 @@ def classify_driver_intent(
 
         if delivery_status_from_text(text, "en"):
             return "update_delivery_status"
-        if any(p in t for p in _DELIVERY_ORDERS_EN):
+        if _prefers_earnings_over_delivery(t, "en"):
+            return "earnings"
+        if not _denies_delivery_topic(t, "en") and (
+            any(p in t for p in _DELIVERY_ORDERS_EN) or parse_order_index(text) is not None
+        ):
             return "delivery_orders"
         if _is_phone_lookup(t, "en"):
             return "customer_phone"
@@ -464,6 +623,8 @@ def classify_driver_intent(
         if any(p in t for p in _UPCOMING_EN):
             return "upcoming"
         if any(p in t for p in _EARNINGS_EN):
+            return "earnings"
+        if any(p in t for p in _EARNINGS_PERIOD_FOLLOWUP_EN):
             return "earnings"
         if any(p in t for p in ("completed today", "finished today", "cancelled today", "cancellations today")):
             return "trip_history"
@@ -491,7 +652,11 @@ def classify_driver_intent(
 
     if delivery_status_from_text(text, "vn"):
         return "update_delivery_status"
-    if any(p in t for p in _DELIVERY_ORDERS_VN) or parse_order_index(text) is not None:
+    if _prefers_earnings_over_delivery(t, "vn"):
+        return "earnings"
+    if not _denies_delivery_topic(t, "vn") and (
+        any(p in t for p in _DELIVERY_ORDERS_VN) or parse_order_index(text) is not None
+    ):
         return "delivery_orders"
     if _is_phone_lookup(t, "vn"):
         return "customer_phone"
@@ -502,6 +667,8 @@ def classify_driver_intent(
     if parse_trip_index(text) is not None:
         return "upcoming"
     if any(p in t for p in _EARNINGS_VN):
+        return "earnings"
+    if any(p in t for p in _EARNINGS_PERIOD_FOLLOWUP_VN):
         return "earnings"
     if any(p in t for p in ("hoàn thành hôm nay", "chuyến hoàn thành", "chuyến bị hủy", "hủy hôm nay")):
         return "trip_history"
@@ -728,6 +895,34 @@ async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) ->
             "check_upcoming_trips",
         )
         await fn.__wrapped__(args, ctx)
+        return
+    if intent == "delivery_orders":
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.check_delivery_orders",
+            "app.voicebot.locales.en.tools.check_delivery_orders",
+            "check_delivery_orders",
+        )
+        await fn.__wrapped__(args or {"active_only": True}, ctx)
+        return
+    if intent == "earnings":
+        period = str(args.get("period") or "today")
+        if period in ("week", "month"):
+            fn = _tool(
+                lang,
+                "app.voicebot.locales.vn.tools.get_earnings_summary",
+                "app.voicebot.locales.en.tools.get_earnings_summary",
+                "get_earnings_summary",
+            )
+            await fn.__wrapped__({"period": period}, ctx)
+            return
+        fn = _tool(
+            lang,
+            "app.voicebot.locales.vn.tools.get_today_earnings",
+            "app.voicebot.locales.en.tools.get_today_earnings",
+            "get_today_earnings",
+        )
+        await fn.__wrapped__({}, ctx)
         return
     logger.warning("pending_action unknown intent=%s", intent)
 

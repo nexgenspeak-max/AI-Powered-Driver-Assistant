@@ -1,6 +1,4 @@
-import { View } from 'react-native'
-import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
-import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
+import { StyleSheet, View } from 'react-native'
 import { Tabs } from 'expo-router'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { LiquidGlassProvider, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
@@ -13,34 +11,21 @@ import { useCaptureVoiceMessages } from '../../src/features/home/hooks/useCaptur
 import { preloadCzenFillers } from '../../src/features/home/lib/czenFillerAudio'
 import { useReturnHomeOnVoiceEnd } from '../../src/features/home/hooks/useReturnHomeOnVoiceEnd'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
-import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../src/constants'
+import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
+import { ChatVoiceDock } from '../../src/features/home/components/ChatVoiceDock'
+import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
 import { useEffect } from 'react'
 
 function TabIcon({ route, size, color, focused }: { route: DriverTabRoute; size: number; color: string; focused: boolean }) {
   return <DriverTabBarIcon route={route} size={size} color={color} focused={focused} />
 }
 
-const renderTabBar = (props: BottomTabBarProps) => <LiquidGlassTabBar {...props} />
-
 function AssistantChatOverlay() {
-  const panelOpen = useAssistantChatStore(s => s.panelOpen)
-  const closePanel = useAssistantChatStore(s => s.closePanel)
+  const panelOpen = useAssistantChatStore((s) => s.panelOpen)
+  const closePanel = useAssistantChatStore((s) => s.closePanel)
   if (!panelOpen) return null
-  // Stop above the floating tab bar + raised Trợ lý orb so hang-up / reopen
-  // stays visible while chat is open. AbsoluteFill covered the orb (zIndex 100
-  // regression). Touches in the bottom gap fall through to the tab bar.
   return (
-    <View
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: MAP_OVERLAY_BOTTOM_CLEARANCE,
-        zIndex: 50,
-        elevation: 50,
-      }}
-    >
+    <View style={[StyleSheet.absoluteFill, { zIndex: 100, elevation: 100 }]}>
       <AssistantChatPanel onClose={closePanel} />
     </View>
   )
@@ -51,6 +36,7 @@ export default function AppLayout() {
   // trip-offer banner below can appear — regardless of which tab the driver
   // currently has open, not just while Dashboard is mounted.
   const { data: driver } = useCurrentUser()
+  const panelOpen = useAssistantChatStore((s) => s.panelOpen)
   useDispatchSocket(driver?.status === 'online', driver?.phone)
   // Lives here too (not dashboard.tsx) so a pending nudge gets delivered
   // regardless of which tab the driver has open — same reasoning as the
@@ -72,7 +58,12 @@ export default function AppLayout() {
     <LiquidGlassProvider>
       <View style={{ flex: 1 }}>
         <Tabs
-          tabBar={renderTabBar}
+          // React Navigation invokes `tabBar` as a render function (not
+          // createElement) — do not put hooks inside that callback/component.
+          // Hide the full bar while chat is open; ChatVoiceDock keeps the orb.
+          tabBar={(props: BottomTabBarProps) =>
+            panelOpen ? null : <LiquidGlassTabBar {...props} />
+          }
           detachInactiveScreens={false}
           screenOptions={{
             headerShown: false,
@@ -131,6 +122,7 @@ export default function AppLayout() {
         </Tabs>
         <TripOfferBanner />
         <AssistantChatOverlay />
+        <ChatVoiceDock />
       </View>
     </LiquidGlassProvider>
   )
