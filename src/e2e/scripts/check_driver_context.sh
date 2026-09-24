@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify GET /drivers/me/context — same payload voice-agent prefetch uses.
+# Verify GET /drivers/me/context — same payload llm-orchestrator prefetch uses.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -31,4 +31,4 @@ if not upcoming and not current:
     sys.exit(1)
 "
 
-pass "Driver context OK — voice-agent prefetch should succeed"
+pass "Driver context OK — llm-orchestrator prefetch should succeed"

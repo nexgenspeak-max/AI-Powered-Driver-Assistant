@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 APP="$(cd "$(dirname "$0")/.." && pwd)"
-TRIP="$ROOT/src/backend/trip-service/envs/.env.local"
+TRIP="$ROOT/src/backend/external-api-service/envs/.env.local"
 DRIVER_ENV="$APP/.env"
 CUSTOMER_ENV="$ROOT/src/frontend/customer-app/.env"
 

@@ -1,15 +1,15 @@
 # E2E Testing — Driver Assistant
 
 End-to-end test guide for the **driver voice bot** full flow.  
-Scenario catalog: [`../backend/voice-agent/requirements/scenario.md`](../backend/voice-agent/requirements/scenario.md)
+Scenario catalog: [`../backend/llm-orchestrator/requirements/scenario.md`](../backend/llm-orchestrator/requirements/scenario.md)
 
 ---
 
 ## Quick start (API smoke — no mic)
 
 ```bash
-# 1. Start trip-service
-cd src/backend/trip-service && npm install && npm run dev
+# 1. Start external-api-service
+cd src/backend/external-api-service && npm install && npm run dev
 
 # 2. Run API smoke (another terminal)
 cd src/e2e
@@ -24,18 +24,18 @@ Expected: health OK → trip created → `/drivers/me/context` has data → stat
 
 ## Full voice flow (recommended for thesis demo)
 
-### Terminal 1 — trip-service
+### Terminal 1 — external-api-service
 
 ```bash
-cd src/backend/trip-service
+cd src/backend/external-api-service
 npm run dev
-# → trip-service running on :8002
+# → external-api-service running on :8002
 ```
 
-### Terminal 2 — voice-agent
+### Terminal 2 — llm-orchestrator
 
 ```bash
-cd src/backend/voice-agent
+cd src/backend/llm-orchestrator
 source .venv/bin/activate
 python -m app.main download-files   # one-time
 ENV=local python -m app.main dev
@@ -54,7 +54,7 @@ cd src/e2e
 
 ```bash
 cd src/frontend/agents-playground
-# Copy LIVEKIT_* from voice-agent/envs/.env.local into .env.local
+# Copy LIVEKIT_* from llm-orchestrator/envs/.env.local into .env.local
 pnpm install && pnpm dev
 # → http://localhost:3000
 ```
@@ -63,7 +63,7 @@ pnpm install && pnpm dev
 
 | Setting | Value |
 |---------|-------|
-| Agent name | `driver-assistant-local` (match `AGENT_NAME` in voice-agent `.env.local`) |
+| Agent name | `driver-assistant-local` (match `AGENT_NAME` in llm-orchestrator `.env.local`) |
 | Room name | leave empty → auto `driver-84867347452-{timestamp}` |
 | Mic + Audio | ON |
 
@@ -80,11 +80,11 @@ npm install && npm run dev
 
 ### Optional — call customer (F1)
 
-Requires call-center + ngrok:
+Requires external-channel-service + ngrok:
 
 ```bash
-cd src/backend/call-center && npm run dev   # :8000
-# Set BASE_URL to ngrok URL in call-center env
+cd src/backend/external-channel-service && npm run dev   # :8000
+# Set BASE_URL to ngrok URL in external-channel-service env
 ```
 
 ---
@@ -94,7 +94,7 @@ cd src/backend/call-center && npm run dev   # :8000
 | Script | Purpose |
 |--------|---------|
 | `scripts/run_api_smoke.sh` | Full API smoke (run this first) |
-| `scripts/verify_services.sh` | Check trip-service / call-center / call-logger |
+| `scripts/verify_services.sh` | Check external-api-service / external-channel-service / call-records-service |
 | `scripts/seed_trip.sh [status]` | Create trip for `DRIVER_PHONE` (default `confirmed`) |
 | `scripts/check_driver_context.sh [true]` | Verify prefetch endpoint (`?fresh=true` optional) |
 | `scripts/test_trip_status.sh [trip_id]` | PATCH ARRIVED_PICKUP → PICKED_UP → COMPLETED |
@@ -149,10 +149,10 @@ Session start
   → prefetch: GET /drivers/me/context  (1 API call)
   → tools read context_store (no await)
   → mutations: patch local context + background API sync
-  → trip-service invalidates Redis/in-memory cache on writes
+  → external-api-service invalidates Redis/in-memory cache on writes
 ```
 
-Verify prefetch in voice-agent logs:
+Verify prefetch in llm-orchestrator logs:
 
 ```
 driver prefetch complete | phone=84867347452 upcoming=1 current=True
@@ -167,16 +167,16 @@ driver prefetch complete | phone=84867347452 upcoming=1 current=True
 | Agent joins but no audio | Check `AGENT_NAME` matches playground; only one worker running |
 | "Không có chuyến" | Run `seed_trip.sh`; phone must match room `driver-{phone}-*` |
 | Prefetch empty | `curl -H "X-Driver-Phone: +84867347452" localhost:8002/api/v1/drivers/me/context` |
-| DynamoDB errors | Create table — see `trip-service/README.md` |
-| STT fails | Check `GOOGLE_CREDENTIALS_FILE` / `STT_PROVIDER` in voice-agent env |
-| call_customer fails | Start call-center :8000; Twilio trial needs verified number |
+| DynamoDB errors | Create table — see `external-api-service/README.md` |
+| STT fails | Check `GOOGLE_CREDENTIALS_FILE` / `STT_PROVIDER` in llm-orchestrator env |
+| call_customer fails | Start external-channel-service :8000; Twilio trial needs verified number |
 
 ---
 
 ## What is NOT in e2e yet
 
 - Automated Playwright (admin UI + playground)
-- pytest for voice-agent tools (use `voice-agent/tests/smoke_test.py` for imports/env)
+- pytest for llm-orchestrator tools (use `llm-orchestrator/tests/smoke_test.py` for imports/env)
 - SIP outbound dispatch test (needs LiveKit SIP + real phone)
 
 Add these later under `src/e2e/` as needed.

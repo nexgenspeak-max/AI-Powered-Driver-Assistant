@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed backdated trips + delivery orders for one driver (DynamoDB PutItem).
+"""Seed backdated trips for one driver (DynamoDB PutItem).
 
 Earnings use updated_at on completed trips; history/context use recent rows.
 Default target: David 0888887798 — enough volume for today/week/month bot answers.
@@ -19,9 +19,6 @@ import boto3
 
 DRIVER_PHONE = os.environ.get("DRIVER_PHONE", "0888887798")
 TABLE = os.environ.get("DYNAMODB_TABLE", "local-driver-assistant-trips")
-DELIV_TABLE = os.environ.get(
-    "DYNAMODB_DELIVERY_ORDERS_TABLE", "local-driver-assistant-delivery-orders"
-)
 REGION = os.environ.get("AWS_REGION", "ap-southeast-1")
 TAG = "seed_history_david_v1"
 
@@ -58,10 +55,6 @@ def iso(dt: datetime) -> str:
 
 def put_trip(ddb: Any, trip: dict[str, Any]) -> None:
     ddb.put_item(TableName=TABLE, Item=_to_item(trip))
-
-
-def put_order(ddb: Any, order: dict[str, Any]) -> None:
-    ddb.put_item(TableName=DELIV_TABLE, Item=_to_item(order))
 
 
 def _to_item(obj: dict[str, Any]) -> dict[str, Any]:
@@ -260,32 +253,7 @@ def main() -> None:
         )
         created += 1
 
-    # --- Delivery orders ---
-    deliv_n = 0
-    for i, status in enumerate(
-        ["delivered", "delivered", "delivered", "delivering", "pending", "returned"]
-    ):
-        day = now - timedelta(days=[0, 2, 9, 0, 1, 5][i], hours=i)
-        put_order(
-            ddb,
-            {
-                "order_id": str(uuid.uuid4()),
-                "driver_phone": DRIVER_PHONE,
-                "status": status,
-                "sender_phone": "0904000001",
-                "sender_address": PICKUPS[i % len(PICKUPS)],
-                "recipient_name": CUSTOMERS[i % len(CUSTOMERS)][0],
-                "recipient_phone": CUSTOMERS[i % len(CUSTOMERS)][1],
-                "recipient_address": DROPOFFS[i % len(DROPOFFS)],
-                "note": TAG,
-                "source": "manual",
-                "created_at": iso(day - timedelta(hours=2)),
-                "updated_at": iso(day),
-            },
-        )
-        deliv_n += 1
-
-    print(f"driver={DRIVER_PHONE} trips_put={created} delivery_put={deliv_n} tag={TAG}")
+    print(f"driver={DRIVER_PHONE} trips_put={created} tag={TAG}")
 
 
 if __name__ == "__main__":

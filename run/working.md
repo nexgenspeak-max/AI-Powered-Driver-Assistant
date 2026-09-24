@@ -27,8 +27,8 @@ Không cần Git Bash, không cần biết Git cài ở đâu, không dính lỗ
 
 - Mỗi service Node cần đã `npm install` (có `node_modules`) — nếu thiếu, script vẫn cố khởi
   động nhưng in cảnh báo `Chua thay node_modules`.
-- `voice-agent` (Python) cần đã tạo `.venv` + cài `requirements.txt` tại
-  `src/backend/voice-agent/.venv`. Nếu thiếu `.venv/Scripts/python.exe`, script sẽ **bỏ qua**
+- `llm-orchestrator` (Python) cần đã tạo `.venv` + cài `requirements.txt` tại
+  `src/backend/llm-orchestrator/.venv`. Nếu thiếu `.venv/Scripts/python.exe`, script sẽ **bỏ qua**
   service này (không tự tạo venv giúp bạn).
 
 ## Nó làm gì
@@ -42,11 +42,11 @@ Danh sách service & lệnh chạy:
 
 | Service | Thư mục | Lệnh |
 |---|---|---|
-| auth-service | `src/backend/auth-service` | `npm run dev` |
-| call-center | `src/backend/call-center` | `npm run dev` |
-| call-logger | `src/backend/call-logger` | `npm run dev` |
-| trip-service | `src/backend/trip-service` | `npm run dev` |
-| voice-agent | `src/backend/voice-agent` | `.venv/Scripts/python.exe -m app.main dev` |
+| identity-service | `src/backend/identity-service` | `npm run dev` |
+| external-channel-service | `src/backend/external-channel-service` | `npm run dev` |
+| call-records-service | `src/backend/call-records-service` | `npm run dev` |
+| external-api-service | `src/backend/external-api-service` | `npm run dev` |
+| llm-orchestrator | `src/backend/llm-orchestrator` | `.venv/Scripts/python.exe -m app.main dev` |
 | admin-panel | `src/frontend/admin-panel` | `npm run dev` |
 | customer-web | `src/frontend/customer-web` | `npm run dev` |
 | driver-web | `src/frontend/driver-web` | `npm run dev` |
@@ -58,7 +58,7 @@ Danh sách service & lệnh chạy:
 Đóng cửa sổ console của service nào là tắt service đó — không có lệnh "stop all" chung.
 
 ## Cổng tham khảo
-`auth-service:8003` · `call-center:8000` · `call-logger:8001` · `trip-service:8002` ·
+`identity-service:8003` · `external-channel-service:8000` · `call-records-service:8001` · `external-api-service:8002` ·
 `admin-panel:5173` · `customer-web:5174` · `driver-web:5175` · `agents-playground:3000` ·
 `driver-app(Expo):8081` · `customer-app(Expo):8083`
 

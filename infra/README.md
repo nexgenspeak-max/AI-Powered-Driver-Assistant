@@ -13,7 +13,7 @@ Detailed plan: [`claude/docs/deploy/00_PLAN.md`](../claude/docs/deploy/00_PLAN.m
 | Only building features, no external demo | **No** — prepare scripts only (this folder) |
 
 **Idle cost if full dev stack runs 24/7:** ~$61–66/month (0 calls).  
-**Recommended while developing:** deploy Lambda services only, skip voice-agent, or set `DESIRED_COUNT=0`.
+**Recommended while developing:** deploy Lambda services only, skip llm-orchestrator, or set `DESIRED_COUNT=0`.
 
 ---
 
@@ -47,8 +47,8 @@ bash infra/scale-ecs.sh dev 0
 |--------|---------|
 | `setup-env.sh` | Create `src/backend/*/envs/.env.dev` from templates |
 | `status.sh` | Stack status + idle cost hint |
-| `deploy-all.sh` | Full backend in correct order (trip-service ×2) |
-| `scale-ecs.sh` | Start/stop voice-agent ECS (`0` or `1`) |
+| `deploy-all.sh` | Full backend in correct order (external-api-service ×2) |
+| `scale-ecs.sh` | Start/stop llm-orchestrator ECS (`0` or `1`) |
 | `teardown-all.sh` | Delete all stacks (keeps DynamoDB data) |
 | `{service}/deploy.sh` | Deploy one service |
 | `{service}/teardown.sh` | Delete one stack |
@@ -58,13 +58,13 @@ bash infra/scale-ecs.sh dev 0
 
 ```bash
 # Lambda only (~$0-5/month idle) — no voice worker in cloud
-bash infra/deploy-all.sh dev --skip voice-agent
+bash infra/deploy-all.sh dev --skip llm-orchestrator
 
 # Dry-run (print commands only)
 bash infra/deploy-all.sh dev --dry-run
 
 # Single service
-bash infra/auth-service/deploy.sh dev
+bash infra/identity-service/deploy.sh dev
 ```
 
 ---
@@ -72,10 +72,10 @@ bash infra/auth-service/deploy.sh dev
 ## Deploy order (automatic in deploy-all.sh)
 
 ```
-auth-service → trip-service → call-logger → call-center → voice-agent → trip-service (pass 2)
+identity-service → external-api-service → call-records-service → external-channel-service → llm-orchestrator
 ```
 
-`trip-service` pass 2 sets `VOICE_AGENT_URL` from voice-agent ALB output.
+URL wiring after each deploy: `AUTH_SERVICE_URL` → external-api-service, `TRIP_SERVICE_URL` / `CALL_LOGGER_URL` → llm-orchestrator (and call-records-service into trip).
 
 ---
 

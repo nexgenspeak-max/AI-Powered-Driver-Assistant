@@ -1,0 +1,72 @@
+---
+description: Python llm-orchestrator coding standards
+globs: src/backend/llm-orchestrator/**/*.py
+alwaysApply: false
+---
+
+# Python llm-orchestrator standards
+
+## Imports
+
+```python
+# ✅ GOOD — all imports at top, grouped: stdlib → third-party → local
+import logging
+from livekit.agents import RunContext, function_tool
+
+from app.voicebot.processors import context_store
+from app.voicebot.processors.trip_format import fmt_money
+
+# ❌ BAD — import inside function (unless optional heavy dep or circular import)
+def build_prompt(trip: dict) -> str:
+    from app.voicebot.processors.trip_format import fmt_money
+```
+
+Allowed inline imports: optional plugins (`livekit.plugins`), lazy LLM/RAG deps, documented circular imports.
+
+## Control flow
+
+```python
+# ✅ GOOD — early return, explicit blocks
+async def get_stats(context: RunContext) -> str:
+    data = context_store.get(context.userdata, "driver_profile", {})
+    if not data:
+        return ERR_NO_STATS
+    return _format_stats(data)
+
+# ❌ BAD — nested if/else, logic duplicated across vn/en
+if x:
+    if y:
+        ...
+    else:
+        ...
+else:
+    ...
+```
+
+Prefer **guard clauses** over deep nesting. Extract helpers when `if lang == "en"` repeats.
+
+## Tools (one file = one tool)
+
+```
+voicebot/vn/tools/check_upcoming_trips.py   ← tool impl
+voicebot/vn/tools_definition.py             ← JSON schema only
+voicebot/processors/context_store.py        ← read/write session data
+voicebot/processors/trip_format.py          ← pure formatters, no I/O
+```
+
+- Tools **read** from `context_store` (no await for reads)
+- Mutations: update context first, `schedule_sync()` for API
+- No business logic in `agent.py` or `system_instructions.py`
+- Domain logic in `app/services/<name>/` packages; HTTP to external-api-service only via `backend_api` (adapter). See `.cursor/rules/service-layer.mdc`.
+
+## Naming
+
+- Public helpers: `fmt_money`, `build_outbound_nav_info` (no leading `_` unless truly private)
+- Constants: `UPPER_SNAKE` in `constants.py`
+- Loggers: `logger = logging.getLogger("llm-orchestrator.vn.tools.<name>")`
+
+## Google STT
+
+- **Default model:** `chirp_3` + auto location `us` for vi-VN and en-US (`settings.google_stt_model`).
+- vi-VN on chirp_3: region must be `us` or `eu` (not `asia-southeast1`).
+- Fallback when `GOOGLE_STT_MODEL` empty: `chirp_3`. Override via env or use `chirp_2` + `asia-southeast1` if needed.

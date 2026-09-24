@@ -25,12 +25,12 @@ export type CallRecord = {
 }
 
 export const LOG_SERVICE_IDS = [
-  'auth-service',
-  'trip-service',
-  'call-center',
-  'call-logger',
+  'identity-service',
+  'external-api-service',
+  'external-channel-service',
+  'call-records-service',
   'ops-service',
-  'voice-agent',
+  'llm-orchestrator',
 ] as const
 
 export type LogServiceId = (typeof LOG_SERVICE_IDS)[number]

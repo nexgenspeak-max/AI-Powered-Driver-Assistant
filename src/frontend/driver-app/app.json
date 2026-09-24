@@ -17,8 +17,6 @@
       "bundleIdentifier": "com.chinhtruongba.driverapp",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Czen Driver needs microphone access so you can talk to the AI assistant.",
-        "NSCameraUsageDescription": "Czen Driver needs camera access to capture a photo when creating a delivery order.",
-        "NSPhotoLibraryUsageDescription": "Czen Driver needs photo library access to attach a photo to a delivery order.",
         "NSContactsUsageDescription": "Czen Driver needs contacts access so the AI assistant can call people from your phone by name.",
         "UIBackgroundModes": ["audio"]
       },
@@ -35,7 +33,6 @@
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.CAMERA",
         "android.permission.INTERNET",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.RECORD_AUDIO",
@@ -45,7 +42,6 @@
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.CAMERA",
         "android.permission.INTERNET",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.RECORD_AUDIO",

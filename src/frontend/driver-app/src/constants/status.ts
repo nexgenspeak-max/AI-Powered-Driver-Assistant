@@ -1,4 +1,4 @@
-import type { TripStatus, DeliveryOrderStatus } from '../types'
+import type { TripStatus } from '../types'
 
 export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   pending: 'Pending',
@@ -35,27 +35,3 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
 }
 
 export const PENDING_STATUSES: TripStatus[] = ['pending', 'notified', 'calling']
-
-// Dashboard's "Giao hàng" tab split — "Đã giao" is `delivered` only;
-// everything still in the pipeline (including a failed-attempt redelivery)
-// counts as "Đang giao". `returned` (given up on) sits outside both, same
-// choice as leaving cancelled/rejected trips out of the trip-status tabs.
-export const DELIVERY_ACTIVE_STATUSES: DeliveryOrderStatus[] = ['pending', 'picked_up', 'delivering', 'redelivery']
-
-export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
-  pending: 'Chờ lấy hàng',
-  picked_up: 'Đã lấy hàng',
-  delivering: 'Đang giao hàng',
-  delivered: 'Giao thành công',
-  redelivery: 'Giao hàng lại',
-  returned: 'Đã trả hàng',
-}
-
-export const DELIVERY_ORDER_STATUS_COLORS: Record<DeliveryOrderStatus, { bg: string; text: string }> = {
-  pending: { bg: '$yellow4', text: '$yellow11' },
-  picked_up: { bg: '$blue4', text: '$blue11' },
-  delivering: { bg: '$purple4', text: '$purple11' },
-  delivered: { bg: '$green4', text: '$green11' },
-  redelivery: { bg: '$orange4', text: '$orange11' },
-  returned: { bg: '$gray4', text: '$gray11' },
-}

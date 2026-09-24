@@ -10,7 +10,7 @@ Repo layout (see `.cursor/rules/project-structure.mdc` for the authoritative ver
 | Project                                              | Path                        | Run/build                                     | Stack conventions                      |
 | ----------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ----------------------------------------- |
 | auth-service, call-center, call-logger, trip-service, ops-service | `src/backend/<service>`      | `npm run dev` / `npm run build`               | `.cursor/rules/typescript-backend.mdc` |
-| voice-agent                                          | `src/backend/voice-agent`    | uv/python, `tests/` (e.g. `smoke_test.py`)    | `.cursor/rules/python-voice-agent.mdc` |
+| voice-agent                                          | `src/backend/llm-orchestrator`    | uv/python, `tests/` (e.g. `smoke_test.py`)    | `.cursor/rules/python-llm-orchestrator.mdc` |
 | admin-panel, super-admin-panel, customer-web, driver-web | `src/frontend/<app>`         | `npm run dev` / `build` / `typecheck` / `lint` | Vite + React                           |
 | agents-playground                                    | `src/frontend/agents-playground` | `npm run dev` / `build` / `lint`             | Next.js                                |
 | customer-app, driver-app, mobile-app                 | `src/frontend/<app>`         | `npm run start` / `android` / `ios`           | Expo/React Native                      |
@@ -80,7 +80,7 @@ Run the checks for every project touched. "The code looks right" is not verifica
 npm run build
 ```
 
-**Python voice-agent** (`src/backend/voice-agent`): run the relevant tests under `tests/` (e.g. `pytest tests/smoke_test.py` or the full suite); for changes to entry points, sanity-check the app still imports/starts.
+**Python voice-agent** (`src/backend/llm-orchestrator`): run the relevant tests under `tests/` (e.g. `pytest tests/smoke_test.py` or the full suite); for changes to entry points, sanity-check the app still imports/starts.
 
 **Vite frontend** (`admin-panel`, `customer-web`, `driver-web`):
 

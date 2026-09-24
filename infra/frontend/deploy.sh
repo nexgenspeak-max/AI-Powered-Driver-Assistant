@@ -51,16 +51,16 @@ fi
 check_aws_credentials
 require_cmd npm
 
-TRIP_URL="$(stack_output "$(stack_name trip-service "$TARGET_ENV")" "ApiUrl")"
-AUTH_URL="$(stack_output "$(stack_name auth-service "$TARGET_ENV")" "ApiUrl")"
-LOGGER_URL="$(stack_output "$(stack_name call-logger "$TARGET_ENV")" "ApiUrl")"
+TRIP_URL="$(stack_output "$(stack_name external-api-service "$TARGET_ENV")" "ApiUrl")"
+AUTH_URL="$(stack_output "$(stack_name identity-service "$TARGET_ENV")" "ApiUrl")"
+LOGGER_URL="$(stack_output "$(stack_name call-records-service "$TARGET_ENV")" "ApiUrl")"
 
 if [[ -z "$TRIP_URL" || "$TRIP_URL" == "None" ]]; then
-  echo "❌ trip-service not deployed." >&2
+  echo "❌ external-api-service not deployed." >&2
   exit 1
 fi
 if [[ -z "$AUTH_URL" || "$AUTH_URL" == "None" ]]; then
-  echo "❌ auth-service not deployed." >&2
+  echo "❌ identity-service not deployed." >&2
   exit 1
 fi
 

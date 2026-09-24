@@ -7,7 +7,7 @@ import type { Driver } from '../../types'
 import { attachHttpDevlog } from '../devlog'
 
 export const apiClient = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
+  baseURL: process.env.EXPO_PUBLIC_EXTERNAL_API_SERVICE_URL ?? process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 

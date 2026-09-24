@@ -115,7 +115,17 @@ function SiriOrbWeb({
   )
 }
 
-export function AssistantTabButton({ centerX, barWidth }: { centerX: number; barWidth: number }) {
+export function AssistantTabButton({
+  centerX,
+  barWidth,
+  showLabel = true,
+}: {
+  centerX: number
+  barWidth: number
+  /** Render the “Trợ lý AI” caption under the orb. Off for the docked
+   *  Navigation Bar orb (M3 FAB has no label); on for the chat dock. */
+  showLabel?: boolean
+}) {
   const pageVisible = usePageVisible()
 
   useEffect(() => {
@@ -188,9 +198,11 @@ export function AssistantTabButton({ centerX, barWidth }: { centerX: number; bar
             <View style={[styles.muteDot, { backgroundColor: theme.danger.val, borderColor: theme.textInverse.val }]} />
           ) : null}
         </View>
-        <View style={styles.labelSlot} pointerEvents="none">
-          <AssistantTabLabel color={theme.textPrimary.val} connectingColor={theme.primary.val} />
-        </View>
+        {showLabel ? (
+          <View style={styles.labelSlot} pointerEvents="none">
+            <AssistantTabLabel color={theme.textPrimary.val} connectingColor={theme.primary.val} />
+          </View>
+        ) : null}
       </Pressable>
     </>
   )

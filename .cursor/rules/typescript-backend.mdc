@@ -1,5 +1,5 @@
 ---
-description: TypeScript backend (trip-service, call-center, auth-service, call-logger, ops-service) standards
+description: TypeScript backend (external-api-service, external-channel-service, identity-service, call-records-service, ops-service) standards
 globs: src/backend/**/*.ts
 alwaysApply: false
 ---

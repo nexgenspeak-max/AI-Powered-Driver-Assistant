@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native'
 import { Tabs } from 'expo-router'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { LiquidGlassProvider, LiquidGlassTabBar } from '../../src/components/LiquidGlassTabBar'
+import { NavigationBar } from '../../src/components/NavigationBar'
 import { DriverTabBarIcon, type DriverTabRoute } from '../../src/components/tabBarIcons'
 import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
@@ -55,76 +55,73 @@ export default function AppLayout() {
   }, [])
 
   return (
-    <LiquidGlassProvider>
-      <View style={{ flex: 1 }}>
-        <Tabs
-          // React Navigation invokes `tabBar` as a render function (not
-          // createElement) — do not put hooks inside that callback/component.
-          // Hide the full bar while chat is open; ChatVoiceDock keeps the orb.
-          tabBar={(props: BottomTabBarProps) =>
-            panelOpen ? null : <LiquidGlassTabBar {...props} />
-          }
-          detachInactiveScreens={false}
-          screenOptions={{
-            headerShown: false,
-            // Inactive tabs stay frozen — avoids map/list re-rendering on every
-            // poll tick from useDriverContext in sibling tabs.
-            freezeOnBlur: true,
+    <View style={{ flex: 1 }}>
+      <Tabs
+        // React Navigation invokes `tabBar` as a render function (not
+        // createElement) — do not put hooks inside that callback/component.
+        // Hide the full bar while chat is open; ChatVoiceDock keeps the orb.
+        tabBar={(props: BottomTabBarProps) =>
+          panelOpen ? null : <NavigationBar {...props} />
+        }
+        detachInactiveScreens={false}
+        screenOptions={{
+          headerShown: false,
+          // Inactive tabs stay frozen — avoids map/list re-rendering on every
+          // poll tick from useDriverContext in sibling tabs.
+          freezeOnBlur: true,
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Trang chủ',
+            tabBarIcon: ({ size, focused, color }) => (
+              <TabIcon route="index" size={size} focused={focused} color={color} />
+            ),
           }}
-        >
-          <Tabs.Screen
-            name="index"
-            options={{
-              title: 'Trang chủ',
-              tabBarIcon: ({ size, focused, color }) => (
-                <TabIcon route="index" size={size} focused={focused} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="dashboard"
-            options={{
-              title: 'Chuyến',
-              tabBarIcon: ({ size, focused, color }) => (
-                <TabIcon route="dashboard" size={size} focused={focused} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="earnings"
-            options={{
-              title: 'Thu nhập',
-              tabBarIcon: ({ size, focused, color }) => (
-                <TabIcon route="earnings" size={size} focused={focused} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Cá nhân',
-              tabBarIcon: ({ size, focused, color }) => (
-                <TabIcon route="profile" size={size} focused={focused} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
-          <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
-          <Tabs.Screen name="edit-profile" options={{ href: null, title: 'Edit Profile' }} />
-          <Tabs.Screen name="assistant-settings" options={{ href: null, title: 'Assistant Settings' }} />
-          <Tabs.Screen name="add-delivery" options={{ href: null, title: 'Add Delivery' }} />
-          <Tabs.Screen name="add-trip" options={{ href: null, title: 'Add Trip' }} />
-          <Tabs.Screen name="vehicle" options={{ href: null, title: 'Vehicle' }} />
-          <Tabs.Screen name="bank-info" options={{ href: null, title: 'Bank Info' }} />
-          <Tabs.Screen name="documents" options={{ href: null, title: 'Documents' }} />
-          <Tabs.Screen name="safety" options={{ href: null, title: 'Safety' }} />
-          <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
-          <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
-        </Tabs>
-        <TripOfferBanner />
-        <AssistantChatOverlay />
-        <ChatVoiceDock />
-      </View>
-    </LiquidGlassProvider>
+        />
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            title: 'Chuyến',
+            tabBarIcon: ({ size, focused, color }) => (
+              <TabIcon route="dashboard" size={size} focused={focused} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="earnings"
+          options={{
+            title: 'Thu nhập',
+            tabBarIcon: ({ size, focused, color }) => (
+              <TabIcon route="earnings" size={size} focused={focused} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Cá nhân',
+            tabBarIcon: ({ size, focused, color }) => (
+              <TabIcon route="profile" size={size} focused={focused} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
+        <Tabs.Screen name="faq" options={{ href: null, title: 'FAQ' }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null, title: 'Edit Profile' }} />
+        <Tabs.Screen name="assistant-settings" options={{ href: null, title: 'Assistant Settings' }} />
+        <Tabs.Screen name="add-trip" options={{ href: null, title: 'Add Trip' }} />
+        <Tabs.Screen name="vehicle" options={{ href: null, title: 'Vehicle' }} />
+        <Tabs.Screen name="bank-info" options={{ href: null, title: 'Bank Info' }} />
+        <Tabs.Screen name="documents" options={{ href: null, title: 'Documents' }} />
+        <Tabs.Screen name="safety" options={{ href: null, title: 'Safety' }} />
+        <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
+        <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
+      </Tabs>
+      <TripOfferBanner />
+      <AssistantChatOverlay />
+      <ChatVoiceDock />
+    </View>
   )
 }

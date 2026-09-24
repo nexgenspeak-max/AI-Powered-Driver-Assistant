@@ -1,6 +1,6 @@
 # Chương 2. Cơ sở lý thuyết và nghiên cứu liên quan
 
-Chương này giải thích những khái niệm cần thiết để hiểu hệ thống trợ lý giọng nói cho tài xế, đồng thời đối chiếu với các hướng nghiên cứu liên quan. Mục 2.1–2.3 nói về cách một trợ lý “nghe – hiểu – nói” và kết nối điện thoại/ứng dụng. Mục 2.4–2.5 gắn với thực tiễn gọi xe và an toàn khi lái. Mục 2.6 nêu cách đo chất lượng; mục 2.7 chỉ ra khoảng trống mà luận văn hướng tới.
+Chương này giải thích các khái niệm cần thiết để hiểu hệ thống: cách một trợ lý nghe, hiểu rồi nói; cách kết nối thời gian thực trong ứng dụng và qua điện thoại; và cách đo chất lượng. Sau đó, chương đối chiếu với các hướng nghiên cứu liên quan để chỉ ra khoảng trống mà luận văn hướng tới.
 
 ## 2.1. Trợ lý giọng nói hoạt động như thế nào?
 
@@ -12,11 +12,11 @@ Về bản chất, hầu hết trợ lý giọng nói hiện nay làm việc the
 
 Cách tổ chức này gọi là **chuỗi xử lý theo tầng** (mỗi bước một thành phần riêng, nối tiếp nhau). Ưu điểm là có thể thay từng phần (nhà cung cấp STT/LLM/TTS khác nhau) mà không phải xây lại toàn bộ. Nhược điểm là mỗi tầng đều tốn thời gian; nếu cộng dồn quá lâu, tài xế sẽ cảm thấy trợ lý chậm phản hồi, dễ mất kiên nhẫn khi đang lái xe.
 
-Vì vậy, hệ thống thực tế không chỉ quan tâm “nhận dạng đúng chữ”, mà còn phải **nói lại đủ nhanh**. Các bộ đánh giá trợ lý giọng nói gần đây cũng nhấn mạnh cần thử trong điều kiện gần đời sống (ồn, cách nói khác nhau), không chỉ trên dữ liệu sạch trong phòng thí nghiệm (Chen et al., 2024). Với tài xế, thêm hai ràng buộc thực tiễn: tiếng ồn trong **khoang xe** (động cơ, gió, đường) và mọi câu trả lời phải **khớp nghiệp vụ thật** (có chuyến nào, trạng thái nào), không được “bịa” cho trôi chảy.
+Vì vậy, hệ thống thực tế không chỉ quan tâm “nhận dạng đúng chữ”, mà còn phải **trả lời đủ nhanh**. Các bộ đánh giá trợ lý giọng nói gần đây cũng nhấn mạnh cần thử trong điều kiện gần đời sống (ồn, cách nói khác nhau), không chỉ trên dữ liệu sạch trong phòng thí nghiệm (Chen et al., 2024). Với tài xế, thêm hai ràng buộc thực tiễn: tiếng ồn trong **khoang xe** (động cơ, gió, đường) và mọi câu trả lời phải **khớp nghiệp vụ thật** (có chuyến nào, trạng thái nào), không được “bịa” cho trôi chảy.
 
 ## 2.2. Vì sao trợ lý phải “làm được việc”, không chỉ trò chuyện?
 
-Trợ lý hội thoại thông thường chỉ sinh câu trả lời. Trợ lý cho tài xế còn phải **thao tác hộ**: nhận chuyến, cập nhật đón/trả, gọi khách, trả lời câu hỏi thường gặp về ứng dụng. Cơ chế **gọi công cụ** (function calling) cho phép mô hình chọn một công cụ đã định nghĩa sẵn và điền tham số, rồi hệ thống thực thi qua giao diện lập trình ứng dụng (API) của dịch vụ phía máy chủ (Schick et al., 2023).
+Trợ lý hội thoại thông thường chỉ sinh câu trả lời. Trợ lý cho tài xế còn phải **thao tác hộ**: nhận chuyến, cập nhật điểm đón và điểm trả, gọi khách, trả lời câu hỏi thường gặp về ứng dụng. Cơ chế **gọi công cụ** (function calling) cho phép mô hình chọn một công cụ đã định nghĩa sẵn và điền tham số, rồi hệ thống thực thi qua giao diện lập trình ứng dụng (API) của dịch vụ phía máy chủ (Schick et al., 2023).
 
 Trên thực tế, thách thức không nằm ở việc có danh sách công cụ, mà ở chỗ:
 
@@ -28,9 +28,9 @@ Do đó, phần lý thuyết về gọi công cụ chỉ là nền; phần quy�
 
 ## 2.3. Kết nối thời gian thực: trong ứng dụng và qua điện thoại
 
-Để tài xế nói chuyện với trợ lý ngay trên điện thoại, âm thanh cần truyền đi gần như tức thời. **WebRTC** là bộ giao thức phổ biến cho thoại/video thời gian thực trên trình duyệt và ứng dụng (Alvestrand, 2021). Trong luận văn, kênh chính trong ứng dụng tài xế dùng WebRTC: tài xế bấm (hoặc gọi bằng từ khóa đánh thức), tham gia một phòng hội thoại với trợ lý (agent).
+Để tài xế nói chuyện với trợ lý ngay trên điện thoại, âm thanh cần truyền đi gần như tức thời. **WebRTC** là bộ giao thức phổ biến cho thoại và video thời gian thực trên trình duyệt và ứng dụng (Alvestrand, 2021). Trong luận văn, kênh chính trong ứng dụng tài xế dùng WebRTC: tài xế bấm (hoặc gọi bằng từ khóa đánh thức), tham gia một phòng hội thoại với trợ lý (agent).
 
-Khi cần gọi ra mạng điện thoại cố định/di động (Public Switched Telephone Network – PSTN) — ví dụ hệ thống gọi tài xế đề nghị chuyến, hoặc gọi khách — thường dùng thêm **SIP** và cầu nối với nhà cung cấp thoại. Điểm quan trọng về mặt thực tiễn: **cùng một logic nghiệp vụ** (nhận/từ chối, gọi khách…) nên tái sử dụng được trên cả hai kênh, thay vì viết hai trợ lý tách biệt.
+Khi cần gọi ra mạng điện thoại cố định hoặc di động (Public Switched Telephone Network – PSTN), chẳng hạn khi hệ thống gọi tài xế để đề nghị chuyến hoặc gọi khách, hệ thống dùng thêm **SIP** và cầu nối với nhà cung cấp thoại. Điểm quan trọng về mặt thực tiễn là **cùng một logic nghiệp vụ** (nhận hoặc từ chối chuyến, gọi khách) nên tái sử dụng được trên cả hai kênh, thay vì viết hai trợ lý tách biệt.
 
 Nền tảng như LiveKit Agents hỗ trợ xây trợ lý tham gia phòng hội thoại thời gian thực và gắn STT/LLM/TTS (LiveKit Inc., n.d.). Luận văn kế thừa tầng truyền thông này; đóng góp nằm ở việc gắn nghiệp vụ vận tải và đánh giá theo tiêu chí của tài xế.
 
@@ -40,13 +40,13 @@ Nhiều nghiên cứu AI cho gọi xe tập trung vào **phía nền tảng**: p
 
 Ở lớp trải nghiệm người dùng, có công trình dùng chatbot giọng nói để tăng cảm giác an toàn cho **hành khách** trong chuyến đi (Alvarado Contreras et al., 2024). Đối tượng và bài toán khác với bộ nghiệp vụ của tài xế.
 
-Khoảng trống thực tiễn vì vậy khá rõ: thiếu trợ lý chuyên cho tài xế — nghe–hiểu–làm việc trên hệ thống chuyến — và được đo bằng độ trễ, độ đúng hành động, chứ không chỉ bằng độ “hay nói”.
+Khoảng trống thực tiễn vì vậy khá rõ: thiếu một trợ lý chuyên cho tài xế, vừa nghe hiểu vừa thực thi việc trên hệ thống chuyến, và được đánh giá bằng độ trễ và độ đúng hành động chứ không chỉ bằng mức độ trôi chảy khi nói.
 
 ## 2.5. An toàn khi lái và lý do dùng giọng nói
 
-Thao tác điện thoại khi lái gắn với nguy cơ phân tâm. Phân tích dữ liệu lái xe tự nhiên quy mô lớn cho thấy yếu tố liên quan tài xế (sai sót, mệt, phân tâm…) xuất hiện trong phần lớn vụ va chạm được quan sát; phân tâm khi cầm thiết bị làm tăng nguy cơ mất an toàn (Dingus et al., 2016). Tổng hợp của Insurance Institute for Highway Safety (IIHS) cũng nêu nguy cơ va chạm tăng khoảng hai đến sáu lần khi người lái thao tác điện thoại so với khi không bị phân tâm (Insurance Institute for Highway Safety, n.d.).
+Thao tác điện thoại khi lái gắn với nguy cơ phân tâm. Như đã dẫn ở mục 1.1, phân tích dữ liệu lái xe tự nhiên quy mô lớn cho thấy yếu tố liên quan tài xế hiện diện trong phần lớn vụ va chạm, và phân tâm khi cầm thiết bị làm tăng nguy cơ mất an toàn (Dingus et al., 2016; Insurance Institute for Highway Safety, n.d.).
 
-Các hệ thống trên xe (Android Auto, Apple CarPlay…) giúp giảm một phần thao tác tay–mắt cho bản đồ và giải trí, nhưng thường **không** bao phủ đủ nghiệp vụ của ứng dụng gọi xe/giao hàng cụ thể (nhận chuyến, gọi đúng khách của chuyến, báo khách không ra…). Luận văn lấy động lực từ nhu cầu giảm nhìn–chạm màn hình trong lúc lái, và giới hạn phạm vi ở trợ lý nghiệp vụ gắn hệ thống chuyến — không thay thế toàn bộ hệ thống giải trí trên xe.
+Các hệ thống trên xe như Android Auto hay Apple CarPlay giúp giảm một phần thao tác tay và mắt cho bản đồ và giải trí, nhưng thường **không** bao phủ đủ nghiệp vụ của một ứng dụng gọi xe cụ thể, chẳng hạn nhận chuyến, gọi đúng khách của chuyến, hay báo khách không ra. Luận văn lấy động lực từ nhu cầu giảm việc nhìn và chạm màn hình trong lúc lái, và giới hạn phạm vi ở lớp trợ lý nghiệp vụ gắn với hệ thống chuyến, chứ không thay thế toàn bộ hệ thống giải trí trên xe.
 
 ## 2.6. Đo thế nào thì biết trợ lý “đủ dùng”?
 
@@ -61,21 +61,21 @@ Một trợ lý có thể nhận dạng chữ tốt nhưng vẫn “hỏng việ
 | 3 | Độ đúng gọi công cụ | Có chọn đúng hành động và tham số không | RQ4 |
 | 4 | Hoàn thành nghiệp vụ | Trên kịch bản (và thử với tài xế nếu có), việc có xong không | RQ4 |
 
-Các khung đánh giá trợ lý giọng nói dựa trên LLM cũng cho thấy cần nhìn nhiều khía cạnh và điều kiện thực tế, không chỉ một điểm số đơn (Chen et al., 2024).
+Các khung đánh giá trợ lý giọng nói dựa trên LLM cũng khuyến nghị dùng nhiều chỉ số bổ sung nhau thay vì một điểm số tổng (Chen et al., 2024).
 
 ## 2.7. Khoảng trống và định hướng luận văn
 
 Tóm lại có ba khoảng trống gắn trực tiếp đề tài:
 
-1. Thiếu tích hợp đồng thời: hội thoại thời gian thực + LLM có gọi công cụ + nghiệp vụ tài xế gọi xe/giao hàng + góc nhìn giảm thao tác khi lái.
+1. Thiếu một hướng tích hợp đồng thời cả bốn yếu tố: hội thoại thời gian thực, mô hình ngôn ngữ có gọi công cụ, nghiệp vụ của tài xế gọi xe, và góc nhìn giảm thao tác khi lái.
 2. Nghiên cứu AI gọi xe nghiêng về tối ưu dịch vụ phía máy chủ (backend) hoặc trải nghiệm khách, chưa đủ tập trung trợ lý thực thi việc cho tài xế.
-3. Đánh giá cần bộ chỉ số gắn lĩnh vực vận tải (độ trễ, WER, đúng công cụ, xong việc), không chỉ hội thoại hỏi–đáp chung.
+3. Đánh giá cần bộ chỉ số gắn với lĩnh vực vận tải (độ trễ, WER, độ đúng công cụ, mức hoàn thành việc), không chỉ đánh giá hội thoại hỏi đáp chung.
 
-Luận văn định hướng lấp các khoảng trống này bằng cách thiết kế–triển khai–đánh giá nguyên mẫu trong phạm vi Chương 1, trên nền tảng WebRTC/SIP và dịch vụ quản lý chuyến thật.
+Luận văn định hướng lấp các khoảng trống này bằng cách thiết kế, triển khai và đánh giá một nguyên mẫu trong phạm vi Chương 1, trên nền tảng WebRTC và SIP cùng dịch vụ quản lý chuyến thật.
 
 ## Kết luận chương
 
-Chương 2 đã làm rõ chuỗi nghe–hiểu–nói, vai trò gọi công cụ, kênh trong ứng dụng và qua điện thoại, sự khác biệt với AI điều phối mạng gọi xe hoặc trợ lý cho khách, động lực an toàn, bộ chỉ số đo và khoảng trống nghiên cứu. Những nội dung này là nền để Chương 3 mô tả yêu cầu theo đúng cách hệ thống vận hành trên thực tế.
+Chương 2 đã trình bày chuỗi nghe–hiểu–nói và vai trò gọi công cụ, hai kênh kết nối thời gian thực, khác biệt với các hướng AI gọi xe khác, bộ chỉ số đánh giá, và ba khoảng trống nghiên cứu. Đây là nền để Chương 3 mô tả yêu cầu theo đúng cách hệ thống vận hành trên thực tế.
 
 ---
 

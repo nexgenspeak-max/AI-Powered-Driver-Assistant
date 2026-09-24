@@ -57,7 +57,7 @@ export default function AddTripScreen() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driverContext'] })
-      // Hidden tab (`href: null`) — same fixed-destination as add-delivery.
+      // Hidden tab (`href: null`) — replace back to dashboard (not router.back()).
       router.replace('/dashboard')
     },
     onError: (err: unknown) => {
@@ -68,7 +68,7 @@ export default function AddTripScreen() {
 
   return (
     <Screen scroll backButton backTo="/dashboard">
-      <AppText variant="h1">Thêm chuyến (khách vãng lai)</AppText>
+      <AppText variant="h1">Thêm chuyến (tự tạo)</AppText>
       <AppText variant="body" color="$textSecondary">
         Chuyến sẽ vào ngay Đang chạy — không hiện banner nhận chuyến.
       </AppText>

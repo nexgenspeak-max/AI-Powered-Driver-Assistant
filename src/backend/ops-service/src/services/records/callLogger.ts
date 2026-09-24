@@ -1,4 +1,5 @@
 import { config } from '../../config';
+import { authHeaders } from '../serviceToken';
 import { getLogger } from '../logger';
 
 const log = getLogger('records');
@@ -37,7 +38,7 @@ export async function listRecords(
   params.set('limit', String(opts.limit ?? 20));
   const t0 = Date.now();
   const url = `${base}/api/v1/records?${params.toString()}`;
-  const res = await fetchFn(url);
+  const res = await fetchFn(url, { headers: authHeaders() });
   const duration_ms = Date.now() - t0;
   if (!res.ok) {
     log.error('list failed', { ok: false, status: res.status, duration_ms });
@@ -54,7 +55,9 @@ export async function getRecord(
   const fetchFn = deps.fetchFn ?? fetch;
   const base = deps.baseUrl ?? config.callLoggerUrl;
   const t0 = Date.now();
-  const res = await fetchFn(`${base}/api/v1/records/${encodeURIComponent(callId)}`);
+  const res = await fetchFn(`${base}/api/v1/records/${encodeURIComponent(callId)}`, {
+    headers: authHeaders(),
+  });
   const duration_ms = Date.now() - t0;
   if (res.status === 404) {
     log.info('get miss', { ok: true, duration_ms });

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Service layer
 
-Canonical examples already in the repo: `trip-service/src/services/maps/` and `notify/`.
+Canonical examples already in the repo: `external-api-service/src/services/maps/` and `notify/`.
 
 ## Folder = one domain
 
@@ -44,7 +44,7 @@ async def get_driver_context(phone: str, *, http: httpx.AsyncClient | None = Non
 
 ## Adapter
 
-Stable interface, swap the vendor. `maps/types.ts` `RouteProvider` + `goong.ts` / `google.ts`. Voice-agent `backend_api` is the HTTP adapter to trip-service (Python must not touch DynamoDB).
+Stable interface, swap the vendor. `maps/types.ts` `RouteProvider` + `goong.ts` / `google.ts`. Voice-agent `backend_api` is the HTTP adapter to external-api-service (Python must not touch DynamoDB).
 
 ## Process singleton — I/O clients and config only
 

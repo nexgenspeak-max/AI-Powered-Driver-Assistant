@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520" font-family="DejaVu Sans, Arial, sans-serif">
+<rect width="720" height="520" fill="#FFFFFF"/>
+<line x1="80" y1="440.0" x2="680" y2="440.0" stroke="#E5E7EB"/>
+<text x="68" y="444.0" text-anchor="end" font-size="14" fill="#374151">0%</text>
+<line x1="80" y1="360.0" x2="680" y2="360.0" stroke="#E5E7EB"/>
+<text x="68" y="364.0" text-anchor="end" font-size="14" fill="#374151">2%</text>
+<line x1="80" y1="280.0" x2="680" y2="280.0" stroke="#E5E7EB"/>
+<text x="68" y="284.0" text-anchor="end" font-size="14" fill="#374151">4%</text>
+<line x1="80" y1="200.0" x2="680" y2="200.0" stroke="#E5E7EB"/>
+<text x="68" y="204.0" text-anchor="end" font-size="14" fill="#374151">6%</text>
+<line x1="80" y1="120.0" x2="680" y2="120.0" stroke="#E5E7EB"/>
+<text x="68" y="124.0" text-anchor="end" font-size="14" fill="#374151">8%</text>
+<line x1="80" y1="40.0" x2="680" y2="40.0" stroke="#E5E7EB"/>
+<text x="68" y="44.0" text-anchor="end" font-size="14" fill="#374151">10%</text>
+<line x1="80" y1="40" x2="80" y2="440" stroke="#111827" stroke-width="1.5"/>
+<line x1="80" y1="440" x2="680" y2="440" stroke="#111827" stroke-width="1.5"/>
+<text x="28" y="240.0" font-size="14" fill="#374151" transform="rotate(-90 28 240.0)" text-anchor="middle">WER (%)</text>
+<rect x="175.0" y="316.0" width="110" height="124.0" fill="#93C5FD"/>
+<text x="230.0" y="306.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">3.1%</text>
+<text x="230.0" y="468.0" text-anchor="middle" font-size="15" fill="#111827">A — Yên tĩnh</text>
+<rect x="475.0" y="148.0" width="110" height="292.0" fill="#1D4ED8"/>
+<text x="530.0" y="138.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">7.3%</text>
+<text x="530.0" y="468.0" text-anchor="middle" font-size="15" fill="#111827">B — Nhiễu khoang xe</text>
+<text x="380.0" y="492.0" text-anchor="middle" font-size="12" fill="#6B7280">cùng đoạn đọc 22 câu, N = 192 từ · chênh lệch +4,2 điểm %</text>
+</svg>

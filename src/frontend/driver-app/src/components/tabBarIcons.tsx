@@ -19,7 +19,7 @@ export const DRIVER_TAB_ICONS: Record<
 > = {
   index: { on: 'map', off: 'map-outline', a11y: 'Trang chủ, bản đồ' },
   dashboard: { on: 'car', off: 'car-outline', a11y: 'Chuyến đi' },
-  earnings: { on: 'cash-multiple', off: 'cash', a11y: 'Thu nhập' },
+  earnings: { on: 'wallet', off: 'wallet-outline', a11y: 'Thu nhập' },
   profile: { on: 'account-circle', off: 'account-circle-outline', a11y: 'Cá nhân' },
 }
 

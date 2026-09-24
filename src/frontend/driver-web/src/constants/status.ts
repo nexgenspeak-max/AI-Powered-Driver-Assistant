@@ -32,26 +32,3 @@ export const TRIP_STATUS_COLORS: Record<TripStatus, { bg: string; text: string }
 
 export const PENDING_STATUSES: TripStatus[] = ['pending', 'notified', 'calling']
 export const IN_PROGRESS_STATUSES: TripStatus[] = ['confirmed', 'arrived_pickup', 'picked_up']
-
-export type DeliveryOrderStatus =
-  | 'pending' | 'picked_up' | 'delivering' | 'delivered' | 'redelivery' | 'returned'
-
-export const DELIVERY_ACTIVE_STATUSES: DeliveryOrderStatus[] = ['pending', 'picked_up', 'delivering', 'redelivery']
-
-export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
-  pending: 'Chờ lấy hàng',
-  picked_up: 'Đã lấy hàng',
-  delivering: 'Đang giao',
-  delivered: 'Đã giao',
-  redelivery: 'Giao lại',
-  returned: 'Đã trả hàng',
-}
-
-export const DELIVERY_ORDER_STATUS_COLORS: Record<DeliveryOrderStatus, { bg: string; text: string }> = {
-  pending: { bg: '#FEF9C3', text: '#854D0E' },
-  picked_up: { bg: '#DBEAFE', text: '#1E40AF' },
-  delivering: { bg: '#EDE9FE', text: '#5B21B6' },
-  delivered: { bg: '#DCFCE7', text: '#166534' },
-  redelivery: { bg: '#FFEDD5', text: '#9A3412' },
-  returned: { bg: '#F3F4F6', text: '#374151' },
-}

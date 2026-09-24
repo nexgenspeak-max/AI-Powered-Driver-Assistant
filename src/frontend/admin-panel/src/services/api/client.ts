@@ -3,10 +3,10 @@ import { useAuthStore } from '../../stores/authStore'
 import { authService } from './auth'
 
 const tripServiceBaseURL =
-  import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002'
+  import.meta.env.VITE_EXTERNAL_API_SERVICE_URL ?? import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002'
 
 const callLoggerBaseURL =
-  import.meta.env.VITE_CALL_LOGGER_URL ?? 'http://localhost:8001'
+  import.meta.env.VITE_CALL_RECORDS_SERVICE_URL ?? import.meta.env.VITE_CALL_LOGGER_URL ?? 'http://localhost:8001'
 
 export const apiClient = axios.create({
   baseURL: tripServiceBaseURL,
@@ -19,6 +19,12 @@ export const callLoggerClient = axios.create({
 })
 
 apiClient.interceptors.request.use(config => {
+  const accessToken = useAuthStore.getState().accessToken
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
+  return config
+})
+
+callLoggerClient.interceptors.request.use(config => {
   const accessToken = useAuthStore.getState().accessToken
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
   return config
@@ -67,8 +73,23 @@ apiClient.interceptors.response.use(
 
 callLoggerClient.interceptors.response.use(
   response => response,
-  error => {
-    console.error('[call-logger]', error.config?.url, error.response?.status, error.message)
+  async error => {
+    const status = error.response?.status
+    const original = error.config
+
+    if (status === 401 && original && !original._retry && useAuthStore.getState().refreshToken) {
+      original._retry = true
+      refreshing ??= refreshAccessToken().finally(() => { refreshing = null })
+      const newAccessToken = await refreshing
+
+      if (newAccessToken) {
+        original.headers.Authorization = `Bearer ${newAccessToken}`
+        return callLoggerClient.request(original)
+      }
+      window.location.href = '/login'
+    }
+
+    console.error('[call-records]', error.config?.url, error.response?.status, error.message)
     return Promise.reject(error)
   },
 )

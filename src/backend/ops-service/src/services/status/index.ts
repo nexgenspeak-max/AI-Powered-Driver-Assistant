@@ -9,16 +9,16 @@ export { httpProbe } from './httpProbe';
 export { logFreshnessProbe } from './logFreshness';
 
 const HTTP_IDS: HttpServiceId[] = [
-  'auth-service',
-  'trip-service',
-  'call-center',
-  'call-logger',
+  'identity-service',
+  'external-api-service',
+  'external-channel-service',
+  'call-records-service',
 ];
 
 export function defaultProbes(): HealthProbe[] {
   const http: HealthProbe[] = HTTP_IDS.map((id) => () => httpProbe(id, config.healthUrls[id]));
   const voice: HealthProbe = async () =>
-    logFreshnessProbe('voice-agent', resolveLogFiles('voice-agent'), config.logFreshnessMs);
+    logFreshnessProbe('llm-orchestrator', resolveLogFiles('llm-orchestrator'), config.logFreshnessMs);
   const self: HealthProbe = async () => ({ id: 'ops-service', ok: true, latency_ms: 0, detail: 'self' });
   return [...http, self, voice];
 }

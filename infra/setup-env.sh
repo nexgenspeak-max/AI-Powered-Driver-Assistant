@@ -43,21 +43,21 @@ copy_template() {
   echo "✅ Created: $rel"
 }
 
-for svc in auth-service trip-service call-logger call-center voice-agent; do
+for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
   copy_template "$svc"
 done
 
 # Shared JWT — generate once if all three are empty
-JWT_FILE="$REPO_ROOT/src/backend/auth-service/envs/.env.${TARGET_ENV}"
+JWT_FILE="$REPO_ROOT/src/backend/identity-service/envs/.env.${TARGET_ENV}"
 if [[ -f "$JWT_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$JWT_FILE"
   if [[ -z "${JWT_SECRET:-}" ]]; then
     NEW_JWT="$(openssl rand -hex 32)"
-    for svc in auth-service trip-service voice-agent; do
+    for svc in identity-service external-api-service llm-orchestrator; do
       set_env_var "$REPO_ROOT/src/backend/${svc}/envs/.env.${TARGET_ENV}" "JWT_SECRET" "$NEW_JWT"
     done
-    echo "✅ Generated JWT_SECRET (same value in auth/trip/voice-agent)"
+    echo "✅ Generated JWT_SECRET (same value in auth/trip/llm-orchestrator)"
   fi
 fi
 
@@ -78,7 +78,7 @@ if [[ "$FROM_LOCAL" == "true" ]]; then
       key="${line%%=*}"
       val="${line#*=}"
       case "$key" in
-        ENV|AWS_REGION|AWS_PROFILE|JWT_SECRET|AUTH_SERVICE_URL|TRIP_SERVICE_URL|VOICE_AGENT_URL|CALL_LOGGER_URL|BASE_URL|VPC_ID|SUBNET_IDS)
+        ENV|AWS_REGION|AWS_PROFILE|JWT_SECRET|AUTH_SERVICE_URL|TRIP_SERVICE_URL|CALL_LOGGER_URL|BASE_URL|VPC_ID|SUBNET_IDS)
           continue
           ;;
       esac
@@ -87,13 +87,13 @@ if [[ "$FROM_LOCAL" == "true" ]]; then
     echo "   merged keys → src/backend/${service}/envs/.env.${TARGET_ENV}"
   }
 
-  for svc in auth-service trip-service call-logger call-center voice-agent; do
+  for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
     copy_if_local "$svc"
   done
 fi
 
-# Auto-fill VPC for voice-agent if empty
-VA_ENV="$REPO_ROOT/src/backend/voice-agent/envs/.env.${TARGET_ENV}"
+# Auto-fill VPC for llm-orchestrator if empty
+VA_ENV="$REPO_ROOT/src/backend/llm-orchestrator/envs/.env.${TARGET_ENV}"
 if [[ -f "$VA_ENV" ]]; then
   # shellcheck disable=SC1090
   source "$VA_ENV"
@@ -104,10 +104,10 @@ if [[ -f "$VA_ENV" ]]; then
         SUBNETS="$(discover_public_subnets "$VPC")"
         set_env_var "$VA_ENV" "VPC_ID" "$VPC"
         set_env_var "$VA_ENV" "SUBNET_IDS" "$SUBNETS"
-        echo "✅ voice-agent: VPC_ID=$VPC SUBNET_IDS=$SUBNETS"
+        echo "✅ llm-orchestrator: VPC_ID=$VPC SUBNET_IDS=$SUBNETS"
       fi
     else
-      echo "ℹ️  AWS not configured — fill VPC_ID and SUBNET_IDS in voice-agent env manually"
+      echo "ℹ️  AWS not configured — fill VPC_ID and SUBNET_IDS in llm-orchestrator env manually"
     fi
   fi
 fi

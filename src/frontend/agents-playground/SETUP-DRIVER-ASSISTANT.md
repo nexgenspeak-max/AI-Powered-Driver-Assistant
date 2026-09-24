@@ -6,10 +6,10 @@ Dùng playground **trước** mobile app — cùng LiveKit + cùng worker `drive
 
 ```bash
 # trip-service :8002
-cd src/backend/trip-service && ENV=local uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
+cd src/backend/external-api-service && ENV=local uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
 
 # voice-agent worker
-cd src/backend/voice-agent && ENV=local python -m app.main dev
+cd src/backend/llm-orchestrator && ENV=local python -m app.main dev
 # đợi log: registered worker {"agent_name": "driver-assistant"}
 
 # (tuỳ chọn) call-center :8000 + ngrok — khi test tool "gọi khách"
@@ -20,7 +20,7 @@ cd src/backend/voice-agent && ENV=local python -m app.main dev
 ```bash
 cd agents-playground
 cp .env.local.example .env.local
-# Sửa .env.local — copy LIVEKIT_* từ src/backend/voice-agent/envs/.env.local
+# Sửa .env.local — copy LIVEKIT_* từ src/backend/llm-orchestrator/envs/.env.local
 pnpm install
 pnpm dev
 ```

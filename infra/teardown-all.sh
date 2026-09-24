@@ -27,7 +27,7 @@ confirm() {
 }
 
 print_header "Teardown all ($TARGET_ENV)"
-echo "Order: voice-agent → call-center → call-logger → trip-service → auth-service"
+echo "Order: llm-orchestrator → external-channel-service → call-records-service → external-api-service → identity-service"
 echo ""
 
 if ! confirm "⚠️  Delete ALL stacks for environment '$TARGET_ENV'?"; then
@@ -58,7 +58,7 @@ run_teardown() {
 }
 
 # Reverse order
-for svc in voice-agent call-center call-logger trip-service auth-service; do
+for svc in llm-orchestrator external-channel-service call-records-service external-api-service identity-service; do
   run_teardown "$svc"
 done
 

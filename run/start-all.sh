@@ -35,11 +35,11 @@ fi
 # name|relative_path|cmd
 SERVICES=(    
     # -- Backend --------------------------------------------------------
-    "auth-service|src/backend/auth-service|npm run dev"
-    "call-center|src/backend/call-center|npm run dev"
-    "call-logger|src/backend/call-logger|npm run dev"
-    "trip-service|src/backend/trip-service|npm run dev"
-    "voice-agent|src/backend/voice-agent|__VENV__"   # xu ly rieng ben duoi
+    "identity-service|src/backend/identity-service|npm run dev"
+    "external-channel-service|src/backend/external-channel-service|npm run dev"
+    "call-records-service|src/backend/call-records-service|npm run dev"
+    "external-api-service|src/backend/external-api-service|npm run dev"
+    "llm-orchestrator|src/backend/llm-orchestrator|__VENV__"   # xu ly rieng ben duoi
 
     # -- Frontend (web) ---------------------------------------------------
     "admin-panel|src/frontend/admin-panel|npm run dev"
@@ -67,7 +67,7 @@ for entry in "${SERVICES[@]}"; do
 
     win_path="$(cd "$full_path" && pwd -W 2>/dev/null || pwd)"
 
-    if [ "$name" = "voice-agent" ]; then
+    if [ "$name" = "llm-orchestrator" ]; then
         venv_python="$full_path/.venv/Scripts/python.exe"
         if [ ! -f "$venv_python" ]; then
             echo "[WARN] [$name] Bo qua - chua thay .venv (chay 'python -m venv .venv' + cai requirements.txt truoc)" >&2
@@ -92,4 +92,4 @@ done
 
 echo
 echo "Da mo xong cac cua so. Moi service 1 cua so rieng - dong cua so nao la tat service do."
-echo "Port tham khao: auth-service:8003  call-center:8000  call-logger:8001  trip-service:8002  admin-panel:5173  customer-web:5174  driver-web:5175  agents-playground:3000  driver-app(Expo):8081  customer-app(Expo):8083"
+echo "Port tham khao: identity-service:8003  external-channel-service:8000  call-records-service:8001  external-api-service:8002  admin-panel:5173  customer-web:5174  driver-web:5175  agents-playground:3000  driver-app(Expo):8081  customer-app(Expo):8083"

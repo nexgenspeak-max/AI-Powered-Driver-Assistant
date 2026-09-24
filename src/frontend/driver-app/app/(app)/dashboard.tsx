@@ -15,28 +15,20 @@ import { OptimizedRouteCard } from "../../src/features/dashboard/components/Opti
 import { TripCard } from "../../src/features/dashboard/components/TripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
 import { EmptyState } from "../../src/components/EmptyState";
-import { DeliveryOrderCard } from "../../src/features/delivery/components/DeliveryOrderCard";
-import { EmptyDeliveryState } from "../../src/features/delivery/components/EmptyDeliveryState";
 import { GlassButton } from "../../src/components/GlassButton";
 import { SearchInput } from "../../src/components/SearchInput";
-import { useDeliveryOrders } from "../../src/features/delivery/hooks/useDeliveryOrders";
 import { driversService } from "../../src/services/api/drivers";
 import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
-import { PENDING_STATUSES, DELIVERY_ACTIVE_STATUSES } from "../../src/constants/status";
+import { PENDING_STATUSES } from "../../src/constants/status";
 
-type DashboardMode = "trips" | "delivery";
 // "Chưa xác nhận" (pending/notified/calling) → "Đang chạy" (confirmed →
 // arrived_pickup → picked_up) → "Đã hoàn thành" (completed). Accepting a
 // pending trip or completing an active one just moves it between these tabs
 // on the next driverContext refetch — no separate "move" action needed.
 type TripStatusTab = "pending" | "active" | "completed";
-// "Đang giao" (pending/picked_up/delivering/redelivery) → "Đã giao"
-// (delivered). Same idea as TripStatusTab: a status update just moves the
-// order between tabs on the next refetch.
-type DeliveryStatusTab = "active" | "delivered";
 
 /**
- * Sticky chrome (greeting, mode, search, status tabs); only the card list scrolls.
+ * Sticky chrome (greeting, search, status tabs); only the card list scrolls.
  * Same pattern as Thu nhập (`earnings.tsx`).
  */
 export default function DashboardScreen() {
@@ -45,17 +37,8 @@ export default function DashboardScreen() {
   const { data: driver } = useCurrentUser();
   const qc = useQueryClient();
   const insets = useSafeAreaInsets();
-  const [mode, setMode] = useState<DashboardMode>("trips");
   const [tripStatusTab, setTripStatusTab] = useState<TripStatusTab>("active");
-  const [deliveryStatusTab, setDeliveryStatusTab] =
-    useState<DeliveryStatusTab>("active");
   const [tripQuery, setTripQuery] = useState("");
-  const [deliveryQuery, setDeliveryQuery] = useState("");
-  const {
-    data: deliveryOrders = [],
-    isError: isDeliveryError,
-    refetch: refetchDelivery,
-  } = useDeliveryOrders();
 
   const {
     data: context,
@@ -67,7 +50,7 @@ export default function DashboardScreen() {
   const onPullRefresh = async () => {
     setPullRefreshing(true);
     try {
-      await Promise.all([refetch(), refetchDelivery()]);
+      await refetch();
     } finally {
       setPullRefreshing(false);
     }
@@ -141,27 +124,6 @@ export default function DashboardScreen() {
   const filteredPending = pending.filter(matchesTripQuery);
   const filteredCompleted = completed.filter(matchesTripQuery);
 
-  const matchesDeliveryQuery = (o: {
-    sender_phone?: string;
-    recipient_phone: string;
-  }) => {
-    const q = deliveryQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      o.sender_phone?.toLowerCase().includes(q) ||
-      o.recipient_phone?.toLowerCase().includes(q)
-    );
-  };
-  const deliveryActive = deliveryOrders.filter((o) =>
-    DELIVERY_ACTIVE_STATUSES.includes(o.status),
-  );
-  const deliveryDelivered = deliveryOrders.filter(
-    (o) => o.status === "delivered",
-  );
-  const filteredDeliveryActive = deliveryActive.filter(matchesDeliveryQuery);
-  const filteredDeliveryDelivered =
-    deliveryDelivered.filter(matchesDeliveryQuery);
-
   const header = (
     <YStack
       backgroundColor="$background"
@@ -196,72 +158,28 @@ export default function DashboardScreen() {
         </XStack>
       </XStack>
 
-      <SegmentedControl<DashboardMode>
-        value={mode}
-        onChange={(next) => {
-          setMode(next);
-          if (next === "trips") setTripQuery("");
-          else setDeliveryQuery("");
-        }}
+      <SearchInput
+        value={tripQuery}
+        onChangeText={setTripQuery}
+        placeholder="Tìm theo tên hoặc số điện thoại..."
+      />
+
+      <GlassButton
+        label="+ Thêm chuyến (tự tạo)"
+        onPress={() => router.push("/add-trip")}
+      />
+      {/* Short labels, no icons — 3 segments is already tight; an icon +
+          "Chưa xác nhận (12)" wrapped to 2 lines inside the control's
+          fixed height and visually overlapped the neighboring segment. */}
+      <SegmentedControl<TripStatusTab>
+        value={tripStatusTab}
+        onChange={setTripStatusTab}
         options={[
-          { value: "trips", label: "Chuyến đi", icon: "car-sport" },
-          { value: "delivery", label: "Giao hàng", icon: "cube" },
+          { value: "pending", label: `Chờ (${pending.length})` },
+          { value: "active", label: `Đang chạy (${active.length})` },
+          { value: "completed", label: `Xong (${completed.length})` },
         ]}
       />
-
-      <SearchInput
-        value={mode === "trips" ? tripQuery : deliveryQuery}
-        onChangeText={mode === "trips" ? setTripQuery : setDeliveryQuery}
-        placeholder={
-          mode === "trips"
-            ? "Tìm theo tên hoặc số điện thoại..."
-            : "Tìm theo SĐT người gửi/nhận..."
-        }
-      />
-
-      {mode === "trips" ? (
-        <>
-          <GlassButton
-            label="+ Thêm chuyến (vãng lai)"
-            onPress={() => router.push("/add-trip")}
-          />
-          {/* Short labels, no icons — 3 segments is already tight; an icon +
-              "Chưa xác nhận (12)" wrapped to 2 lines inside the control's
-              fixed height and visually overlapped the neighboring segment. */}
-          <SegmentedControl<TripStatusTab>
-            value={tripStatusTab}
-            onChange={setTripStatusTab}
-            options={[
-              { value: "pending", label: `Chờ (${pending.length})` },
-              { value: "active", label: `Đang chạy (${active.length})` },
-              { value: "completed", label: `Xong (${completed.length})` },
-            ]}
-          />
-        </>
-      ) : (
-        <>
-          <GlassButton
-            label="+ Thêm đơn hàng"
-            onPress={() => router.push("/add-delivery")}
-          />
-          {deliveryOrders.length > 0 ? (
-            <SegmentedControl<DeliveryStatusTab>
-              value={deliveryStatusTab}
-              onChange={setDeliveryStatusTab}
-              options={[
-                {
-                  value: "active",
-                  label: `Đang giao (${deliveryActive.length})`,
-                },
-                {
-                  value: "delivered",
-                  label: `Đã giao (${deliveryDelivered.length})`,
-                },
-              ]}
-            />
-          ) : null}
-        </>
-      )}
     </YStack>
   );
 
@@ -272,14 +190,14 @@ export default function DashboardScreen() {
       refreshing={pullRefreshing}
       onRefresh={onPullRefresh}
     >
-      {mode === "trips" && showTripSkeleton && (
+      {showTripSkeleton && (
         <YStack gap="$4">
           <Skeleton height={120} radius={24} />
           <Skeleton height={120} radius={24} />
         </YStack>
       )}
 
-      {mode === "trips" && !showTripSkeleton && isError && (
+      {!showTripSkeleton && isError && (
         <EmptyState
           icon="alert-circle-outline"
           title="Không thể tải chuyến đi"
@@ -289,7 +207,7 @@ export default function DashboardScreen() {
         />
       )}
 
-      {mode === "trips" && !showTripSkeleton && !isError && context && (
+      {!showTripSkeleton && !isError && context && (
         <>
           {tripStatusTab === "pending" &&
             (pending.length === 0 ? (
@@ -341,58 +259,6 @@ export default function DashboardScreen() {
             ))}
         </>
       )}
-
-      {mode === "delivery" && isDeliveryError && (
-        <EmptyState
-          icon="alert-circle-outline"
-          title="Không thể tải đơn hàng"
-          message="Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại."
-          actionLabel="Thử lại"
-          onAction={refetchDelivery}
-        />
-      )}
-
-      {mode === "delivery" && !isDeliveryError && (
-        <>
-          {deliveryOrders.length === 0 ? (
-            <EmptyDeliveryState />
-          ) : (
-            <>
-              {deliveryStatusTab === "active" &&
-                (deliveryActive.length === 0 ? (
-                  <NoDeliveryMatch text="Không có đơn nào đang giao" />
-                ) : filteredDeliveryActive.length === 0 ? (
-                  <NoDeliveryMatch text="Không tìm thấy đơn hàng phù hợp" />
-                ) : (
-                  <YStack gap="$4">
-                    {filteredDeliveryActive.map((order) => (
-                      <DeliveryOrderCard
-                        key={order.order_id}
-                        order={order}
-                      />
-                    ))}
-                  </YStack>
-                ))}
-
-              {deliveryStatusTab === "delivered" &&
-                (deliveryDelivered.length === 0 ? (
-                  <NoDeliveryMatch text="Chưa có đơn nào đã giao" />
-                ) : filteredDeliveryDelivered.length === 0 ? (
-                  <NoDeliveryMatch text="Không tìm thấy đơn hàng phù hợp" />
-                ) : (
-                  <YStack gap="$4">
-                    {filteredDeliveryDelivered.map((order) => (
-                      <DeliveryOrderCard
-                        key={order.order_id}
-                        order={order}
-                      />
-                    ))}
-                  </YStack>
-                ))}
-            </>
-          )}
-        </>
-      )}
     </Screen>
   );
 }
@@ -406,19 +272,6 @@ function NoSearchMatch() {
       paddingVertical="$4"
     >
       Không tìm thấy chuyến đi phù hợp
-    </AppText>
-  );
-}
-
-function NoDeliveryMatch({ text }: { text: string }) {
-  return (
-    <AppText
-      variant="body"
-      color="$textSecondary"
-      textAlign="center"
-      paddingVertical="$4"
-    >
-      {text}
     </AppText>
   );
 }

@@ -21,7 +21,7 @@ if ! aws sts get-caller-identity $(aws_profile_args) >/dev/null 2>&1; then
   exit 0
 fi
 
-SERVICES=(auth-service trip-service call-logger call-center voice-agent)
+SERVICES=(identity-service external-api-service call-records-service external-channel-service llm-orchestrator)
 DEPLOYED=0
 MISSING=0
 
@@ -40,13 +40,9 @@ for svc in "${SERVICES[@]}"; do
     printf "%-20s %-45s %s\n" "$svc" "$name" "$status"
     DEPLOYED=$((DEPLOYED + 1))
 
-    if [[ "$svc" == "auth-service" || "$svc" == "trip-service" || "$svc" == "call-logger" ]]; then
+    if [[ "$svc" == "identity-service" || "$svc" == "external-api-service" || "$svc" == "call-records-service" ]]; then
       url="$(stack_output "$name" "ApiUrl")"
       [[ -n "$url" && "$url" != "None" ]] && echo "                     → ApiUrl: $url"
-    fi
-    if [[ "$svc" == "voice-agent" ]]; then
-      url="$(stack_output "$name" "VoiceAgentApiUrl")"
-      [[ -n "$url" && "$url" != "None" ]] && echo "                     → VoiceAgentApiUrl: $url"
     fi
   else
     printf "%-20s %-45s %s\n" "$svc" "$name" "NOT DEPLOYED"
@@ -58,8 +54,8 @@ echo ""
 echo "Deployed: $DEPLOYED / ${#SERVICES[@]}   Missing: $MISSING"
 echo ""
 
-# ECS desired count (voice-agent cost driver)
-VA_STACK="$(stack_name voice-agent "$TARGET_ENV")"
+# ECS desired count (llm-orchestrator cost driver)
+VA_STACK="$(stack_name llm-orchestrator "$TARGET_ENV")"
 if stack_exists "$VA_STACK"; then
   CLUSTER="$(stack_output "$VA_STACK" "ECSClusterName")"
   SERVICE="$(stack_output "$VA_STACK" "ECSServiceName")"
@@ -71,9 +67,9 @@ if stack_exists "$VA_STACK"; then
       $(aws_profile_args) \
       --query 'services[0].desiredCount' \
       --output text 2>/dev/null || echo "?")"
-    echo "voice-agent ECS desiredCount: $DESIRED"
+    echo "llm-orchestrator ECS desiredCount: $DESIRED"
     if [[ "$DESIRED" == "0" ]]; then
-      echo "   💡 ECS is scaled to 0 — saving ~\$41/month (ALB still ~\$18-20 if stack exists)"
+      echo "   💡 ECS is scaled to 0 — saving compute cost while stack exists"
     fi
   fi
 fi

@@ -14,10 +14,10 @@ code_auth=$(curl -s -o /dev/null -w '%{http_code}' "$auth_health" 2>/dev/null ||
 code_trip=$(curl -s -o /dev/null -w '%{http_code}' "$trip_health" 2>/dev/null || echo 000)
 
 if [[ "$code_auth" != "200" ]]; then
-  fail "auth-service not reachable at $auth_health (got $code_auth) — run: cd src/backend/auth-service && npm run dev"
+  fail "auth-service not reachable at $auth_health (got $code_auth) — run: cd src/backend/identity-service && npm run dev"
 fi
 if [[ "$code_trip" != "200" ]]; then
-  fail "trip-service not reachable at $trip_health (got $code_trip) — run: cd src/backend/trip-service && npm run dev"
+  fail "trip-service not reachable at $trip_health (got $code_trip) — run: cd src/backend/external-api-service && npm run dev"
 fi
 
 echo "deps-check ok auth=$auth_health trip=$trip_health"

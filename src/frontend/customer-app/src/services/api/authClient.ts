@@ -4,7 +4,7 @@ import { refreshAccessToken } from './tokenRefresh'
 import { logoutAndReset } from '../../features/auth/logoutAndReset'
 
 export const authClient = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL ?? 'http://localhost:8003/api/v1',
+  baseURL: process.env.EXPO_PUBLIC_IDENTITY_SERVICE_URL ?? process.env.EXPO_PUBLIC_AUTH_SERVICE_URL ?? 'http://localhost:8003/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 

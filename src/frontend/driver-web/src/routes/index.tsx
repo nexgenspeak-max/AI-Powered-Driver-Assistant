@@ -7,7 +7,6 @@ import RegisterPage from '../pages/RegisterPage'
 
 const LoginPage       = lazy(() => import('../pages/LoginPage'))
 const DashboardPage   = lazy(() => import('../pages/DashboardPage'))
-const AddDeliveryPage = lazy(() => import('../pages/AddDeliveryPage'))
 const EarningsPage    = lazy(() => import('../pages/EarningsPage'))
 const ProfilePage     = lazy(() => import('../pages/ProfilePage'))
 const EditProfilePage = lazy(() => import('../pages/EditProfilePage'))
@@ -42,7 +41,6 @@ export function AppRoutes() {
         <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/add-delivery" element={<ProtectedRoute><AddDeliveryPage /></ProtectedRoute>} />
         <Route path="/earnings" element={<ProtectedRoute><EarningsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />

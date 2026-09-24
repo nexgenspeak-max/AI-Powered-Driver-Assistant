@@ -17,11 +17,11 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 
 $Services = @(
     # -- Backend --------------------------------------------------------
-    @{ Name = 'auth-service';  Path = 'src\backend\auth-service';  Cmd = 'npm run dev' }
-    @{ Name = 'call-center';   Path = 'src\backend\call-center';   Cmd = 'npm run dev' }
-    @{ Name = 'call-logger';   Path = 'src\backend\call-logger';   Cmd = 'npm run dev' }
-    @{ Name = 'trip-service';  Path = 'src\backend\trip-service';  Cmd = 'npm run dev' }
-    @{ Name = 'voice-agent';   Path = 'src\backend\voice-agent';   Cmd = '.venv-python' }  # xu ly rieng ben duoi
+    @{ Name = 'identity-service';  Path = 'src\backend\identity-service';  Cmd = 'npm run dev' }
+    @{ Name = 'external-channel-service';   Path = 'src\backend\external-channel-service';   Cmd = 'npm run dev' }
+    @{ Name = 'call-records-service';   Path = 'src\backend\call-records-service';   Cmd = 'npm run dev' }
+    @{ Name = 'external-api-service';  Path = 'src\backend\external-api-service';  Cmd = 'npm run dev' }
+    @{ Name = 'llm-orchestrator';   Path = 'src\backend\llm-orchestrator';   Cmd = '.venv-python' }  # xu ly rieng ben duoi
 
     # -- Frontend (web) ---------------------------------------------------
     @{ Name = 'admin-panel';       Path = 'src\frontend\admin-panel';       Cmd = 'npm run dev' }
@@ -45,8 +45,8 @@ foreach ($svc in $Services) {
         continue
     }
 
-    # voice-agent chay bang python trong .venv rieng, khong phai npm
-    if ($svc.Name -eq 'voice-agent') {
+    # llm-orchestrator chay bang python trong .venv rieng, khong phai npm
+    if ($svc.Name -eq 'llm-orchestrator') {
         $venvPython = Join-Path $fullPath '.venv\Scripts\python.exe'
         if (-not (Test-Path -LiteralPath $venvPython)) {
             Write-Warning "[$($svc.Name)] Bo qua - chua thay .venv (chay 'python -m venv .venv' + cai requirements.txt truoc)"
@@ -72,4 +72,4 @@ foreach ($svc in $Services) {
 }
 
 Write-Host "`nDa mo xong cac cua so. Moi service 1 cua so PowerShell rieng - dong cua so nao la tat service do." -ForegroundColor Yellow
-Write-Host "Port tham khao: auth-service:8003  call-center:8000  call-logger:8001  trip-service:8002  admin-panel:5173  customer-web:5174  driver-web:5175  agents-playground:3000  driver-app(Expo):8081  customer-app(Expo):8083" -ForegroundColor DarkGray
+Write-Host "Port tham khao: identity-service:8003  external-channel-service:8000  call-records-service:8001  external-api-service:8002  admin-panel:5173  customer-web:5174  driver-web:5175  agents-playground:3000  driver-app(Expo):8081  customer-app(Expo):8083" -ForegroundColor DarkGray

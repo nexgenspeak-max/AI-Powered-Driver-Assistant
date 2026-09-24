@@ -24,8 +24,10 @@ export const ORB_SIZE = 64
 export const BUTTON_SIZE = ORB_SIZE
 /** Horizontal wrap wider than the orb so “Trợ lý AI” caption fits. */
 export const ORB_WRAP_WIDTH = 80
-export const BUTTON_RISE = 32
-/** Space below the orb for the “Trợ lý AI” caption (clears tab bar). */
+/** How far the docked orb rises above the Navigation Bar's top edge. */
+export const BUTTON_RISE = 26
+/** Space below the orb for the “Trợ lý AI” caption, when it is shown
+ *  (chat dock keeps it; the docked nav-bar orb passes `showLabel={false}`). */
 export const BUTTON_LABEL_OVERHANG = 18
 
 export const EXPANDED_TEXT_MS = 4500

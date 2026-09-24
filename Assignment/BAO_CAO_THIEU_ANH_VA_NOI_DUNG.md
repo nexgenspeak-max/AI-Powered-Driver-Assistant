@@ -15,7 +15,7 @@
 | Ch.2 Cơ sở lý thuyết | STT–LLM–TTS, tool calling, WebRTC/SIP, AI gọi xe, an toàn, Bảng 2.1, khoảng trống; 8 cite verified |
 | Ch.3 Phân tích yêu cầu | Actors, FR/NFR, UC01–UC10, ~39 tools, OOS (không group chat), Bảng 3.1–3.4 |
 | Ch.4 Thiết kế | Kiến trúc, pipeline, sequence, context, tool↔API; Hình 4.1–4.2 |
-| Ch.5 Triển khai | Stack, monorepo, voice-agent, backend, app, module; Bảng 5.1–5.4 |
+| Ch.5 Triển khai | Stack, monorepo, llm-orchestrator, backend, app, module; Bảng 5.1–5.4 |
 | Ch.6 Thực nghiệm | Method + định nghĩa chỉ số + bảng kết quả (ô — chờ số) + threats; Bảng 6.1–6.7 |
 | Phần đầu | Bìa (từ gốc) + Tóm tắt VI + cảm ơn + TOC field + danh sách bảng/hình |
 | Phụ lục | Khung A–D (chưa điền) |
@@ -43,7 +43,7 @@
 | Mã hình | Chú thích đề xuất | Ghi chú |
 |---|---|---|
 | **Hình 4.1** | Sơ đồ kiến trúc tổng thể hệ thống trợ lý giọng nói và nền tảng tích hợp | FigJam / draw.io — agent vẽ giúp được nếu bạn muốn |
-| **Hình 4.2** | Chuỗi xử lý hội thoại và đường tắt | Khối STT → chọn đường → công cụ/LLM → TTS |
+| **Hình 4.2** | Chuỗi xử lý hội thoại một đường + câu giữ chỗ | Khối STT → LLM kèm công cụ → TTS (+ filler ≈ 2s) |
 
 ### 3.2. Ảnh ứng dụng tài xế (bạn chụp)
 
@@ -57,13 +57,12 @@
 | **Hình 5.6** | Hội thoại mẫu — tra cứu lịch hoặc xác nhận chuyến | Bubble chat + nội dung nghiệp vụ |
 | **Hình 5.7** | Cài đặt chế độ gọi khách mặc định | Assistant settings (agent / bridge) |
 | **Hình 5.8** | Kích hoạt rảnh tay (wake-word), nếu UI có | Settings hoặc màn hướng dẫn |
-| **Hình 5.9** | Luồng quét đơn giao hàng từ ảnh | Camera / kết quả scan |
 
 ### 3.3. Tuỳ chọn
 
 | Mã hình | Chú thích đề xuất | Khi nào cần |
 |---|---|---|
-| **Hình 5.10** | Giao diện quản trị tạo chuyến thử nghiệm | Demo end-to-end |
+| **Hình 5.9** | Giao diện quản trị tạo chuyến thử nghiệm | Demo end-to-end |
 | **Hình 6.1+** | Biểu đồ độ trễ / WER / tỷ lệ hoàn thành tác vụ | Sau khi có số liệu Ch.6 |
 
 Ảnh đưa vào **thân Ch.5** (2–4 hình tiêu biểu) + phần còn lại **Phụ lục C**.

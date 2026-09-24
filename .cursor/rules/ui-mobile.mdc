@@ -124,9 +124,7 @@ Brand anchor: `#8B5CF6` primary — defined once in `tamagui.config.ts`.
 <AppText variant="caption" color="$textSecondary">Trang chủ</AppText>
 ```
 
-Tab bar labels: **12px** minimum (`LiquidGlassTabBar`).
-
-**Exception:** route tabs (Trang chủ, Chuyến, …) are **icon-only** — meaning is carried by the icon + `accessibilityLabel`; center **Trợ lý AI** slot keeps its caption under the orb.
+**Exception:** route tabs (Trang chủ, Chuyến, …) in the M3 `NavigationBar` are **icon-only** — meaning is carried by the filled/outline icon + a Vietnamese `accessibilityLabel`. The docked center **Trợ lý AI** orb has **no caption** (M3 FAB carries none); the chat-dock orb (`ChatVoiceDock`) still shows its label via `AssistantTabButton showLabel` (default on).
 
 ---
 
@@ -170,18 +168,18 @@ Tab bar labels: **12px** minimum (`LiquidGlassTabBar`).
 | Back nav | `BackButton` or `<Screen backButton>` | Custom chevron per screen |
 | Badge | `Badge` | Inline styled View |
 
-**Glass rule:** `Card` uses `GlassSheen` (no blur). Floating controls (tab bar, back, assistant orb) use `GlassMaterial`.
+**Glass rule:** `Card` uses `GlassSheen` (no blur). Floating controls (back button, assistant orb, chat dock) use `GlassMaterial`. The `NavigationBar` is a solid M3 surface (`$surfaceElevated`), **not** glass.
 
 ---
 
-## 7. Tab bar & assistant orb
+## 7. Navigation Bar & assistant orb
 
-- Tab bar: `LiquidGlassTabBar` — floating island, **do not** hardcode bottom padding without clearance constants.
-- **Route tabs:** icon-only (no caption) — icons at **26px**; `accessibilityLabel` from route `title` (Vietnamese) for screen readers.
-- **Active tab pill:** fill/tint only (`backgroundColor`) — **never** add a `borderWidth` stroke on the pill; the bar already has a 1px glass rim (`GLASS_BORDER_COLOR`). Stacking both reads as overlapping/double borders (worst at first/last tab corners, e.g. Trang chủ).
-- **Edge clearance:** first/last tab pill must inset **`PILL_BAR_EDGE_INSET` (12px)** from the bar's rounded outer edge; middle tabs use **`PILL_SLOT_INSET` (4px)** — pill must not "chạm thành" the bar rim.
-- Center **Trợ lý AI**: `AssistantTabButton` + `AssistantTabLabel` — mic when idle, waves when connected, purple brand gradient.
-- Web preview (`driver-app` on Expo web) is **approximate** for map/orb — **device/simulator is authoritative** for pixels.
+- Tab bar: `NavigationBar` — **Material 3 bottom Navigation Bar**: edge-attached, full width, `80dp` + bottom safe-area inset, `$surfaceElevated` surface, hairline `$outlineVariant` top edge, **8dp** top corner radius, soft upward elevation shadow. Not a floating island. **Do not** hardcode bottom padding — use `SCROLL_TAB_BAR_CLEARANCE` / `MAP_OVERLAY_BOTTOM_CLEARANCE` (+ `insets.bottom`) from `constants/layout.ts`.
+- **Route tabs:** icon-only — MaterialCommunityIcons at **26px** (`TAB_BAR_ICON_SIZE`), **filled** when active / **outline** when inactive; active tint `$primary`, inactive `$textSecondary`; `accessibilityLabel` from route `title` (Vietnamese).
+- **Active indicator:** a short `$primary` line along the active tab's **top edge** (`INDICATOR_WIDTH_RATIO` of the slot, 3dp tall), sliding between tabs via Reanimated (`200ms`, jumps under reduce-motion). No pill, no fill behind the icon.
+- **Colours:** Tamagui tokens only — no hardcoded hex/rgba (the old `PALETTE` object is gone).
+- Center **Trợ lý AI**: `AssistantTabButton` docked in the middle slot, rising `BUTTON_RISE` (26dp) above the bar's top edge, rendered as a sibling of the row so the bar's bounds don't clip it. `showLabel={false}`. Mic when idle, waves when connected, purple brand gradient.
+- Web (`driver-app` on Expo web) shares `NavigationBar.tsx` (no Skia, so no `.web` split) and is **approximate** for the orb — **device/simulator is authoritative** for pixels.
 
 ---
 

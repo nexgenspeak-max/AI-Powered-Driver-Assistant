@@ -88,21 +88,3 @@ export interface DriverContext {
   optimized_route: unknown | null
   fetched_at: string
 }
-
-export type DeliveryOrderStatus =
-  | 'pending' | 'picked_up' | 'delivering' | 'delivered' | 'redelivery' | 'returned'
-
-export interface DeliveryOrder {
-  order_id: string
-  driver_phone: string
-  status: DeliveryOrderStatus
-  sender_phone: string
-  sender_address?: string
-  recipient_name?: string
-  recipient_phone: string
-  recipient_address: string
-  note?: string
-  source: 'ai_scan' | 'manual'
-  created_at: string
-  updated_at: string
-}

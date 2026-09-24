@@ -57,11 +57,14 @@ export function Screen({
       ? 16
       : top + 16
 
+  // The Navigation Bar is edge-attached and paints over the bottom safe area,
+  // so scroll content clears `insets.bottom` + the bar/orb footprint always
+  // (independent of the `edges` prop, which only governs the top inset here).
   const contentPad: ViewStyle = padded
     ? {
         paddingHorizontal: 20,
         paddingTop: topPad,
-        paddingBottom: bottom + SCROLL_TAB_BAR_CLEARANCE,
+        paddingBottom: insets.bottom + SCROLL_TAB_BAR_CLEARANCE,
         gap: 20,
       }
     : { paddingTop: backButton ? getBackButtonClearance(insets.top) : header ? 0 : top, paddingBottom: bottom }

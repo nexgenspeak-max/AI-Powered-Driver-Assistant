@@ -12,9 +12,7 @@ export interface ContactMatch {
 }
 
 // Permission requested lazily here, at the first actual search — not
-// proactively when "Trợ lý rảnh tay" is turned on — mirroring the only other
-// runtime-permission flow in this app (add-delivery.tsx's camera permission,
-// requested right at the point of use, not ahead of time).
+// proactively when "Trợ lý rảnh tay" is turned on (requested at point of use).
 async function ensurePermission(): Promise<boolean> {
   const existing = await Contacts.getPermissionsAsync()
   if (existing.granted) return true

@@ -23,7 +23,7 @@ import { devlog } from '../../../services/devlog'
 function deriveWsUrl(): string {
   const explicit = process.env.EXPO_PUBLIC_TRIP_SERVICE_WS_URL
   if (explicit) return explicit
-  const restBase = process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1'
+  const restBase = process.env.EXPO_PUBLIC_EXTERNAL_API_SERVICE_URL ?? process.env.EXPO_PUBLIC_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1'
   return restBase.replace(/^http/, 'ws').replace(/\/api\/v1\/?$/, '') + '/ws'
 }
 const WS_URL = deriveWsUrl()

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Deploy full backend stack in dependency order (handles trip-service 2-pass bootstrap).
+# Deploy full backend stack in dependency order (handles external-api-service 2-pass bootstrap).
 #
 # Usage:
 #   bash infra/deploy-all.sh dev
-#   bash infra/deploy-all.sh dev --skip voice-agent,call-center
-#   bash infra/deploy-all.sh dev --only auth-service,trip-service
+#   bash infra/deploy-all.sh dev --skip llm-orchestrator,external-channel-service
+#   bash infra/deploy-all.sh dev --only identity-service,external-api-service
 #   bash infra/deploy-all.sh dev --dry-run
 #
 # Prerequisites:
 #   bash infra/setup-env.sh dev [--from-local]
-#   aws configure + sam + docker (for voice-agent)
+#   aws configure + sam + docker (for llm-orchestrator)
 
 set -euo pipefail
 
@@ -82,7 +82,7 @@ run_deploy() {
     echo "(dry-run) bash $SCRIPT_DIR/${svc}/deploy.sh $TARGET_ENV"
     return 0
   fi
-  if [[ "$svc" == "voice-agent" ]]; then
+  if [[ "$svc" == "llm-orchestrator" ]]; then
     check_deploy_prereqs true
   else
     check_deploy_prereqs false
@@ -91,37 +91,31 @@ run_deploy() {
 }
 
 propagate_urls() {
-  local auth_stack trip_stack logger_stack voice_stack
-  auth_stack="$(stack_name auth-service "$TARGET_ENV")"
-  trip_stack="$(stack_name trip-service "$TARGET_ENV")"
-  logger_stack="$(stack_name call-logger "$TARGET_ENV")"
-  voice_stack="$(stack_name voice-agent "$TARGET_ENV")"
+  local auth_stack trip_stack logger_stack
+  auth_stack="$(stack_name identity-service "$TARGET_ENV")"
+  trip_stack="$(stack_name external-api-service "$TARGET_ENV")"
+  logger_stack="$(stack_name call-records-service "$TARGET_ENV")"
 
-  local auth_url trip_url logger_url voice_url
+  local auth_url trip_url logger_url
   auth_url="$(stack_output "$auth_stack" "ApiUrl")"
   trip_url="$(stack_output "$trip_stack" "ApiUrl")"
   logger_url="$(stack_output "$logger_stack" "ApiUrl")"
-  voice_url="$(stack_output "$voice_stack" "VoiceAgentApiUrl")"
 
-  local trip_env="$REPO_ROOT/src/backend/trip-service/envs/.env.${TARGET_ENV}"
-  local voice_env="$REPO_ROOT/src/backend/voice-agent/envs/.env.${TARGET_ENV}"
+  local trip_env="$REPO_ROOT/src/backend/external-api-service/envs/.env.${TARGET_ENV}"
+  local voice_env="$REPO_ROOT/src/backend/llm-orchestrator/envs/.env.${TARGET_ENV}"
 
   if [[ -n "$auth_url" && "$auth_url" != "None" && -f "$trip_env" ]]; then
     set_env_var "$trip_env" "AUTH_SERVICE_URL" "$auth_url"
-    echo "✅ trip-service ← AUTH_SERVICE_URL"
+    echo "✅ external-api-service ← AUTH_SERVICE_URL"
   fi
   if [[ -n "$trip_url" && "$trip_url" != "None" && -f "$voice_env" ]]; then
     set_env_var "$voice_env" "TRIP_SERVICE_URL" "$trip_url"
-    echo "✅ voice-agent ← TRIP_SERVICE_URL"
+    echo "✅ llm-orchestrator ← TRIP_SERVICE_URL"
   fi
   if [[ -n "$logger_url" && "$logger_url" != "None" ]]; then
     [[ -f "$voice_env" ]] && set_env_var "$voice_env" "CALL_LOGGER_URL" "$logger_url"
     [[ -f "$trip_env" ]] && set_env_var "$trip_env" "CALL_LOGGER_URL" "$logger_url"
     echo "✅ trip/voice ← CALL_LOGGER_URL"
-  fi
-  if [[ -n "$voice_url" && "$voice_url" != "None" && -f "$trip_env" ]]; then
-    set_env_var "$trip_env" "VOICE_AGENT_URL" "$voice_url"
-    echo "✅ trip-service ← VOICE_AGENT_URL"
   fi
 }
 
@@ -129,7 +123,7 @@ print_header "Deploy all backend ($TARGET_ENV)"
 
 # Validate env files exist
 MISSING_ENV=()
-for svc in auth-service trip-service call-logger call-center voice-agent; do
+for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
   if should_run "$svc"; then
     f="$REPO_ROOT/src/backend/${svc}/envs/.env.${TARGET_ENV}"
     [[ -f "$f" ]] || MISSING_ENV+=("$f")
@@ -146,34 +140,19 @@ if [[ ${#MISSING_ENV[@]} -gt 0 ]]; then
 fi
 
 # Phase 1 — linear DAG
-run_deploy auth-service
+run_deploy identity-service
 propagate_urls
 
-run_deploy trip-service
+run_deploy external-api-service
 propagate_urls
 
-run_deploy call-logger
+run_deploy call-records-service
 propagate_urls
 
-run_deploy call-center
+run_deploy external-channel-service
 
-run_deploy voice-agent
+run_deploy llm-orchestrator
 propagate_urls
-
-# Phase 2 — trip-service needs VOICE_AGENT_URL from voice-agent
-if should_run trip-service && should_run voice-agent; then
-  voice_stack="$(stack_name voice-agent "$TARGET_ENV")"
-  if [[ "$DRY_RUN" == "true" ]]; then
-    echo "(dry-run) redeploy trip-service pass 2 with VOICE_AGENT_URL"
-  elif stack_exists "$voice_stack"; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo " Redeploy: trip-service (pass 2 — VOICE_AGENT_URL)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    propagate_urls
-    bash "$SCRIPT_DIR/trip-service/deploy.sh" "$TARGET_ENV"
-  fi
-fi
 
 echo ""
 echo "======================================"

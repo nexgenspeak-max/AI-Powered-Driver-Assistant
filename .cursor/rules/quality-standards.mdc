@@ -26,13 +26,13 @@ Follow stack rules (do not invent parallel patterns):
 |------|-----------|
 | Layout / boundaries | `project-structure.mdc`, `service-layer.mdc` |
 | TS backends | `typescript-backend.mdc` |
-| Voice agent | `python-voice-agent.mdc` |
+| Voice agent | `python-llm-orchestrator.mdc` |
 | Mobile UI | `ui-mobile.mdc` |
 
 **Bar:**
 
 - One concern per file; no duplicate logic across vn/en or web/mobile.
-- Service boundaries: voice-agent → trip-service via HTTP only — no direct DB from Python.
+- Service boundaries: llm-orchestrator → external-api-service via HTTP only — no direct DB from Python.
 - Early returns, typed boundaries, no secrets in git, no debug `print`/`console.log` left behind.
 - Smallest correct diff — no drive-by refactors.
 
@@ -45,7 +45,7 @@ Follow stack rules (do not invent parallel patterns):
 | Project | Minimum verify |
 |---------|----------------|
 | `src/backend/<ts-service>` | `npm run build` (`ops-service`: also `npm run verify:ops`) |
-| `src/backend/voice-agent` | relevant `pytest tests/…` (add test for new behavior) |
+| `src/backend/llm-orchestrator` | relevant `pytest tests/…` (add test for new behavior) |
 | Vite frontends | `typecheck` / `build` / `lint` per app |
 | `driver-app` / `customer-app` | `npm run verify` where present; exercise changed UI on device/simulator when visual |
 
@@ -67,8 +67,8 @@ DEV ok=true|false event=<kind> key=value duration_ms=…
 
 | Layer | Module |
 |-------|--------|
-| voice-agent | `app/services/logger` (formatter on all stdlib logs after `bind` in `session.py`); `app/devlog.py` for pipeline events |
-| trip-service, auth-service, call-center, call-logger, ops-service | `src/services/logger` + `attachLogContext` middleware |
+| llm-orchestrator | `app/services/logger` (formatter on all stdlib logs after `bind` in `session.py`); `app/devlog.py` for pipeline events |
+| external-api-service, identity-service, external-channel-service, call-records-service, ops-service | `src/services/logger` + `attachLogContext` middleware |
 | driver-app | `src/services/logger` + `devlog.ts` (`__DEV__` only) |
 
 **Rules:**
@@ -86,7 +86,7 @@ DEV ok=true|false event=<kind> key=value duration_ms=…
 
 Emit DEV/metrics on:
 
-- HTTP to trip-service (status, duration)
+- HTTP to external-api-service (status, duration)
 - Tool calls (name, ok, duration)
 - LiveKit connect/disconnect, STT final, turn timings (EOU, LLM TTFT, TTS TTFB)
 - Prefetch / context warm paths
@@ -107,7 +107,7 @@ Web (`driver-web`, `customer-web`, `admin-panel`): **`ui-web.mdc`** — WCAG 2.2
 
 ## 7. Voice & chat response quality
 
-**Accuracy over fluency:** tools and prompts must not invent trip data — use `context_store`, trip-service, and tool results.
+**Accuracy over fluency:** tools and prompts must not invent trip data — use `context_store`, external-api-service, and tool results.
 
 **UX:**
 

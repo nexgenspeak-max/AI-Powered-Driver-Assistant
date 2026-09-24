@@ -16,4 +16,4 @@ bash "$DIR/test_trip_status.sh" "$TRIP_ID"
 
 echo ""
 echo -e "\033[32m✓ API smoke passed\033[0m"
-echo "  Next: start voice-agent + agents-playground for voice scenarios (see README.md)"
+echo "  Next: start llm-orchestrator + agents-playground for voice scenarios (see README.md)"

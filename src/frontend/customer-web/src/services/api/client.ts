@@ -3,7 +3,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { refreshAccessToken } from './tokenRefresh'
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
+  baseURL: import.meta.env.VITE_EXTERNAL_API_SERVICE_URL ?? import.meta.env.VITE_TRIP_SERVICE_URL ?? 'http://localhost:8002/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 

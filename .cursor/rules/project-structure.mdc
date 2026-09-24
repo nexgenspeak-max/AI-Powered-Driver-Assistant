@@ -6,7 +6,7 @@ alwaysApply: true
 # Project structure
 
 ```
-src/backend/{voice-agent,trip-service,call-center,call-logger,auth-service,ops-service}  — one service per folder
+src/backend/{llm-orchestrator,external-api-service,external-channel-service,call-records-service,identity-service,ops-service}  — one service per folder
 src/frontend/{admin-panel,super-admin-panel,driver-web,agents-playground,...}     — one app per folder
 src/e2e/                                                         — cross-service scripts only
 ```
@@ -15,9 +15,9 @@ src/e2e/                                                         — cross-servi
 
 - **One concern per file** — tools, routes, services, prompts in separate modules
 - **No duplicate logic** — shared code lives once (e.g. `voicebot/prompts/`, `processors/trip_format.py`)
-- **Service boundaries** — voice-agent calls trip-service via HTTP; no direct DB access from Python. Super Admin UI calls **ops-service** only (ops proxies call-logger and tails log files).
+- **Service boundaries** — llm-orchestrator calls external-api-service via HTTP; no direct DB access from Python. Super Admin UI calls **ops-service** only (ops proxies call-records-service and tails log files).
 - **Lang split** — `voicebot/vn/` and `voicebot/en/` mirror each other; shared logic in `processors/`, `prompts/`, `services/`
-- **Requirements/docs** — product specs in `voice-agent/requirements/`, not mixed into code
+- **Requirements/docs** — product specs in `llm-orchestrator/requirements/`, not mixed into code
 - **Service packages** — `services/<domain>/` (folder + public `index`/`__init__`). Compose adapters; no DI container. See `.cursor/rules/service-layer.mdc`.
 
 ## File naming

@@ -102,15 +102,15 @@
 
 <div id="panel">
   <h1>Fake GPS — Driver Assistant</h1>
-  <p class="sub">Chỉ dùng local/dev để test. Gọi thẳng API sẵn có, không đụng code driver-app/trip-service.</p>
+  <p class="sub">Chỉ dùng local/dev để test. Gọi thẳng API sẵn có, không đụng code driver-app/external-api-service.</p>
 
   <div id="status">Chưa đăng nhập.</div>
 
   <fieldset>
     <legend>1. Địa chỉ service</legend>
-    <label>trip-service URL</label>
+    <label>external-api-service URL</label>
     <input id="tripBase" value="http://localhost:8002" />
-    <label>auth-service URL</label>
+    <label>identity-service URL</label>
     <input id="authBase" value="http://localhost:8003" />
   </fieldset>
 
@@ -349,7 +349,7 @@ function drawTripFromSelect() {
   if (typeof trip.pickup_lat === 'number' && typeof trip.pickup_lng === 'number') {
     pickupMarker = L.marker([trip.pickup_lat, trip.pickup_lng], { icon: pickupIcon }).addTo(map)
       .bindTooltip(`Điểm đón: ${trip.pickup_address || ''}<br>${customerLine}`);
-    // 1000m = default PROXIMITY_ALERT_METERS / ARRIVAL_RADIUS_METERS (trip-service config.ts)
+    // 1000m = default PROXIMITY_ALERT_METERS / ARRIVAL_RADIUS_METERS (external-api-service config.ts)
     pickupCircle = L.circle([trip.pickup_lat, trip.pickup_lng], { radius: 1000, color: '#3b82f6', fillOpacity: 0.06, dashArray: '4,6' }).addTo(map);
     bounds.push([trip.pickup_lat, trip.pickup_lng]);
     $('quickBox').disabled = false;

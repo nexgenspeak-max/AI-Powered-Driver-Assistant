@@ -41,7 +41,7 @@ echo "=== driver-app mobile-check (native) ==="
 # Native map + orb entry points (not web stubs)
 check_present "native DriverMap.tsx exists" "export function DriverMap" src/features/home/components/DriverMap.tsx
 check_present "native AssistantTabButton.tsx exists" "export function AssistantTabButton" src/components/AssistantTabButton.tsx
-check_present "native LiquidGlassTabBar.tsx exists" "export function LiquidGlassTabBar" src/components/LiquidGlassTabBar.tsx
+check_present "native NavigationBar.tsx exists" "export const NavigationBar" src/components/NavigationBar.tsx
 
 # Mobile perf: background pause on native
 check_present "useAppForeground pauses orb animations" "useAppForeground" src/hooks/useAppForeground.ts src/components/assistantTabButtonShared.tsx
@@ -52,14 +52,11 @@ check_present "useFrameCallback gated (native audio level)" "frame\\.setActive" 
 check_absent "mix-blend-mode in native TSX" "mix-blend-mode" src
 check_absent "backdropFilter in native TSX" "backdropFilter" src
 
-# Platform extension pairs for critical UI
-for base in AssistantTabButton DriverMap LiquidGlassTabBar AssistantTabButton; do
-  :
-done
+# Platform extension pairs for critical UI. NavigationBar.tsx is deliberately
+# single-file (no Skia → no .web split needed, unlike the old glass tab bar).
 PAIRS=(
   "src/components/AssistantTabButton.tsx:src/components/AssistantTabButton.web.tsx"
   "src/features/home/components/DriverMap.tsx:src/features/home/components/DriverMap.web.tsx"
-  "src/components/LiquidGlassTabBar.tsx:src/components/LiquidGlassTabBar.web.tsx"
 )
 for pair in "${PAIRS[@]}"; do
   native="${pair%%:*}"

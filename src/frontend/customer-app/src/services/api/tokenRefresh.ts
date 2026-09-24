@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore'
 // dependency on authClient.ts/auth.ts — both of those need to call *this*
 // module's refreshAccessToken() from their own response interceptors, and a
 // two-way import would be circular.
-const AUTH_BASE = process.env.EXPO_PUBLIC_AUTH_SERVICE_URL ?? 'http://localhost:8003/api/v1'
+const AUTH_BASE = process.env.EXPO_PUBLIC_IDENTITY_SERVICE_URL ?? process.env.EXPO_PUBLIC_AUTH_SERVICE_URL ?? 'http://localhost:8003/api/v1'
 
 let refreshing: Promise<string | null> | null = null
 

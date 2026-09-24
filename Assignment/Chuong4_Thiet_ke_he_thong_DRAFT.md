@@ -4,10 +4,10 @@ Chương này giải thích *vì sao hệ thống được bố trí như hiện
 
 ## 4.1. Nguyên tắc thiết kế (nói bằng việc cần đạt)
 
-1. **Bot nói chuyện; máy chủ giữ sổ sách.** Voice-agent chỉ hội thoại và gọi API. Mọi chuyến, trạng thái, thu nhập lấy từ trip-service. Tránh để AI “nhớ bừa” dữ liệu chuyến trong lời nhắc hệ thống.
-2. **Nhanh với việc hay làm; đủ thông minh với việc lạ.** Câu quen (“xem lịch”, “nhận chuyến”, “gọi khách”) đi đường tắt. Câu mơ hồ mới cần suy luận đầy đủ.
-3. **An toàn khi lái:** câu trả lời ngắn; hủy chuyến / gọi số lạ phải hỏi lại; không bịa số liệu.
-4. **Một nghiệp vụ, nhiều cửa vào:** trong ứng dụng (WebRTC) và gọi điện (SIP) tái sử dụng logic nhận/từ chối, gọi khách…, nhưng cấu hình phòng và tập công cụ khác nhau cho đúng ngữ cảnh.
+1. **Bot nói chuyện; máy chủ giữ sổ sách.** llm-orchestrator chỉ hội thoại và gọi API. Mọi chuyến, trạng thái, thu nhập lấy từ external-api-service. Tránh để AI “nhớ bừa” dữ liệu chuyến trong lời nhắc hệ thống.
+2. **Một đường xử lý; cảm giác phản hồi bằng câu giữ chỗ và nạp trước.** Mọi câu tài xế đi **STT → LLM kèm công cụ → TTS**. Câu quen (“xem lịch”, “nhận chuyến”) cũng trả chi phí thời gian sinh token đầu của mô hình; khi phản hồi chưa kịp phát âm khoảng từ hai giây, hệ thống xen **câu giữ chỗ** ngắn (không chứa sự kiện chuyến). Nạp ngữ cảnh trước giúp rút ngắn phần thân công cụ.
+3. **An toàn khi lái:** câu trả lời ngắn; hủy chuyến hoặc gọi số lạ phải hỏi lại; không bịa số liệu.
+4. **Một nghiệp vụ, nhiều cửa vào:** kênh trong ứng dụng (WebRTC) và kênh gọi điện (SIP) tái sử dụng cùng logic nhận hoặc từ chối chuyến, gọi khách; chỉ khác nhau ở cấu hình phòng và tập công cụ cho đúng ngữ cảnh.
 5. **Đổi ngôn ngữ không đổi việc:** gói tiếng Việt và tiếng Anh cùng bộ năng lực.
 6. **Lỗi lần được theo từng cuộc nói:** mọi phiên gắn mã phòng trên nhật ký.
 
@@ -21,39 +21,42 @@ Hệ thống là một kho mã nguồn dùng chung gồm nhiều dịch vụ nh�
 |---|---|---|
 | Ứng dụng tài xế | Bấm trợ lý, nói, thấy chữ hội thoại, từ khóa đánh thức | Lấy token, vào phòng LiveKit, giao diện |
 | LiveKit Cloud | Nghe–nói mượt trong ứng dụng; gọi điện khi cần | Phòng thời gian thực, cầu SIP |
-| voice-agent | “Con bot” trả lời và làm hộ việc | STT → quyết định → TTS; gọi HTTP công cụ |
-| trip-service | Chuyến đúng, gọi khách được, ngữ cảnh đủ | API chuyến, ngữ cảnh, token thoại, điều phối |
-| auth-service | Đăng nhập, nhớ cấu hình gọi khách | JWT, cài đặt tài xế |
-| call-center / call-logger | Điện thoại reo / có tóm tắt cuộc gọi | Quay số, lưu vết |
-| admin / ops | Tạo chuyến thử, xem hệ thống có sống không | Không nằm trên đường nóng hội thoại |
+| llm-orchestrator | Bot trả lời và làm hộ việc | Nhận dạng, quyết định, tổng hợp giọng nói; gọi HTTP tới công cụ |
+| external-api-service | Chuyến đúng, gọi khách được, ngữ cảnh đủ | API chuyến, ngữ cảnh, token thoại, điều phối |
+| identity-service | Đăng nhập, nhớ cấu hình gọi khách | JWT, cài đặt tài xế |
+| external-channel-service và call-records-service | Điện thoại reo; có tóm tắt cuộc gọi | Quay số, lưu vết |
+| admin và ops | Tạo chuyến thử, xem hệ thống còn hoạt động không | Không nằm trên đường nóng hội thoại |
 
-**Hình 4.1.** Sơ đồ kiến trúc tổng thể (ứng dụng – LiveKit – voice-agent – trip-service và dịch vụ liên quan)
+**Hình 4.1.** Sơ đồ kiến trúc tổng thể (ứng dụng – LiveKit – llm-orchestrator – external-api-service / external-channel-service và dịch vụ liên quan)
 
 ![Hình 4.1](thesis_screenshots/H4_1_architecture.png)
 
-Luồng tư duy đọc Hình 4.1 từ trái sang phải: tài xế thao tác trên ứng dụng; ứng dụng lấy phiên đăng nhập và token thoại; âm thanh đi qua LiveKit tới voice-agent; mọi dữ liệu chuyến/thu nhập/gọi điện đi xuống trip-service (và call-center khi cần mạng điện thoại công cộng). Python **không** đọc cơ sở dữ liệu trực tiếp.
+Luồng tư duy đọc Hình 4.1 từ trái sang phải: tài xế thao tác trên ứng dụng; ứng dụng lấy phiên đăng nhập và token thoại; âm thanh đi qua LiveKit tới llm-orchestrator; mọi dữ liệu chuyến, thu nhập và gọi điện đi xuống external-api-service, cùng external-channel-service khi cần mạng điện thoại công cộng. Python **không** đọc cơ sở dữ liệu trực tiếp.
 
 **Bảng 4.2.** Các đường gọi chính
 
 | Từ → Đến | Để làm gì |
 |---|---|
-| Ứng dụng → auth-service | Đăng nhập |
-| Ứng dụng → trip-service | Token thoại, chuyến, thông báo WebSocket |
+| Ứng dụng → identity-service | Đăng nhập |
+| Ứng dụng → external-api-service | Token thoại, chuyến, thông báo WebSocket |
 | Ứng dụng → LiveKit | Âm thanh trợ lý |
-| voice-agent → trip-service | Đọc ngữ cảnh, đổi trạng thái chuyến, bắt đầu cuộc gọi… |
-| voice-agent → LiveKit | Vào phòng, phát TTS, nhận mic |
-| trip-service → call-center / SIP | Quay số tài xế hoặc khách |
+| llm-orchestrator → external-api-service | Đọc ngữ cảnh, đổi trạng thái chuyến, bắt đầu cuộc gọi |
+| llm-orchestrator → LiveKit | Vào phòng, phát TTS, nhận mic |
+| external-api-service → external-channel-service / SIP | Quay số tài xế hoặc khách |
 
 ### 4.2.1. Phương án thiết kế đã cân nhắc
 
-Trước khi chốt kiến trúc trên, có vài hướng thay thế thường gặp:
+Trước khi chốt kiến trúc trên, có vài hướng thay thế thường gặp; Bảng 4.2a nêu ưu điểm bề ngoài và lý do không chọn làm lõi luận văn.
+
+**Bảng 4.2a.** So sánh các phương án kiến trúc đã cân nhắc
 
 | Phương án | Ưu điểm bề ngoài | Vì sao không chọn làm lõi luận văn |
 |---|---|---|
-| A. Mọi câu đều qua LLM + toàn bộ công cụ | Đơn giản về mặt “một đường ống” | Dễ chậm trên câu quen; khó đạt cảm giác P95 ≤ 2 giây |
-| B. Voice-agent đọc cơ sở dữ liệu trực tiếp | Ít bước gọi HTTP | Phá biên dịch vụ; khó vận hành/bảo mật; không tái dùng trip-service cho ứng dụng |
+| A. Mọi câu đều qua LLM + toàn bộ công cụ, không có câu giữ chỗ | Đơn giản về mặt “một đường ống” | Dễ cảm nhận im lặng trên câu quen khi TTFT cao; khó giữ cảm giác P95 ≤ 2 giây |
+| B. llm-orchestrator đọc cơ sở dữ liệu trực tiếp | Ít bước gọi HTTP | Phá biên dịch vụ; khó vận hành và bảo mật; không tái dùng external-api-service cho ứng dụng |
 | C. Chỉ WebRTC, không SIP | Đỡ phức tạp thoại mạng điện thoại công cộng | Không phủ được đề nghị chuyến bằng cuộc gọi điện thoại và một phần gọi khách |
-| D. Kết hợp (đã chọn): đường tắt + LLM khi cần; chỉ gọi HTTP; WebRTC + SIP | Khớp NFR độ trễ và FR đa kênh | Đổi lấy độ phức tạp phân loại phòng / chế độ gọi — chấp nhận và thiết kế rõ ở các mục sau |
+| D. Đường tắt khớp ý định nói + LLM khi cần (thử nghiệm A/B trước đây) | P95 đường tắt bám ngưỡng ≈ 2 giây trên mẫu đo cũ | Dễ chọn sai việc từ câu mơ hồ; khó bảo trì mẫu; đã **tắt** tự gọi công cụ theo ý định (`SPOKEN_INTENT_AUTO_TOOL=False`) |
+| E. Kết hợp (đã chọn hiện tại): một đường STT → LLM kèm công cụ → TTS; câu giữ chỗ ≈ 2 giây; chỉ gọi HTTP; dùng cả WebRTC và SIP | Khớp NFR độ trễ cảm nhận và FR đa kênh; không bịa trạng thái chuyến để nói cho nhanh | Đổi lại là độ phức tạp khi phân loại phòng và chế độ gọi; được chấp nhận và thiết kế rõ ở các mục sau |
 
 ---
 
@@ -65,39 +68,41 @@ Trước khi tài xế nói câu nghiệp vụ đầu tiên, hệ thống phải
 
 | Bước | Ai | Việc |
 |---|---|---|
-| 1 | Ứng dụng | Gọi `POST /api/v1/voice/token` (số điện thoại, ngôn ngữ) |
-| 2 | trip-service | Cấp token LiveKit + tên phòng `driver-{số}-{mã}`; có thể tái sử dụng phòng nếu phiên cũ còn agent |
-| 3 | Ứng dụng | Tham gia phòng LiveKit (WebRTC) |
-| 4 | voice-agent | Nhận việc, kết nối phòng, gắn nhật ký theo mã phòng |
-| 5 | voice-agent | Chào nhanh (“Chào bạn, tôi là Czen…”) — không chờ tải xong toàn bộ số liệu |
-| 6 | voice-agent | Song song / ngay sau đó: `GET /drivers/me/context` → đổ vào bộ nhớ phiên |
-| 7 | voice-agent | Hỏi “Tôi có thể giúp gì cho bạn?” — sẵn sàng nhận lệnh |
+| 1 | Ứng dụng | Gọi API cấp token thoại, kèm số điện thoại và ngôn ngữ |
+| 2 | external-api-service | Cấp token LiveKit và tên phòng dạng `driver-{số}-{mã}`; tái sử dụng phòng nếu phiên cũ còn agent |
+| 3 | Ứng dụng | Tham gia phòng LiveKit qua WebRTC |
+| 4 | llm-orchestrator | Nhận việc, kết nối phòng, gắn nhật ký theo mã phòng |
+| 5 | llm-orchestrator | Chào nhanh ("Chào bạn, tôi là Czen…"), không chờ tải xong toàn bộ số liệu |
+| 6 | llm-orchestrator | Ngay sau đó gọi API ngữ cảnh, đổ dữ liệu vào bộ nhớ phiên |
+| 7 | llm-orchestrator | Hỏi "Tôi có thể giúp gì cho bạn?" và sẵn sàng nhận lệnh |
 
 Thiết kế “chào trước – tải ngữ cảnh sau/kèm” nhằm tránh cảm giác im lặng lúc mới bấm trợ lý (liên quan NFR-P01/P03).
 
 ---
 
-## 4.3. Thiết kế một lượt nói: ba đường xử lý
+## 4.3. Thiết kế một lượt nói: một đường xử lý và câu giữ chỗ
 
 ### 4.3.1. Đường ống chung
 
-Âm thanh tài xế → nhận dạng thành chữ (STT) → **chọn đường xử lý** → (có thể) gọi API → câu trả lời ngắn → TTS. Mục tiêu cảm nhận: càng ít khâu thừa trên việc quen thuộc càng tốt, hướng tới P95 ≤ 2 giây (NFR-P01).
+Một lượt nói đi qua các khâu: âm thanh tài xế được nhận dạng thành chữ (**STT**), mô hình ngôn ngữ chọn công cụ hoặc trả lời kèm schema (**LLM + tools**), rồi tổng hợp thành giọng nói (**TTS**). Không có nhánh “bỏ qua LLM” cho câu quen thuộc trong thiết kế hiện hành. Mục tiêu cảm nhận vẫn hướng tới P95 ≤ 2 giây (NFR-P01): khi phản hồi thật chưa kịp phát âm khoảng từ hai giây, hệ thống xen **câu giữ chỗ** ngắn; nạp ngữ cảnh trước và làm nóng worker giúp rút ngắn phần thân công cụ và lần kết nối đầu.
 
-**Hình 4.2.** Chuỗi xử lý hội thoại và điểm rẽ đường tắt / LLM / trò chuyện nhẹ
+**Hình 4.2.** Chuỗi xử lý hội thoại một đường: STT → LLM kèm công cụ → TTS, kèm câu giữ chỗ khoảng hai giây
 
 ![Hình 4.2](thesis_screenshots/H4_2_pipeline.png)
 
-### 4.3.2. Vì sao cần “đường tắt”?
+*(Ảnh minh họa cũ có thể còn vẽ điểm rẽ ba đường — sẽ vẽ lại; chú thích và nội dung chương lấy thiết kế một đường làm chuẩn.)*
 
-Nếu mọi câu đều chờ mô hình ngôn ngữ đọc hết danh sách công cụ rồi mới trả lời, độ trễ dễ đội lên — đặc biệt lúc tài xế chỉ cần “ok”, “xem lịch”, “nhận chuyến”. Thiết kế nguyên mẫu dùng **ba đường**:
+### 4.3.2. Vì sao một đường + câu giữ chỗ (và đường tắt đã được thay thế)?
 
-**Bảng 4.3.** Ba đường xử lý một câu nói
+Nếu mọi câu đều chờ mô hình ngôn ngữ đọc hết danh sách công cụ rồi mới trả lời, độ trễ dễ đội lên — đặc biệt lúc tài xế chỉ cần “ok”, “xem lịch”, “nhận chuyến”. Nguyên mẫu từng thử **đường tắt** khớp ý định nói (`spoken_intent`) để gọi thẳng công cụ, bỏ qua vòng LLM; số liệu A/B ở Chương 6 cho thấy đường tắt khi đó bám ngưỡng P95 ≈ 2 giây, còn đường đủ chưa đạt. Thiết kế hiện tại **tắt** tự gọi công cụ theo ý định (`SPOKEN_INTENT_AUTO_TOOL=False`) để tránh chọn sai việc từ câu mơ hồ và thống nhất một đường ống:
 
-| Đường | Ví dụ câu tài xế | Hệ thống làm gì |
+**Bảng 4.3.** Một đường xử lý một câu nói (thiết kế hiện hành)
+
+| Thành phần | Ví dụ câu tài xế | Hệ thống làm gì |
 |---|---|---|
-| Đường tắt (khớp ý định nói) | “Chuyến sắp tới”, “Nhận chuyến”, “Gọi khách”, “Tắt máy”, “Cảm ơn” | Khớp mẫu → gọi thẳng đúng việc → nói kết quả → **dừng**, không để mô hình viết lại thêm vòng |
-| Đường đủ (LLM + công cụ) | Câu mơ hồ hoặc việc phức tạp | Mô hình chọn công cụ / hỏi lại → gọi API → nói |
-| Trò chuyện nhẹ | Câu xã giao không dính chuyến | Trả lời ngắn, **không** nạp cả bảng công cụ nặng |
+| STT → LLM kèm công cụ → TTS | “Chuyến sắp tới”, “Nhận chuyến”, câu mơ hồ, FAQ… | Mọi câu qua mô hình ngôn ngữ; công cụ gọi HTTP khi cần; TTS phát kết quả |
+| Câu giữ chỗ (~2 giây) | Bất kỳ lượt nào phản hồi thật chưa kịp phát âm | Phát “Đợi mình một chút…” (hoặc bản tiếng Anh tương đương) — **không** chứa sự kiện chuyến, thu nhập hay kết quả cuộc gọi; hủy nếu câu trả lời thật đã bắt đầu |
+| Nạp ngữ cảnh trước / FollowUpKnowledge | “Chuyến đầu đi đâu?”, “Đón mấy giờ?” | Đọc dữ liệu đã có trong phiên trước khi gọi mạng thêm; giảm vòng HTTP lặp |
 
 Ngoài ra còn cơ chế **việc đang chờ**: bot vừa hứa “em gọi hộ” nhưng chưa kịp gọi; tài xế nói “ok, gọi đi” thì hệ thống thực thi việc đã hứa thay vì chỉ đáp “vâng”.
 
@@ -106,8 +111,9 @@ Ngoài ra còn cơ chế **việc đang chờ**: bot vừa hứa “em gọi h�
 Để câu đầu không bị chậm oan:
 
 - Worker nạp sẵn bộ tiếng Việt/Anh và thành phần nhận diện giọng nói khi khởi động (tránh lần đầu “lạnh”).
-- Với phiên trong ứng dụng: **chào nhanh trước**, vừa chào vừa tải ngữ cảnh tài xế (`/drivers/me/context`), rồi mới hỏi cần gì — tránh bắt tài xế nghe im vì đang chờ tải số liệu.
+- Với phiên trong ứng dụng, áp dụng chào hai pha (mục 4.2b) để lời chào không phải chờ tải xong ngữ cảnh.
 - Công cụ ưu tiên đọc ngữ cảnh đã tải (ví dụ danh sách chuyến, địa chỉ đón đã có trong phiên) trước khi gọi mạng thêm.
+- Câu giữ chỗ theo lượt (`turn_filler`) che khoảng chờ TTFT + công cụ khi vượt mốc khoảng hai giây.
 
 ## 4.4. Phân loại theo loại phòng hội thoại
 
@@ -117,8 +123,8 @@ Cùng một worker, nhưng **loại phòng** quyết định bot được phép 
 
 | Loại | Cách mở | Việc bot được làm |
 |---|---|---|
-| Tài xế chủ động (trong ứng dụng) | Ứng dụng / từ khóa đánh thức → phòng `driver-…` | Gần đủ nhóm: lịch, cập nhật, gọi khách, FAQ, thu nhập… |
-| Đề nghị chuyến (SIP) | Hệ thống gọi điện, gắn metadata chuyến | Chủ yếu nhận / từ chối |
+| Tài xế chủ động (trong ứng dụng) | Bấm trong ứng dụng hoặc từ khóa đánh thức, vào phòng `driver-…` | Gần đủ nhóm: lịch, cập nhật, gọi khách, FAQ, thu nhập |
+| Đề nghị chuyến (SIP) | Hệ thống gọi điện, gắn metadata chuyến | Chủ yếu nhận hoặc từ chối |
 | Gọi khách nền | Phòng riêng `custcall-…` | Bot nói với khách; xong thì báo lại phòng tài xế |
 | Nói trực tiếp (bridge) | Trong phiên tài xế | Tài xế nói thẳng với khách; cụm từ kết thúc chế độ nói trực tiếp |
 
@@ -126,17 +132,17 @@ Thiết kế này trực tiếp đáp ứng yêu cầu “đúng kiểu phiên�
 
 ### 4.4.1. Chuỗi bước gọi khách (ba chế độ)
 
-Khi tài xế nói “gọi khách”, thiết kế tách thành ba chuỗi (cùng mục tiêu liên lạc, khác trải nghiệm trên xe):
+Khi tài xế nói “gọi khách”, ba chế độ ở Bảng 3.1 được hiện thực thành ba chuỗi bước:
 
 **Bảng 4.4b.** Chuỗi bước gọi khách theo chế độ
 
 | Chế độ | Các bước chính (rút gọn) | Điểm thiết kế |
 |---|---|---|
-| Agent gọi hộ | Xác định chuyến/khách → lấy chế độ (mặc định cài đặt hoặc lời nói rõ khác mặc định) → `POST /calls/start` → bàn giao agent nói với khách **trong cùng phòng** tài xế → kết thúc → có thể tóm tắt | Tài xế vẫn theo dõi được cuộc gọi |
-| Nói trực tiếp | Tương tự khởi tạo → cầu nối để **tài xế nói thẳng** với khách; bot không nói đè → kết thúc bằng cụm từ (vd. “Trợ lý kết thúc”) | Phù hợp trao đổi nhanh, cá nhân |
-| Gọi nền | Tạo phòng riêng `custcall-…` + agent cô lập → bot gọi khách trong khi tài xế **tiếp tục** hỏi việc khác trên trợ lý → xong đẩy tóm tắt về phòng tài xế | Không chiếm mic phiên chính |
+| Agent gọi hộ | Xác định chuyến và khách; lấy chế độ (mặc định trong cài đặt, hoặc lời nói ghi rõ khác mặc định); gọi API bắt đầu cuộc gọi; bàn giao agent nói với khách **trong cùng phòng** tài xế; kết thúc và tóm tắt lại | Tài xế vẫn theo dõi được cuộc gọi |
+| Nói trực tiếp | Khởi tạo tương tự, sau đó cầu nối để **tài xế nói thẳng** với khách; bot không nói đè; kết thúc bằng cụm từ kích hoạt (ví dụ "Trợ lý kết thúc") | Phù hợp trao đổi nhanh, cá nhân |
+| Gọi nền | Tạo phòng riêng `custcall-…` với agent cô lập; bot gọi khách trong khi tài xế **tiếp tục** hỏi việc khác trên trợ lý; xong thì đẩy tóm tắt về phòng tài xế | Không chiếm mic phiên chính |
 
-Gọi số không thuộc chuyến: lưu “số đang chờ” → hỏi xác nhận → mới quay (giới hạn số lần mỗi phiên).
+Với số không thuộc chuyến hiện tại, hệ thống lưu "số đang chờ", hỏi tài xế xác nhận, rồi mới quay số; mỗi phiên giới hạn số lần gọi.
 
 ---
 
@@ -146,25 +152,25 @@ Gọi số không thuộc chuyến: lưu “số đang chờ” → hỏi xác n
 
 - Mỗi việc có tên công cụ và mô tả rõ (tiếng Việt / Anh đối xứng nhau).
 - **Đọc:** ưu tiên ngữ cảnh đã nạp trước.
-- **Ghi:** HTTP tới trip-service; lỗi thì nói ngắn theo mã lỗi nghiệp vụ (không bịa “đã hủy” khi API thất bại).
-- **Rủi ro:** cặp “đề nghị → xác nhận” (hủy chuyến, gọi số lạ…).
+- **Ghi:** HTTP tới external-api-service; lỗi thì nói ngắn theo mã lỗi nghiệp vụ (không bịa “đã hủy” khi API thất bại).
+- **Rủi ro:** dùng cặp bước "đề nghị rồi xác nhận" cho hủy chuyến, gọi số lạ và các thao tác khó hoàn tác.
 
-### 4.5.2. Thiết kế nhóm công cụ ↔ API ↔ yêu cầu
+### 4.5.2. Thiết kế nhóm công cụ, API và yêu cầu
 
-**Bảng 4.5a.** Nhóm năng lực hội thoại (thiết kế) — chi tiết tên công cụ ở Phụ lục A
+**Bảng 4.5a.** Nhóm năng lực hội thoại theo thiết kế (chi tiết tên công cụ ở Phụ lục A, đường dẫn API cụ thể ở Bảng 5.2)
 
-| Nhóm | Việc tiêu biểu | API / nguồn dữ liệu chính | FR liên quan |
+| Nhóm | Việc tiêu biểu | Nhóm API / nguồn dữ liệu | FR liên quan |
 |---|---|---|---|
-| Lịch & chuyến | Xem sắp tới / hiện tại; cập nhật trạng thái | `GET …/context`, `…/trips/upcoming`, `…/current`; `PATCH` chuyến | FR-T01–T03 |
+| Lịch và chuyến | Xem sắp tới / hiện tại; cập nhật trạng thái | API ngữ cảnh, danh sách chuyến, cập nhật trạng thái chuyến | FR-T01–T03 |
 | Nhận / từ chối | Đề nghị chuyến hoặc trong ứng dụng | Công cụ xác nhận/từ chối → cập nhật chuyến | FR-T04 |
-| Hủy hai bước | Đề nghị hủy → xác nhận | Việc chờ trong phiên + `PATCH` cancelled | FR-T05 |
-| Gọi / SMS khách | Ba chế độ; SMS; tóm tắt | `POST /calls/start`, SMS, summary/latest | FR-C01–C05 |
-| Chờ & sự cố | Gia hạn chờ; khách không ra; sự cố | `extend-wait`, `no-show`, `issues` | FR-W*, FR-I* |
-| Thu nhập & online | Hôm nay / tóm tắt; bật–tắt nhận chuyến | earnings, `…/status` | FR-E* |
+| Hủy hai bước | Đề nghị hủy → xác nhận | Việc chờ trong phiên + API hủy chuyến | FR-T05 |
+| Gọi / SMS khách | Ba chế độ; SMS; tóm tắt | API bắt đầu cuộc gọi, gửi SMS, lấy tóm tắt | FR-C01–C05 |
+| Chờ và sự cố | Gia hạn chờ; khách không ra; sự cố | API gia hạn chờ, báo khách không ra, báo sự cố | FR-W*, FR-I* |
+| Thu nhập và online | Hôm nay / tóm tắt; bật–tắt nhận chuyến | API thu nhập, API bật–tắt nhận chuyến | FR-E* |
 | FAQ | Cách dùng ứng dụng | Công cụ FAQ + playbook tri thức | FR-F* |
-| Kết thúc phiên | Tắt trợ lý | `POST /voice/end-session` | FR-L02 |
+| Kết thúc phiên | Tắt trợ lý | API đóng phiên thoại | FR-L02 |
 
-Token vào phòng do **ứng dụng** gọi `POST /voice/token` — voice-agent không tự cấp token cho tài xế.
+Token vào phòng do **ứng dụng** xin từ external-api-service — llm-orchestrator không tự cấp token cho tài xế.
 
 ### 4.5.3. Bộ nhớ ngữ cảnh phiên
 
@@ -174,7 +180,7 @@ Token vào phòng do **ứng dụng** gọi `POST /voice/token` — voice-agent 
 
 | Nhóm | Ví dụ nội dung | Dùng để |
 |---|---|---|
-| Hồ sơ / cài đặt | Cấu hình gọi khách mặc định, tùy chọn rảnh tay… | Chọn chế độ gọi; cá nhân hóa |
+| Hồ sơ và cài đặt | Cấu hình gọi khách mặc định, tùy chọn rảnh tay | Chọn chế độ gọi; cá nhân hóa |
 | Chuyến | Sắp tới, đang chạy, hiện tại, lịch sử gần | “Còn mấy chuyến?”, cập nhật tiến độ |
 | Thu nhập / thưởng | Hôm nay, tóm tắt, thưởng đang mở | Câu hỏi thu nhập |
 | Cuộc gọi | Cờ đang gọi / nói trực tiếp / gọi nền; cuộc gọi gần nhất | Không gọi chồng; tóm tắt |
@@ -189,9 +195,9 @@ Câu hỏi “ứng dụng dùng thế nào” đi qua công cụ FAQ đọc pla
 
 ## 4.6. Xác thực, lỗi và quan sát — thiết kế cho tình huống xấu
 
-**Đăng nhập:** auth-service cấp phiên; cấu hình như chế độ gọi khách mặc định đi theo tài xế vào ngữ cảnh.
+**Đăng nhập:** identity-service cấp phiên; cấu hình như chế độ gọi khách mặc định đi theo tài xế vào ngữ cảnh.
 
-**Khi im lặng:** khoảng **15 giây** không nói → bot hỏi còn đó không; lần hai vẫn im → chào kết thúc (tránh phiên treo). Đồng hồ tạm dừng khi bot đang nói.
+**Khi im lặng:** sau khoảng **15 giây** tài xế không nói, bot hỏi còn đó không; nếu lần thứ hai vẫn im, bot chào kết thúc để tránh phiên treo. Đồng hồ đếm im lặng tạm dừng trong lúc bot đang nói.
 
 **Khi API lỗi / không bắt máy:** nói được gì thì nói rõ (“không gọi được”, “chưa có dữ liệu”); không bịa chuyến cho có chuyện. Cuộc gọi không ai nghe có luồng dọn dẹp riêng (hết thời gian chờ không bắt máy).
 
@@ -203,29 +209,17 @@ Câu hỏi “ứng dụng dùng thế nào” đi qua công cụ FAQ đọc pla
 
 1. Chỗ vào trợ lý rõ (biểu tượng/nút), thể hiện đang chờ / đang nghe / đang nói.
 2. Chữ hội thoại đồng bộ với lời nói — tiện đối chiếu khi dừng xe.
-3. Từ khóa đánh thức chỉ **mở phiên**, không thay bộ hiểu lệnh của voice-agent.
+3. Từ khóa đánh thức chỉ **mở phiên**, không thay bộ hiểu lệnh của llm-orchestrator.
 4. Cài đặt chế độ gọi khách mặc định — giảm hỏi lại trên đường.
-5. Quét đơn giao hàng trên luồng ảnh/API riêng; kết quả vào hệ thống đơn sau khi tài xế xác nhận trên giao diện.
-
 Mục tiêu khớp Chương 3: các việc cốt lõi hoàn thành được bằng giọng nói trên đường hạnh phúc, không bắt buộc thao tác phức tạp lúc xe đang chạy.
 
-## 4.8. Liên hệ yêu cầu ↔ quyết định thiết kế
+## 4.8. Liên hệ yêu cầu và quyết định thiết kế
 
-**Bảng 4.8.** Ánh xạ ngắn
-
-| Yêu cầu (Ch.3) | Quyết định thiết kế (Ch.4) |
-|---|---|
-| P95 ≤ 2s; việc quen phải nhanh | Đường tắt + nạp ngữ cảnh trước + chào hai pha; bác bỏ “mọi câu qua LLM” |
-| Không bịa chuyến | Bộ nhớ ngữ cảnh + API; lời nhắc hệ thống cấm bịa |
-| Ba cách gọi khách | Agent / nói trực tiếp / gọi nền + mặc định cài đặt |
-| Hủy an toàn | Hai bước + việc chờ trong phiên |
-| Đúng lúc gọi điện đề nghị chuyến | Phiên đề nghị chuyến chỉ nhận/từ chối; phân biệt SIP |
-| Từ khóa đánh thức / quét đơn | Tách khỏi chuỗi xử lý công cụ hội thoại |
-| Im lặng / lỗi | 15s × 2; thông báo lỗi ngắn |
+Tổng hợp lại, các quyết định thiết kế ở chương này bám sát yêu cầu Chương 3: một đường STT → LLM kèm công cụ → TTS cùng câu giữ chỗ khoảng hai giây và nạp ngữ cảnh trước / chào hai pha để giữ cảm giác phản hồi khi lái (bác bỏ vừa “mọi câu im lặng chờ LLM” vừa “đường tắt bịa/chọn sai việc”); bộ nhớ ngữ cảnh và lời nhắc hệ thống để không bịa dữ liệu; ba chế độ gọi khách với mặc định lưu sẵn; hủy chuyến hai bước; phiên đề nghị chuyến qua điện thoại chỉ mở hai việc nhận/từ chối; từ khóa đánh thức tách khỏi chuỗi xử lý công cụ; nhắc im lặng 15 giây tối đa hai lần. Đối chiếu chi tiết với vị trí mã nguồn ở Bảng 5.4.
 
 ## Kết luận chương
 
-Chương 4 đã làm rõ kiến trúc và phương án đã chọn, chuỗi mở phiên, ba đường xử lý một câu nói (kèm Hình 4.1–4.2), phân loại phòng và ba chuỗi gọi khách, nhóm công cụ–API, bộ nhớ ngữ cảnh phiên, xử lý lỗi/im lặng và chỗ đứng của ứng dụng. Chương 5 trình bày hiện thực các quyết định này trong mã nguồn và môi trường chạy nguyên mẫu.
+Chương 4 đã trình bày kiến trúc và các phương án đã cân nhắc, một đường xử lý một câu nói kèm câu giữ chỗ (Hình 4.1 và 4.2), phân loại phòng hội thoại, cách gắn công cụ với API, bộ nhớ ngữ cảnh phiên và xử lý tình huống xấu. Chương 5 trình bày hiện thực các quyết định này trong mã nguồn và môi trường chạy nguyên mẫu.
 
 ---
 
