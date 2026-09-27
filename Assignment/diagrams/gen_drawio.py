@@ -87,8 +87,73 @@ EDGE = (
 )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Bản tiếng Anh cho README (khóa = chuỗi tiếng Việt gốc, kể cả chỗ xuống dòng)
+# ─────────────────────────────────────────────────────────────────────────────
+LANG = "vn"
+EN = {
+    "H4.1 Kiến trúc AWS": "H4.1 AWS architecture", "H4.9 Một lượt hội thoại": "H4.9 One conversational turn",
+    "S1 Đăng nhập": "S1 Login", "S2 Khởi tạo phiên": "S2 Open voice session", "S3 Một lượt hội thoại": "S3 One conversational turn",
+    "S4 Mời nhận chuyến": "S4 Trip offer call", "S5 Gọi khách và SMS": "S5 Call and text the rider",
+    "S6 Nhật ký cuộc gọi": "S6 Call records", "S7 Báo cáo ngày": "S7 Daily report",
+    # sequence participants
+    "Ứng dụng tài xế": "Driver app", "Cổng API REST": "REST API", "Dịch vụ Định danh": "Identity service",
+    "Dịch vụ Chuyến đi và Điều phối": "Trip & dispatch service", "Nền tảng truyền thông": "Real-time media",
+    "Tác nhân hội thoại": "Voice agent", "Nhà cung cấp AI": "AI providers", "Bộ nhớ đệm phiên": "Session cache",
+    "Trang quản trị điều hành": "Admin panel", "Nhà cung cấp thoại": "Voice carrier",
+    "Dịch vụ Kênh liên lạc": "Channel service", "Dịch vụ Nhật ký cuộc gọi": "Call records service",
+    "Kênh thông báo WebSocket": "WebSocket push", "Lịch chạy báo cáo": "Report schedule",
+    "Dịch vụ Giám sát vận hành": "Ops service", "Mô hình chấm": "Grader model", "Trang giám sát hệ thống": "Ops panel",
+    # architecture
+    "Tài xế": "Driver", "Ứng dụng\nkhách hàng": "Rider app", "Quản trị viên": "Operators",
+    "Nền tảng\ntruyền thông\nthời gian thực": "Real-time\nmedia\nplatform", "Nhà cung cấp\ndịch vụ thoại": "Voice\ncarrier",
+    "Nhà cung cấp\nmô hình AI": "AI model\nproviders", "STT · LLM · TTS\nchính và dự phòng": "STT · LLM · TTS\nprimary + fallback",
+    "Tác nhân\nhội thoại\ngiọng nói": "Voice\nagent", "Cụm ECS": "ECS\ncluster", "Kênh thông báo\nthời gian thực": "Real-time\npush channel",
+    "Định danh": "Identity", "Chuyến đi và\nĐiều phối": "Trips &\ndispatch", "Kênh liên lạc": "Channel",
+    "Nhật ký\ncuộc gọi": "Call\nrecords", "Giám sát\nvận hành": "Operations", "Lưu trữ web tĩnh": "Static web hosting",
+    "Nhật ký tập trung": "Central logs", "Quyền truy cập": "Access control", "Hạ tầng dạng mã": "Infra as code",
+    "Lịch báo cáo ngày": "Daily report job", "Dịch vụ bản đồ": "Maps service",
+    "Kho image": "Image\nregistry", "HTTPS qua API Gateway": "HTTPS via API Gateway",
+    "<Service>RestApi (mỗi dịch vụ một API)": "<Service>RestApi (one API per service)",
+    # turn pipeline
+    "Tài xế\nnói": "Driver\nspeaks", "Nhận dạng\ngiọng nói": "Speech\nto text", "STT chính\n→ dự phòng": "primary STT\n→ fallback",
+    "Mô hình ngôn ngữ": "Language model", "LLM chính → dự phòng\nlược đồ công cụ\ntheo loại phiên": "primary LLM → fallback\ntool schema\nper session type",
+    "Tổng hợp\ngiọng nói": "Text\nto speech", "TTS chính\n→ dự phòng": "primary TTS\n→ fallback", "Phát\ntrả lời": "Plays\nanswer",
+    "Gọi API nghiệp vụ": "Business API call", "Trạng thái phiên\nhội thoại": "Session\nstate",
+    "context_store\ntải trước khi mở phiên": "context_store\npreloaded at session start",
+    "Dịch vụ Chuyến đi\nvà Điều phối": "Trip & dispatch\nservice", "Câu đệm": "Hold phrase",
+    "turn_filler: quá 2 s chưa có âm thanh trả lời thì phát một lần;\nhủy khi câu trả lời thật bắt đầu":
+        "turn_filler: plays once when no answer audio after 2 s;\ncancelled when the real answer starts",
+    "văn bản": "text", "gọi công cụ": "tool call", "kết quả": "result", "trả lời": "answer",
+    "đọc trước": "read first", "thiếu dữ liệu / ghi": "missing data / write",
+    # sequence steps
+    "① chuyển tiếp": "① forward", "② tìm tài khoản": "② find account", "bản ghi tài khoản": "account record",
+    "so khớp mật khẩu": "check password", "ký token": "sign tokens", "② lưu băm refresh": "② store refresh hash",
+    "200 token mới | 401": "200 new tokens | 401", "đọc phiên đang mở": "read open session", "phòng | không có": "room | none",
+    "④ tạo phòng": "④ create room", "ký token LiveKit": "sign LiveKit token", "④ phân công tác nhân": "④ dispatch agent",
+    "200 token, phòng": "200 token, room", "⑤ vào phòng (WebRTC)": "⑤ join room (WebRTC)", "⑥ giao việc": "⑥ assign job",
+    "⑤ lời chào": "⑤ greeting", "ngữ cảnh": "context", "⑤ hỏi cần gì": "⑤ ask what is needed",
+    "⑤⑥ âm thanh": "⑤⑥ audio", "đếm 2 s": "start 2 s timer", "⑦ LLM + công cụ": "⑦ LLM + tools", "câu đệm": "hold phrase",
+    "⑨ ghi trạng thái": "⑨ write status", "⑤ câu trả lời": "⑤ spoken answer", "④ người tham gia SIP": "④ SIP participant",
+    "⑩ trạng thái calling": "⑩ status calling", "hỏi nhận chuyến": "ask to accept", "⑩ trạng thái mới": "⑩ new status",
+    "⑪ gọi khách": "⑪ call rider", "⑫ gửi SMS": "⑫ send SMS", "㉒ lưu sự kiện": "㉒ store event",
+    "tổng hợp bản ghi": "build record", "⑯ lưu bản ghi": "⑯ store record", "bản ghi gần nhất": "latest record",
+    "tóm tắt": "summary", "⑲ 00:15 hằng ngày": "⑲ daily at 00:15", "bản ghi của ngày": "day's records",
+    "tổng hợp chỉ số": "aggregate metrics", "chấm mẫu": "grade sample", "đúng / sai": "correct / wrong",
+    "㉑ lưu báo cáo": "㉑ store report", "báo cáo + xu hướng": "report + trend",
+    "opt [mật khẩu đúng]": "opt [password OK]", "opt [chưa có phòng]": "opt [no open room]", "opt [quá 2 s]": "opt [> 2 s]",
+    "opt [có SIP trunk]": "opt [SIP trunk set]", "alt [chế độ gọi]": "alt [call mode]",
+    "opt [tài xế hỏi tóm tắt]": "opt [driver asks summary]", "opt [có khóa API]": "opt [API key set]",
+}
+
+
+def tr(text: str) -> str:
+    """Chuỗi hiển thị theo LANG; bản tiếng Anh chỉ dùng cho README."""
+    return EN.get(text, text) if LANG == "en" else text
+
 def label(title: str, tech: str = "", tech_px: int = 12) -> str:
     """Function name large, technical name small (GVHD rule)."""
+    title, tech = tr(title), tr(tech)
     if not tech:
         return f"<b>{escape(title)}</b>"
     small = "<br>".join(escape(part) for part in tech.split("\n"))
@@ -97,13 +162,13 @@ def label(title: str, tech: str = "", tech_px: int = 12) -> str:
 
 class Diagram:
     def __init__(self, name: str, width: int, height: int):
-        self.name = name
+        self.name = tr(name)
         self.width = width
         self.height = height
         self.cells: list[str] = []
 
     def _data(self, data: dict[str, str] | None) -> str:
-        return "".join(f" {k}={quoteattr(v)}" for k, v in (data or {}).items())
+        return "".join(f" {k}={quoteattr(tr(v))}" for k, v in (data or {}).items())
 
     def vertex(self, cid: str, value: str, style: str, x: float, y: float, w: float, h: float,
                parent: str = "1", data: dict[str, str] | None = None) -> str:
@@ -116,6 +181,7 @@ class Diagram:
              points: list[tuple[float, float]] | None = None, data: dict[str, str] | None = None,
              ports: tuple[float, float, float, float] | None = None, at: float = 0.0) -> str:
         """at: label position along the edge, -1 (source) … 0 (middle) … 1 (target), as draw.io."""
+        value = tr(value)
         if ports:
             ex, ey, nx, ny = ports
             style += f"exitX={ex};exitY={ey};exitDx=0;exitDy=0;entryX={nx};entryY={ny};entryDx=0;entryDy=0;"
@@ -178,6 +244,7 @@ def architecture() -> Diagram:
     d = Diagram("H4.1 Kiến trúc AWS", 2260, 1330)
 
     def lab(title: str, tech: str = "") -> str:
+        title, tech = tr(title), tr(tech)
         head = "<br>".join(f"<b>{escape(t)}</b>" for t in title.split("\n"))
         if not tech:
             return head
@@ -383,7 +450,7 @@ def sequence(page: str, participants: list[tuple[str, str, str]], steps: list[tu
     for n, step in enumerate(steps, 1):
         kind, src, dst, text = step
         y = ys[n - 1]
-        value = f"{n}. {escape(text)}"
+        value = f"{n}. {escape(tr(text))}"
         if kind == "self":
             d.free_edge(f"m{n}", xs[src], y, xs[src] + 1, y + 18,
                         value, SELF + "align=left;labelPosition=right;spacingLeft=48;" + "entryX=0;")
@@ -399,6 +466,7 @@ def sequence(page: str, participants: list[tuple[str, str, str]], steps: list[tu
         fh = ys[last - 1] - ys[first - 1] + 90   # bottom edge under the last message
         fx = max(4, min(xs[left_p], xs[right_p]) - SEQ_BOX / 2 - 6)
         fr = min(width - 4, max(xs[left_p], xs[right_p]) + SEQ_BOX / 2 + 6)
+        title = tr(title)
         d.vertex(f"frame{i}", escape(title), FRAME.format(w=min(int(fr - fx) - 20, 13 * len(title) + 36)), fx, fy, fr - fx, fh)
     return d
 
@@ -560,6 +628,7 @@ def pipeline() -> Diagram:
     d = Diagram("H4.9 Một lượt hội thoại", 1100, 760)
 
     def lab(title: str, tech: str = "") -> str:
+        title, tech = tr(title), tr(tech)
         head = "<br>".join(f"<b>{escape(t)}</b>" for t in title.split("\n"))
         if not tech:
             return head
@@ -597,6 +666,7 @@ def pipeline() -> Diagram:
 
 
 if __name__ == "__main__":
-    write(OUT_DIR / "H4_1_aws_architecture.drawio", [architecture()])
-    write(OUT_DIR / "H4_sequences.drawio", sequences())
-    write(OUT_DIR / "H4_2_turn_pipeline.drawio", [pipeline()])
+    for LANG, suffix in (("vn", ""), ("en", "_en")):   # _en: bản tiếng Anh cho README
+        write(OUT_DIR / f"H4_1_aws_architecture{suffix}.drawio", [architecture()])
+        write(OUT_DIR / f"H4_sequences{suffix}.drawio", sequences())
+        write(OUT_DIR / f"H4_2_turn_pipeline{suffix}.drawio", [pipeline()])

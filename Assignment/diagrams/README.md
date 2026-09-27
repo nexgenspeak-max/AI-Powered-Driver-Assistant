@@ -1,6 +1,6 @@
 # Hình vẽ luận văn (draw.io)
 
-Nguồn: `gen_drawio.py` (sinh lại bằng `python3 Assignment/diagrams/gen_drawio.py`). Sửa **nội dung** trong script rồi sinh lại; chỉnh **bố cục** tinh trên app.diagrams.net (File → Open from → Device).
+Nguồn: `gen_drawio.py` (sinh lại bằng `python3 Assignment/diagrams/gen_drawio.py`). Mỗi hình có hai bản: tiếng Việt (tên tệp không hậu tố, dùng trong luận văn) và tiếng Anh (hậu tố `_en`, dùng trong README gốc); bản dịch nằm trong bảng `EN` của script. Sửa **nội dung** trong script rồi sinh lại; chỉnh **bố cục** tinh trên app.diagrams.net (File → Open from → Device).
 
 | Tệp | Trang | Hình trong luận văn | PNG cần xuất (build tự chèn) |
 |---|---|---|---|
