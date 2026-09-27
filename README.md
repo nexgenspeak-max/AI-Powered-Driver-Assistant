@@ -31,11 +31,11 @@ Login tokens come from `identity-service`. Other services check that token; they
 
 ## How it works (diagrams)
 
-The figures below are generated from `Assignment/diagrams/gen_drawio.py`, which writes each diagram in English (`*_en.drawio`, used here) and in Vietnamese (used in the thesis); see [`Assignment/diagrams/README.md`](Assignment/diagrams/README.md). The service names in small type match the folders above. Circled numbers ①–㉒ are the same flows in every figure.
+The figures below are generated from `docs/diagrams/gen_drawio.py`, which writes each diagram in English (`*_en.drawio`, used here and tracked in git) and in Vietnamese (for the thesis, kept locally); see [`docs/diagrams/README.md`](docs/diagrams/README.md). The service names in small type match the folders above. Circled numbers ①–㉒ are the same flows in every figure.
 
 ### Architecture on AWS
 
-![AWS architecture](Assignment/diagrams/H4_1_aws_architecture_en.png)
+![AWS architecture](docs/diagrams/H4_1_aws_architecture_en.png)
 
 Read left to right, one column per layer: apps → real-time voice (LiveKit, the voice worker on ECS Fargate, AI providers) → API Gateway → one Lambda per service → that service's own DynamoDB tables. The bottom band holds what every layer uses: CloudWatch logs, IAM/JWT, CloudFormation/SAM, and the EventBridge schedule that builds the daily report. Grey dashed boxes are outside AWS.
 
@@ -54,7 +54,7 @@ Read left to right, one column per layer: apps → real-time voice (LiveKit, the
 
 ### One spoken turn
 
-![One conversational turn](Assignment/diagrams/H4_2_turn_pipeline_en.png)
+![One conversational turn](docs/diagrams/H4_2_turn_pipeline_en.png)
 
 Every sentence goes speech-to-text → language model with the tools allowed for this session → text-to-speech. Tools read the session state loaded when the session opened and call the trip service only when data is missing or must be written. If no audio is ready two seconds after the driver stops talking, a short hold phrase plays once.
 
@@ -62,33 +62,31 @@ Every sentence goes speech-to-text → language model with the tools allowed for
 
 **S1 — Login.** The app sends phone and password; `identity-service` checks the bcrypt hash and returns access and refresh tokens.
 
-<img src="Assignment/diagrams/H4_S1_identity_login_en.png" alt="S1 login" width="560">
+<img src="docs/diagrams/H4_S1_identity_login_en.png" alt="S1 login" width="560">
 
 **S2 — Open the assistant.** The app gets a LiveKit token (reusing an open room if there is one), joins the room, and a voice worker is dispatched. The worker greets first, then loads the driver's context.
 
-<img src="Assignment/diagrams/H4_S2_voice_session_en.png" alt="S2 voice session" width="600">
+<img src="docs/diagrams/H4_S2_voice_session_en.png" alt="S2 voice session" width="600">
 
 **S3 — One turn with a tool.** Example "picked up the rider": the model calls `update_trip_status`, the worker PATCHes the trip, and confirms only after the API says OK.
 
-<img src="Assignment/diagrams/H4_S3_voice_turn_en.png" alt="S3 voice turn" width="600">
+<img src="docs/diagrams/H4_S3_voice_turn_en.png" alt="S3 voice turn" width="600">
 
 **S4 — Trip offer by phone.** The dispatcher sends a trip; `external-api-service` rings the driver through LiveKit SIP. In that call the worker can only accept or reject.
 
-<img src="Assignment/diagrams/H4_S4_trip_offer_en.png" alt="S4 trip offer" width="680">
+<img src="docs/diagrams/H4_S4_trip_offer_en.png" alt="S4 trip offer" width="680">
 
 **S5 — Call or text the rider.** Three call modes (assistant speaks, driver speaks directly, background call); SMS goes through `external-channel-service`, which stores Twilio events.
 
-<img src="Assignment/diagrams/H4_S5_customer_call_en.png" alt="S5 customer call" width="680">
+<img src="docs/diagrams/H4_S5_customer_call_en.png" alt="S5 customer call" width="680">
 
 **S6 — Call log.** When a session ends the worker saves the transcript and summary; later the driver can ask for the last call's summary.
 
-<img src="Assignment/diagrams/H4_S6_call_records_en.png" alt="S6 call records" width="560">
+<img src="docs/diagrams/H4_S6_call_records_en.png" alt="S6 call records" width="560">
 
 **S7 — Daily report.** At 00:15 `ops-service` reads yesterday's records, computes sessions, drivers, latency, errors, grades a sample of answers with an LLM, and stores the report for the super-admin panel.
 
-<img src="Assignment/diagrams/H4_S7_daily_report_en.png" alt="S7 daily report" width="680">
-
-The same flows with every parameter, timeout, and error code are in `Assignment/Chuong4_Thiet_ke_he_thong_DRAFT.md` (tables 4.4–4.12).
+<img src="docs/diagrams/H4_S7_daily_report_en.png" alt="S7 daily report" width="680">
 
 ## Names you will still see
 

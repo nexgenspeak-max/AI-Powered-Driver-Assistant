@@ -87,3 +87,16 @@ src/backend/voice-agent/app/models/
 
 # ── Cursor hook sentinels ─────────────────────────────────────────────────────
 .cursor/hooks/.need-distill
+
+# ── Thesis (local only, not part of the product) ─────────────────────────────
+# Chapters, DOCX/PDF, build scripts, screenshots and the docx venv stay on disk.
+docs/thesis/
+Assignment/
+# Diagrams: track only the generator, its README and the English figures used by
+# the root README; the Vietnamese thesis figures stay local.
+docs/diagrams/*
+!docs/diagrams/gen_drawio.py
+!docs/diagrams/check_layout.py
+!docs/diagrams/README.md
+!docs/diagrams/*_en.drawio
+!docs/diagrams/*_en.png

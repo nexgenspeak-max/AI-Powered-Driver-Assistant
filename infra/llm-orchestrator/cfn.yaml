@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Driver Assistant - llm-orchestrator (Tác tử hội thoại giọng nói) on Amazon ECS Fargate
+Description: Driver Assistant - llm-orchestrator (Tác nhân hội thoại giọng nói) on Amazon ECS Fargate
 
-# Naming convention (see Assignment/KE_HOACH_SUA_LUAN_VAN_NFR_MSA.md §12.1):
+# Naming convention (see infra/README.md, "Naming convention"):
 #   stack          ${Environment}-${AppName}-llm-orchestrator
 #   logical ID     LlmOrchestrator<Role>
 #   physical name  ${Environment}-${AppName}-llm-orchestrator[-<role>]

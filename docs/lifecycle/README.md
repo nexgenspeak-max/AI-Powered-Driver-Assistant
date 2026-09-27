@@ -8,7 +8,7 @@ Bộ tài liệu dự án AVDA, viết dạng độc lập (không phải văn l
 | `02-nghien-cuu-kha-thi.md` | Nghiên cứu khả thi: kỹ thuật / vận hành / kinh tế / pháp lý + rủi ro |
 | `03-truy-vet-yeu-cau-jira.md` | Ma trận truy vết FR/UC ↔ Epic ↔ Ticket ↔ mã nguồn ↔ trạng thái |
 
-## Cần bổ sung (từ các chương luận văn trong `../../Assignment/`)
+## Cần bổ sung (từ các chương luận văn trong `../thesis/`, chỉ có trên máy, không đưa lên git)
 
 - `04-tai-lieu-kien-truc-SAD.md` — rút từ Chương 4 (thiết kế hệ thống).
 - `05-ke-hoach-kiem-thu.md` — rút từ Chương 3 §3.8 + Chương 6.

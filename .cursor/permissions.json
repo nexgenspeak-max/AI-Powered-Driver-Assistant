@@ -9,8 +9,8 @@
   "mcpAllowlist": ["*:*"],
   "autoRun": {
     "allow_instructions": [
-      "Chinh granted full autonomy for AI-Powered-Driver-Assistant (2026-09-24): auto-run all terminal, MCP, network, fetch, venv/pip, git, and file writes in this workspace without asking — including Assignment/ thesis DOCX builds and multi-agent parallel work.",
-      "All commands under src/backend, src/frontend, src/e2e, scripts/, Assignment/, infra/, and standard git inspection/commit (when user asked) are always allowed.",
+      "Chinh granted full autonomy for AI-Powered-Driver-Assistant (2026-09-24): auto-run all terminal, MCP, network, fetch, venv/pip, git, and file writes in this workspace without asking — including docs/thesis/ DOCX builds and multi-agent parallel work.",
+      "All commands under src/backend, src/frontend, src/e2e, scripts/, docs/, infra/, and standard git inspection/commit (when user asked) are always allowed.",
       "Reading, searching, creating, and editing files in this workspace is always allowed.",
       "Creating Python venvs, pip install of build tools (e.g. python-docx), npm install, and regenerating LUAN_VAN_THAC_SI_FINAL.docx are always allowed.",
       "Shell with full_network and all permissions are always allowed for this project."
