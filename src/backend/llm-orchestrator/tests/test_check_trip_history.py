@@ -21,7 +21,7 @@ async def _run(context, args):
 
 
 async def test_completed_today_empty():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, {"completed_trips": []})
     context = MagicMock()
     context.userdata = userdata
@@ -32,7 +32,7 @@ async def test_completed_today_empty():
 
 
 async def test_completed_today_counts_and_speaks():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {
@@ -65,7 +65,7 @@ async def test_completed_today_counts_and_speaks():
 
 
 async def test_cancelled_today_empty_and_with_rows():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, {"cancelled_trips": []})
     context = MagicMock()
     context.userdata = userdata

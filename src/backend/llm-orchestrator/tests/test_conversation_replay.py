@@ -15,8 +15,8 @@ from app.voicebot.tools import bridge_call_tools, customer_call_tools
 
 
 def _log_session_userdata() -> dict:
-    """Fixture mirroring session driver-0888887798-e5ea0a9b (2026-08-30)."""
-    userdata: dict = {"driver_phone": "0888887798", "room_name": "test", "context": {}}
+    """Fixture mirroring session driver-0900000001-e5ea0a9b (2026-08-30)."""
+    userdata: dict = {"driver_phone": "0900000001", "room_name": "test", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -26,7 +26,7 @@ def _log_session_userdata() -> dict:
                     "trip_id": "t-nexgen",
                     "status": "confirmed",
                     "customer_name": "NexGen Speak",
-                    "customer_phone": "+848888887798",
+                    "customer_phone": "+848900000001",
                     "pickup_address": "Lotte 54 Liễu Giai, Ba Đình, Hà Nội",
                     "scheduled_pickup": "2026-08-30T12:30:00",
                 },

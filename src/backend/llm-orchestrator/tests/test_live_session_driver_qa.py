@@ -97,7 +97,7 @@ def test_live_7937_ack_does_not_eat_month_followup():
 
 @pytest.mark.parametrize("bot_line,intent", LIVE_7937_PENDING_BOT)
 def test_live_7937_pending_from_bot_promise(bot_line: str, intent: str):
-    userdata: dict = {"driver_phone": "0888887798", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -132,7 +132,7 @@ def test_live_7937_pending_from_bot_promise(bot_line: str, intent: str):
 
 def test_live_7937_orphan_delivery_promise_does_not_arm_upcoming():
     """Delivery removed: 'Em kiểm tra đơn hàng…' must not sticky-arm trip_index=2."""
-    userdata: dict = {"driver_phone": "0888887798", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -168,7 +168,7 @@ async def test_live_7937_month_earnings_defers_to_llm():
     utterance = "hỏi về phần thu nhập của tôi trong tháng vừa rồi."
     assert classify_driver_intent(utterance, "vn") == "earnings"
     assert _earnings_period_from_text(utterance, "vn") == "month"
-    userdata: dict = {"driver_phone": "0888887798", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "context": {}}
     session = MagicMock()
     session.userdata = userdata
     session.say = AsyncMock()

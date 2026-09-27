@@ -28,11 +28,11 @@ async def _run(context, args):
 
 def _two_trips(*, same_phone_as_driver: bool = False) -> dict:
     userdata: dict = {
-        "driver_phone": "0888887798",
-        "room_name": "driver-0888887798-test",
+        "driver_phone": "0900000001",
+        "room_name": "driver-0900000001-test",
         "context": {},
     }
-    phone_a = "0888887798" if same_phone_as_driver else "+84901111111"
+    phone_a = "0900000001" if same_phone_as_driver else "+84901111111"
     context_store.load_driver_context(
         userdata,
         {
@@ -107,7 +107,7 @@ async def test_call_customer_agent_handoff_tuple():
 
 @pytest.mark.asyncio
 async def test_call_customer_no_trips_speaks():
-    userdata: dict = {"driver_phone": "0888887798", "room_name": "r", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "room_name": "r", "context": {}}
     context_store.load_driver_context(userdata, {"upcoming_trips": []})
     context = _ctx(userdata)
     result = await _run(context, {"mode": "agent"})

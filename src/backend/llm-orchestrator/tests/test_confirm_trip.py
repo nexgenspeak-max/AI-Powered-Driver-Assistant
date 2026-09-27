@@ -14,7 +14,7 @@ from app.voicebot.locales.vn.tools.confirm_trip import confirm_trip
 
 
 def _userdata_with_pending_trip():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {
@@ -178,7 +178,7 @@ async def test_confirm_trip_accepts_sync_say_handle():
 
 
 async def test_confirm_trip_speaks_when_none_waiting():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, {"current_trip": None, "upcoming_trips": []})
     context = MagicMock()
     context.userdata = userdata
@@ -192,7 +192,7 @@ async def test_confirm_trip_speaks_when_none_waiting():
 
 async def test_confirm_trip_asks_which_when_ambiguous():
     """Multiple notified trips without index → ask, do not PATCH."""
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {

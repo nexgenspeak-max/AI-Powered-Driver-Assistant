@@ -52,7 +52,7 @@ def test_sip_identity_reads_driver_outbound_slot():
     from app.voicebot.processors.sip_call_watch import sip_identity_of
 
     assert sip_identity_of({}) == ""
-    assert sip_identity_of({"sip_identity": "driver-84888887798"}) == "driver-84888887798"
+    assert sip_identity_of({"sip_identity": "driver-84900000001"}) == "driver-84900000001"
     assert sip_identity_of({
         "customer_call": {"sip_identity": "customer-1"},
         "sip_identity": "driver-2",

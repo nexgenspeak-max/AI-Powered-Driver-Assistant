@@ -15,7 +15,7 @@ from app.voicebot.tools.customer_call_tools import (
 def _ctx(**userdata) -> SimpleNamespace:
     base = {
         "lang": "vn",
-        "driver_phone": "0888887798",
+        "driver_phone": "0900000001",
         "customer_call": {"trip_id": "trip-abc-123"},
     }
     base.update(userdata)

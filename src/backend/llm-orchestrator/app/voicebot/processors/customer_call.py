@@ -192,7 +192,7 @@ async def _dial_customer_in_room(
         return _phone_missing(name, lang)
 
     # Live 2026-09-05: NexGen Speak trip had customer_phone == driver_phone
-    # (0888887798). Dialing that number loops the driver into their own SIP
+    # (0900000001). Dialing that number loops the driver into their own SIP
     # leg, AI "talks to customer", then hangup reports confusing summaries.
     driver_norm = normalize_vn_phone(driver_phone)
     customer_norm = normalize_vn_phone(phone)

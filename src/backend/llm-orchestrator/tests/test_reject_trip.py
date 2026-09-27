@@ -9,7 +9,7 @@ from app.voicebot.locales.vn.tools.reject_trip import reject_trip
 
 
 def _userdata_with_pending_trip():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {
@@ -65,7 +65,7 @@ async def test_reject_trip_speaks_and_patches_in_parallel():
 
 
 async def test_reject_trip_asks_which_when_ambiguous():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {

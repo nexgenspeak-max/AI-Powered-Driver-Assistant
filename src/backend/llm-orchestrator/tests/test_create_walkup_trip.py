@@ -11,7 +11,7 @@ from app.voicebot.locales.vn.tools.create_walkup_trip import create_walkup_trip
 from app.voicebot.testing.conversation_quality import assert_no_raw_template
 
 
-def _ctx(driver_phone: str = "0888887798") -> MagicMock:
+def _ctx(driver_phone: str = "0900000001") -> MagicMock:
     userdata = {"driver_phone": driver_phone, "room_name": "driver-test", "context": {}}
     context = MagicMock()
     context.userdata = userdata
@@ -57,7 +57,7 @@ async def test_create_walkup_trip_success():
     assert result == "stopped"
     mock_create.assert_awaited_once()
     kwargs = mock_create.await_args.kwargs
-    assert kwargs["driver_phone"] == "0888887798"
+    assert kwargs["driver_phone"] == "0900000001"
     assert kwargs["has_bulky_goods"] is True
     assert kwargs["with_children"] is False
     spoken = context.session.say.await_args.args[0]

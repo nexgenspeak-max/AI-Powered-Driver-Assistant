@@ -39,7 +39,7 @@ async def test_teardown_unanswered_isolated_call():
         "lang": "vn",
         "isolated_call": True,
         "customer_call": {"call_id": "c1", "mode": "background"},
-        "driver_phone": "0888887798",
+        "driver_phone": "0900000001",
     }
 
     with patch(

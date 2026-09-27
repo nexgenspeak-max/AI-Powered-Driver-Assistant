@@ -38,5 +38,5 @@ def test_self_call_blocked_message_in_dial_path():
     from app.voicebot.processors import customer_call
     from app.voicebot.processors.custom_call import normalize_vn_phone
 
-    assert normalize_vn_phone("84888887798") == normalize_vn_phone("0888887798")
+    assert normalize_vn_phone("84900000001") == normalize_vn_phone("0900000001")
     assert "trùng số tài xế" in customer_call._self_call_blocked("NexGen", "vn")

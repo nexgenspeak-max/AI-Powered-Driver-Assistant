@@ -171,7 +171,7 @@ from app.agent.session import _parse_room  # noqa: E402
 
 cases = [
     ("driver-84867347452-1748700000", "driver",   "84867347452"),
-    ("driver-0888887798-d4963ecd-2341-4056-8425-64a663ca7a4d", "driver", "0888887798"),
+    ("driver-0900000001-d4963ecd-2341-4056-8425-64a663ca7a4d", "driver", "0900000001"),
     ("customer-84901234567-1748700000", "customer", "84901234567"),
     ("trip-abc12345",                 "outbound", ""),
     ("unknown-room",                  "driver",   ""),

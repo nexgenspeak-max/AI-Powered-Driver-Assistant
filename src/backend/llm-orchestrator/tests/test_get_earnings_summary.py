@@ -16,7 +16,7 @@ async def _run(context, args):
 
 async def test_earnings_summary_week_speaks_totals():
     context = MagicMock()
-    context.userdata = {"driver_phone": "0888887798"}
+    context.userdata = {"driver_phone": "0900000001"}
     context.session.say = AsyncMock()
 
     with patch(
@@ -34,7 +34,7 @@ async def test_earnings_summary_week_speaks_totals():
 
 async def test_earnings_summary_rejects_lifetime_period():
     context = MagicMock()
-    context.userdata = {"driver_phone": "0888887798"}
+    context.userdata = {"driver_phone": "0900000001"}
     context.session.say = AsyncMock()
 
     with patch(
@@ -50,7 +50,7 @@ async def test_earnings_summary_rejects_lifetime_period():
 
 async def test_earnings_summary_api_failure_speaks_honest_error():
     context = MagicMock()
-    context.userdata = {"driver_phone": "0888887798"}
+    context.userdata = {"driver_phone": "0900000001"}
     context.session.say = AsyncMock()
 
     with patch(

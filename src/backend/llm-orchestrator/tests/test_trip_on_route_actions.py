@@ -14,7 +14,7 @@ from app.voicebot.testing.conversation_quality import assert_no_raw_template
 
 
 def _active_userdata() -> dict:
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {
@@ -48,7 +48,7 @@ async def _run(fn, context, args):
 
 
 async def test_update_status_no_trip_speaks():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, {"current_trip": None, "upcoming_trips": []})
     context = _ctx(userdata)
     await _run(update_trip_status, context, {"status": "ARRIVED_PICKUP"})
@@ -102,7 +102,7 @@ async def test_extend_wait_api_fail_speaks_error_not_success():
 
 
 async def test_extend_wait_no_trip():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, {"current_trip": None})
     context = _ctx(userdata)
     await _run(extend_wait_time, context, {"minutes": 3})

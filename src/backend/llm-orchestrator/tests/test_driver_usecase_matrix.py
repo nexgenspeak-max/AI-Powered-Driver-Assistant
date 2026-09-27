@@ -130,7 +130,7 @@ async def test_a8b1_lifetime_defers_to_llm_not_today_tool():
     assert classify_driver_intent(utterance, "vn") == "earnings"
     assert _earnings_period_from_text(utterance, "vn") == "lifetime"
     session = MagicMock()
-    session.userdata = {"driver_phone": "0888887798", "context": {}}
+    session.userdata = {"driver_phone": "0900000001", "context": {}}
     session.say = AsyncMock()
     await handle_driver_utterance(
         session, SimpleNamespace(text_content=utterance), lang="vn"
@@ -148,7 +148,7 @@ async def test_a8b1_earnings_split_classifies_week_defers_to_llm():
     assert classify_driver_intent(utterance, "vn") == "earnings"
     assert _earnings_period_from_text(utterance, "vn") == "week"
     session = MagicMock()
-    session.userdata = {"driver_phone": "0888887798", "context": {}}
+    session.userdata = {"driver_phone": "0900000001", "context": {}}
     session.say = AsyncMock()
     await handle_driver_utterance(
         session, SimpleNamespace(text_content=utterance), lang="vn"

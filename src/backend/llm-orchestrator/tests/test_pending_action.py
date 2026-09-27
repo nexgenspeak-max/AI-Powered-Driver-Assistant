@@ -9,7 +9,7 @@ from app.voicebot.processors.spoken_intent import classify_driver_intent, handle
 
 
 def _userdata():
-    userdata = {"driver_phone": "0888887798", "room_name": "test-room", "context": {}}
+    userdata = {"driver_phone": "0900000001", "room_name": "test-room", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -19,7 +19,7 @@ def _userdata():
                     "trip_id": "t1",
                     "status": "confirmed",
                     "customer_name": "NexGen Speak",
-                    "customer_phone": "+848888887798",
+                    "customer_phone": "+848900000001",
                     "pickup_address": "123 Lê Lợi",
                     "scheduled_pickup": "2026-08-30T12:30:00",
                 },

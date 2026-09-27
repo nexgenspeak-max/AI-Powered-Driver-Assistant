@@ -9,7 +9,7 @@ from app.voicebot.locales.vn.tools.check_upcoming_trips import check_upcoming_tr
 
 
 def _userdata():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {
@@ -84,7 +84,7 @@ async def test_check_upcoming_trips_list_all_reads_customers():
 
 
 async def test_check_upcoming_trips_empty_schedule():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata, {"current_trip": None, "upcoming_trips": [], "active_trip": None}
     )
@@ -142,7 +142,7 @@ async def test_check_upcoming_trips_index_sets_target_and_detail():
 
 
 def test_format_schedule_awaiting_scope_and_en_empty():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {

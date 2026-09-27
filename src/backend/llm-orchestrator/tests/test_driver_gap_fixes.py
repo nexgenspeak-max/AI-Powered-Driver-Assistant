@@ -28,7 +28,7 @@ def test_call_mode_prompt_uses_saved_default():
 
 
 def _trip_userdata() -> dict:
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {

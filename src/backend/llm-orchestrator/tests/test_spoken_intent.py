@@ -181,8 +181,8 @@ def test_vn_reads_customer_phone_instead_of_calling():
 
 def test_vn_call_does_not_fire_on_questions_or_fragments():
     assert classify_driver_intent("Alo, bạn gọi cho", "vn") is None
-    assert classify_driver_intent("gọi cho tôi số 0888887798", "vn") is None
-    assert classify_driver_intent("gì? À bạn gọi cho tôi số 0888887798", "vn") is None
+    assert classify_driver_intent("gọi cho tôi số 0900000001", "vn") is None
+    assert classify_driver_intent("gì? À bạn gọi cho tôi số 0900000001", "vn") is None
 
 
 def test_stt_tail_fragment_dropped():
@@ -303,7 +303,7 @@ async def test_handle_phone_lookup_defers_to_llm():
 
 
 def test_handle_trip_lookup_by_address_classifies():
-    userdata: dict = {"driver_phone": "0888887798", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "context": {}}
     context_store.load_driver_context(
         userdata,
         {

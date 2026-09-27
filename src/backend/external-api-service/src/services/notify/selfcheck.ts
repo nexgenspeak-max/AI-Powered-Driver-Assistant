@@ -80,7 +80,7 @@ async function withServer<T>(fn: (port: number) => Promise<T>): Promise<T> {
 
 export async function assertNotifyWs(): Promise<{ open_ms: number; push_ms: number }> {
   return withServer(async (port) => {
-    const driverId = '+84888887798';
+    const driverId = '+84900000001';
     const customerId = 'cust-ws-selfcheck';
     const t0 = Date.now();
     const driverWs = new WebSocket(`ws://127.0.0.1:${port}/ws?role=driver&id=${encodeURIComponent(driverId)}`);

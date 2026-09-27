@@ -18,7 +18,7 @@ from app.voicebot.testing.conversation_quality import assert_no_raw_template
 
 
 def _active() -> dict:
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {

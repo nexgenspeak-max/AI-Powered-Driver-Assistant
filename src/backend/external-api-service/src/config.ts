@@ -89,7 +89,7 @@ export const config = {
   // Twilio-trial workaround (trial accounts can only dial verified numbers).
   // It used to default on (`!== 'false'`), which silently routed real calls
   // to the one verified test number whenever TWILIO_VERIFIED_TO was set —
-  // e.g. a trip booked with 0888887798 still rang 0382759152. Now it only
+  // e.g. a trip booked with 0900000001 still rang 0900000002. Now it only
   // ever redirects when explicitly set: CALL_FORCE_VERIFIED_TO=true.
   callForceVerifiedTo: process.env.CALL_FORCE_VERIFIED_TO === 'true',
 

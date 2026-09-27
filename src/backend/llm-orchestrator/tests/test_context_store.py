@@ -192,7 +192,7 @@ def test_match_callable_trip_by_text_sets_target():
         ],
     )
     matched = context_store.match_callable_trip_by_text(
-        userdata, "Số điện thoại khách NexGen Speak là 0888887798"
+        userdata, "Số điện thoại khách NexGen Speak là 0900000001"
     )
     assert matched is not None
     assert matched["trip_id"] == "t1"

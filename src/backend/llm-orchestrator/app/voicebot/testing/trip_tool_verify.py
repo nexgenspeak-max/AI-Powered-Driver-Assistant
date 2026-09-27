@@ -107,7 +107,7 @@ class Report:
 
 
 def _fixture_userdata() -> dict:
-    userdata: dict = {"driver_phone": "0888887798", "room_name": "test", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "room_name": "test", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -117,7 +117,7 @@ def _fixture_userdata() -> dict:
                     "trip_id": "t-nexgen",
                     "status": "confirmed",
                     "customer_name": "NexGen Speak",
-                    "customer_phone": "+848888887798",
+                    "customer_phone": "+848900000001",
                     "pickup_address": "123 Lê Lợi, Quận 1, TP.HCM",
                     "dropoff_address": "456 Nguyễn Huệ, Quận 1",
                     "scheduled_pickup": "2026-08-30T12:30:00+07:00",
@@ -148,7 +148,7 @@ def _fixture_userdata() -> dict:
 
 
 def _pending_fixture() -> dict:
-    userdata: dict = {"driver_phone": "0888887798", "room_name": "test", "context": {}}
+    userdata: dict = {"driver_phone": "0900000001", "room_name": "test", "context": {}}
     context_store.load_driver_context(
         userdata,
         {
@@ -230,7 +230,7 @@ PENDING_EXECUTE = [
     ("Sao bạn không kiểm tra?", False),
 ]
 
-# Replay of live session driver-0888887798-e5ea0a9b (2026-08-30 ~02:59–03:02).
+# Replay of live session driver-0900000001-e5ea0a9b (2026-08-30 ~02:59–03:02).
 CONVERSATION_REPLAY_STEPS = [
     "schedule_intent",
     "schedule_target_trip",

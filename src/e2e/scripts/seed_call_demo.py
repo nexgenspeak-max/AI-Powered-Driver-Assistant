@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Seed một vài chuyến DEMO để test luồng 'gọi khách' bằng số thật.
 
-Vì tài xế demo David dùng số 0888887798, các chuyến cũ lỡ gán customer_phone
+Vì tài xế demo (DRIVER_PHONE) dùng chính số của mình, các chuyến cũ lỡ gán customer_phone
 trùng số này → llm-orchestrator chặn self-call (loop SIP). Script này tạo chuyến
 mới với customer_phone khác hẳn (mặc định 0528310879) để bot gọi ra được.
 
@@ -19,7 +19,10 @@ from typing import Any
 
 import boto3
 
-DRIVER_PHONE = os.environ.get("DRIVER_PHONE", "0888887798")
+# Số tài xế demo truyền qua biến môi trường; repo không chứa số điện thoại thật.
+DRIVER_PHONE = os.environ.get("DRIVER_PHONE", "").strip()
+if not DRIVER_PHONE:
+    sys.exit("DRIVER_PHONE is required, e.g. DRIVER_PHONE=09xxxxxxxx python3 " + os.path.basename(__file__))
 CUSTOMER_PHONE = os.environ.get("CUSTOMER_PHONE", "0528310879")
 CUSTOMER_NAME = os.environ.get("CUSTOMER_NAME", "Khách Gọi Thử")
 TABLE = os.environ.get("DYNAMODB_TABLE", "local-driver-assistant-trips")

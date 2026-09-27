@@ -31,7 +31,7 @@ def _four_trips() -> dict:
 
 
 async def test_new_trip_offer_reloads_context_and_names_the_fourth_trip():
-    userdata = {"driver_phone": "0888887798"}
+    userdata = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, _three_trips())
     assert len(context_store.get_schedule_trips(userdata)) == 3
 
@@ -51,7 +51,7 @@ async def test_new_trip_offer_reloads_context_and_names_the_fourth_trip():
             userdata=userdata,
         )
 
-    fetch.assert_awaited_once_with("0888887798")
+    fetch.assert_awaited_once_with("0900000001")
     assert len(context_store.get_schedule_trips(userdata)) == 4
     assert "Trương Bá Chính" in text
     assert "stale-name" not in text
@@ -59,7 +59,7 @@ async def test_new_trip_offer_reloads_context_and_names_the_fourth_trip():
 
 
 async def test_new_trip_offer_english_and_payload_fallback_when_refresh_fails():
-    userdata = {"driver_phone": "0888887798"}
+    userdata = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, _three_trips())
 
     with patch(
@@ -84,7 +84,7 @@ async def test_new_trip_offer_english_and_payload_fallback_when_refresh_fails():
 
 
 async def test_schedule_updated_silent_refresh_only():
-    userdata = {"driver_phone": "0888887798"}
+    userdata = {"driver_phone": "0900000001"}
     context_store.load_driver_context(userdata, _three_trips())
 
     with patch(
@@ -94,6 +94,6 @@ async def test_schedule_updated_silent_refresh_only():
     ) as fetch:
         text = await build_nudge_message("schedule_updated", {}, lang="vi", userdata=userdata)
 
-    fetch.assert_awaited_once_with("0888887798")
+    fetch.assert_awaited_once_with("0900000001")
     assert text == ""
     assert len(context_store.get_schedule_trips(userdata)) == 4

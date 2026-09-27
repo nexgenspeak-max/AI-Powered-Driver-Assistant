@@ -2,14 +2,15 @@
 """Seed backdated trips for one driver (DynamoDB PutItem).
 
 Earnings use updated_at on completed trips; history/context use recent rows.
-Default target: David 0888887798 — enough volume for today/week/month bot answers.
+Target: the demo driver given by DRIVER_PHONE — enough volume for today/week/month bot answers.
 
   AWS_PROFILE=david python3 src/e2e/scripts/seed_driver_history.py
-  DRIVER_PHONE=0888887798 python3 .../seed_driver_history.py
+  DRIVER_PHONE=<demo driver phone> python3 .../seed_driver_history.py
 """
 from __future__ import annotations
 
 import os
+import sys
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -17,7 +18,10 @@ from typing import Any
 
 import boto3
 
-DRIVER_PHONE = os.environ.get("DRIVER_PHONE", "0888887798")
+# Số tài xế demo truyền qua biến môi trường; repo không chứa số điện thoại thật.
+DRIVER_PHONE = os.environ.get("DRIVER_PHONE", "").strip()
+if not DRIVER_PHONE:
+    sys.exit("DRIVER_PHONE is required, e.g. DRIVER_PHONE=09xxxxxxxx python3 " + os.path.basename(__file__))
 TABLE = os.environ.get("DYNAMODB_TABLE", "local-driver-assistant-trips")
 REGION = os.environ.get("AWS_REGION", "ap-southeast-1")
 TAG = "seed_history_david_v1"

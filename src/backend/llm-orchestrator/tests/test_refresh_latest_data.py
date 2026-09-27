@@ -18,7 +18,7 @@ async def _run(context, args=None):
 
 async def test_refresh_without_pending_speaks_error():
     context = MagicMock()
-    context.userdata = {"driver_phone": "0888887798", "context": {}}
+    context.userdata = {"driver_phone": "0900000001", "context": {}}
     context.session.say = AsyncMock()
 
     await _run(context)
@@ -28,7 +28,7 @@ async def test_refresh_without_pending_speaks_error():
 
 
 async def test_refresh_today_earnings_speaks_fresh_totals():
-    userdata: dict = {"driver_phone": "0888887798"}
+    userdata: dict = {"driver_phone": "0900000001"}
     context_store.load_driver_context(
         userdata,
         {"today_earnings": {"total_earnings": 1000, "trip_count": 1}},
