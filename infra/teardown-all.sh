@@ -58,7 +58,7 @@ run_teardown() {
 }
 
 # Reverse order
-for svc in llm-orchestrator external-channel-service call-records-service external-api-service identity-service; do
+for svc in ops-service llm-orchestrator external-api-service external-channel-service call-records-service identity-service; do
   run_teardown "$svc"
 done
 

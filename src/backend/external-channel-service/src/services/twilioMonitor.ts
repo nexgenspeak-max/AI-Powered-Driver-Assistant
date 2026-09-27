@@ -1,28 +1,33 @@
-import * as fs from 'fs';
 import * as path from 'path';
+import { config } from '../config';
 import { bind, getLogger } from './logger';
+import { DynamoEventStore } from './events/dynamoStore';
+import { FileEventStore } from './events/fileStore';
+import { EventStore, ProviderEvent, sidOf } from './events/store';
 
-const LOG_DIR = path.resolve(__dirname, '../../data');
-const LOG_FILE = path.join(LOG_DIR, 'twilio_events.jsonl');
 const log = getLogger('twilio');
 
-export function logEvent(source: string, payload: Record<string, string>): void {
-  const row = { ts: new Date().toISOString(), source, ...payload };
-  if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
-  fs.appendFileSync(LOG_FILE, JSON.stringify(row) + '\n', 'utf-8');
+const store: EventStore = config.eventsTable
+  ? new DynamoEventStore(config.eventsTable, config.awsRegion)
+  : new FileEventStore(path.resolve(__dirname, '../../data'));
+
+/**
+ * Record one carrier event. Never throws: a storage failure must not fail the
+ * Twilio webhook (Twilio would retry) or the SMS/dial that already happened.
+ */
+export async function logEvent(source: string, payload: Record<string, string>): Promise<void> {
+  const event: ProviderEvent = { ...payload, ts: new Date().toISOString(), source, sid: sidOf(payload) };
   if (payload.CallSid) {
     bind({ conv: payload.CallSid });
   }
-  log.info(source, { status: payload.CallStatus ?? payload.status ?? '-' });
+  log.info(source, { status: payload.CallStatus ?? payload.SmsStatus ?? payload.status ?? '-' });
+  try {
+    await store.put(event);
+  } catch (err) {
+    log.error('event store write failed', { source, error: err instanceof Error ? err.message : String(err) });
+  }
 }
 
-export function readEvents(limit = 200, callSid?: string): Record<string, string>[] {
-  if (!fs.existsSync(LOG_FILE)) return [];
-  const rows = fs.readFileSync(LOG_FILE, 'utf-8')
-    .split('\n')
-    .filter(Boolean)
-    .map(line => { try { return JSON.parse(line); } catch { return null; } })
-    .filter(Boolean);
-  const filtered = callSid ? rows.filter(r => r.CallSid === callSid) : rows;
-  return filtered.slice(-limit);
+export function readEvents(limit = 200, sid?: string): Promise<ProviderEvent[]> {
+  return store.list(limit, sid);
 }

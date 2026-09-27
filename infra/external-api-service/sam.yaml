@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Driver Assistant - external-api-service (Lambda + API Gateway + DynamoDB)
+Description: Driver Assistant - external-api-service (Dịch vụ Chuyến đi và Điều phối) - Lambda + API Gateway (REST, WebSocket) + DynamoDB
 
 Parameters:
   Environment:
@@ -40,9 +40,19 @@ Parameters:
     NoEcho: true
     Description: Must match the JwtSecret used by identity-service — tokens are verified with this value.
 
-  AuthServiceUrl:
+  IdentityServiceUrl:
     Type: String
-    Description: Base URL of identity-service — driver profile/status now lives in its accounts table.
+    Description: Base URL of identity-service — driver profile/status lives in its accounts table.
+
+  CallRecordsServiceUrl:
+    Type: String
+    Default: ""
+    Description: Base URL of call-records-service (call summaries). Empty disables summaries.
+
+  ExternalChannelServiceUrl:
+    Type: String
+    Default: ""
+    Description: Base URL of external-channel-service (SMS). Empty disables SMS.
 
   RedisUrl:
     Type: String
@@ -77,7 +87,7 @@ Globals:
     Environment:
       Variables:
         ENV: !Ref Environment
-        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-trips"
+        DYNAMODB_TABLE: !Ref ExternalApiTripsTable
         LIVEKIT_URL: !Ref LivekitUrl
         LIVEKIT_API_KEY: !Ref LivekitApiKey
         LIVEKIT_API_SECRET: !Ref LivekitApiSecret
@@ -86,221 +96,81 @@ Globals:
         MAPS_PROVIDER: !Ref MapsProvider
         MAPS_API_KEY: !Ref MapsApiKey
         JWT_SECRET: !Ref JwtSecret
-        AUTH_SERVICE_URL: !Ref AuthServiceUrl
+        IDENTITY_SERVICE_URL: !Ref IdentityServiceUrl
+        CALL_RECORDS_SERVICE_URL: !Ref CallRecordsServiceUrl
+        EXTERNAL_CHANNEL_SERVICE_URL: !Ref ExternalChannelServiceUrl
         REDIS_URL: !Ref RedisUrl
-        CONNECTIONS_TABLE: !Ref ConnectionsTable
+        CONNECTIONS_TABLE: !Ref ExternalApiWsConnectionsTable
         # WEBSOCKET_API_ENDPOINT deliberately NOT set here — it references
-        # DispatchWebSocketApi (below), and ConnectFunction/DisconnectFunction
+        # ExternalApiDispatchWebSocketApi (below), and the WebSocket connect/disconnect functions
         # (which also inherit Globals) are themselves wired INTO that API's
         # routes, which would create a circular resource dependency. Set
-        # explicitly instead on just TripServiceFunction, the only function
+        # explicitly instead on just ExternalApiFunction, the only function
         # that actually calls postToConnection.
 
 Resources:
-
-  TripServiceApi:
+  ExternalApiRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "${Environment}-${AppName}-trip-service-api"
+      Name: !Sub "${Environment}-${AppName}-external-api-service-api"
       StageName: !Ref Environment
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: external-api-service, layer: api-gateway, component: rest-api }
 
-  TripServiceFunction:
+  ExternalApiFunction:
     Type: AWS::Serverless::Function
+    DependsOn: ExternalApiFunctionLogGroup
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-trip-service"
+      FunctionName: !Sub "${Environment}-${AppName}-external-api-service-fn"
       CodeUri: ../../src/backend/external-api-service/
       Handler: src/index.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref TripsTable
+            TableName: !Ref ExternalApiTripsTable
         - DynamoDBCrudPolicy:
-            TableName: !Ref ConnectionsTable
+            TableName: !Ref ExternalApiWsConnectionsTable
         - Statement:
             - Effect: Allow
               Action: execute-api:ManageConnections
-              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/${Environment}/POST/@connections/*"
+              Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ExternalApiDispatchWebSocketApi}/${Environment}/POST/@connections/*"
       Environment:
         Variables:
-          WEBSOCKET_API_ENDPOINT: !Sub "https://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+          WEBSOCKET_API_ENDPOINT: !Sub "https://${ExternalApiDispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
       Events:
-        Health:
+        Root:
           Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /health
-            Method: GET
-        # ── Trips ────────────────────────────────────────────────────
-        CreateTrip:
+          Properties: { RestApiId: !Ref ExternalApiRestApi, Path: "/", Method: ANY }
+        Proxy:
           Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips
-            Method: POST
-        ListTrips:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips
-            Method: GET
-        GetTrip:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}
-            Method: GET
-        UpdateTrip:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}
-            Method: PATCH
-        GetTripLocation:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}/location
-            Method: GET
-        UpdateTripLocation:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}/location
-            Method: POST
-        DispatchTrip:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}/dispatch
-            Method: POST
-        NotifyDriver:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/trips/{trip_id}/notify
-            Method: POST
-        # ── Drivers ──────────────────────────────────────────────────
-        ListDrivers:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers
-            Method: GET
-        ListOnlineDrivers:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/online
-            Method: GET
-        DriverUpcomingTrips:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/trips/upcoming
-            Method: GET
-        DriverCurrentTrip:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/trips/current
-            Method: GET
-        DriverMeContext:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/context
-            Method: GET
-        DriverMeProfile:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/profile
-            Method: GET
-        DriverMeEarningsToday:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/earnings/today
-            Method: GET
-        DriverMeEarningsSummary:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/earnings/summary
-            Method: GET
-        DriverMeBonuses:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/bonuses
-            Method: GET
-        DriverMeStatus:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/me/status
-            Method: PATCH
-        GetDriver:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/{phone}
-            Method: GET
-        UpdateDriver:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/drivers/{phone}
-            Method: PATCH
-        # ── Calls ────────────────────────────────────────────────────
-        StartCall:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/calls/start
-            Method: POST
-        LatestCall:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/calls/latest
-            Method: GET
-        # ── Voice ────────────────────────────────────────────────────
-        CreateVoiceToken:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/voice/token
-            Method: POST
-        CreateCustomerToken:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TripServiceApi
-            Path: /api/v1/voice/customer-token
-            Method: POST
+          Properties: { RestApiId: !Ref ExternalApiRestApi, Path: "/{proxy+}", Method: ANY }
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: external-api-service, layer: microservices, component: lambda }
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
         Target: "es2020"
-        EntryPoints:
-          - src/index.ts
-        External:
-          - "@aws-sdk/*"
+        EntryPoints: [src/index.ts]
+        External: ["@aws-sdk/*"]
 
-  TripServiceFunctionLogGroup:
+  ExternalApiFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-trip-service"
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-external-api-service-fn"
       RetentionInDays: 30
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: external-api-service }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
 
-  TripsTable:
+  ExternalApiTripsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "${Environment}-${AppName}-trips"
+      TableName: !Sub "${Environment}-${AppName}-external-api-service-trips"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: trip_id
@@ -351,16 +221,24 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: external-api-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-trips }
 
   # ── Real-time WebSocket push (trip_offer / trip_confirmed / trip_rejected) ──
-  # See services/notify/lambda.ts — used by POST /trips and PATCH /:tripId.
+  # API Gateway WebSocket gives each connected app a connectionId. Lambda is
+  # stateless, so $connect stores connectionId ↔ "<role>#<phone>" in this table
+  # and services/notify/lambda.ts looks it up to push; $disconnect removes it.
 
-  ConnectionsTable:
+  ExternalApiWsConnectionsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      TableName: !Sub "${Environment}-${AppName}-ws-connections"
+      TableName: !Sub "${Environment}-${AppName}-external-api-service-ws-connections"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: connectionId
@@ -380,11 +258,17 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: external-api-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-ws-connections }
 
-  DispatchWebSocketApi:
+  ExternalApiDispatchWebSocketApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: !Sub "${Environment}-${AppName}-dispatch-ws"
+      Name: !Sub "${Environment}-${AppName}-external-api-service-ws"
       ProtocolType: WEBSOCKET
       # Unused in practice — this deployment only ever needs $connect/
       # $disconnect (client identifies itself via query string on connect,
@@ -392,99 +276,94 @@ Resources:
       # ApiGatewayV2 WebSocket APIs require a RouteSelectionExpression.
       RouteSelectionExpression: "$request.body.action"
 
-  ConnectFunction:
+  ExternalApiWsConnectFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-ws-connect"
+      FunctionName: !Sub "${Environment}-${AppName}-external-api-service-ws-connect-fn"
       CodeUri: ../../src/backend/external-api-service/
       Handler: src/handlers/websocketConnect.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ConnectionsTable
+            TableName: !Ref ExternalApiWsConnectionsTable
 
-  DisconnectFunction:
+  ExternalApiWsDisconnectFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-ws-disconnect"
+      FunctionName: !Sub "${Environment}-${AppName}-external-api-service-ws-disconnect-fn"
       CodeUri: ../../src/backend/external-api-service/
       Handler: src/handlers/websocketDisconnect.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ConnectionsTable
+            TableName: !Ref ExternalApiWsConnectionsTable
 
-  ConnectFunctionPermission:
+  ExternalApiWsConnectPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref ConnectFunction
+      FunctionName: !Ref ExternalApiWsConnectFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/*"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ExternalApiDispatchWebSocketApi}/*"
 
-  DisconnectFunctionPermission:
+  ExternalApiWsDisconnectPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref DisconnectFunction
+      FunctionName: !Ref ExternalApiWsDisconnectFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DispatchWebSocketApi}/*"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ExternalApiDispatchWebSocketApi}/*"
 
-  ConnectIntegration:
+  ExternalApiWsConnectIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
       IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ConnectFunction.Arn}/invocations"
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExternalApiWsConnectFunction.Arn}/invocations"
 
-  ConnectRoute:
+  ExternalApiWsConnectRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
       RouteKey: $connect
-      Target: !Sub "integrations/${ConnectIntegration}"
+      Target: !Sub "integrations/${ExternalApiWsConnectIntegration}"
 
-  DisconnectIntegration:
+  ExternalApiWsDisconnectIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
       IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DisconnectFunction.Arn}/invocations"
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExternalApiWsDisconnectFunction.Arn}/invocations"
 
-  DisconnectRoute:
+  ExternalApiWsDisconnectRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
       RouteKey: $disconnect
-      Target: !Sub "integrations/${DisconnectIntegration}"
+      Target: !Sub "integrations/${ExternalApiWsDisconnectIntegration}"
 
-  DispatchWebSocketDeployment:
+  ExternalApiDispatchWebSocketDeployment:
     Type: AWS::ApiGatewayV2::Deployment
     DependsOn:
-      - ConnectRoute
-      - DisconnectRoute
+      - ExternalApiWsConnectRoute
+      - ExternalApiWsDisconnectRoute
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
 
-  DispatchWebSocketStage:
+  ExternalApiDispatchWebSocketStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
-      ApiId: !Ref DispatchWebSocketApi
-      DeploymentId: !Ref DispatchWebSocketDeployment
+      ApiId: !Ref ExternalApiDispatchWebSocketApi
+      DeploymentId: !Ref ExternalApiDispatchWebSocketDeployment
       StageName: !Ref Environment
 
 Outputs:
-  ApiUrl:
-    Description: Trip Service API base URL — set as TRIP_SERVICE_URL in llm-orchestrator
-    Value: !Sub "https://${TripServiceApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
-
-  TripServiceFunctionArn:
-    Value: !GetAtt TripServiceFunction.Arn
-
-  TripsTableName:
-    Value: !Ref TripsTable
-
-  DispatchWebSocketUrl:
+  ExternalApiUrl:
+    Description: Base URL of external-api-service (EXTERNAL_API_SERVICE_URL for llm-orchestrator and apps)
+    Value: !Sub "https://${ExternalApiRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  ExternalApiTripsTableName:
+    Value: !Ref ExternalApiTripsTable
+  ExternalApiDispatchWebSocketUrl:
     Description: >
       wss:// URL driver-app/customer-app connect to for real-time trip_offer/
       trip_confirmed/trip_rejected push — append ?role=driver&id=<phone> (or
       role=customer). See notify/local.ts for the identical local-dev protocol.
-    Value: !Sub "wss://${DispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Value: !Sub "wss://${ExternalApiDispatchWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"

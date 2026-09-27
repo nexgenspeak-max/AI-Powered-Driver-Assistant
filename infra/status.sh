@@ -21,7 +21,7 @@ if ! aws sts get-caller-identity $(aws_profile_args) >/dev/null 2>&1; then
   exit 0
 fi
 
-SERVICES=(identity-service external-api-service call-records-service external-channel-service llm-orchestrator)
+SERVICES=(identity-service call-records-service external-channel-service external-api-service llm-orchestrator ops-service)
 DEPLOYED=0
 MISSING=0
 
@@ -40,8 +40,16 @@ for svc in "${SERVICES[@]}"; do
     printf "%-20s %-45s %s\n" "$svc" "$name" "$status"
     DEPLOYED=$((DEPLOYED + 1))
 
-    if [[ "$svc" == "identity-service" || "$svc" == "external-api-service" || "$svc" == "call-records-service" ]]; then
-      url="$(stack_output "$name" "ApiUrl")"
+    key=""
+    case "$svc" in
+      identity-service) key=IdentityApiUrl ;;
+      call-records-service) key=CallRecordsApiUrl ;;
+      external-channel-service) key=ExternalChannelApiUrl ;;
+      external-api-service) key=ExternalApiUrl ;;
+      ops-service) key=OpsApiUrl ;;
+    esac
+    if [[ -n "$key" ]]; then
+      url="$(stack_output "$name" "$key")"
       [[ -n "$url" && "$url" != "None" ]] && echo "                     → ApiUrl: $url"
     fi
   else
@@ -57,8 +65,8 @@ echo ""
 # ECS desired count (llm-orchestrator cost driver)
 VA_STACK="$(stack_name llm-orchestrator "$TARGET_ENV")"
 if stack_exists "$VA_STACK"; then
-  CLUSTER="$(stack_output "$VA_STACK" "ECSClusterName")"
-  SERVICE="$(stack_output "$VA_STACK" "ECSServiceName")"
+  CLUSTER="$(stack_output "$VA_STACK" "LlmOrchestratorClusterName")"
+  SERVICE="$(stack_output "$VA_STACK" "LlmOrchestratorServiceName")"
   if [[ -n "$CLUSTER" && "$CLUSTER" != "None" ]]; then
     DESIRED="$(aws ecs describe-services \
       --cluster "$CLUSTER" \

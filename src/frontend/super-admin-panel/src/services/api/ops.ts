@@ -1,5 +1,5 @@
 import { opsClient } from './opsClient'
-import type { AgentSnapshot, CallRecord, ProbeResult, PromptsSnapshot } from '../../types/ops'
+import type { AgentSnapshot, CallRecord, DailyReport, ProbeResult, PromptsSnapshot } from '../../types/ops'
 
 export const opsService = {
   status: () =>
@@ -19,4 +19,13 @@ export const opsService = {
 
   getRecord: (callId: string) =>
     opsClient.get<CallRecord>(`/api/v1/records/${callId}`).then(r => r.data),
+
+  dailyReport: (date: string) =>
+    opsClient.get<DailyReport>('/api/v1/reports/daily', { params: { date } }).then(r => r.data),
+
+  dailyReports: (from: string, to: string) =>
+    opsClient.get<DailyReport[]>('/api/v1/reports/daily', { params: { from, to } }).then(r => r.data),
+
+  rebuildDailyReport: (date: string) =>
+    opsClient.post<DailyReport>(`/api/v1/reports/daily/${date}/rebuild`).then(r => r.data),
 }

@@ -18,9 +18,9 @@ def test_inbound_prompt_is_compact():
     from app.voicebot.locales.en.system_instructions import INBOUND_PROMPT as EN_IN
     from app.voicebot.locales.vn.system_instructions import INBOUND_PROMPT as VN_IN
 
-    # Grew with tool-parity + ResponseTemplate rules (2026-08); hard cap still blocks drift.
-    assert len(VN_IN) < 3200
-    assert len(EN_IN) < 3200
+    # Grew with tool-response rules. Cap stays tight enough to catch a large prompt drift.
+    assert len(VN_IN) < 4000
+    assert len(EN_IN) < 4000
     assert "end_conversation" in VN_IN
     assert "end_conversation" in EN_IN
 

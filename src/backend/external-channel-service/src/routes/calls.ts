@@ -9,16 +9,18 @@ const router = Router();
 const log = getLogger('calls');
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-function logForm(source: string, body: Record<string, string>): void {
+// Awaited before replying: on Lambda, work left running after the response may be frozen
+// and lost. logEvent never throws, so a storage failure cannot fail the webhook.
+function logForm(source: string, body: Record<string, string>): Promise<void> {
   const filtered = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== ''));
-  twilioMonitor.logEvent(source, filtered);
+  return twilioMonitor.logEvent(source, filtered);
 }
 
 // ── INBOUND ───────────────────────────────────────────────────────────────────
 
-router.post('/inbound/webhook', (req: Request, res: Response) => {
+router.post('/inbound/webhook', async (req: Request, res: Response) => {
   const { CallSid, From, To } = req.body;
-  logForm('inbound_webhook', { CallSid, From, To, CallStatus: 'ringing' });
+  await logForm('inbound_webhook', { CallSid, From, To, CallStatus: 'ringing' });
 
   const twiml = new VoiceResponse();
   twiml.say({ language: 'vi-VN' }, 'Xin chào, đây là trợ lý AI dành cho tài xế. Vui lòng chờ một chút.');
@@ -58,9 +60,9 @@ router.post('/inbound/transcription', (req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
-router.post('/inbound/status', (req: Request, res: Response) => {
+router.post('/inbound/status', async (req: Request, res: Response) => {
   const { CallSid, CallStatus, Duration = '', From = '', To = '' } = req.body;
-  logForm('inbound_status', { CallSid, CallStatus, Duration, From, To });
+  await logForm('inbound_status', { CallSid, CallStatus, Duration, From, To });
   res.json({ status: 'ok' });
 });
 
@@ -97,9 +99,9 @@ router.post('/outbound/gather', (req: Request, res: Response) => {
   res.type('text/xml').send(twiml.toString());
 });
 
-router.post('/outbound/status', (req: Request, res: Response) => {
+router.post('/outbound/status', async (req: Request, res: Response) => {
   const { CallSid, CallStatus, To, Duration = '', From = '' } = req.body;
-  logForm('outbound_status', { CallSid, CallStatus, To, From, Duration });
+  await logForm('outbound_status', { CallSid, CallStatus, To, From, Duration });
   res.json({ status: 'ok' });
 });
 
@@ -147,11 +149,15 @@ router.get('/twilio', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/events', authenticate, (req: Request, res: Response) => {
-  const limit = Math.min(Number(req.query.limit) || 200, 1000);
-  const callSid = req.query.call_sid ? String(req.query.call_sid) : undefined;
-  const events = twilioMonitor.readEvents(limit, callSid);
-  return res.json({ events, count: events.length });
+router.get('/events', authenticate, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 200, 1000);
+    const callSid = req.query.call_sid ? String(req.query.call_sid) : undefined;
+    const events = await twilioMonitor.readEvents(limit, callSid);
+    return res.json({ events, count: events.length });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
 });
 
 router.get('/monitor/:callSid', authenticate, async (req: Request, res: Response) => {
@@ -162,7 +168,12 @@ router.get('/monitor/:callSid', authenticate, async (req: Request, res: Response
   } catch (err) {
     live = { error: String(err) };
   }
-  const events = twilioMonitor.readEvents(500, callSid);
+  let events: unknown[] = [];
+  try {
+    events = await twilioMonitor.readEvents(500, callSid);
+  } catch (err) {
+    events = [{ error: String(err) }];
+  }
   return res.json({ call_sid: callSid, twilio: live, events });
 });
 

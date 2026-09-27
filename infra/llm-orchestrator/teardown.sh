@@ -17,7 +17,7 @@ export $(grep -v '^#' "$ENV_FILE" | grep -v '^$' | xargs)
 
 ENVIRONMENT="${ENV:-dev}"
 APP_NAME="driver-assistant"
-STACK_NAME="${ENVIRONMENT}-${APP_NAME}-voice-agent"
+STACK_NAME="${ENVIRONMENT}-${APP_NAME}-llm-orchestrator"
 REGION="${AWS_REGION:-ap-southeast-1}"
 PROFILE="${AWS_PROFILE:+--profile $AWS_PROFILE}"
 
@@ -37,12 +37,12 @@ fi
 # Scale down ECS service to 0 before deleting (avoids stuck deletions)
 CLUSTER=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
-  --query "Stacks[0].Outputs[?OutputKey=='ECSClusterName'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='LlmOrchestratorClusterName'].OutputValue" \
   --output text 2>/dev/null || echo "")
 
 SERVICE=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" --region "$REGION" $PROFILE \
-  --query "Stacks[0].Outputs[?OutputKey=='ECSServiceName'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='LlmOrchestratorServiceName'].OutputValue" \
   --output text 2>/dev/null || echo "")
 
 if [[ -n "$CLUSTER" && -n "$SERVICE" && "$SERVICE" != "None" ]]; then
@@ -54,7 +54,7 @@ fi
 
 # Delete ECR images so the repo can be deleted
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text $PROFILE)
-ECR_REPO="${ENVIRONMENT}-${APP_NAME}-voice-agent"
+ECR_REPO="${ENVIRONMENT}-${APP_NAME}-llm-orchestrator"
 echo "→ Deleting ECR images..."
 aws ecr batch-delete-image \
   --repository-name "$ECR_REPO" \

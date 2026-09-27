@@ -31,7 +31,7 @@ export async function makeOutboundCall(toNumber: string): Promise<string> {
     statusCallbackMethod: 'POST',
     statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
   });
-  twilioMonitor.logEvent('api_dial', {
+  await twilioMonitor.logEvent('api_dial', {
     CallSid: call.sid,
     To: toNumber,
     From: config.twilioPhoneNumber,
@@ -60,6 +60,12 @@ export async function sendSms(to: string, body: string): Promise<{ sid: string; 
     to,
     from: config.twilioPhoneNumber,
     body,
+  });
+  await twilioMonitor.logEvent('sms_sent', {
+    MessageSid: message.sid,
+    To: message.to,
+    From: config.twilioPhoneNumber,
+    SmsStatus: message.status,
   });
   return { sid: message.sid, to: message.to, status: message.status };
 }

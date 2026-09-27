@@ -1,3 +1,6 @@
+// LiveKit dial for a trip this service already owns.
+// Twilio SMS and PSTN live in external-channel-service.
+// This file does not own accounts or call transcripts.
 import {
   RoomServiceClient,
   AgentDispatchClient,

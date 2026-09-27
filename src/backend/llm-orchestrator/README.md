@@ -31,38 +31,9 @@ python -m app.main download-files
 
 > This downloads the Silero VAD and turn-detector models (~50 MB). Must be done before the first run.
 
-### 3. Create env file
+### 3. Keys and config
 
-`envs/.env.local` (copy values from your API dashboards):
-
-```env
-# LiveKit — from cloud.livekit.io → Project Settings
-LIVEKIT_URL=wss://ai-powered-driver-assistant-77jfa364.livekit.cloud
-LIVEKIT_API_KEY=
-LIVEKIT_API_SECRET=
-
-# OpenAI
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.6-luna
-
-# ElevenLabs
-ELEVENLABS_API_KEY=
-ELEVENLABS_VOICE_ID=pNInz6obpgDQGcFmaJgB
-ELEVENLABS_MODEL=eleven_flash_v2_5
-
-# Deepgram (optional — only if STT_PROVIDER=deepgram)
-DEEPGRAM_API_KEY=
-
-# Twilio
-TWILIO_PHONE_NUMBER=+19068288788
-
-# Providers
-STT_PROVIDER=openai        # openai | deepgram | google
-LLM_PROVIDER=openai
-TTS_PROVIDER=elevenlabs
-
-ENV=local
-```
+Secrets go in `envs/.env.local` (copy `envs/.env.example`). Providers, models, URLs, and voices go in `envs/config.local.toml` (copy `envs/config.example.toml`). A value set in the shell or in `.env.local` overrides the toml file.
 
 ### 4. Start the agent
 
@@ -106,13 +77,13 @@ INFO  session started
 
 ## Switch STT/LLM/TTS provider
 
-Change `STT_PROVIDER` / `LLM_PROVIDER` / `TTS_PROVIDER` in `.env.local`:
+Change `stt_provider`, `llm_provider`, and `tts_provider` in `envs/config.local.toml`. Optional `stt_fallback`, `llm_fallback`, and `tts_fallback` are comma-separated backups used only when the provider in front fails. Leave them empty to keep a single provider. A backup uses its own default model and voice.
 
-| Variable | Options |
+| Field | Options |
 |---|---|
-| `STT_PROVIDER` | `openai` (Whisper) · `deepgram` (Nova-2) · `google` |
-| `LLM_PROVIDER` | `openai` (gpt-5.6-luna) · `google` (Gemini) |
-| `TTS_PROVIDER` | `elevenlabs` · `openai` · `google` |
+| `stt_provider` | `openai` (Whisper) · `deepgram` (Nova-2) · `google` · `inference` |
+| `llm_provider` | `openai` (gpt-5.6-luna) · `gemini` · `kimi` |
+| `tts_provider` | `google` · `elevenlabs` · `openai` · `gemini` |
 
 ---
 
@@ -133,7 +104,7 @@ This creates the inbound SIP trunk (`ST_65EBPmZTeo3b`) and dispatch rule (`SDR_r
 ## Deploy to AWS
 
 ```bash
-# Fill in src/llm-orchestrator/envs/.env.dev (API keys + VPC_ID + SUBNET_IDS)
+# Fill in src/backend/llm-orchestrator/envs/.env.dev (API keys + VPC_ID + SUBNET_IDS)
 bash infra/llm-orchestrator/deploy.sh dev
 
 # Watch logs
@@ -164,20 +135,4 @@ Tool: `answer_app_faq` — handles *"ứng dụng hỗ trợ những gì?"*, how
 
 ## Project structure
 
-```
-src/llm-orchestrator/
-├── app/
-│   ├── main.py          # WorkerOptions + CLI entry point
-│   ├── agent.py         # DriverAgent class, tools, entrypoint
-│   ├── providers.py     # STT / LLM / TTS factory
-│   └── config.py        # Pydantic settings
-├── scripts/
-│   └── setup_sip.py     # One-time LiveKit SIP trunk + dispatch rule
-├── envs/
-│   ├── .env.local       # Local secrets (not in git)
-│   └── .env.dev         # Dev/AWS secrets (not in git)
-├── test_server.py       # Browser test server (port 8888)
-├── test_client.html     # Browser mic test UI
-├── Dockerfile
-└── requirements.txt
-```
+Worker entry is `app/main.py`. Session and tools live under `app/agent/`, `app/voicebot/`, and `app/providers/`. Env files are in `envs/`.

@@ -16,7 +16,7 @@ TARGET_ENV="${2:-dev}"
 BUCKET=""
 
 if [[ -z "$APP" ]]; then
-  echo "Usage: bash infra/frontend/deploy.sh <admin-panel|customer-web|driver-web> [dev|uat|prod] [--bucket name]" >&2
+  echo "Usage: bash infra/frontend/deploy.sh <admin-panel|super-admin-panel|customer-web|driver-web> [dev|uat|prod] [--bucket name]" >&2
   exit 1
 fi
 
@@ -38,7 +38,7 @@ source "$INFRA_DIR/lib/common.sh"
 
 export ENV="$TARGET_ENV"
 
-VALID_APPS=(admin-panel customer-web driver-web)
+VALID_APPS=(admin-panel super-admin-panel customer-web driver-web)
 is_valid=false
 for v in "${VALID_APPS[@]}"; do
   [[ "$APP" == "$v" ]] && is_valid=true
@@ -51,9 +51,10 @@ fi
 check_aws_credentials
 require_cmd npm
 
-TRIP_URL="$(stack_output "$(stack_name external-api-service "$TARGET_ENV")" "ApiUrl")"
-AUTH_URL="$(stack_output "$(stack_name identity-service "$TARGET_ENV")" "ApiUrl")"
-LOGGER_URL="$(stack_output "$(stack_name call-records-service "$TARGET_ENV")" "ApiUrl")"
+TRIP_URL="$(stack_output "$(stack_name external-api-service "$TARGET_ENV")" "ExternalApiUrl")"
+AUTH_URL="$(stack_output "$(stack_name identity-service "$TARGET_ENV")" "IdentityApiUrl")"
+LOGGER_URL="$(stack_output "$(stack_name call-records-service "$TARGET_ENV")" "CallRecordsApiUrl")"
+OPS_URL="$(stack_output "$(stack_name ops-service "$TARGET_ENV")" "OpsApiUrl")"
 
 if [[ -z "$TRIP_URL" || "$TRIP_URL" == "None" ]]; then
   echo "❌ external-api-service not deployed." >&2
@@ -81,6 +82,11 @@ print_header "Frontend deploy: $APP ($TARGET_ENV)"
 cd "$APP_DIR"
 export VITE_TRIP_SERVICE_URL="$TRIP_URL"
 export VITE_AUTH_SERVICE_URL="$AUTH_V1"
+export VITE_IDENTITY_SERVICE_URL="$AUTH_V1"
+if [[ "$APP" == "super-admin-panel" ]]; then
+  [[ -n "$OPS_URL" && "$OPS_URL" != "None" ]] || { echo "❌ ops-service not deployed" >&2; exit 1; }
+  export VITE_OPS_SERVICE_URL="$OPS_URL"
+fi
 if [[ "$APP" == "admin-panel" && -n "$LOGGER_URL" && "$LOGGER_URL" != "None" ]]; then
   export VITE_CALL_LOGGER_URL="$LOGGER_URL"
 fi

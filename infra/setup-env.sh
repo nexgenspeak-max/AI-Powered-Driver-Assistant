@@ -43,7 +43,7 @@ copy_template() {
   echo "✅ Created: $rel"
 }
 
-for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
+for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator ops-service; do
   copy_template "$svc"
 done
 
@@ -54,10 +54,10 @@ if [[ -f "$JWT_FILE" ]]; then
   source "$JWT_FILE"
   if [[ -z "${JWT_SECRET:-}" ]]; then
     NEW_JWT="$(openssl rand -hex 32)"
-    for svc in identity-service external-api-service llm-orchestrator; do
+    for svc in identity-service external-api-service external-channel-service call-records-service llm-orchestrator ops-service; do
       set_env_var "$REPO_ROOT/src/backend/${svc}/envs/.env.${TARGET_ENV}" "JWT_SECRET" "$NEW_JWT"
     done
-    echo "✅ Generated JWT_SECRET (same value in auth/trip/llm-orchestrator)"
+    echo "✅ Generated JWT_SECRET (same value in every service that issues or verifies JWT)"
   fi
 fi
 
@@ -78,7 +78,7 @@ if [[ "$FROM_LOCAL" == "true" ]]; then
       key="${line%%=*}"
       val="${line#*=}"
       case "$key" in
-        ENV|AWS_REGION|AWS_PROFILE|JWT_SECRET|AUTH_SERVICE_URL|TRIP_SERVICE_URL|CALL_LOGGER_URL|BASE_URL|VPC_ID|SUBNET_IDS)
+        ENV|AWS_REGION|AWS_PROFILE|JWT_SECRET|IDENTITY_SERVICE_URL|EXTERNAL_API_SERVICE_URL|EXTERNAL_CHANNEL_SERVICE_URL|CALL_RECORDS_SERVICE_URL|AUTH_SERVICE_URL|TRIP_SERVICE_URL|CALL_CENTER_URL|CALL_LOGGER_URL|BASE_URL|VPC_ID|SUBNET_IDS)
           continue
           ;;
       esac
@@ -87,7 +87,7 @@ if [[ "$FROM_LOCAL" == "true" ]]; then
     echo "   merged keys → src/backend/${service}/envs/.env.${TARGET_ENV}"
   }
 
-  for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
+  for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator ops-service; do
     copy_if_local "$svc"
   done
 fi

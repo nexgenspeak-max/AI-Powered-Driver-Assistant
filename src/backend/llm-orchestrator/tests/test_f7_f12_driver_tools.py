@@ -13,7 +13,6 @@ from app.voicebot.locales.vn.tools.set_driver_status import set_driver_status
 from app.voicebot.locales.vn.tools.end_conversation import end_conversation
 from app.voicebot.locales.vn.tools.get_trip_traffic import get_trip_traffic
 from app.voicebot.locales.vn.tools.get_current_trip_info import get_current_trip_info
-from app.voicebot.locales.vn.tools.get_bonus_info import get_bonus_info
 from app.voicebot.locales.vn.tools.get_driver_stats import get_driver_stats
 from app.voicebot.testing.conversation_quality import assert_no_raw_template
 
@@ -124,10 +123,6 @@ async def test_f12_status_stats_bonus_and_end_guard():
 
     context.session.say = AsyncMock()
     await _run(get_driver_stats, context, {})
-    assert context.session.say.await_count >= 1
-
-    context.session.say = AsyncMock()
-    await _run(get_bonus_info, context, {})
     assert context.session.say.await_count >= 1
 
     userdata["customer_call_active"] = True

@@ -110,7 +110,7 @@ Extend prefetch when new read-heavy tools are added.
 
 | Layer | Mechanism |
 |-------|-----------|
-| Worker default | `VOICE_AGENT_LANG=vn\|en` in voice-agent env |
+| Worker default | `AGENT_LANG=vn\|en` in llm-orchestrator env |
 | Per session | `room.metadata.lang` from trip-service `/voice/token?lang=` |
 | driver-app | `resolveVoiceAgentLang()` → query param |
 | STT/TTS | Global env per worker — must match locale bundle |

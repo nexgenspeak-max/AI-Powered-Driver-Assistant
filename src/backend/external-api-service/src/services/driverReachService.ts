@@ -38,7 +38,8 @@ export type NudgeKind =
   | 'proximity_dropoff'
   | 'suggest_next_stop'
   | 'new_trip_offer'
-  | 'schedule_updated';
+  | 'schedule_updated'
+  | 'pickup_reminder';
 
 /** App WS + silent LiveKit refresh when the driver already has Trợ lý open. */
 export async function pushDriverScheduleUpdated(driverPhone: string): Promise<void> {

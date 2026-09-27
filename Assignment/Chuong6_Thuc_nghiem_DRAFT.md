@@ -1,266 +1,267 @@
 # Chương 6. Thực nghiệm và đánh giá
 
-Chương này kiểm chứng nguyên mẫu đã triển khai ở Chương 5 theo các chỉ số đã thống nhất từ Chương 2–3 và các câu hỏi nghiên cứu RQ2–RQ4 (RQ1 đã được trả lời chủ yếu qua thiết kế và hiện thực). Trọng tâm là **hành vi tài xế khi vận hành chuyến** (rảnh tay, câu ngắn, xác nhận trước việc rủi ro); **độ trễ phản hồi** được ưu tiên cao nhất. Phía khách hàng được kiểm chứng bằng **bộ test case**, không tổ chức khảo sát trải nghiệm sử dụng với khách trên đường. Chương lần lượt trình bày phạm vi và môi trường đo, bộ kịch bản, định nghĩa chỉ số, kết quả theo từng nhóm chỉ số, thảo luận theo câu hỏi nghiên cứu, và các hạn chế ảnh hưởng đến độ tin cậy của kết luận. Chi tiết thoại dài để ở Phụ lục B.
+Chương này đánh giá nguyên mẫu đã triển khai ở Chương 5 theo từng yêu cầu đã đặc tả ở Chương 3 và trả lời các câu hỏi nghiên cứu RQ1–RQ4. Mỗi yêu cầu được đánh giá bằng kịch bản, chỉ số và ngưỡng đã xác định trước (Bảng 3.12). Chương trình bày ma trận đánh giá, môi trường thực nghiệm, định nghĩa chỉ số, kết quả theo từng yêu cầu, tổng hợp và thảo luận theo câu hỏi nghiên cứu, và các yếu tố ảnh hưởng đến độ tin cậy của kết luận.
 
-> **Ghi chú liêm chính số liệu:** Các bảng kết quả trong chương này được điền từ nhật ký phiên thật (trường `room`) và từ bộ kiểm thử tự động, trích xuất tại một thời điểm cố định trong cửa sổ hai ngày 05 và 06 tháng 9 năm 2026. Số liệu ở quy mô mẫu nhỏ và trong môi trường thử nghiệm, không phải vận hành thực địa diện rộng; các giới hạn về độ tin cậy được nêu ở mục 6.12. Nhóm nghiệp vụ chưa đủ mẫu trong cửa sổ đo được ghi rõ là “không đủ mẫu”, không suy đoán giá trị.
+> **Ghi chú liêm chính số liệu:** Số liệu độ trễ, tỷ lệ lỗi từ và độ chính xác gọi công cụ được trích từ nhật ký phiên thật (trường room) và bộ kiểm thử tự động trong cửa sổ hai ngày 05 và 06 tháng 9 năm 2026. Số liệu khả năng mở rộng và khả năng phục hồi được thu từ môi trường mô phỏng cục bộ (mục 6.2.2). Các ô chưa có số liệu được đánh dấu 「—」, không suy đoán giá trị.
 
-## 6.1. Mục tiêu và phạm vi đánh giá
+## 6.1. Mục tiêu và ma trận đánh giá
 
-Mục tiêu đánh giá là trả lời thực nghiệm:
+Bảng 6.1 liên kết từng yêu cầu với câu hỏi nghiên cứu, kịch bản, chỉ số, ngưỡng và mục trình bày kết quả.
 
-- **RQ2:** Độ trễ phản hồi đầu cuối (tính từ lúc tài xế dứt câu đến lúc bot bắt đầu nói) đạt mức nào trên luồng cốt lõi; có duy trì được **P95 ≤ 2 giây** không? (**ưu tiên báo cáo trước**)
-- **RQ3:** WER thay đổi thế nào giữa điều kiện yên tĩnh và nhiễu giả lập khoang xe (cùng đoạn đọc cố định)?
-- **RQ4:** Trên bộ use case UC01–UC08 (và UC09–UC10 khi đo), tỷ lệ chọn đúng công cụ và hoàn thành nghiệp vụ là bao nhiêu, và lỗi phổ biến nằm ở đâu?
+**Bảng 6.1.** Ma trận đánh giá theo yêu cầu
 
-Bổ sung ngoài RQ nhưng phục vụ tính thực tiễn: (i) **trải nghiệm sử dụng** hiểu theo hành vi lái xe (danh mục kiểm tra, không bắt buộc thang SUS); (ii) **luồng khách** đạt hoặc không đạt theo test case; (iii) **bảo mật và vị trí** theo danh mục kiểm tra NFR-S.
+| Yêu cầu | Câu hỏi nghiên cứu | Kịch bản | Chỉ số | Ngưỡng | Mục |
+|---|---|---|---|---|---|
+| NFR-02 Performance | RQ2 | Phiên hội thoại UC01, UC03, UC04, UC07 | P50, P95 độ trễ phản hồi | P95 ≤ 2 giây | 6.4 |
+| Nhận dạng giọng nói | RQ3 | Bộ câu tham chiếu, hai điều kiện âm thanh | Tỷ lệ lỗi từ | So sánh tương đối | 6.5 |
+| FR-T, FR-C, FR-E, FR-F | RQ4 | UC01–UC08 | Độ chính xác gọi công cụ; tỷ lệ hoàn thành nghiệp vụ | Báo cáo theo nhóm | 6.6 |
+| NFR-01 Usability | RQ4 | UC01–UC06, UC09 | Danh mục kiểm tra hành vi khi lái | 100% thao tác rủi ro có xác nhận | 6.7 |
+| NFR-03 Scalability | RQ1 | SC-01, SC-02, SC-03 | P95 và tỷ lệ lỗi theo số phiên đồng thời | Tăng P95 ≤ 20%; lỗi < 1% | 6.8 |
+| NFR-04 Resilience | RQ1 | RS-01 đến RS-05 | Tỷ lệ phiên duy trì; thời gian khôi phục | 100% phiên duy trì | 6.9 |
+| NFR-05 Security | — | Kiểm tra mã nguồn, cấu hình, nhật ký | Danh mục kiểm tra bảo mật | 100% mục đạt | 6.10 |
+| Luồng khách hàng | RQ4 | Bộ trường hợp kiểm thử khách hàng | Tỷ lệ trường hợp kiểm thử đạt | Đạt / không đạt | 6.11 |
+| FR-O01, FR-O02 | — | Kiểm thử tự động mô-đun chỉ số phiên và báo cáo ngày | Tỷ lệ trường hợp kiểm thử đạt | Đạt / không đạt | 6.11 |
 
-RQ1 được xem là đã được minh họa bằng kiến trúc và mã nguồn (Chương 4–5); Chương 6 chỉ đối chiếu ngắn trong mục thảo luận.
+Ngoài phạm vi đánh giá: khảo sát trải nghiệm của khách hàng thật; đo an toàn giao thông thực địa; so sánh quy mô lớn giữa các nhà cung cấp STT, LLM, TTS; thử tải trên hạ tầng AWS thực tế.
 
-**Trong phạm vi đo:** phiên tài xế trong ứng dụng (WebRTC); đề nghị chuyến qua điện thoại và gọi khách khi SIP sẵn sàng; FAQ; im lặng; từ khóa đánh thức (kiểm riêng); bộ test case phía khách gồm ba chế độ agent, gọi nền và ghi nhận yêu cầu.
+## 6.2. Môi trường thực nghiệm
 
-**Ngoài phạm vi:** khảo sát trải nghiệm sử dụng với khách hàng thật trên đường; đo an toàn giao thông thực địa; so sánh A/B nhà cung cấp STT/LLM/TTS quy mô lớn; suy luận toàn mạng thương mại từ mẫu môi trường thử nghiệm.
+### 6.2.1. Môi trường đo hội thoại
 
-## 6.2. Môi trường và cấu hình đo
+Bảng 6.2 mô tả môi trường dùng để đo độ trễ, tỷ lệ lỗi từ và độ chính xác gọi công cụ.
 
-**Bảng 6.1.** Môi trường thực nghiệm (cấu hình cụ thể của cửa sổ đo nêu ở đoạn ngay sau bảng)
+**Bảng 6.2.** Môi trường đo hội thoại
 
-| Thành phần | Cấu hình dùng khi đo | Ghi chú |
+| Thành phần | Cấu hình | Ghi chú |
 |---|---|---|
-| Ứng dụng tài xế | driver-app (Expo) trên thiết bị / Simulator | Ưu tiên thiết bị thật khi đo mic/loa |
-| Voice worker | llm-orchestrator (LiveKit Agents) | Nhật ký gắn `room=` |
-| Backend | external-api-service + identity-service (+ call khi UC04) | Môi trường thử nghiệm / Docker cục bộ theo Phụ lục D |
-| LiveKit | Cloud (WebRTC; SIP nếu đo UC02/UC04) | Không đưa bí mật vào luận văn |
-| Dữ liệu chuyến | Dữ liệu thử admin / tài khoản demo nội bộ | Che thông tin cá nhân trên nhật ký và ảnh |
-| Ngôn ngữ phiên | Tiếng Việt (chính); vài lượt Anh nếu đo NFR-L01 | Công cụ vn/en đối xứng |
-| Kiểm thử tự động | `pytest` trong `llm-orchestrator/tests` (nhóm customer và call) | Bổ trợ test case khách, không thay việc đo độ trễ cảm nhận |
+| Ứng dụng tài xế | Thiết bị thật hoặc trình giả lập | Ưu tiên thiết bị thật khi đo micro, loa |
+| Tác nhân hội thoại | Chạy cục bộ, kết nối LiveKit Cloud | Nhật ký gắn mã phòng |
+| Dịch vụ backend | Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối chạy cục bộ | Cấu hình không chứa bí mật ở Phụ lục D |
+| Truyền thông | LiveKit Cloud, WebRTC; SIP khi đo UC02, UC04 | — |
+| Mô hình AI | LLM gpt-5.6-luna; STT Google chirp_3 (vi-VN); TTS Google vi-VN-Chirp3-HD-Kore | Cố định trong suốt cửa sổ đo |
+| Dữ liệu | Tài khoản và chuyến thử nghiệm nội bộ | Che thông tin cá nhân trên nhật ký và ảnh |
+| Kiểm thử tự động | pytest trong thư mục kiểm thử của tác nhân | Bổ trợ trường hợp kiểm thử khách hàng |
 
-Trước mỗi buổi đo: (1) chuẩn bị đủ chuyến cho UC01–UC05; (2) xác nhận worker đã **làm nóng trước**; (3) loại phiên “lạnh” đầu tiên khỏi thống kê P95 hoặc báo cáo tách riêng cột phiên lạnh và phiên ấm nếu mẫu đủ lớn. Cấu hình mô hình STT, LLM và TTS được ghi lại trong nhật ký buổi đo (Phụ lục D) để kết quả tái lập được.
+Số liệu độ trễ được trích từ nhật ký `turn_metrics` của tác nhân trong hai ngày 2026-09-05 và 2026-09-06 (n = 341 lượt), kênh WebRTC trong ứng dụng. Mô hình gpt-5.6-luna là mô hình họ GPT truy cập qua giao diện tương thích OpenAI (bí danh nội bộ của dự án); kết luận về thời gian sinh token đầu gắn với mô hình này. Kịch bản do tác giả đọc; script trích xuất `extract_ch6_metrics.py` đi kèm để tái lập.
 
-**Cấu hình cửa sổ đo dùng trong luận văn này.** Số liệu độ trễ ở mục 6.5 được trích từ nhật ký `turn_metrics` của llm-orchestrator trong hai ngày 2026-09-05 và 2026-09-06 (n = 341 lượt), cùng cấu hình: mô hình ngôn ngữ `gpt-5.6-luna`, nhận dạng giọng nói Google `chirp_3` (vi-VN), tổng hợp giọng nói Google `vi-VN-Chirp3-HD-Kore`, kênh WebRTC trong ứng dụng, tài khoản demo nội bộ. Ở đây `gpt-5.6-luna` là một mô hình lớp GPT truy cập qua giao diện tương thích OpenAI (bí danh nội bộ của dự án, cố định trong suốt cửa sổ đo); mọi kết luận về độ trễ token đầu ở mục 6.5 gắn với riêng mô hình này và sẽ thay đổi nếu đổi nhà cung cấp — đây cũng chính là lý do kiến trúc Chương 4 tách nhà cung cấp qua lớp cấu hình. Nhật ký thuộc môi trường phát triển và thử nghiệm, kịch bản do tác giả tự đọc, chưa phải khảo sát mù trên đường; script trích xuất `extract_ch6_metrics.py` đi kèm để tái lập.
+### 6.2.2. Môi trường mô phỏng thử tải và tiêm lỗi
 
-## 6.3. Bộ kịch bản và quy trình thực nghiệm
+Khả năng mở rộng và khả năng phục hồi được đánh giá trên môi trường mô phỏng cục bộ, trong đó mỗi thành phần AWS được thay bằng một thành phần tương đương (Bảng 6.3). Nhà cung cấp STT, LLM, TTS được thay bằng bộ giả lập có độ trễ cấu hình được để kết quả phản ánh tính chất kiến trúc, không phụ thuộc biến động của nhà cung cấp bên ngoài.
 
-Bộ kịch bản bám Bảng 3.7 (use case cốt lõi) và Bảng 3.9 (ánh xạ yêu cầu sang chỉ số), cùng kho câu hỏi và luồng đa bước nội bộ của dự án (câu tài xế thường nói khi chạy xe: xem lịch, cập nhật tiến độ, gọi khách, hủy có xác nhận, thu nhập…). Mỗi use case có **điều kiện thành công** đã nêu ở Chương 3; bản thoại chi tiết để ở Phụ lục B.
+**Bảng 6.3.** Ánh xạ thành phần AWS sang môi trường mô phỏng
 
-**Bảng 6.2.** Ánh xạ use case với chỉ số ưu tiên
+| Trên AWS | Môi trường mô phỏng |
+|---|---|
+| API Gateway và Lambda của từng dịch vụ | Tiến trình Node.js của từng dịch vụ, mỗi dịch vụ một cổng |
+| Amazon DynamoDB | DynamoDB Local hoặc chế độ lưu trữ cục bộ của dịch vụ |
+| ECS Fargate với DesiredCount = N | N tiến trình tác nhân cùng đăng ký vào một máy chủ LiveKit |
+| LiveKit Cloud | Máy chủ LiveKit chạy ở chế độ phát triển |
+| Nhà cung cấp STT, LLM, TTS | Bộ giả lập có độ trễ và tỷ lệ lỗi cấu hình được |
+| Twilio | Bộ giả lập HTTP có thể cấu hình trả lỗi |
+| Lỗi mạng giữa các dịch vụ | Công cụ toxiproxy chèn độ trễ, ngắt kết nối, lỗi |
 
-| Use case | Việc tài xế (hành vi thực tế) | Đo độ trễ | Đo độ đúng công cụ | Ghi chú |
-|---|---|---|---|---|
-| UC01 | Hỏi lịch, hỏi số chuyến khi đang chạy | Có | Có | Một đường + nạp ngữ cảnh trước |
-| UC02 | Điện thoại reo, nhận hoặc từ chối nhanh | Có (nếu đo SIP) | Có | Tập công cụ hẹp |
-| UC03 | Báo đến nơi, khách lên xe, xong chuyến | Có | Có | Câu ngắn, một ý |
-| UC04 | Gọi khách khi cần xác nhận đón | Có | Có | Chế độ đã chọn sẵn |
-| UC05 | Muốn hủy, phải xác nhận rõ | Tùy | Có | An toàn thao tác |
-| UC06 | Khách không ra hoặc gặp sự cố | Tùy | Có | |
-| UC07 | Hỏi cách dùng ứng dụng (FAQ) | Có | Có (FAQ) | Không bịa chính sách |
-| UC08 | Thu nhập; bật hoặc tắt nhận chuyến | Tùy | Có | |
-| UC09 | Im lặng hoặc API lỗi | Không bắt buộc | Chấm theo hành vi | 15 giây, tối đa hai lần nhắc |
-| UC10 | Từ khóa đánh thức mở trợ lý | Kiểm riêng | Kiểm riêng | Ngoài chuỗi xử lý công cụ LiveKit |
+Công cụ tạo tải gồm k6 (kiểm thử tải API) và LiveKit CLI (tạo nhiều người tham gia giả lập phát âm thanh vào phòng).
 
-**Quy trình một lượt đo nghiệp vụ (độ đúng công cụ và mức hoàn thành việc):** mở trợ lý, chờ chào hai pha, đọc đúng câu kịch bản (hoặc diễn đạt ngắn giống cách tài xế nói), ghi lại công cụ được gọi, trạng thái backend và câu TTS. Lặp tối thiểu N lần cho mỗi kịch bản; khuyến nghị N ≥ 10 khi báo cáo phần trăm, nếu ít hơn thì nêu rõ.
+## 6.3. Định nghĩa chỉ số
 
-**Quy trình đo độ trễ:** lấy `user_stop_to_agent_speak` sau khi phiên ấm. Số liệu Bảng 6.3 còn tách *đường tắt* và *đường LLM* theo nhật ký đợt A/B cũ (khi còn bật tự gọi công cụ theo ý định); thiết kế hiện tại đo trên một đường duy nhất và ghi thêm sự kiện câu giữ chỗ khi có.
+**Độ trễ phản hồi.** Thời gian từ lúc tài xế kết thúc phát ngôn đến lúc tác nhân bắt đầu phát âm thanh trả lời, ghi trong nhật ký với tên `user_stop_to_agent_speak`. Các mốc phụ trong một lượt (phát hiện kết thúc phát ngôn, thời gian sinh token đầu của LLM, thời gian đến âm thanh đầu của TTS) dùng để phân tích điểm nghẽn. Báo cáo P50 và P95 theo giây.
 
-**Quy trình đo WER:** cùng đoạn đọc cố định, hai điều kiện âm thanh (yên / nhiễu khoang xe giả lập).
+**Tỷ lệ lỗi từ.** WER = (S + D + I) / N, trong đó S, D, I là số từ bị thay thế, bị xóa, bị chèn so với câu tham chiếu và N là số từ của câu tham chiếu.
 
-## 6.4. Định nghĩa chỉ số và cách thu thập
+**Độ chính xác gọi công cụ.** Một lượt được tính là đúng khi tên công cụ thuộc tập kỳ vọng của trường hợp sử dụng, tham số chính đúng và không có lời gọi công cụ gây sai nghiệp vụ.
 
-### 6.4.1. Độ trễ phản hồi đầu cuối (RQ2)
+**Tỷ lệ hoàn thành nghiệp vụ.** Một trường hợp sử dụng được tính là hoàn thành khi thỏa điều kiện thành công ở Bảng 3.8; câu trả lời trôi chảy nhưng dữ liệu phía backend không thay đổi đúng vẫn tính là không hoàn thành.
 
-**Định nghĩa vận hành:** thời gian từ lúc tài xế **kết thúc câu nói** (agent chuyển từ trạng thái đang nói sang đang nghe) đến lúc agent **bắt đầu phát âm** câu trả lời. Đây là độ trễ tài xế cảm nhận được khi đang lái, khớp NFR-P01 và RQ2.
+**Chỉ số khả năng mở rộng.** Mức tăng tương đối của P95 độ trễ phản hồi và tỷ lệ phiên lỗi khi tăng số phiên đồng thời, với số bản sao tác nhân tương ứng.
 
-Trong mã nguồn, chỉ số này do `turn_metrics` ghi lại dưới tên `user_stop_to_agent_speak`; ngưỡng nội bộ 2 giây đánh dấu là chậm — cùng ý với P95 ≤ 2 giây. Các mốc phụ bên trong một lượt (phát hiện hết câu, thời gian đến token đầu của LLM, thời gian đến âm thanh đầu của TTS) chỉ dùng để phân tích nút nghẽn, không thay chỉ số chính.
+**Chỉ số khả năng phục hồi.** Tỷ lệ phiên không bị kết thúc bất thường khi tiêm lỗi; tỷ lệ lượt vẫn được phản hồi; thời gian từ khi bản sao tác nhân bị dừng đến khi phiên mới được phục vụ.
 
-**Báo cáo:** P50 và P95 (giây) theo nhóm UC; với đợt A/B cũ còn báo theo đường xử lý (đường tắt / đường đủ). Không dùng lần “làm nóng” mạng làm đại diện cho trải nghiệm lái xe.
+## 6.4. Kết quả hiệu năng — NFR-02 (RQ2)
 
-### 6.4.2. Tỷ lệ lỗi từ — WER (RQ3)
+Số liệu độ trễ hiện có thuộc đợt đo ngày 05–06/09/2026, khi nguyên mẫu còn nhánh xử lý rút gọn theo ý định (Bảng 6.4). Sau đợt đo, nhánh này đã bị loại bỏ theo ADR-02 (mục 4.2.2); các con số của nhánh rút gọn không còn là kết quả của thiết kế hiện hành mà là bằng chứng cho thấy thời gian sinh token đầu của LLM là điểm nghẽn chính.
 
-Công thức: WER = (S + D + I) / N, trong đó S, D, I lần lượt là số từ bị thay thế, xóa, chèn khi so với câu đọc đúng, và N là tổng số từ của câu gốc. Đo trong hai điều kiện: (A) yên tĩnh; (B) nhiễu khoang xe giả lập (ghi rõ nguồn nhiễu).
+**Bảng 6.4.** Độ trễ phản hồi theo nhánh xử lý (giây, nhật ký 05–06/09/2026, gpt-5.6-luna)
 
-### 6.4.3. Độ đúng gọi công cụ (RQ4)
-
-Một lượt **đúng công cụ** khi: (i) tên công cụ thuộc tập kỳ vọng UC; (ii) tham số then chốt đúng; (iii) không gọi thêm công cụ phá nghiệp vụ. Mọi lượt trên thiết kế hiện hành đi qua LLM kèm công cụ; đợt A/B cũ còn có nhánh đường tắt (`spoken_intent`) chấm cùng tiêu chí.
-
-### 6.4.4. Hoàn thành nghiệp vụ (RQ4)
-
-UC **thành công** khi thỏa Bảng 3.7. Thành công không đồng nghĩa với “nói trôi chảy”: nếu câu TTS hay nhưng backend không thay đổi trong khi lẽ ra phải thay đổi thì vẫn tính là **thất bại**.
-
-### 6.4.5. Trải nghiệm sử dụng theo ngữ cảnh lái xe (NFR-U01)
-
-Không dùng thang SUS bắt buộc. Chấm **danh mục kiểm tra hành vi** trên cùng bản ghi UC (đạt/không đạt từng mục), ví dụ: câu TTS ngắn (một ý chính); không đọc địa chỉ/GPS dài khi không được hỏi; việc rủi ro có hỏi lại; tài xế hoàn thành việc mà không cần chạm màn hình trên kịch bản rảnh tay. Có thể bổ sung vài nhận xét định tính nếu có người đóng vai tài xế — mẫu nhỏ chỉ minh họa.
-
-### 6.4.6. Luồng khách qua test case
-
-“Khách có thể dùng” = các test case liên quan **đạt** (pytest và/hoặc kịch bản thoại): khởi tạo gọi đúng chế độ; bot phía khách không bịa thời gian đến / giá khi thiếu dữ liệu; ghi nhận yêu cầu khách đẩy về tài xế; chặn gọi nhầm số trùng tài xế… Không đo P95 khách như tiêu chí chính; nếu đo độ trễ khách thì báo riêng, không gộp vào P95 tài xế.
-
-## 6.5. Kết quả độ trễ (RQ2)
-
-Các Bảng 6.3–6.10 dưới đây được điền từ nhật ký phiên và bộ kiểm thử. Toàn bộ số liệu độ trễ trích bằng `extract_ch6_metrics.py` trên cùng cửa sổ hai ngày; số liệu ở quy mô mẫu nhỏ, môi trường thử nghiệm — xem Ghi chú liêm chính số liệu ở đầu chương và mục 6.12.
-
-**Lưu ý thiết kế hiện hành:** Bảng 6.3 và Hình 6.1 phản ánh đợt A/B khi còn bật **đường tắt** (tự gọi công cụ theo ý định nói). Sau đợt đo, mã nguồn đã chuyển sang **một đường** STT → LLM kèm công cụ → TTS và câu giữ chỗ khoảng hai giây (`SPOKEN_INTENT_AUTO_TOOL=False`). Các con số P95 đường tắt **không** còn là cam kết hiệu năng của bản hiện hành; chúng là bằng chứng lịch sử rằng bỏ qua LLM giúp bám ngưỡng, còn chi phí TTFT của đường đủ là nút nghẽn chính — đúng với giả thuyết phải tối ưu lời nhắc / mô hình / câu giữ chỗ trên một đường duy nhất.
-
-**Bảng 6.3.** Độ trễ phản hồi cảm nhận theo đường xử lý — đợt A/B khi còn đường tắt (giây, nhật ký 2026-09-05..06, `gpt-5.6-luna`)
-
-| Đường xử lý (đợt A/B cũ) | n | P50 | P90 | P95 | % lượt ≥ 2s | Đạt P95 ≤ 2s? |
+| Nhánh xử lý | n | P50 | P90 | P95 | Tỷ lệ lượt ≥ 2 giây | Đạt P95 ≤ 2 giây |
 |---|---|---|---|---|---|---|
-| Đường tắt (khớp ý định nói, không qua LLM) | 167 | 0,21 | 1,48 | 2,00 | 5,4% | Đạt (sát ngưỡng) |
-| Đường đủ và trò chuyện nhẹ (qua LLM) | 174 | 1,54 | 2,78 | 3,75 | 30,5% | Chưa |
-| Gộp mọi lượt | 341 | 0,50 | 2,29 | 2,87 | 18,2% | Chưa (đạt ở đường tắt) |
+| Nhánh rút gọn theo ý định (không qua LLM) | 167 | 0,21 | 1,48 | 2,00 | 5,4% | Đạt (sát ngưỡng) |
+| Luồng đầy đủ qua LLM | 174 | 1,54 | 2,78 | 3,75 | 30,5% | Chưa đạt |
+| Toàn bộ lượt | 341 | 0,50 | 2,29 | 2,87 | 18,2% | Chưa đạt |
 
-Đường xử lý gán theo việc `spoken_intent` có kích hoạt trong lượt hay không (cách gán xấp xỉ, nêu ở mục 6.12). Trong cửa sổ đo đó, câu mở đầu mỗi use case cốt lõi (xem lịch, nhận chuyến, gọi khách, thu nhập) hầu hết đi đường tắt; câu hỏi chi tiết tiếp theo ("chuyến đầu đi đâu", "đón mấy giờ") và câu mơ hồ đi đường đủ. Nhóm UC03 và UC07 không đủ mẫu trong cửa sổ đo để tách riêng.
+Nhánh xử lý được gán theo việc mô-đun nhận dạng ý định có kích hoạt trong lượt hay không (cách gán xấp xỉ, xem mục 6.13). Nhóm UC03 và UC07 không đủ mẫu để tách riêng.
 
-**Bảng 6.4.** Tách nút nghẽn độ trễ trong một lượt (mili-giây, mọi lượt có mốc sự kiện, `gpt-5.6-luna`)
+**Bảng 6.5.** Phân tích điểm nghẽn độ trễ trong một lượt (mili-giây)
 
-| Chặng trong một lượt | P50 (ms) | P95 (ms) | Nhận xét |
+| Chặng | P50 | P95 | Nhận xét |
 |---|---|---|---|
-| Phát hiện tài xế dứt câu (EOU) | 935 | 1 700 | Phụ thuộc mô hình ngắt lời và độ dài câu |
-| Mô hình ngôn ngữ sinh token đầu (TTFT) | 1 249 | 2 487 | Chi phí trội của mọi lượt qua LLM (thiết kế hiện hành) |
-| Tổng hợp giọng nói đến âm thanh đầu (TTFB) | 161 | 288 | Gần như không đáng kể |
+| Phát hiện kết thúc phát ngôn | 935 | 1 700 | Phụ thuộc mô hình phát hiện lượt và độ dài câu |
+| LLM sinh token đầu | 1 249 | 2 487 | Chi phí lớn nhất của mọi lượt qua LLM |
+| TTS đến âm thanh đầu | 161 | 288 | Không đáng kể |
 
-Hình 6.1 minh họa P50/P95 theo đường xử lý của đợt A/B cũ. Nhận định chính:
+![Biểu đồ P50 P95 độ trễ theo nhánh xử lý](thesis_screenshots/H6_1_latency.png)
 
-- **Đợt A/B — đường tắt bám ngưỡng** P95 ≤ 2 giây (P95 = 2,00 giây, chỉ 5,4% lượt ≥ 2 giây); phần lớn lượt kết thúc dưới 0,5 giây. Biên an toàn mỏng; thiết kế hiện hành **không** còn dựa vào đường tắt để đạt ngưỡng.
-- **Đợt A/B — đường đủ chưa đạt** (P95 = 3,75 giây). Theo Bảng 6.4, chi phí trội nằm ở thời gian mô hình ngôn ngữ sinh token đầu (P95 ≈ 2,5 giây); tổng hợp giọng nói gần như không đáng kể. Trên thiết kế một đường hiện hành, **mọi** câu quen thuộc cũng trả chi phí TTFT này; câu giữ chỗ ≈ 2 giây che khoảng chờ cảm nhận, còn nạp ngữ cảnh trước giúp rút ngắn phần thân công cụ.
-- **Gộp chung (đợt A/B)** P95 = 2,87 giây, vượt ngưỡng vì khoảng 51% lượt trong các buổi thử đi đường đủ.
+**Hình 6.1.** P50 và P95 độ trễ phản hồi theo nhánh xử lý, đợt đo 05–06/09/2026 (n = 341 lượt)
 
-Kết quả khớp giả thuyết ở mục 4.3.2: bỏ qua LLM từng giúp cảm giác tức thì, nhưng đã được thay bằng một đường + câu giữ chỗ; hướng tối ưu tiếp theo là rút gọn lời nhắc, giảm số vòng công cụ, hoặc mô hình có độ trễ token đầu thấp hơn — rồi đo lại P95 trên bản hiện hành.
+Kết quả cho thấy: nhánh rút gọn đạt ngưỡng sát biên (P95 = 2,00 giây); luồng đầy đủ qua LLM chưa đạt (P95 = 3,75 giây), với thời gian sinh token đầu (P95 ≈ 2,5 giây) là nguyên nhân chính. Trong thiết kế hiện hành, mọi lượt đều đi qua LLM, vì vậy câu đệm sau 2 giây được dùng để báo hiệu hệ thống đang xử lý, còn tải trước ngữ cảnh rút ngắn thời gian thực thi công cụ.
 
-**Hình 6.1. Độ trễ cảm nhận P50/P95 theo đường xử lý — đợt A/B khi còn đường tắt (n = 341 lượt, 2026-09-05..06).**
+**Bảng 6.6.** Độ trễ phản hồi trên thiết kế hiện hành (luồng xử lý đơn và câu đệm)
 
-![Biểu đồ P50 P95 độ trễ theo đường xử lý](thesis_screenshots/H6_1_latency.png)
+| Nhóm trường hợp sử dụng | n | P50 | P95 | Tỷ lệ lượt có câu đệm | Đạt P95 ≤ 2 giây |
+|---|---|---|---|---|---|
+| UC01 Xem lịch | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
+| UC03 Cập nhật tiến độ | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
+| UC04 Gọi khách | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
+| UC07 Hỏi đáp | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
 
-## 6.6. Kết quả WER (RQ3)
+## 6.5. Kết quả nhận dạng giọng nói (RQ3)
 
-**Bảng 6.5.** WER theo điều kiện âm thanh (sơ bộ: một người đọc, một lượt mỗi điều kiện)
+**Bảng 6.7.** Tỷ lệ lỗi từ theo điều kiện âm thanh (một người đọc, một lượt mỗi điều kiện)
 
 | Điều kiện | Số câu / số từ | S / D / I | WER |
 |---|---|---|---|
 | A — Yên tĩnh | 22 câu / 192 từ | 1 / 5 / 0 | 3,1% |
-| B — Nhiễu khoang xe giả lập | 22 câu / 192 từ | 3 / 5 / 6 | 7,3% |
+| B — Nhiễu mô phỏng khoang xe | 22 câu / 192 từ | 3 / 5 / 6 | 7,3% |
 | Chênh lệch B − A | | | +4,2 điểm phần trăm |
 
-**Thiết lập.** Cùng một đoạn 22 câu (truy vấn chuyến, xác nhận, gọi/nhắn khách, hai địa chỉ đầy đủ có số, mốc giờ), đọc một lượt ở điều kiện A rồi một lượt ở điều kiện B, cùng thiết bị và micro. Điều kiện B phát tiếng ồn nền mô phỏng khoang xe từ một thiết bị phụ (không phát qua chính điện thoại đang đọc, tránh bộ khử tiếng vọng bóp mất input). Văn bản nhận dạng lấy từ `event=stt_final text=…` trong nhật ký; chuẩn hoá qua lại giữa số và chữ số, bỏ dấu câu trước khi so; kèm script `compute_wer.py`.
-
-**Nhận xét.** WER tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện B xuất hiện thêm các lỗi không có ở điều kiện A: nhận nhầm từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ ("năm mươi tư" thành "50" hoặc "24"), và rụng các hư từ ngắn như "đón", "này", "trước". Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm, phù hợp với giới hạn "không huấn luyện lại mô hình nhận dạng cho tiếng Việt trong khoang xe" nêu ở Chương 1. Mẫu nhỏ (một người đọc, một lượt mỗi điều kiện); cần nhiều người đọc và nhiều mức nhiễu để khái quát.
-
-**Hình 6.2. So sánh WER điều kiện yên tĩnh và nhiễu khoang xe giả lập.**
+**Thiết lập.** Cùng một bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, hai địa chỉ có số nhà, mốc giờ) được đọc một lượt ở mỗi điều kiện, cùng thiết bị và micro. Ở điều kiện B, tiếng ồn nền mô phỏng khoang xe được phát từ một thiết bị khác để tránh bộ khử tiếng vọng của điện thoại loại bỏ tín hiệu. Văn bản nhận dạng lấy từ sự kiện `stt_final` trong nhật ký, chuẩn hóa chữ số và dấu câu trước khi so sánh bằng script `compute_wer.py`.
 
 ![Biểu đồ WER điều kiện A và B](thesis_screenshots/H6_2_wer.png)
 
-## 6.7. Kết quả gọi công cụ và hoàn thành nghiệp vụ (RQ4)
+**Hình 6.2.** Tỷ lệ lỗi từ ở điều kiện yên tĩnh và điều kiện nhiễu mô phỏng khoang xe
 
-**Bảng 6.6.** Độ đúng công cụ và hoàn thành nghiệp vụ (chấm tay sơ bộ, một người, chưa mù; mẫu nhật ký 2026-09-05..06)
+Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện nhiễu xuất hiện các lỗi thay từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ và mất các hư từ ngắn. Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm, phù hợp với giới hạn không huấn luyện lại mô hình nhận dạng nêu ở Chương 1.
 
-| Nhóm nghiệp vụ | n | % đúng công cụ | % hoàn thành ngay lần đầu | Lỗi quan sát |
+## 6.6. Kết quả tính đúng chức năng (RQ4)
+
+**Bảng 6.8.** Độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ (đánh giá thủ công, một người đánh giá, nhật ký 2026-09-05 đến 2026-09-06)
+
+| Nhóm nghiệp vụ | n | Đúng công cụ | Hoàn thành ngay lần đầu | Lỗi quan sát |
 |---|---|---|---|---|
-| UC01 Xem lịch / hỏi chuyến | 21 | ≈ 100% | ≈ 95% | 1 lần địa chỉ bị cắt (E-UX) |
-| UC02 Nhận / từ chối chuyến | 4 | 100% | 100% | không có |
-| UC04 Gọi khách | 6 | ≈ 67% | ≈ 50% | "gọi khách như nào?" → gọi luôn (E-INTENT); chuyển lời nhắn hỏng (E-UX) |
-| UC08 Thu nhập | 6 | ≈ 100% | ≈ 67% | hỏi "tháng"/"cả năm" → trả về hôm nay (E-PARAM) |
-| UC07 FAQ / cách dùng | 2 | 100% | 100% | không có |
-| **Gộp** | ≈ 39 | ≈ 88% | ≈ 77% | E-INTENT, E-PARAM, E-UX (Bảng 6.7) |
+| UC01 Xem lịch, hỏi chuyến | 21 | ≈ 100% | ≈ 95% | 1 lần địa chỉ bị cắt (E-UX) |
+| UC02 Nhận, từ chối chuyến | 4 | 100% | 100% | Không có |
+| UC04 Gọi khách | 6 | ≈ 67% | ≈ 50% | Hỏi cách gọi khách bị hiểu thành lệnh gọi (E-INTENT); chuyển lời nhắn sai nghĩa (E-UX) |
+| UC08 Thu nhập | 6 | ≈ 100% | ≈ 67% | Hỏi thu nhập theo tháng, theo năm trả về thu nhập trong ngày (E-PARAM) |
+| UC07 Hỏi đáp cách sử dụng | 2 | 100% | 100% | Không có |
+| Tổng | ≈ 39 | ≈ 88% | ≈ 77% | Xem Bảng 6.9 |
 
-Chấm bởi một người, chưa mù, phiên phát triển nhiều câu cạnh biên; n mỗi nhóm nhỏ (2–21). **Các lỗi E-INTENT ở nhóm UC04 đã được vá ở phiên bản mã nguồn sau cửa sổ đo** (xác nhận bằng kiểm thử `test_spoken_intent`: "gọi khách như nào?" nay không còn tự kích hoạt công cụ gọi). Con số theo từng UC riêng lẻ (UC03/05/06) cần đợt chấm chính thức có gắn nhãn, kịch bản mù và ≥ 2 người chấm.
+Lỗi E-INTENT ở UC04 phát sinh từ nhánh rút gọn theo ý định; nhánh này đã bị loại bỏ và kiểm thử `test_spoken_intent` xác nhận câu hỏi cách gọi khách không còn kích hoạt công cụ gọi. Số liệu theo từng trường hợp sử dụng UC03, UC05, UC06 cần đợt đánh giá có gắn nhãn, kịch bản mù và ít nhất hai người đánh giá.
 
-Bổ sung mang tính mô tả (trên toàn bộ nhật ký đợt A/B cũ, rộng hơn cửa sổ hai ngày ở Bảng 6.3): khi còn bật đường tắt, cơ chế kích hoạt trên khoảng chín loại ý định, tập trung nhiều nhất ở xem chuyến sắp tới, gọi khách, xác nhận hoặc cảm ơn ngắn, và tra thu nhập. Trên thiết kế hiện hành, các câu này cũng đi qua LLM; độ đúng công cụ phụ thuộc chọn tool của mô hình và nạp ngữ cảnh trước.
+**Bảng 6.9.** Phân loại lỗi quan sát (n ≈ 39 lượt)
 
-**Bảng 6.7.** Phân loại lỗi quan sát (mẫu nhật ký 2026-09-05..06, n ≈ 39 lượt, 1 người chấm)
-
-| Mã | Nhóm lỗi | Ví dụ quan sát trong nhật ký | Tầng nghi ngờ | Số lần (mẫu n ≈ 39) |
+| Mã | Nhóm lỗi | Ví dụ | Khâu nghi ngờ | Số lần |
 |---|---|---|---|---|
-| E-INTENT | Đúng chữ nhưng chọn sai việc | “gọi khách như nào?” → gọi luôn thay vì trả lời cách dùng; câu mơ hồ khác kích hoạt công cụ sai | LLM / đường tắt (đợt A/B cũ) | ≈ 3 |
-| E-PARAM | Đúng công cụ, sai tham số | Hỏi thu nhập “tháng vừa rồi” / “từ trước đến giờ” → trả về thu nhập hôm nay | Ngữ cảnh / LLM | ≈ 2 |
-| E-UX | Việc xong nhưng câu nói khó nghe khi lái | Đọc địa chỉ bị cắt “…ba đ….”; chuyển lời nhắn thành câu vô nghĩa | Lời nhắc TTS | ≈ 3 |
-| E-CONFIRM | Đáp “vâng” nhưng chưa gọi công cụ (việc đang chờ) | “Vâng.” rồi không kiểm tra cho tới khi tài xế hỏi lại | Lời nhắc hệ thống / việc đang chờ | ≈ 2 |
-| E-STT | Nghe sai tên riêng | “NexGen Speak” bị nghe thành “Nick Jan Speed” (bot thường tự phục hồi) | STT hoặc ồn | ≈ 2 |
-| E-API | Công cụ đúng nhưng HTTP lỗi | Không quan sát thấy trong cửa sổ đo (mọi lệnh HTTP đều 200) | Backend / mạng | 0 |
+| E-INTENT | Nhận dạng đúng nhưng chọn sai thao tác | Hỏi cách gọi khách bị hiểu thành lệnh gọi | Nhánh rút gọn (đã loại bỏ) | ≈ 3 |
+| E-PARAM | Đúng công cụ, sai tham số | Thu nhập "tháng vừa rồi" trả về thu nhập hôm nay | Ngữ cảnh, LLM | ≈ 2 |
+| E-UX | Hoàn thành nghiệp vụ nhưng câu nói khó nghe khi lái | Địa chỉ bị cắt; lời nhắn chuyển sai nghĩa | Lời nhắc hệ thống, TTS | ≈ 3 |
+| E-CONFIRM | Đáp lời nhưng chưa gọi công cụ | Trả lời "Vâng" nhưng không thực hiện cho tới khi tài xế hỏi lại | Lời nhắc hệ thống, hành động chờ xác nhận | ≈ 2 |
+| E-STT | Nhận dạng sai tên riêng | "NexGen Speak" thành "Nick Jan Speed" | STT, nhiễu | ≈ 2 |
+| E-API | Đúng công cụ nhưng API lỗi | Gửi SMS trả mã 503; tác nhân báo không gửi được, phiên tiếp tục (Bảng 5.3) | Dịch vụ Kênh liên lạc, backend | 1 |
 
-Kiểm riêng UC09–UC10: danh mục kiểm tra đạt/không đạt — chi tiết Phụ lục B.
+## 6.7. Kết quả khả năng sử dụng — NFR-01
 
-## 6.8. Trải nghiệm sử dụng theo hành vi tài xế (NFR-U01)
+**Bảng 6.10.** Danh mục kiểm tra hành vi khi lái
 
-**Bảng 6.8.** Danh mục kiểm tra trải nghiệm theo ngữ cảnh lái xe (điền đạt/không trên mẫu UC)
-
-| STT | Tiêu chí (gắn hành vi thực tế) | UC gắn | Đạt? | Bằng chứng (nhật ký / kiểm thử) |
+| STT | Tiêu chí | Trường hợp sử dụng | Kết quả | Bằng chứng |
 |---|---|---|---|---|
-| 1 | Hoàn thành việc cốt lõi không cần chạm màn hình (theo kịch bản) | UC01–UC04 | Đạt (mẫu) | Phiên 2026-09-06: lần lượt hỏi lịch, số chuyến, điểm đón, tên khách mà không thao tác màn hình |
-| 2 | Câu trả lời ngắn, một ý chính | UC01, UC03 | Đạt | Độ dài câu TTS trên toàn nhật ký: trung vị 44 ký tự, 93% câu ≤ 120 ký tự (n = 2 638 câu) |
-| 3 | Thao tác rủi ro có bước xác nhận | UC05, UC06 | Đạt | Ý định `confirm` tách khỏi hành động; kiểm thử `test_confirm_trip`, `test_pending_action` đạt |
-| 4 | Không bịa chuyến, thu nhập hoặc vị trí khi thiếu dữ liệu | UC01, UC08 | Đạt (mẫu) | Câu trả lời khớp dữ liệu ngữ cảnh (`GET /api/v1/drivers/me/context` mã 200); không quan sát thấy bịa |
-| 5 | Im lặng được nhắc rồi kết thúc lịch sự | UC09 | Đạt | Nhiều nhịp theo dõi im lặng trên toàn nhật ký; phiên mẫu: bot nhắc “Bạn còn đó không?”, sau đó chào kết thúc và gọi `POST /api/v1/voice/end-session` (mã 200) |
+| 1 | Hoàn thành nghiệp vụ cốt lõi không cần chạm màn hình | UC01–UC04 | Đạt (mẫu) | Phiên 2026-09-06: hỏi lịch, số chuyến, điểm đón, tên khách không thao tác màn hình |
+| 2 | Mỗi câu trả lời một ý chính | UC01, UC03 | Đạt | Độ dài câu TTS trên toàn nhật ký: trung vị 44 ký tự, 93% câu ≤ 120 ký tự (n = 2 638 câu) |
+| 3 | Thao tác rủi ro có bước xác nhận | UC05, UC06 | Đạt | Kiểm thử `test_confirm_trip`, `test_pending_action` đạt |
+| 4 | Không đưa ra dữ liệu chuyến, thu nhập, vị trí không có nguồn | UC01, UC08 | Đạt (mẫu) | Câu trả lời khớp dữ liệu ngữ cảnh từ API; không quan sát thấy dữ liệu không có nguồn |
+| 5 | Im lặng được nhắc, sau đó kết thúc phiên | UC09 | Đạt | Phiên mẫu: tác nhân hỏi "Bạn còn đó không?", chào kết thúc và gọi API kết thúc phiên (mã 200) |
 
-Trải nghiệm sử dụng ở đây là **quan sát hành vi hệ thống khớp cách tài xế làm việc**, không phải điểm trung bình khảo sát lớn.
+## 6.8. Kết quả khả năng mở rộng — NFR-03 (RQ1)
 
-## 6.9. Luồng khách hàng qua test case
+**Bảng 6.11.** Kết quả thử tải trên môi trường mô phỏng
 
-**Bảng 6.9.** Kết quả test case phía khách (đạt / không đạt)
+| Mã | Kịch bản | Cấu hình | P50 (giây) | P95 (giây) | Mức tăng P95 so với 1 phiên | Tỷ lệ phiên lỗi | Đạt |
+|---|---|---|---|---|---|---|---|
+| SC-01 | 1, 5, 10, 20 phiên đồng thời | 1 bản sao tác nhân | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
+| SC-02 | 20 phiên đồng thời | 2 và 4 bản sao tác nhân | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
+| SC-03 | Tải tăng dần 10 đến 200 người dùng ảo trên API ngữ cảnh và cập nhật chuyến | Dịch vụ Chuyến đi và Điều phối | 「—」 | 「—」 | 「—」 | 「—」 | 「—」 |
 
-| Nhóm test case | Việc kiểm | Cách chạy | Kết quả |
+## 6.9. Kết quả khả năng phục hồi — NFR-04 (RQ1)
+
+**Bảng 6.12.** Kết quả tiêm lỗi trên môi trường mô phỏng
+
+| Mã | Lỗi được tiêm | Kỳ vọng | Tỷ lệ phiên duy trì | Chỉ số bổ sung | Đạt |
+|---|---|---|---|---|---|
+| RS-01 | Dừng Dịch vụ Nhật ký cuộc gọi giữa phiên | Phiên tiếp tục; bản ghi được ghi vào nhật ký | 「—」 | 「—」 | 「—」 |
+| RS-02 | Dịch vụ Chuyến đi và Điều phối trả lỗi 5xx hoặc quá thời gian chờ | Tác nhân thông báo không thực hiện được; phiên tiếp tục | 「—」 | 「—」 | 「—」 |
+| RS-03 | Dừng một bản sao tác nhân khi đang có phiên | Phiên mới được phục vụ bởi bản sao khác | 「—」 | Thời gian khôi phục: 「—」 | 「—」 |
+| RS-04 | Nhà cung cấp dịch vụ thoại trả lỗi | Tác nhân thông báo không gọi được | 「—」 | 「—」 | 「—」 |
+| RS-05 | Nhà cung cấp STT, LLM hoặc TTS chính lỗi | Chuyển sang nhà cung cấp dự phòng; lượt vẫn được phản hồi | 「—」 | Độ trễ tăng thêm: 「—」 | 「—」 |
+
+Trong khi chờ đợt tiêm lỗi có kiểm soát, nhật ký phát triển đã ghi nhận một trường hợp lỗi thật tương ứng kịch bản RS-02: ngày 06/09/2026, trong khoảng 235 lời gọi HTTP của tác nhân có một lời gọi gửi SMS trả mã 503 (Bảng 5.3). Tác nhân thông báo "Không thể gửi tin nhắn lúc này", phiên không bị ngắt và tài xế tiếp tục thực hiện thêm các nghiệp vụ khác (cập nhật trạng thái, báo khách không có mặt, hỏi thu nhập, đặt nhắc việc) trong cùng phiên. Quan sát này mới là một mẫu, chưa thay thế được Bảng 6.12.
+
+## 6.10. Kết quả bảo mật — NFR-05
+
+**Bảng 6.13.** Danh mục kiểm tra bảo mật
+
+| STT | Kiểm tra | Kỳ vọng | Kết quả | Bằng chứng |
+|---|---|---|---|---|
+| 1 | JWT đăng nhập chỉ do Dịch vụ Định danh phát hành | Dịch vụ khác chỉ xác minh | Đạt | Chỉ `identity-service/src/services/tokenService.ts` ký access token và refresh token của người dùng; Dịch vụ Chuyến đi và Điều phối, Dịch vụ Giám sát vận hành và tác nhân chỉ ký token dịch vụ cho lời gọi giữa các dịch vụ |
+| 2 | Tham số bí mật không nằm trong mã nguồn | Khai báo NoEcho, nạp từ tệp môi trường ngoài kho mã | Đạt | Template SAM/CloudFormation; tệp `.env` nằm trong danh sách bỏ qua của git |
+| 3 | Nhật ký không chứa token hoặc mật khẩu | Chỉ mã phòng và mã lỗi | Đạt | Tìm kiếm trong nhật ký không thấy Bearer, chuỗi JWT, password, khóa API |
+| 4 | Nhật ký không chứa số điện thoại đầy đủ | Số điện thoại được che | 「—」 | Cần kiểm tra lại: một số dòng nhật ký của tác nhân ghi số điện thoại khi đăng ký phiên |
+| 5 | Tác nhân không truy cập cơ sở dữ liệu (CON-01) | Chỉ gọi HTTP | Đạt | Mã tác nhân không có trình điều khiển cơ sở dữ liệu |
+| 6 | Vị trí khách chỉ lấy từ dữ liệu chuyến | Không đưa ra vị trí không có nguồn | Đạt (mẫu) | Câu trả lời vị trí trong phiên mẫu lấy từ API chuyến |
+
+## 6.11. Kết quả luồng khách hàng và giám sát vận hành qua trường hợp kiểm thử
+
+**Bảng 6.14.** Kết quả trường hợp kiểm thử phía khách hàng và giám sát vận hành
+
+| Nhóm trường hợp kiểm thử | Nội dung kiểm tra | Trường hợp kiểm thử | Kết quả |
 |---|---|---|---|
-| Gọi khách từ tài xế | Đúng chế độ; chặn tự gọi; không quay khi thiếu chuyến | `test_call_customer`, `test_outbound_call_modes` | Đạt |
-| Agent / gọi nền nói với khách | Mở đầu đúng; không bịa thời gian đến/giá khi thiếu trường; tóm tắt về tài xế | `test_customer_outbound_opening`, `test_customer_call_faq` | Đạt |
-| Ghi nhận yêu cầu khách | Chờ thêm / ghi chú được lưu và đẩy tóm tắt | `test_record_customer_request`, `test_resolve_customer_trip` | Đạt |
+| Gọi khách từ tài xế | Đúng chế độ; không quay số khi thiếu chuyến | `test_call_customer`, `test_outbound_call_modes` | Đạt |
+| Tác nhân trao đổi với khách | Mở đầu đúng; không đưa ra thời gian đến hoặc giá khi thiếu dữ liệu; tóm tắt về tài xế | `test_customer_outbound_opening`, `test_customer_call_faq` | Đạt |
+| Ghi nhận yêu cầu khách | Yêu cầu chờ thêm, ghi chú được lưu và gửi tóm tắt | `test_record_customer_request`, `test_resolve_customer_trip` | Đạt |
+| Chỉ số phiên (FR-O01) | Đếm độ trễ, câu đệm, công cụ, lỗi HTTP, dự phòng; không lỗi khi chưa có bộ thu | `test_session_metrics` (4 ca) | Đạt |
+| Báo cáo ngày (FR-O01) | Số phiên, số tài xế, độ trễ trung bình/P95, tỷ lệ công cụ thành công, tỷ lệ API lỗi, lỗi hàng đầu, mẫu chấm lặp lại được, đếm kết quả chấm, suy ra loại phiên của bản ghi cũ | `ops-service` selfcheck báo cáo (npm run verify:ops) | Đạt |
+| Báo cáo ngày trên dữ liệu thật (FR-O01, FR-O02) | Dựng lại báo cáo 5 ngày có dữ liệu (30/08–10/09/2026) từ bảng nhật ký cuộc gọi; trang giám sát hiển thị đúng số liệu (Hình 5.6) | Chạy cục bộ ops-service + call-records-service | Đạt; độ trễ chưa có vì bản ghi trước ngày có chỉ số phiên |
+| Truy vấn bản ghi theo ngày | Quy đổi ngày giờ Việt Nam, biên ngày theo UTC | `call-records-service` selfcheck (npm run verify:records) | Đạt |
 
-Các test case nhóm khách / gọi đạt (pytest, 2026-09-06). Bộ kiểm thử đầy đủ: **451/452 đạt**; test còn lại kiểm độ dài lời nhắc hệ thống, không phải hành vi nghiệp vụ.
+Bộ kiểm thử tự động của tác nhân tại ngày 2026-09-06: 451/452 ca đạt (ca còn lại kiểm tra độ dài lời nhắc hệ thống); tại ngày 2026-09-27, sau khi bổ sung chỉ số phiên và dự phòng nhà cung cấp: 476/476 ca đạt. Kết quả đạt trường hợp kiểm thử chứng minh luồng khách hàng hoạt động trong phạm vi đã thiết kế, không suy ra mức hài lòng của khách hàng thật.
 
-Cách diễn giải: **đạt bộ test case** = chứng minh tích hợp “khách có thể được phục vụ bởi voice trong phạm vi đã thiết kế”. Không suy ra “khách hàng thật hài lòng trên đường”.
+## 6.12. Tổng hợp và thảo luận theo câu hỏi nghiên cứu
 
-## 6.10. Danh mục kiểm tra bảo mật và chia sẻ vị trí
+**Bảng 6.15.** Tổng hợp kết quả theo yêu cầu
 
-**Bảng 6.10.** Kiểm nhanh NFR-S (quan sát trên phiên thử / nhật ký đã che)
+| Yêu cầu | Kết quả chính | Trạng thái |
+|---|---|---|
+| NFR-02 Performance | Đợt đo 05–06/09/2026: luồng đầy đủ qua LLM P95 = 3,75 giây; thiết kế hiện hành: 「—」 | Chưa đạt ở đợt đo 05–06/09; chờ đo lại |
+| Nhận dạng giọng nói | WER 3,1% (yên tĩnh), 7,3% (nhiễu) | Đã đo (mẫu nhỏ) |
+| FR (tính đúng chức năng) | ≈ 88% đúng công cụ, ≈ 77% hoàn thành lần đầu | Đã đo (mẫu nhỏ) |
+| NFR-01 Usability | 5/5 tiêu chí đạt | Đạt |
+| NFR-03 Scalability | 「—」 | Chờ số liệu |
+| NFR-04 Resilience | 「—」 | Chờ số liệu |
+| NFR-05 Security | 5/6 mục đạt; 1 mục cần kiểm tra lại | Đạt một phần |
+| Luồng khách hàng | Các trường hợp kiểm thử đạt | Đạt |
+| FR-O01, FR-O02 | Kiểm thử tự động đạt; báo cáo dựng trên dữ liệu thật (Hình 5.6); chỉ số độ trễ có từ ngày triển khai chỉ số phiên | Đạt |
 
-| STT | Kiểm tra | Kỳ vọng | Đạt? | Bằng chứng |
-|---|---|---|---|---|
-| 1 | TTS / chat không đọc số điện thoại đầy đủ khi không được hỏi | Chỉ đọc khi tài xế yêu cầu | Đạt | Trong nhật ký, số điện thoại đầy đủ chỉ được đọc khi tài xế chủ động hỏi (công cụ `get_customer_phone`); không tự đọc trong câu trả lời khác |
-| 2 | Nhật ký phiên không chứa token LiveKit / mật khẩu | Chỉ `room=` và mã lỗi an toàn | Đạt | Grep nhật ký: không có `bearer`, JWT (`eyJ…`), `password`, API key |
-| 3 | Hỏi vị trí khách / điểm đón | Lấy từ API chuyến; thiếu thì nói chưa có — không bịa | Đạt (mẫu) | Câu trả lời vị trí trong phiên mẫu lấy từ dữ liệu chuyến; không đọc tọa độ |
-| 4 | llm-orchestrator không mở cơ sở dữ liệu trực tiếp | Chỉ HTTP tới external-api-service | Đạt | Mã llm-orchestrator không có trình điều khiển CSDL (psycopg / SQLAlchemy / Mongo / MySQL); chỉ HTTP |
+**RQ1 (kiến trúc, khả năng mở rộng và khả năng phục hồi).** 「—」 Kết luận được rút ra sau khi có số liệu Bảng 6.11 và Bảng 6.12.
 
-## 6.11. Thảo luận theo câu hỏi nghiên cứu
+**RQ2 (độ trễ).** Trên 341 lượt của đợt đo 05–06/09/2026, luồng đầy đủ qua LLM chưa đạt ngưỡng (P95 = 3,75 giây), điểm nghẽn chính là thời gian LLM sinh token đầu (P95 ≈ 2,5 giây). Thiết kế hiện hành đưa mọi lượt qua LLM để bảo đảm tính đúng nghiệp vụ và dùng câu đệm để giảm cảm nhận chờ; hướng cải thiện là rút gọn lời nhắc hệ thống, giảm số vòng gọi công cụ hoặc dùng mô hình có thời gian sinh token đầu thấp hơn. Kết luận cuối cùng cho RQ2 phụ thuộc số liệu Bảng 6.6.
 
-**RQ1 (thiết kế và triển khai).** Nguyên mẫu hoạt động theo trình tự: ứng dụng lấy token và vào phòng LiveKit; worker phân loại phiên theo tên phòng; câu nói đi qua nhận dạng giọng nói rồi **một đường** mô hình ngôn ngữ kèm công cụ, sau đó tổng hợp giọng nói; khi phản hồi chậm khoảng từ hai giây có thể xen câu giữ chỗ; mọi thao tác nghiệp vụ gọi HTTP tới external-api-service. Thiết kế này khớp hành vi tài xế: xác nhận hai bước cho việc rủi ro, chế độ gọi khách không hỏi lại mỗi lần nếu đã cấu hình sẵn, và không bịa trạng thái chuyến để nói cho nhanh.
+**RQ3 (nhận dạng giọng nói).** Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe; nhiễu làm tăng lỗi thay từ mang nghĩa và sai chữ số trong địa chỉ.
 
-**RQ2 (độ trễ — ưu tiên).** Trên n = 341 lượt (nhật ký 2026-09-05..06, `gpt-5.6-luna`, **đợt A/B khi còn đường tắt**): đường tắt khi đó bám ngưỡng P95 = 2,00 giây (5,4% lượt vượt 2 giây); đường đủ chưa đạt P95 = 3,75 giây, nghẽn chủ yếu ở thời gian mô hình ngôn ngữ sinh token đầu (P95 ≈ 2,5 giây). Gộp chung P95 = 2,87 giây. Thiết kế hiện hành đã tắt đường tắt: mọi câu quen thuộc cũng trả TTFT; câu giữ chỗ ≈ 2 giây che khoảng chờ; hướng cải thiện là rút gọn lời nhắc hệ thống, giảm vòng công cụ, hoặc dùng mô hình có độ trễ token đầu thấp hơn — rồi đo lại P95. Đây là kết quả sơ bộ từ môi trường thử nghiệm với một nhà cung cấp mô hình (hạn chế ở mục 6.12), chưa phải đo trên đường thật.
+**RQ4 (gọi công cụ, hoàn thành nghiệp vụ).** Khoảng 88% lượt chọn đúng công cụ và 77% hoàn thành đúng ngay lần đầu trên mẫu 39 lượt. Các nhóm lỗi chính là chọn sai thao tác với phát ngôn không rõ ý định, sai phạm vi tham số, câu nói khó nghe khi lái và chưa thực hiện thao tác sau khi xác nhận bằng lời.
 
-**RQ3 (WER).** Trên cùng đoạn 22 câu (N = 192 từ): WER tăng từ **3,1%** (yên tĩnh) lên **7,3%** khi có nhiễu khoang xe giả lập — hơn gấp đôi, chênh +4,2 điểm phần trăm (Bảng 6.5, Hình 6.2). Nhiễu gây thêm lỗi thay từ mang nghĩa và sai chữ số trong địa chỉ. Mức WER này vẫn đủ để nhận diện câu lệnh ngắn nhưng cho thấy giới hạn khi không huấn luyện lại STT cho tiếng Việt trong khoang xe. Mẫu nhỏ, một người đọc.
+## 6.13. Hạn chế và yếu tố ảnh hưởng đến độ tin cậy của kết luận
 
-**RQ4 (công cụ và nghiệp vụ, kèm trải nghiệm sử dụng).** Trên mẫu quan sát n ≈ 39 lượt (nhật ký 2026-09-05..06, một người chấm, chưa mù): khoảng 88% lượt chọn đúng công cụ và 77% hoàn thành đúng ngay lần đầu. Nhóm lỗi thường gặp: chọn sai việc từ câu mơ hồ (E-INTENT, ví dụ “gọi khách như nào?” bị hiểu thành lệnh gọi), sai phạm vi tham số thu nhập (E-PARAM), câu đọc bị cắt hoặc chuyển lời nhắn vô nghĩa (E-UX), và đáp “vâng” nhưng chưa gọi công cụ (E-CONFIRM). Các câu quen thuộc trong đợt đo đó đi đường tắt (xem lịch, xác nhận, cảm ơn) ổn định; trên bản hiện hành chúng đi qua LLM. Con số này là quan sát sơ bộ; cần đợt chấm có gắn nhãn UC, kịch bản mù và nhiều người chấm để kết luận định lượng.
+**Điều kiện thử nghiệm thuận lợi hơn thực tế.** Người đọc kịch bản biết trước câu nói nên phát âm trôi chảy hơn tài xế thật phải ứng biến; nhiễu mô phỏng không đại diện cho mọi khoang xe.
 
-**Khách hàng.** Bảng 6.9 chỉ kết luận mức “test case đạt”, gắn với phạm vi Chương 3 — không nâng thành nghiên cứu người dùng khách.
+**Môi trường mô phỏng cho thử tải và tiêm lỗi.** Thử nghiệm khả năng mở rộng và khả năng phục hồi chạy trên một máy, không có độ trễ mạng thật giữa các vùng, nhà cung cấp AI được giả lập. Kết quả chứng minh tính chất kiến trúc (mở rộng theo chiều ngang, cô lập lỗi), không phải năng lực tải của hệ thống trên AWS thực tế.
 
-Tổng hợp: đã có số liệu độ trễ (RQ2), WER hai điều kiện (RQ3), quan sát sơ bộ độ đúng công cụ (RQ4), kiểm thử luồng khách (Bảng 6.9) và danh mục bảo mật–vị trí (Bảng 6.10). Các số này đều từ mẫu nhỏ trong môi trường thử nghiệm; số liệu RQ4 theo từng UC vẫn cần đợt chấm có gắn nhãn để khẳng định đầy đủ.
+**Chỉ số không bao phủ mọi khái niệm.** Độ trễ phản hồi đo trải nghiệm hội thoại, không đo an toàn giao thông thực địa; danh mục kiểm tra hành vi không thay thế khảo sát mức hài lòng dài hạn.
 
-## 6.12. Hạn chế và yếu tố ảnh hưởng đến độ tin cậy của kết luận
+**Cỡ mẫu nhỏ.** Tỷ lệ lỗi từ đo với một người đọc; độ chính xác gọi công cụ đánh giá trên khoảng 39 lượt bởi một người. Luận văn nêu rõ cỡ mẫu và tránh kết luận tuyệt đối.
 
-Mục này nêu những điểm có thể khiến kết quả thực nghiệm trông tốt hơn hoặc khác so với thực tế vận hành, cùng cách luận văn hạn chế ảnh hưởng đó.
+**Số liệu độ trễ lấy từ nhật ký phát triển.** 341 lượt trong hai ngày, một tài khoản thử nghiệm, kịch bản do tác giả đọc, còn lẫn một số lượt tự kiểm thử; việc phân loại nhánh xử lý dựa trên mô-đun nhận dạng ý định chỉ áp dụng cho đợt đo này; một lượt ngoại lệ khoảng 21 giây do nghẽn mạng vẫn được tính vào thống kê.
 
-**Kết quả trong phòng thử có thể “đẹp” hơn thực tế.** Người đọc kịch bản biết trước câu nên dễ trôi chảy hơn tài xế thật phải ứng biến. Để giảm thiểu, luận văn thêm vài cách diễn đạt ngắn và ghi rõ tỷ lệ câu cố định so với câu tự do.
+**Phụ thuộc nhà cung cấp mô hình.** Kết quả gắn với cấu hình STT, LLM, TTS của buổi đo (Phụ lục D).
 
-**Khó suy ra toàn bộ điều kiện thực tế.** Môi trường thử nghiệm và nhiễu giả lập không đại diện mọi khoang xe; đạt test case phía khách không đồng nghĩa khách thật trên đường dùng như vậy.
-
-**Chỉ số đo không thay thế mọi khái niệm cần quan tâm.** Thời gian thực tế cảm nhận đo phản hồi thoại, không đo an toàn giao thông thực địa. Danh mục kiểm tra trải nghiệm sử dụng cũng không thay được điểm hài lòng đo trong dài hạn.
-
-**Mẫu nhỏ làm suy yếu khẳng định thống kê.** Khi cỡ mẫu nhỏ, luận văn nêu rõ con số và tránh kết luận tuyệt đối.
-
-**Phụ thuộc nhà cung cấp mô hình nhận dạng, ngôn ngữ và tổng hợp giọng nói.** Cấu hình buổi đo được ghi ở Phụ lục D để người khác tái lập.
-
-**Số liệu độ trễ lấy từ nhật ký phát triển.** n = 341 lượt trong hai ngày, cùng một tài khoản demo và một số kịch bản; kịch bản do tác giả tự đọc nên chưa mù, và cửa sổ này còn lẫn một số lượt tự kiểm thử của tác giả (đọc đoạn đo WER, thử luồng gọi khách) chưa được lọc riêng. Việc phân loại đường tắt và đường đủ dựa trên `spoken_intent` có kích hoạt hay không chỉ áp dụng cho **đợt A/B cũ**; thiết kế hiện hành không còn tách hai đường như vậy. Một lượt ngoại lệ khoảng 21 giây do nghẽn mạng vẫn được tính vào P95 và trung bình. Cần đợt đo lại trên một đường + câu giữ chỗ, có gắn nhãn use case, tách riêng lượt nghiệp vụ khỏi lượt tự kiểm thử, và nhiều người đọc để kết quả đại diện hơn.
-
-**Thiên lệch người chấm.** Việc chấm dựa trên rubric ở Bảng 6.7 và 6.8; đợt đo chính thức nên có hai người chấm độc lập.
-
-Các hạn chế phạm vi Chương 1 vẫn giữ khi diễn giải kết quả.
+**Thiên lệch người đánh giá.** Đợt đánh giá chính thức cần ít nhất hai người đánh giá độc lập theo cùng tiêu chí ở Bảng 6.9 và Bảng 6.10.
 
 ## Kết luận chương
 
-Chương 6 đã neo đánh giá vào **hành vi tài xế thực tế** (rảnh tay, câu ngắn, xác nhận rủi ro) và đặt **độ trễ** lên trước. Bảng 6.3–6.10 và Hình 6.1–6.2 có số liệu và kết quả từ nhật ký phiên và bộ kiểm thử: đợt A/B khi còn đường tắt cho P95 ≈ 2,0 giây (đường tắt) và P95 ≈ 3,8 giây (đường đủ, nghẽn ở TTFT); thiết kế hiện hành là một đường + câu giữ chỗ ≈ 2 giây — cần đo lại P95. WER sơ bộ 3,1% (yên tĩnh) so với 7,3% (nhiễu); chấm tay sơ bộ ≈ 88% lượt chọn đúng công cụ và ≈ 77% hoàn thành ngay lần đầu; luồng khách và danh mục bảo mật, vị trí đạt trên bộ kiểm thử. Kết quả RQ2 có cỡ mẫu lớn hơn (n = 341 lượt) nhưng phụ thuộc một nhà cung cấp mô hình và phản ánh phiên bản trước khi tắt đường tắt; RQ3 và RQ4 mới ở mức quan sát sơ bộ (một người đọc, một người chấm). Đợt đo chính thức trên bản một đường + câu giữ chỗ, có gắn nhãn UC, kịch bản mù và nhiều người đọc là bước tiếp theo để khẳng định đầy đủ RQ2–RQ4.
-
----
-
-## Self-review (Chương 6 — rà từ ngữ đúng nghĩa)
-
-| Hạng mục | Kết quả |
-|---|---|
-| 6.12 đổi tên + viết lại đúng nghĩa (không “đe dọa tính hợp lệ”) | Đạt |
-| wall clock / usability / inbound / cabin / vendor / Mitigation | Đã Việt hóa đúng nghĩa |
-| Không bịa số | Đạt (ô 「—」) |
-| Cần bổ sung số liệu | P0: đo + điền bảng |
+Chương 6 đã đánh giá nguyên mẫu theo từng yêu cầu. Kết quả hiện có cho thấy: luồng đầy đủ qua LLM chưa đạt ngưỡng độ trễ trong đợt đo 05–06/09/2026 với điểm nghẽn ở thời gian sinh token đầu; tỷ lệ lỗi từ tăng hơn gấp đôi trong điều kiện nhiễu; khoảng 88% lượt chọn đúng công cụ; các tiêu chí khả năng sử dụng và luồng khách hàng đạt; bảo mật đạt một phần. Số liệu khả năng mở rộng, khả năng phục hồi và độ trễ trên thiết kế hiện hành sẽ được bổ sung sau đợt thử nghiệm trên môi trường mô phỏng.

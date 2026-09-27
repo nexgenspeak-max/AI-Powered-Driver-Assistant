@@ -14,7 +14,6 @@ from app.voicebot.locales.vn.tools.get_today_earnings import _format_earnings_re
 from app.voicebot.processors.schedule_reply import format_schedule_reply
 from app.voicebot.locales.vn.tools.get_current_trip_info import _format_current_trip_reply
 from app.voicebot.locales.vn.tools.get_trip_traffic import _format_traffic_reply
-from app.voicebot.locales.vn.tools.get_bonus_info import _format_bonus_reply
 from app.voicebot.processors.next_stop import build_next_stop_suggestion
 from app.voicebot.processors.tool_response_builders import (
     build_customer_eta_response,
@@ -119,15 +118,6 @@ async def refresh_latest_data(raw_arguments: dict, context: RunContext) -> str:
             else:
                 text = build_customer_eta_response(trip, lang="vi")
         return await context_store.speak_and_stop(context.session, text)
-
-    if topic == "active_bonuses":
-        try:
-            fresh = await backend_api.get_active_bonuses(driver_phone)
-            context_store.set_context(context.userdata, "active_bonuses", fresh)
-        except Exception:
-            logger.warning("refresh_latest_data(active_bonuses) failed, using cached data", exc_info=True)
-        return await context_store.speak_and_stop(context.session, _format_bonus_reply(context.userdata)
-        )
 
     if topic == "driver_profile":
         try:

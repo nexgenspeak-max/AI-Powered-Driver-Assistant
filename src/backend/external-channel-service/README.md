@@ -1,6 +1,6 @@
 # external-channel-service
 
-FastAPI service deployed as an AWS Lambda that handles Twilio voice webhooks — inbound call recording and outbound call triggering.
+TypeScript service that handles Twilio voice webhooks — inbound call recording and outbound call triggering. Deployed as an AWS Lambda.
 
 ## What it does
 
@@ -9,7 +9,7 @@ FastAPI service deployed as an AWS Lambda that handles Twilio voice webhooks —
 
 ## Stack
 
-- Python · FastAPI · Mangum (Lambda adapter) · Twilio
+- TypeScript · Express · Twilio
 - Deployed as: AWS Lambda + API Gateway (SAM)
 
 ---
@@ -19,10 +19,9 @@ FastAPI service deployed as an AWS Lambda that handles Twilio voice webhooks —
 ### 1. Install dependencies
 
 ```bash
-cd src/external-channel-service
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+cd src/backend/external-channel-service
+npm install
+npm run dev
 ```
 
 ### 2. Create env file
@@ -43,7 +42,7 @@ BASE_URL=https://xxxx.ngrok.io   # your ngrok URL (see step 4)
 ### 3. Start the server
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+npm run dev
 ```
 
 ### 4. Expose to internet (Twilio needs a public URL)
@@ -118,16 +117,4 @@ bash infra/external-channel-service/teardown.sh dev
 
 ## Project structure
 
-```
-src/external-channel-service/
-├── app/
-│   ├── main.py              # FastAPI app + Mangum Lambda handler
-│   ├── api/v1/calls.py      # All Twilio webhook + REST endpoints
-│   ├── services/
-│   │   └── call_service.py  # Twilio REST API wrapper
-│   └── core/
-│       └── config.py        # Pydantic settings
-├── envs/
-│   └── .env.local           # Local secrets (not in git)
-└── requirements.txt
-```
+Code is under `src/` (Express). Local entry is `src/local.ts` (`npm run dev`, port 8000).

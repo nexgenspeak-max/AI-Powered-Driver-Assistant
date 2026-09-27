@@ -104,6 +104,7 @@ cd src/backend/external-channel-service && npm run dev   # :8000
 Copy `.env.example` → `.env.local`:
 
 ```env
+# Shell scripts in this folder read TRIP_SERVICE_URL (port 8002 = external-api-service).
 TRIP_SERVICE_URL=http://localhost:8002
 DRIVER_PHONE=84867347452
 ```

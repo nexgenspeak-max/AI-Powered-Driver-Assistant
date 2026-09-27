@@ -19,13 +19,26 @@ import { useAssistantChatStore } from "../stores/assistantChatStore";
 import { useVoiceSessionStore } from "../stores/voiceSessionStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { getAssistantReply } from "../../../services/api/assistant";
+import { useVoiceLangStore } from "../../../services/voiceLang";
 import { CHAT_ORB_CLEARANCE } from "./ChatVoiceDock";
 
 const STATUS_CAPTION = {
-  idle: "Chạm nút Trợ lý bên dưới để kết nối",
-  connecting: "Đang kết nối với Czen…",
-  connected: "Đã kết nối với Czen — chạm nút Trợ lý để ngắt",
-  error: "Kết nối lỗi — chạm nút Trợ lý để thử lại",
+  vn: {
+    idle: "Chạm nút Trợ lý bên dưới để kết nối",
+    connecting: "Đang kết nối với Czen…",
+    connected: "Đã kết nối với Czen — chạm nút Trợ lý để ngắt",
+    error: "Kết nối lỗi — chạm nút Trợ lý để thử lại",
+    inCall: "Đang trong cuộc gọi — không thể tắt",
+    micOff: "Mic đang tắt — phiên vẫn kết nối",
+  },
+  en: {
+    idle: "Tap the Assistant button below to connect",
+    connecting: "Connecting to Czen…",
+    connected: "Connected to Czen — tap the Assistant button to disconnect",
+    error: "Connection failed — tap the Assistant button to try again",
+    inCall: "In a call — can't disconnect",
+    micOff: "Mic is off — the session is still connected",
+  },
 } as const;
 
 interface Props {
@@ -36,14 +49,15 @@ function headerCaption(voice: {
   status: "idle" | "connecting" | "connected" | "error";
   isCallActive: boolean;
   isMicMuted: boolean;
-}): string {
+}, lang: "vn" | "en"): string {
+  const copy = STATUS_CAPTION[lang];
   if (voice.status === "connected" && voice.isCallActive) {
-    return "Đang trong cuộc gọi — không thể tắt";
+    return copy.inCall;
   }
   if (voice.status === "connected" && voice.isMicMuted) {
-    return "Mic đang tắt — phiên vẫn kết nối";
+    return copy.micOff;
   }
-  return STATUS_CAPTION[voice.status];
+  return copy[voice.status];
 }
 
 export function AssistantChatPanel({ onClose }: Props = {}) {
@@ -53,6 +67,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
   const { chats, addUserMessage, addBotMessage, upsertStreamingMessage } =
     useAssistantChatStore();
   const voice = useVoiceSessionStore();
+  const voiceLang = useVoiceLangStore((s) => s.lang) === "en" ? "en" : "vn";
   const [msg, setMsg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [stubLoading, setStubLoading] = useState(false);
@@ -138,7 +153,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                 Trợ lý Czen
               </AppText>
               <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
-                {headerCaption(voice)}
+                {headerCaption(voice, voiceLang)}
               </AppText>
             </YStack>
             {/* Balance the leading 40pt control — same as AppBar right slot */}

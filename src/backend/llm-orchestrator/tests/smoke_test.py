@@ -20,6 +20,9 @@ from dotenv import load_dotenv  # noqa: E402
 _ENV = os.getenv("ENV", "local")
 load_dotenv(f"envs/.env.{_ENV}", override=False)  # don't overwrite already-set vars
 
+from app.config.local_config import load_config_env  # noqa: E402
+load_config_env()
+
 GREEN  = "\033[32m"
 RED    = "\033[31m"
 YELLOW = "\033[33m"

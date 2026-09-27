@@ -1,25 +1,25 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Driver Assistant - identity-service (Lambda + API Gateway + DynamoDB)
+Description: Driver Assistant - identity-service (Dịch vụ Định danh) - Lambda + API Gateway + DynamoDB
+
+# Naming: stack ${Environment}-${AppName}-identity-service; logical IDs Identity<Role>;
+# physical ${Environment}-${AppName}-identity-service-<role>; tags app/env/service/layer/component.
 
 Parameters:
   Environment:
     Type: String
     Default: dev
     AllowedValues: [dev, uat, prod]
-
   AppName:
     Type: String
     Default: driver-assistant
-
   JwtSecret:
     Type: String
     NoEcho: true
-
+    Description: Signs login tokens; every other service verifies with the same value.
   JwtAccessExpiresIn:
     Type: String
     Default: "15m"
-
   JwtRefreshExpiresIn:
     Type: String
     Default: "30d"
@@ -32,173 +32,117 @@ Globals:
     Environment:
       Variables:
         ENV: !Ref Environment
-        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-accounts"
-        DYNAMODB_SETTINGS_TABLE: !Sub "${Environment}-${AppName}-driver-settings"
+        DYNAMODB_TABLE: !Ref IdentityAccountsTable
+        DYNAMODB_SETTINGS_TABLE: !Ref IdentityDriverSettingsTable
         JWT_SECRET: !Ref JwtSecret
         JWT_ACCESS_EXPIRES_IN: !Ref JwtAccessExpiresIn
         JWT_REFRESH_EXPIRES_IN: !Ref JwtRefreshExpiresIn
 
 Resources:
-
-  AuthServiceApi:
+  IdentityRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "${Environment}-${AppName}-auth-service-api"
+      Name: !Sub "${Environment}-${AppName}-identity-service-api"
       StageName: !Ref Environment
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: identity-service, layer: api-gateway, component: rest-api }
 
-  AuthServiceFunction:
+  # Express (serverless-http) owns routing; API Gateway proxies every path.
+  IdentityFunction:
     Type: AWS::Serverless::Function
+    DependsOn: IdentityFunctionLogGroup
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-auth-service"
+      FunctionName: !Sub "${Environment}-${AppName}-identity-service-fn"
       CodeUri: ../../src/backend/identity-service/
       Handler: src/index.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref AccountsTable
+            TableName: !Ref IdentityAccountsTable
         - DynamoDBCrudPolicy:
-            TableName: !Ref DriverSettingsTable
+            TableName: !Ref IdentityDriverSettingsTable
       Events:
-        Health:
+        Root:
           Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /health
-            Method: GET
-        Register:
+          Properties: { RestApiId: !Ref IdentityRestApi, Path: "/", Method: ANY }
+        Proxy:
           Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/auth/register
-            Method: POST
-        Login:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/auth/login
-            Method: POST
-        Refresh:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/auth/refresh
-            Method: POST
-        Me:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/auth/me
-            Method: GET
-        ListAccounts:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/accounts
-            Method: GET
-        GetAccountByPhone:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/accounts/phone/{phone}
-            Method: GET
-        UpdateAccount:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/accounts/{id}
-            Method: PATCH
-        GetAccountSettings:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/settings/{accountId}
-            Method: GET
-        UpdateAccountSettings:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AuthServiceApi
-            Path: /api/v1/settings/{accountId}
-            Method: PATCH
+          Properties: { RestApiId: !Ref IdentityRestApi, Path: "/{proxy+}", Method: ANY }
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: identity-service, layer: microservices, component: lambda }
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
         Target: "es2020"
-        EntryPoints:
-          - src/index.ts
-        External:
-          - "@aws-sdk/*"
+        EntryPoints: [src/index.ts]
+        External: ["@aws-sdk/*"]
 
-  AuthServiceFunctionLogGroup:
+  IdentityFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-auth-service"
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-identity-service-fn"
       RetentionInDays: 30
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: identity-service }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
 
-  AccountsTable:
+  IdentityAccountsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "${Environment}-${AppName}-accounts"
+      TableName: !Sub "${Environment}-${AppName}-identity-service-accounts"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: phone
-          AttributeType: S
-        - AttributeName: email
-          AttributeType: S
-        - AttributeName: role
-          AttributeType: S
+        - { AttributeName: id, AttributeType: S }
+        - { AttributeName: phone, AttributeType: S }
+        - { AttributeName: email, AttributeType: S }
+        - { AttributeName: role, AttributeType: S }
       KeySchema:
-        - AttributeName: id
-          KeyType: HASH
+        - { AttributeName: id, KeyType: HASH }
       GlobalSecondaryIndexes:
         - IndexName: phone-index
-          KeySchema:
-            - AttributeName: phone
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
+          KeySchema: [{ AttributeName: phone, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
         - IndexName: email-index
-          KeySchema:
-            - AttributeName: email
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
+          KeySchema: [{ AttributeName: email, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
         - IndexName: role-index
-          KeySchema:
-            - AttributeName: role
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
+          KeySchema: [{ AttributeName: role, KeyType: HASH }]
+          Projection: { ProjectionType: ALL }
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: identity-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-accounts }
 
-  DriverSettingsTable:
+  IdentityDriverSettingsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "${Environment}-${AppName}-driver-settings"
+      TableName: !Sub "${Environment}-${AppName}-identity-service-driver-settings"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id_account
-          AttributeType: S
+        - { AttributeName: id_account, AttributeType: S }
       KeySchema:
-        - AttributeName: id_account
-          KeyType: HASH
+        - { AttributeName: id_account, KeyType: HASH }
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: identity-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-driver-settings }
 
 Outputs:
-  ApiUrl:
-    Description: Auth Service API base URL — set as AUTH_SERVICE_URL in other services
-    Value: !Sub "https://${AuthServiceApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
-
-  AuthServiceFunctionArn:
-    Value: !GetAtt AuthServiceFunction.Arn
-
-  AccountsTableName:
-    Value: !Ref AccountsTable
-
-  DriverSettingsTableName:
-    Value: !Ref DriverSettingsTable
+  IdentityApiUrl:
+    Description: Base URL of identity-service (IDENTITY_SERVICE_URL for other services)
+    Value: !Sub "https://${IdentityRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  IdentityAccountsTableName:
+    Value: !Ref IdentityAccountsTable
+  IdentityDriverSettingsTableName:
+    Value: !Ref IdentityDriverSettingsTable

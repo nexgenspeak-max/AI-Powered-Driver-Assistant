@@ -137,6 +137,12 @@ async def build_nudge_message(
             "Bạn nhận chuyến này không?"
         )
 
+    if nudge_kind == "pickup_reminder":
+        customer = payload.get("customer_name") or ("the rider" if lang == "en" else "khách")
+        if lang == "en":
+            return f"Reminder: it's almost time to pick up {customer}."
+        return f"Nhắc bạn: sắp đến giờ đón {customer}."
+
     if nudge_kind == "schedule_updated":
         if userdata is not None:
             await _refresh_schedule(userdata)
@@ -153,6 +159,7 @@ async def build_nudge_message(
 _NUDGE_ORDER = {
     "schedule_updated": -1,
     "new_trip_offer": 0,
+    "pickup_reminder": 0,
     "proximity_pickup": 1,
     "proximity_dropoff": 1,
     "debug_ping": 2,

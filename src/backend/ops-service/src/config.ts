@@ -29,13 +29,27 @@ export const config = {
   port: Number(process.env.PORT || 8004),
   jwtSecret: resolveJwtSecret(),
   logDir: process.env.LOG_DIR || repoLogs,
-  voiceAgentLogDir: process.env.VOICE_AGENT_LOG_DIR || voiceLogs,
-  voiceAgentRoot: process.env.VOICE_AGENT_ROOT || voiceAgentRoot,
+  // dual-read: LLM_ORCHESTRATOR_* preferred; VOICE_AGENT_* still accepted
+  voiceAgentLogDir:
+    process.env.LLM_ORCHESTRATOR_LOG_DIR || process.env.VOICE_AGENT_LOG_DIR || voiceLogs,
+  voiceAgentRoot:
+    process.env.LLM_ORCHESTRATOR_ROOT || process.env.VOICE_AGENT_ROOT || voiceAgentRoot,
   logFreshnessMs: Number(process.env.LOG_FRESHNESS_MS || 30_000),
   callLoggerUrl:
     process.env.CALL_RECORDS_SERVICE_URL ||
     process.env.CALL_LOGGER_URL ||
     'http://localhost:8001',
+  awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
+  // filesystem = read local files (dev); cloudwatch / bundled = deployed on Lambda.
+  logSource: (process.env.LOG_SOURCE === 'cloudwatch' ? 'cloudwatch' : 'filesystem') as 'cloudwatch' | 'filesystem',
+  agentSource: (process.env.AGENT_SOURCE === 'bundled' ? 'bundled' : 'filesystem') as 'bundled' | 'filesystem',
+  appName: process.env.APP_NAME || 'driver-assistant',
+  // Daily report store (DynamoDB ops-daily-reports); empty = local files in data/reports.
+  reportsTable: process.env.REPORTS_TABLE || '',
+  // "Correct answer" rate: LLM grades a daily sample of driver exchanges.
+  reportJudgeApiKey: process.env.OPENAI_API_KEY || '',
+  reportJudgeModel: process.env.REPORT_JUDGE_MODEL || 'gpt-4o-mini',
+  reportJudgeSample: Number(process.env.REPORT_JUDGE_SAMPLE || 30),
   healthUrls: {
     'identity-service':
       process.env.IDENTITY_HEALTH_URL ||

@@ -1,5 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { loadAgentSnapshot, loadPromptsSnapshot } from '../services/agent';
+import { BUNDLED_AGENT } from '../services/agent/bundled';
+import { config } from '../config';
+
+/** Deployed: snapshot baked at build time. Local: read llm-orchestrator files live. */
+function source() {
+  if (config.agentSource !== 'bundled') {
+    return { agent: loadAgentSnapshot, prompts: loadPromptsSnapshot };
+  }
+  if (!BUNDLED_AGENT) throw new Error('agent snapshot was not bundled at deploy time');
+  const b = BUNDLED_AGENT;
+  return { agent: () => b.agent, prompts: () => b.prompts };
+}
 import { getLogger } from '../services/logger';
 
 const router = Router();
@@ -8,7 +20,7 @@ const log = getLogger('agent');
 router.get('/prompts', (_req: Request, res: Response) => {
   const started = Date.now();
   try {
-    const snapshot = loadPromptsSnapshot();
+    const snapshot = source().prompts();
     log.info('prompts', {
       ok: true,
       event: 'agent_prompts',
@@ -25,7 +37,7 @@ router.get('/prompts', (_req: Request, res: Response) => {
 router.get('/', (_req: Request, res: Response) => {
   const started = Date.now();
   try {
-    const snapshot = loadAgentSnapshot();
+    const snapshot = source().agent();
     log.info('snapshot', {
       ok: true,
       event: 'agent_snapshot',

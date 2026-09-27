@@ -24,22 +24,23 @@ aws dynamodb create-table \
 ### 2. Start call-records-service
 
 ```bash
-cd src/call-records-service
-pip install -r requirements.txt
-AWS_PROFILE=david uvicorn app.main:app --reload --port 8001
+cd src/backend/call-records-service
+npm install
+npm run dev
 ```
 
 ### 3. Point llm-orchestrator at it
 
-In `src/llm-orchestrator/envs/.env.local`:
+In `src/backend/llm-orchestrator/envs/.env.local`:
 ```env
-CALL_LOGGER_URL=http://localhost:8001
+CALL_RECORDS_SERVICE_URL=http://localhost:8001
 ```
+`CALL_LOGGER_URL` is still accepted if an older env file uses it.
 
 ### 4. Start llm-orchestrator
 
 ```bash
-cd src/llm-orchestrator
+cd src/backend/llm-orchestrator
 python -m app.main dev
 ```
 
@@ -73,12 +74,12 @@ curl http://localhost:8001/api/v1/records/<call_id>
 
 ```bash
 bash infra/call-records-service/deploy.sh dev
-# Output: CALL_LOGGER_URL=https://xxx... → paste into llm-orchestrator .env.dev
+# Output: CALL_RECORDS_SERVICE_URL=https://xxx... → paste into llm-orchestrator envs/.env.dev
 
 bash infra/call-records-service/teardown.sh dev   # Lambda/API GW removed, DynamoDB table kept
 ```
 
-After deploy, update `src/llm-orchestrator/envs/.env.dev`:
+After deploy, update `src/backend/llm-orchestrator/envs/.env.dev`:
 ```env
-CALL_LOGGER_URL=https://xxx.execute-api.ap-southeast-1.amazonaws.com/dev
+CALL_RECORDS_SERVICE_URL=https://xxx.execute-api.ap-southeast-1.amazonaws.com/dev
 ```

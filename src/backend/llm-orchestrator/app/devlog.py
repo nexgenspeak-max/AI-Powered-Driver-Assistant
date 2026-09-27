@@ -15,6 +15,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from app.services import session_metrics
 from app.services.logger.format import fmt_value
 
 logger = logging.getLogger("llm-orchestrator.dev")
@@ -28,6 +29,7 @@ def event(kind: str, *, ok: bool = True, **fields: Any) -> None:
             continue
         parts.append(f"{key}={fmt_value(value)}")
     line = " ".join(parts)
+    session_metrics.observe(kind, ok, fields)
     if ok:
         logger.info(line)
     else:

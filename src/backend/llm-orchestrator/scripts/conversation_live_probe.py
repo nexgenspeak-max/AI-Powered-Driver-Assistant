@@ -29,6 +29,9 @@ sys.path.insert(0, str(ROOT))
 
 load_dotenv(ROOT / f"envs/.env.{os.getenv('ENV', 'local')}")
 
+from app.config.local_config import load_config_env
+load_config_env()
+
 from tests.fixtures.driver_scenarios_vn import FAST_PATH, LLM_CHITCHAT, LLM_TOOL
 
 # Reuse voice-agent's service JWT (same secret as trip-service).

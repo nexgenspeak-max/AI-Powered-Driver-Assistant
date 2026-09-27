@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Driver Assistant - ops-service (Dịch vụ Giám sát vận hành) - Lambda + API Gateway + DynamoDB + EventBridge Scheduler
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, uat, prod]
+  AppName:
+    Type: String
+    Default: driver-assistant
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Same value as identity-service; only super_admin tokens are accepted.
+  IdentityServiceUrl:
+    Type: String
+  ExternalApiServiceUrl:
+    Type: String
+  ExternalChannelServiceUrl:
+    Type: String
+  CallRecordsServiceUrl:
+    Type: String
+  OpenaiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Grades the daily sample of driver exchanges; empty = report without the correct-answer rate.
+  ReportJudgeModel:
+    Type: String
+    Default: gpt-4o-mini
+  ReportJudgeSample:
+    Type: Number
+    Default: 30
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 120          # report build pages through a whole day of call records
+    MemorySize: 512
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        APP_NAME: !Ref AppName
+        JWT_SECRET: !Ref JwtSecret
+        LOG_SOURCE: cloudwatch
+        AGENT_SOURCE: bundled
+        REPORT_SCHEDULER: "off"
+        REPORTS_TABLE: !Ref OpsDailyReportsTable
+        CALL_RECORDS_SERVICE_URL: !Ref CallRecordsServiceUrl
+        IDENTITY_HEALTH_URL: !Sub "${IdentityServiceUrl}/health"
+        EXTERNAL_API_HEALTH_URL: !Sub "${ExternalApiServiceUrl}/health"
+        EXTERNAL_CHANNEL_HEALTH_URL: !Sub "${ExternalChannelServiceUrl}/health"
+        CALL_RECORDS_HEALTH_URL: !Sub "${CallRecordsServiceUrl}/health"
+        OPENAI_API_KEY: !Ref OpenaiApiKey
+        REPORT_JUDGE_MODEL: !Ref ReportJudgeModel
+        REPORT_JUDGE_SAMPLE: !Ref ReportJudgeSample
+
+Resources:
+  OpsRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-${AppName}-ops-service-api"
+      StageName: !Ref Environment
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: ops-service, layer: api-gateway, component: rest-api }
+
+  OpsFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: OpsFunctionLogGroup
+    Properties:
+      FunctionName: !Sub "${Environment}-${AppName}-ops-service-fn"
+      CodeUri: ../../src/backend/ops-service/
+      Handler: src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OpsDailyReportsTable
+        - Statement:
+            - Effect: Allow
+              Action: logs:FilterLogEvents
+              Resource:
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Environment}-${AppName}-*:*"
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}-${AppName}-llm-orchestrator:*"
+            - Effect: Allow
+              Action: ecs:DescribeServices
+              Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${Environment}-${AppName}-llm-orchestrator/*"
+      Events:
+        Root:
+          Type: Api
+          Properties: { RestApiId: !Ref OpsRestApi, Path: "/", Method: ANY }
+        Proxy:
+          Type: Api
+          Properties: { RestApiId: !Ref OpsRestApi, Path: "/{proxy+}", Method: ANY }
+        # 00:15 Vietnam time: build yesterday's report (handler reads source=ops.schedule).
+        DailyReport:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub "${Environment}-${AppName}-ops-service-daily-report"
+            ScheduleExpression: "cron(15 0 * * ? *)"
+            ScheduleExpressionTimezone: Asia/Ho_Chi_Minh
+            Input: '{"source":"ops.schedule","action":"daily-report"}'
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: ops-service, layer: microservices, component: lambda }
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        EntryPoints: [src/index.ts]
+        External: ["@aws-sdk/*"]
+
+  OpsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-ops-service-fn"
+      RetentionInDays: 30
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: ops-service }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
+
+  # ops-service owns only its aggregated daily reports (source data stays in call-records).
+  OpsDailyReportsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-ops-service-daily-reports"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: report_date, AttributeType: S }
+      KeySchema:
+        - { AttributeName: report_date, KeyType: HASH }
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: ops-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-daily-reports }
+
+Outputs:
+  OpsApiUrl:
+    Description: Base URL of ops-service (VITE_OPS_API_URL for super-admin-panel)
+    Value: !Sub "https://${OpsRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  OpsDailyReportsTableName:
+    Value: !Ref OpsDailyReportsTable

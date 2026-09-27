@@ -30,8 +30,8 @@ if ! stack_exists "$VA_STACK"; then
   exit 1
 fi
 
-CLUSTER="$(stack_output "$VA_STACK" "ECSClusterName")"
-WORKER="$(stack_output "$VA_STACK" "ECSServiceName")"
+CLUSTER="$(stack_output "$VA_STACK" "LlmOrchestratorClusterName")"
+WORKER="$(stack_output "$VA_STACK" "LlmOrchestratorServiceName")"
 
 echo "→ $WORKER desiredCount=$COUNT"
 aws ecs update-service \
@@ -47,5 +47,5 @@ if [[ "$COUNT" == "0" ]]; then
   echo "   bash infra/llm-orchestrator/teardown.sh $TARGET_ENV"
 else
   echo "✅ ECS scaled to 1. Wait ~30s then check logs:"
-  echo "   aws logs tail /ecs/${TARGET_ENV}-driver-assistant-voice-agent --follow $(aws_profile_args)"
+  echo "   aws logs tail /ecs/${TARGET_ENV}-driver-assistant-llm-orchestrator --follow $(aws_profile_args)"
 fi

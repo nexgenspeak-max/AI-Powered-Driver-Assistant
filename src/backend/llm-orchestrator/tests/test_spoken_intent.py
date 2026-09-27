@@ -1,18 +1,13 @@
-"""Intent classify + one-path LLM routing (spoken-intent auto-tool gated off)."""
+"""Intent classify + one-path LLM routing."""
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from app.voicebot.processors import context_store
 from app.voicebot.processors.spoken_intent import (
-    SPOKEN_INTENT_AUTO_TOOL,
     classify_driver_intent,
     handle_driver_utterance,
     needs_tool_llm,
 )
-
-
-def test_auto_tool_shortcut_gated_off():
-    assert SPOKEN_INTENT_AUTO_TOOL is False
 
 
 def test_vn_confirm_phrases():

@@ -1,5 +1,7 @@
-"""
-Thin async HTTP client for trip-service and call-center APIs.
+"""HTTP client from llm-orchestrator to external-api-service only.
+
+Trips, driver context, LiveKit room actions, and call or SMS requests all go
+there. This module does not open DynamoDB and does not dial Twilio itself.
 All methods raise httpx.HTTPStatusError on non-2xx — callers handle it.
 """
 import asyncio
@@ -356,14 +358,10 @@ async def get_latest_call_record(driver_phone: str) -> dict:
     r.raise_for_status()
     record = r.json()
 
-    # trip-service's cache is just a pointer (call_id/status) now — the
-    # actual transcript+summary lives in call-logger's DynamoDB table
-    # (local-driver-assistant-call-records), saved by ConversationService
-    # when the call ends. Fetch it here, once, so every caller of this
-    # function (check_call_status, summarize_last_call, ...) still sees a
-    # populated `summary` without each needing to know about this extra hop.
-    # Skipped while still in_progress — the call hasn't ended, so
-    # call-logger has no record for it yet.
+    # external-api-service caches a pointer (call_id/status). The transcript
+    # lives in call-records-service, saved by ConversationService when the
+    # call ends. Fetch it here so callers see `summary` without a second hop.
+    # Skipped while still in_progress — the call has not ended yet.
     if record.get("status") != "in_progress" and not record.get("summary"):
         call_id = record.get("call_id")
         if call_id:
@@ -489,7 +487,7 @@ async def get_active_bonuses(driver_phone: str) -> list[dict]:
 
 
 async def prewarm_trip_service() -> None:
-    """Open pooled HTTP/TLS to trip-service before the first tool/session call."""
+    """Open pooled HTTP/TLS to external-api-service before the first tool call."""
     base = _trip_base()
     if not base:
         return
@@ -497,13 +495,15 @@ async def prewarm_trip_service() -> None:
         c = _get_client()
         await c.get(f"{base}/health", timeout=3.0)
     except Exception:
-        logger.debug("trip-service prewarm failed", exc_info=True)
+        logger.debug("external-api-service prewarm failed", exc_info=True)
 
 
 async def register_driver_session(driver_phone: str, room_name: str) -> None:
-    """Mark this room as the driver's currently open voice session — read by
-    trip-service's driverReachService.reachDriver() to decide whether to
-    push a proactive nudge into it instead of dialing a new one."""
+    """Mark this room as the driver's open voice session.
+
+    external-api-service reads it to push a nudge into the room instead of
+    dialing a new one.
+    """
     c = _get_client()
     r = await c.put(
         f"{_trip_base()}/api/v1/drivers/me/session",
@@ -528,14 +528,11 @@ async def clear_driver_session(driver_phone: str) -> None:
 
 
 async def end_voice_session(room_name: str, participant_identities: list[str]) -> None:
-    """Remove the given participant(s) from a LiveKit room via trip-service,
-    which owns the RoomServiceClient/admin credentials — see
-    session_control.py's end_room_session(), the only caller. Centralizes
-    room administration in trip-service instead of voice-agent holding its
-    own separate LiveKit admin client just for this one teardown step.
-    Best-effort from the caller's perspective (session_control.py already
-    treats this as non-fatal); raises on a genuine HTTP failure like every
-    other method here, left to the caller to catch."""
+    """Remove participants from a LiveKit room via external-api-service.
+
+    That service holds the LiveKit admin credentials. Best-effort for the
+    caller; this method still raises on a genuine HTTP failure.
+    """
     c = _get_client()
     r = await c.post(
         f"{_trip_base()}/api/v1/voice/end-session",

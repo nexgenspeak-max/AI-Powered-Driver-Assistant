@@ -33,6 +33,12 @@ async def request_cancel_trip(raw_arguments: dict, context: RunContext) -> str:
             ),
         )
     context.userdata["pending_cancel_trip_id"] = trip["trip_id"]
+    context_store.set_pending_driver_action(
+        context.userdata,
+        "cancel",
+        {"trip_id": trip["trip_id"]},
+        source="request_cancel_trip",
+    )
     customer = trip.get("customer_name", "khách hàng")
     pickup_time = trip.get("pickup_time", "")
     spoken = (

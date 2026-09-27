@@ -100,6 +100,42 @@ export type OpsMessages = {
     connecting: string
     disconnected: string
   }
+  reports: {
+    date: string
+    rebuild: string
+    rebuilding: string
+    missing: (date: string) => string
+    loadFailed: string
+    sessions: string
+    drivers: string
+    customers: string
+    customerCalls: string
+    turns: string
+    avgSession: string
+    toolSuccess: string
+    correctRate: string
+    notJudged: string
+    latencyMean: string
+    latencyP95: string
+    slowRatio: string
+    meetsNfr: string
+    errors: string
+    sessionsWithErrors: string
+    httpErrorRate: string
+    fillers: string
+    fallbacks: string
+    byMode: string
+    topHttp: string
+    judgeMethod: (model: string, sample: number, correct: number, incorrect: number, unclear: number) => string
+    incorrectExamples: string
+    notes: string
+    coverage: (withMetrics: number, records: number) => string
+    trend: string
+    generatedAt: string
+    yes: string
+    no: string
+    none: string
+  }
   calls: {
     caller: string
     started: string
@@ -137,6 +173,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       prompts: {
         label: 'Prompts',
         description: 'YAML greetings, system instructions, and tools_definition.py as stored in voice-agent. Edit a file and this page shows the new text.',
+      },
+      reports: {
+        label: 'Daily report',
+        description: 'Per-day operations: drivers served, correct-answer rate, errors and response time.',
       },
       logs: {
         label: 'Logs',
@@ -243,6 +283,43 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       connecting: 'Connecting…',
       disconnected: 'Disconnected',
     },
+    reports: {
+      date: 'Day',
+      rebuild: 'Rebuild report',
+      rebuilding: 'Rebuilding…',
+      missing: date => `No report for ${date} yet. Rebuild it from the call records.`,
+      loadFailed: 'Could not load the report.',
+      sessions: 'Sessions',
+      drivers: 'Drivers served',
+      customers: 'Customers served',
+      customerCalls: 'Customer calls',
+      turns: 'Turns',
+      avgSession: 'Average session',
+      toolSuccess: 'Tool success',
+      correctRate: 'Correct answers',
+      notJudged: 'not graded',
+      latencyMean: 'Avg response',
+      latencyP95: 'P95 response',
+      slowRatio: 'Turns ≥ 2 s',
+      meetsNfr: 'Meets P95 ≤ 2 s',
+      errors: 'Errors',
+      sessionsWithErrors: 'Sessions with errors',
+      httpErrorRate: 'API error rate',
+      fillers: 'Filler phrases',
+      fallbacks: 'Provider fallbacks',
+      byMode: 'Sessions by type',
+      topHttp: 'Top API errors',
+      judgeMethod: (model, sample, correct, incorrect, unclear) =>
+        `LLM grader ${model}, sample ${sample}: ${correct} correct, ${incorrect} incorrect, ${unclear} unclear`,
+      incorrectExamples: 'Incorrect answers (examples)',
+      notes: 'Notes',
+      coverage: (withMetrics, records) => `${withMetrics}/${records} records carry session metrics`,
+      trend: 'Last 7 days',
+      generatedAt: 'Generated',
+      yes: 'Yes',
+      no: 'No',
+      none: 'None',
+    },
     calls: {
       caller: 'Caller',
       started: 'Started',
@@ -278,6 +355,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       prompts: {
         label: 'Prompt',
         description: 'Lời chào YAML, system instructions và tools_definition.py đúng như trong voice-agent. Sửa file là trang này hiện nội dung mới.',
+      },
+      reports: {
+        label: 'Báo cáo ngày',
+        description: 'Hoạt động theo ngày: số tài xế được phục vụ, tỷ lệ trả lời đúng, lỗi và độ trễ phản hồi.',
       },
       logs: {
         label: 'Logs',
@@ -383,6 +464,43 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       empty: 'Chưa có dòng khớp. Bắt đầu phiên và lọc room=.',
       connecting: 'Đang kết nối…',
       disconnected: 'Mất kết nối',
+    },
+    reports: {
+      date: 'Ngày',
+      rebuild: 'Tạo lại báo cáo',
+      rebuilding: 'Đang tạo…',
+      missing: date => `Chưa có báo cáo ngày ${date}. Tạo từ bản ghi cuộc gọi.`,
+      loadFailed: 'Không tải được báo cáo.',
+      sessions: 'Phiên hội thoại',
+      drivers: 'Tài xế được phục vụ',
+      customers: 'Khách hàng được phục vụ',
+      customerCalls: 'Cuộc gọi khách',
+      turns: 'Lượt nói',
+      avgSession: 'Thời lượng phiên TB',
+      toolSuccess: 'Công cụ thành công',
+      correctRate: 'Trả lời đúng',
+      notJudged: 'chưa chấm',
+      latencyMean: 'Phản hồi TB',
+      latencyP95: 'Phản hồi P95',
+      slowRatio: 'Lượt ≥ 2 giây',
+      meetsNfr: 'Đạt P95 ≤ 2 giây',
+      errors: 'Lỗi',
+      sessionsWithErrors: 'Phiên có lỗi',
+      httpErrorRate: 'Tỷ lệ API lỗi',
+      fillers: 'Câu đệm',
+      fallbacks: 'Chuyển nhà cung cấp dự phòng',
+      byMode: 'Phiên theo loại',
+      topHttp: 'API lỗi nhiều nhất',
+      judgeMethod: (model, sample, correct, incorrect, unclear) =>
+        `Chấm bằng ${model} trên mẫu ${sample} lượt: ${correct} đúng, ${incorrect} sai, ${unclear} không rõ`,
+      incorrectExamples: 'Câu trả lời sai (ví dụ)',
+      notes: 'Ghi chú',
+      coverage: (withMetrics, records) => `${withMetrics}/${records} bản ghi có chỉ số phiên`,
+      trend: '7 ngày gần nhất',
+      generatedAt: 'Tạo lúc',
+      yes: 'Có',
+      no: 'Không',
+      none: 'Không có',
     },
     calls: {
       caller: 'Người gọi',

@@ -45,11 +45,11 @@ def main() -> None:
         by = y(val)
         s.append(f'<rect x="{cx-bw/2:.1f}" y="{by:.1f}" width="{bw}" height="{MT+PH-by:.1f}" fill="{fill}"/>')
         s.append(f'<text x="{cx:.1f}" y="{by-10:.1f}" text-anchor="middle" font-size="16" '
-                 f'fill="#111827" font-weight="bold">{val:.1f}%</text>')
+                 f'fill="#111827" font-weight="bold">{val:.1f}%</text>'.replace(f'{val:.1f}', f'{val:.1f}'.replace('.', ',')))
         s.append(f'<text x="{cx:.1f}" y="{MT+PH+28:.1f}" text-anchor="middle" font-size="15" fill="#111827">{label}</text>')
 
     s.append(f'<text x="{ML+PW/2:.1f}" y="{MT+PH+52:.1f}" text-anchor="middle" font-size="12" '
-             f'fill="#6B7280">cùng đoạn đọc 22 câu, N = 192 từ · chênh lệch +4,2 điểm %</text>')
+             f'fill="#6B7280">cùng đoạn đọc 22 câu, N = 192 từ · chênh lệch +4,2 điểm phần trăm</text>')
     s.append('</svg>')
 
     svg = OUT / "H6_2_wer.svg"

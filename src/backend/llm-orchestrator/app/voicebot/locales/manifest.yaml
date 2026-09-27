@@ -1,5 +1,5 @@
 # Supported voice-agent locale bundles.
-# Switch language: set VOICE_AGENT_LANG + matching STT/TTS env, restart worker.
+# Switch language: set AGENT_LANG + matching STT/TTS env, restart worker.
 # Spoken copy / NLU patterns: locales/{vn,en}/yaml/*.yaml
 default: vn
 

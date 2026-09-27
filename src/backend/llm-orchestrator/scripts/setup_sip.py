@@ -18,6 +18,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 load_dotenv("envs/.env.local")
 
+from app.config.local_config import load_config_env
+load_config_env()
+
 from livekit import api
 
 

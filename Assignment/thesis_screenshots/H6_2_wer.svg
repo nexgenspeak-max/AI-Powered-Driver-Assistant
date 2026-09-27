@@ -16,10 +16,10 @@
 <line x1="80" y1="440" x2="680" y2="440" stroke="#111827" stroke-width="1.5"/>
 <text x="28" y="240.0" font-size="14" fill="#374151" transform="rotate(-90 28 240.0)" text-anchor="middle">WER (%)</text>
 <rect x="175.0" y="316.0" width="110" height="124.0" fill="#93C5FD"/>
-<text x="230.0" y="306.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">3.1%</text>
+<text x="230.0" y="306.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">3,1%</text>
 <text x="230.0" y="468.0" text-anchor="middle" font-size="15" fill="#111827">A — Yên tĩnh</text>
 <rect x="475.0" y="148.0" width="110" height="292.0" fill="#1D4ED8"/>
-<text x="530.0" y="138.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">7.3%</text>
+<text x="530.0" y="138.0" text-anchor="middle" font-size="16" fill="#111827" font-weight="bold">7,3%</text>
 <text x="530.0" y="468.0" text-anchor="middle" font-size="15" fill="#111827">B — Nhiễu khoang xe</text>
-<text x="380.0" y="492.0" text-anchor="middle" font-size="12" fill="#6B7280">cùng đoạn đọc 22 câu, N = 192 từ · chênh lệch +4,2 điểm %</text>
+<text x="380.0" y="492.0" text-anchor="middle" font-size="12" fill="#6B7280">cùng đoạn đọc 22 câu, N = 192 từ · chênh lệch +4,2 điểm phần trăm</text>
 </svg>

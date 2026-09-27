@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy full backend stack in dependency order (handles external-api-service 2-pass bootstrap).
+# Deploy the full backend in dependency order, copying service URLs between env files.
 #
 # Usage:
 #   bash infra/deploy-all.sh dev
@@ -90,40 +90,29 @@ run_deploy() {
   bash "$SCRIPT_DIR/${svc}/deploy.sh" "$TARGET_ENV"
 }
 
+# Copy each deployed service URL into the env files of the services that call it.
 propagate_urls() {
-  local auth_stack trip_stack logger_stack
-  auth_stack="$(stack_name identity-service "$TARGET_ENV")"
-  trip_stack="$(stack_name external-api-service "$TARGET_ENV")"
-  logger_stack="$(stack_name call-records-service "$TARGET_ENV")"
-
-  local auth_url trip_url logger_url
-  auth_url="$(stack_output "$auth_stack" "ApiUrl")"
-  trip_url="$(stack_output "$trip_stack" "ApiUrl")"
-  logger_url="$(stack_output "$logger_stack" "ApiUrl")"
-
-  local trip_env="$REPO_ROOT/src/backend/external-api-service/envs/.env.${TARGET_ENV}"
-  local voice_env="$REPO_ROOT/src/backend/llm-orchestrator/envs/.env.${TARGET_ENV}"
-
-  if [[ -n "$auth_url" && "$auth_url" != "None" && -f "$trip_env" ]]; then
-    set_env_var "$trip_env" "AUTH_SERVICE_URL" "$auth_url"
-    echo "✅ external-api-service ← AUTH_SERVICE_URL"
-  fi
-  if [[ -n "$trip_url" && "$trip_url" != "None" && -f "$voice_env" ]]; then
-    set_env_var "$voice_env" "TRIP_SERVICE_URL" "$trip_url"
-    echo "✅ llm-orchestrator ← TRIP_SERVICE_URL"
-  fi
-  if [[ -n "$logger_url" && "$logger_url" != "None" ]]; then
-    [[ -f "$voice_env" ]] && set_env_var "$voice_env" "CALL_LOGGER_URL" "$logger_url"
-    [[ -f "$trip_env" ]] && set_env_var "$trip_env" "CALL_LOGGER_URL" "$logger_url"
-    echo "✅ trip/voice ← CALL_LOGGER_URL"
-  fi
+  local out
+  set_url() { # <from-service> <output-key> <VAR> <to-service...>
+    local from="$1" key="$2" var="$3"; shift 3
+    out="$(stack_output "$(stack_name "$from" "$TARGET_ENV")" "$key")"
+    [[ -n "$out" && "$out" != "None" ]] || return 0
+    for to in "$@"; do
+      local f="$REPO_ROOT/src/backend/${to}/envs/.env.${TARGET_ENV}"
+      [[ -f "$f" ]] && set_env_var "$f" "$var" "$out" && echo "✅ ${to} ← ${var}"
+    done
+  }
+  set_url identity-service IdentityApiUrl IDENTITY_SERVICE_URL external-api-service
+  set_url call-records-service CallRecordsApiUrl CALL_RECORDS_SERVICE_URL external-api-service llm-orchestrator
+  set_url external-channel-service ExternalChannelApiUrl EXTERNAL_CHANNEL_SERVICE_URL external-api-service
+  set_url external-api-service ExternalApiUrl EXTERNAL_API_SERVICE_URL llm-orchestrator
 }
 
 print_header "Deploy all backend ($TARGET_ENV)"
 
 # Validate env files exist
 MISSING_ENV=()
-for svc in identity-service external-api-service call-records-service external-channel-service llm-orchestrator; do
+for svc in identity-service call-records-service external-channel-service external-api-service llm-orchestrator ops-service; do
   if should_run "$svc"; then
     f="$REPO_ROOT/src/backend/${svc}/envs/.env.${TARGET_ENV}"
     [[ -f "$f" ]] || MISSING_ENV+=("$f")
@@ -139,20 +128,11 @@ if [[ ${#MISSING_ENV[@]} -gt 0 ]]; then
   exit 1
 fi
 
-# Phase 1 — linear DAG
-run_deploy identity-service
-propagate_urls
-
-run_deploy external-api-service
-propagate_urls
-
-run_deploy call-records-service
-propagate_urls
-
-run_deploy external-channel-service
-
-run_deploy llm-orchestrator
-propagate_urls
+# Dependency order: each service is deployed after the services it calls.
+for svc in identity-service call-records-service external-channel-service external-api-service llm-orchestrator ops-service; do
+  run_deploy "$svc"
+  propagate_urls
+done
 
 echo ""
 echo "======================================"

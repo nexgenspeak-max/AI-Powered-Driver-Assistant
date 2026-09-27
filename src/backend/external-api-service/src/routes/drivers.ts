@@ -9,6 +9,7 @@ import { phoneVariants } from '../utils/phone';
 import { distanceMeters } from '../utils/geo';
 import { cacheSet, cacheGet, cacheDel, driverLiveLocationKey, driverOptimizedRouteKey, driverSessionKey } from '../cache/redis';
 import { pushDriverScheduleUpdated } from '../services/driverReachService';
+import { deliverDueReminders } from '../services/reminderDelivery';
 import { notifyDriver, notifyCustomer } from '../services/notify';
 import {
   maybeNotifyCustomerOfProximity,
@@ -364,6 +365,11 @@ router.post('/me/location', async (req: Request, res: Response) => {
       });
     });
     await runProximityChecks(driverPhone, lat, lng);
+    deliverDueReminders(driverPhone).catch(err => {
+      log.warning('pickup reminder delivery failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     return res.json({ status: 'ok' });
   } catch (err) {
@@ -434,6 +440,11 @@ router.post('/me/location/live', async (req: Request, res: Response) => {
     }
 
     await runProximityChecks(driverPhone, lat, lng, proximityScope);
+    deliverDueReminders(driverPhone).catch(err => {
+      log.warning('pickup reminder delivery failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     return res.json({ status: 'ok' });
   } catch (err) {

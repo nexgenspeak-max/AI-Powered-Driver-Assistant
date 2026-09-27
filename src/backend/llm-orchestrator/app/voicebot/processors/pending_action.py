@@ -222,9 +222,20 @@ def is_action_confirm(text: str, lang: str) -> bool:
         return False
     if any(p in t for p in ("sao ", "tại sao", "bực", "nhỉ", "thế nhỉ")):
         return False
+    if t in ("có", "co"):
+        return True
     if t in _CONFIRM_VN:
         return True
     return any(t == p or t.startswith(f"{p} ") for p in _CONFIRM_VN)
+
+
+def is_action_decline(text: str, lang: str) -> bool:
+    t = _norm(text)
+    if not t or len(t) > 20:
+        return False
+    if lang == "en":
+        return t in ("no", "nope", "dont", "cancel that") or t.startswith("no ")
+    return t in ("không", "khong", "thôi", "đừng", "dung") or t.startswith("không ")
 
 
 def should_execute(userdata: dict, text: str, lang: str) -> bool:

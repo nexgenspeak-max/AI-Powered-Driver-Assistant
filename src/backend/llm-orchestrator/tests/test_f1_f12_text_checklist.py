@@ -1,7 +1,8 @@
 """F1–F12 text-in checklist: classify + tool content (no mic/TTS).
 
-Spoken-intent auto-tool is off — trip answers come from LLM+tools.
-Gate: classify routes correctly; tools speak_and_stop with no raw template.
+Trip answers come from LLM+tools. Gate: classify routes correctly; tools
+speak_and_stop with no raw template. handle_driver_utterance stays silent
+unless a promised action is confirmed.
 """
 from __future__ import annotations
 
@@ -13,7 +14,6 @@ from livekit.agents import StopResponse
 
 from app.voicebot.processors import context_store
 from app.voicebot.processors.spoken_intent import (
-    SPOKEN_INTENT_AUTO_TOOL,
     classify_driver_intent,
     handle_driver_utterance,
     needs_tool_llm,
@@ -31,7 +31,6 @@ from app.voicebot.locales.vn.tools.send_sms_to_customer import send_sms_to_custo
 from app.voicebot.locales.vn.tools.get_trip_traffic import get_trip_traffic
 from app.voicebot.locales.vn.tools.get_current_trip_info import get_current_trip_info
 from app.voicebot.locales.vn.tools.set_driver_status import set_driver_status
-from app.voicebot.locales.vn.tools.get_bonus_info import get_bonus_info
 from app.voicebot.locales.vn.tools.get_driver_stats import get_driver_stats
 from app.voicebot.locales.vn.tools.end_conversation import end_conversation
 from app.voicebot.locales.vn.tools.call_custom_number import call_custom_number
@@ -150,10 +149,6 @@ def _active_context() -> dict:
         },
     )
     return userdata
-
-
-def test_spoken_intent_auto_tool_off():
-    assert SPOKEN_INTENT_AUTO_TOOL is False
 
 
 # --- F1 confirm / reject ---
@@ -379,10 +374,6 @@ async def test_f12_status_stats_bonus_end_text():
     context.session.say = AsyncMock()
     spoken = await _speak_tool(get_driver_stats, context, {})
     assert len(spoken) > 5
-
-    context.session.say = AsyncMock()
-    spoken = await _speak_tool(get_bonus_info, context, {})
-    assert "thưởng" in spoken.lower() or "20" in spoken or "bonus" in spoken.lower()
 
     userdata = _active_context()
     userdata["customer_call_active"] = True

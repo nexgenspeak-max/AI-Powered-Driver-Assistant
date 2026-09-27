@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as tripService from '../services/tripService';
+import * as smsService from '../services/smsService';
 import * as mapsService from '../services/mapsService';
 import * as dispatchService from '../services/dispatchService';
 import * as driverContextService from '../services/driverContextService';
@@ -434,11 +435,14 @@ router.post('/:tripId/confirm-with-customer', async (req: Request, res: Response
   try {
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    if (!trip.customer_phone) {
+      return res.status(400).json({ detail: 'Trip has no customer phone' });
+    }
     const message = req.body.message || 'Tài xế đã xác nhận chuyến đi và sẽ đến đón đúng giờ.';
-    log.info('sms stub sent', { trip: trip.trip_id.slice(0, 8) });
-    return res.json({ status: 'sent', method: req.body.method || 'sms', message });
+    const result = await smsService.sendSms(trip.customer_phone, message);
+    return res.json({ status: 'sent', method: 'sms', sid: result.sid, message });
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    return res.status(503).json({ detail: String(err) });
   }
 });
 

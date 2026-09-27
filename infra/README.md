@@ -47,12 +47,14 @@ bash infra/scale-ecs.sh dev 0
 |--------|---------|
 | `setup-env.sh` | Create `src/backend/*/envs/.env.dev` from templates |
 | `status.sh` | Stack status + idle cost hint |
-| `deploy-all.sh` | Full backend in correct order (external-api-service ×2) |
+| `deploy-all.sh` | Full backend in dependency order, copies service URLs between env files |
 | `scale-ecs.sh` | Start/stop llm-orchestrator ECS (`0` or `1`) |
 | `teardown-all.sh` | Delete all stacks (keeps DynamoDB data) |
 | `{service}/deploy.sh` | Deploy one service |
 | `{service}/teardown.sh` | Delete one stack |
-| `frontend/deploy.sh` | Build + S3 sync web apps (optional) |
+| `frontend/deploy.sh` | Build + S3 sync web apps (admin-panel, super-admin-panel, customer-web, driver-web) |
+| `lib/sam.sh` | Shared SAM build/deploy/teardown used by every `{service}/deploy.sh` |
+| `local/ensure-local-tables.sh` | Add the daily-report index to the local call-records table (and optional local tables) |
 
 ### Partial deploy
 
@@ -72,10 +74,19 @@ bash infra/identity-service/deploy.sh dev
 ## Deploy order (automatic in deploy-all.sh)
 
 ```
-identity-service → external-api-service → call-records-service → external-channel-service → llm-orchestrator
+identity-service → call-records-service → external-channel-service → external-api-service → llm-orchestrator → ops-service
 ```
 
-URL wiring after each deploy: `AUTH_SERVICE_URL` → external-api-service, `TRIP_SERVICE_URL` / `CALL_LOGGER_URL` → llm-orchestrator (and call-records-service into trip).
+Each service is deployed after the services it calls. URL wiring after each deploy:
+
+| Output | Env var | Written to |
+|---|---|---|
+| `IdentityApiUrl` | `IDENTITY_SERVICE_URL` | external-api-service |
+| `CallRecordsApiUrl` | `CALL_RECORDS_SERVICE_URL` | external-api-service, llm-orchestrator |
+| `ExternalChannelApiUrl` | `EXTERNAL_CHANNEL_SERVICE_URL` | external-api-service |
+| `ExternalApiUrl` | `EXTERNAL_API_SERVICE_URL` | llm-orchestrator |
+
+ops-service reads all four URLs from the stack outputs itself. Older names `AUTH_SERVICE_URL`, `TRIP_SERVICE_URL`, `CALL_LOGGER_URL` are still accepted by the services.
 
 ---
 
@@ -88,7 +99,26 @@ bash infra/setup-env.sh uat
 bash infra/deploy-all.sh uat
 ```
 
-Stack names: `{env}-driver-assistant-{service}`
+## Naming convention
+
+| Item | Pattern | Example |
+|---|---|---|
+| Stack | `{env}-driver-assistant-{service}` | `dev-driver-assistant-identity-service` |
+| Logical ID | `<Service><Role>` | `IdentityFunction`, `CallRecordsTable`, `LlmOrchestratorService` |
+| Lambda / API | `{env}-driver-assistant-{service}-fn` / `-api` | `dev-driver-assistant-ops-service-fn` |
+| DynamoDB table | `{env}-driver-assistant-{service}-{table}` | `dev-driver-assistant-call-records-service-call-records` |
+| Log group | `/aws/lambda/<function>` or `/ecs/{env}-driver-assistant-llm-orchestrator` | |
+| Tags | `app`, `env`, `service`, `layer`, `component` | `layer` = layer name on thesis Figure 4.1 |
+
+API Gateway proxies every path (`ANY /{proxy+}`) to the service's Express app, so new routes need no template change.
+
+| Stack | Owns (DynamoDB) |
+|---|---|
+| identity-service | accounts, driver-settings |
+| external-api-service | trips, ws-connections (API Gateway WebSocket connection ids for push) |
+| external-channel-service | channel-events (Twilio webhooks, SMS sends) |
+| call-records-service | call-records (transcript, summary, session metrics) |
+| ops-service | daily-reports (+ EventBridge Scheduler 00:15 Asia/Ho_Chi_Minh) |
 
 ---
 
@@ -113,8 +143,8 @@ aws cloudformation list-stacks --region ap-southeast-1 \
   --query "StackSummaries[?contains(StackName,'driver-assistant')].StackName"
 
 # Voice-agent logs
-aws logs tail /ecs/dev-driver-assistant-voice-agent --follow
+aws logs tail /ecs/dev-driver-assistant-llm-orchestrator --follow
 
 # Rollback ECS to previous task definition
-aws ecs list-task-definitions --family-prefix dev-driver-assistant-voice-agent
+aws ecs list-task-definitions --family-prefix dev-driver-assistant-llm-orchestrator
 ```

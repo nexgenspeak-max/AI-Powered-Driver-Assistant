@@ -10,9 +10,9 @@ Multi-step flows the AI must follow. Violations are considered bugs.
 
 ```
 Driver: "Gọi cho khách giúp tôi."
-AI:     "Anh/chị muốn tôi tự gọi khách rồi tóm tắt (anh/chị vẫn hỏi việc khác được),
-         tôi gọi và anh/chị nghe trực tiếp,
-         hay kết nối để anh/chị nói với khách?"
+AI:     call_customer with the driver's saved default mode (agent unless settings say bridge).
+        Do not ask agent / bridge / background every time.
+        "Nói trực tiếp" → mode=bridge. "Gọi nền" → mode=background.
 
 Driver: "AI tự gọi / tóm tắt sau"  → call_customer(mode="background") — DriverAgent giữ nguyên
 Driver: "AI gọi / tôi nghe"        → call_customer(mode="agent") → CustomerCallAgent handoff
@@ -28,7 +28,7 @@ AI:     → summarize_last_call (on request) or resume_summary on handback
 ```
 
 **Rules:**
-- Never call `call_customer` without asking mode first (unless driver already specified).
+- Use the driver's saved default call mode. Ask only when the driver names a different mode.
 - Do not start a second call while one is active.
 
 ---
@@ -58,11 +58,11 @@ Driver: "Không"           → clear pending, "Đã hủy thao tác."
 
 ```
 Driver: "Khách không ra."
-AI:     "Anh/chị đã chờ bao lâu? Tôi có thể gia hạn thêm hoặc báo khách vắng mặt."
-        [Optional: suggest extend_wait_time or call_customer first]
+AI:     Hỏi một câu xác nhận. Chưa ghi no_show.
+        "Bạn có chắc muốn báo khách không xuất hiện không? Nói có để xác nhận."
 
-Driver confirms no-show → report_customer_no_show
-AI:     "Đã ghi nhận khách vắng mặt. Chuyến sẽ được xử lý theo quy định."
+Driver: "Có" / "Yes"  → ghi no_show
+Driver: "Không" / "No" → bỏ qua, không ghi
 ```
 
 ---

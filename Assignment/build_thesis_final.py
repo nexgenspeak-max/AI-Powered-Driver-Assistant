@@ -8,7 +8,9 @@ Stylesheet locked (chuẩn thực tế VN kiểu UIT/UEH — thesis_mse_docx_rul
 """
 from __future__ import annotations
 
+import re
 import shutil
+import os
 import tempfile
 from copy import deepcopy
 from pathlib import Path
@@ -30,7 +32,7 @@ ROOT = Path(__file__).resolve().parent
 
 # Max drawn size for an embedded figure (fits A4 text area after locked margins)
 FIG_MAX_W_CM = 14.5
-FIG_MAX_H_CM = 19.0
+FIG_MAX_H_CM = 16.0
 
 
 def clean_inline(text: str) -> str:
@@ -43,7 +45,7 @@ def clean_inline(text: str) -> str:
     return text.replace("**", "").replace("*", "").replace("`", "")
 
 
-def figure_width_cm(img_path: Path) -> float:
+def figure_width_cm(img_path: Path, max_w: float = FIG_MAX_W_CM, max_h: float = FIG_MAX_H_CM) -> float:
     """Pick a draw width so portrait phone screenshots don't overflow the page."""
     if _PILImage is None:
         return 12.0
@@ -55,51 +57,49 @@ def figure_width_cm(img_path: Path) -> float:
     if not w or not h:
         return 12.0
     aspect = w / h
-    width = min(FIG_MAX_W_CM, aspect * FIG_MAX_H_CM)
+    width = min(max_w, aspect * max_h)
     return round(width, 2)
 
 
 CONCLUSION_PARAS = [
-    "Luận văn đã đi trọn quy trình thiết kế – xây dựng – đánh giá cho một trợ lý AI bằng "
-    "giọng nói hỗ trợ tài xế xe công nghệ. Từ phân tích hành vi tài xế khi đang "
-    "chạy xe (Chương 3), luận văn đề xuất kiến trúc tách tầng hội thoại AI khỏi tầng nghiệp vụ, "
-    "một đường xử lý STT → LLM kèm công cụ → TTS cùng câu giữ chỗ khoảng hai giây và phân loại "
-    "phiên theo ngữ cảnh (Chương 4), rồi hiện thực thành nguyên mẫu chạy được đầu cuối trên nền "
-    "WebRTC và SIP cùng dịch vụ quản lý chuyến thật (Chương 5).",
-    "Về mặt đánh giá (Chương 6), số liệu trích từ nhật ký phiên khi còn thử nghiệm đường tắt "
-    "(n = 341 lượt, một nhà cung cấp mô hình) cho thấy đường tắt khi đó bám ngưỡng P95 ≤ 2 giây "
-    "(P95 ≈ 2,0 giây), trong khi đường đủ qua mô hình ngôn ngữ chưa đạt (P95 ≈ 3,8 giây) với "
-    "chi phí trội ở thời gian sinh token đầu. Thiết kế hiện tại đã chuyển sang một đường duy nhất: "
-    "mọi câu quen thuộc cũng trả LLM TTFT; câu giữ chỗ khoảng hai giây che khoảng chờ; nạp ngữ "
-    "cảnh trước vẫn rút ngắn phần thân công cụ. Luồng phía khách và danh mục kiểm tra bảo mật, "
-    "vị trí đều đạt trên bộ kiểm thử tự động.",
-    "Trả lời các câu hỏi nghiên cứu: RQ1 được minh chứng qua kiến trúc và mã nguồn hoạt động; "
-    "RQ2, RQ3 và RQ4 đều đã có số liệu sơ bộ từ nhật ký phiên và bộ kiểm thử (độ trễ theo nhóm "
-    "xử lý của đợt A/B cũ, WER hai điều kiện âm thanh, độ đúng gọi công cụ chấm tay), nhưng ở "
-    "quy mô mẫu nhỏ và một người chấm; cần một đợt đo lại trên thiết kế một đường + câu giữ chỗ, "
-    "có gắn nhãn use case, kịch bản mù và nhiều người đọc để kết luận định lượng đầy đủ.",
-    "Hạn chế chính: quy mô đo còn nhỏ và thực hiện trong môi trường phát triển/thử nghiệm; chưa "
-    "khảo sát trên đường thật; phụ thuộc mô hình STT/LLM/TTS của bên thứ ba; chưa huấn luyện lại "
-    "mô hình nền tảng cho tiếng Việt trong khoang xe; số liệu P95 theo đường tắt phản ánh phiên "
-    "bản trước khi tắt tự gọi công cụ theo ý định nói.",
-    "Hướng phát triển: (1) tổ chức đợt đo chính thức trên thiết kế một đường + câu giữ chỗ, có "
-    "gắn nhãn use case và nhiều mức nhiễu để củng cố và mở rộng số liệu ở Bảng 6.3–6.7; "
-    "(2) rút gọn lời nhắc hệ thống và giảm số vòng công cụ để kéo P95 cảm nhận về dưới ngưỡng; "
-    "(3) thử mô hình ngôn ngữ có độ trễ token đầu thấp hơn hoặc kỹ thuật suy luận suy đoán; "
-    "(4) bổ sung ngôn ngữ và giọng vùng miền; (5) thử nghiệm thực địa có kiểm soát an toàn để "
-    "đo tác động đến thao tác tay – mắt khi lái.",
+    "Luận văn đã thực hiện chu trình thiết kế – xây dựng – đánh giá cho một trợ lý AI bằng giọng nói "
+    "hỗ trợ tài xế xe công nghệ. Từ các nghiệp vụ thường xuyên của tài xế, Chương 3 xác định các yêu cầu "
+    "chức năng gắn với thành phần phụ trách và năm yêu cầu phi chức năng (khả năng sử dụng, hiệu năng, "
+    "khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010 và đặc tả dưới "
+    "dạng kịch bản đo được. Các yêu cầu phi chức năng này là động lực để Chương 4 lựa chọn kiến trúc "
+    "microservices trên AWS, trong đó tác nhân hội thoại chạy trên container tách khỏi các dịch vụ nghiệp vụ "
+    "chạy trên FaaS, mỗi dịch vụ sở hữu dữ liệu riêng. Chương 5 hiện thực kiến trúc này thành nguyên mẫu "
+    "chạy đầu cuối trên WebRTC và SIP, kèm hạ tầng dạng mã cho từng dịch vụ.",
+    "Kết quả đánh giá ở Chương 6 được nêu kèm nguồn và cỡ mẫu. Trên 341 lượt hội thoại trích từ nhật ký phát "
+    "triển (05–06/09/2026), các lượt đi qua mô hình ngôn ngữ có P95 độ trễ phản hồi 3,75 giây, chưa đạt ngưỡng "
+    "2 giây; thành phần lớn nhất là thời gian mô hình sinh token đầu (Bảng 6.4, 6.5). Tỷ lệ lỗi từ tăng từ 3,1% "
+    "lên 7,3% khi thêm nhiễu mô phỏng khoang xe (một người đọc, 22 câu). Trên mẫu khoảng 39 lượt do một người "
+    "đánh giá, 88% lượt chọn đúng công cụ và 77% hoàn thành nghiệp vụ ngay lần đầu. Các tiêu chí khả năng sử "
+    "dụng, luồng khách hàng và báo cáo vận hành ngày đạt ở mức kiểm thử; danh mục bảo mật đạt 5/6 mục (mục che số điện thoại trong nhật ký còn phải kiểm tra lại). Số liệu khả năng mở rộng, "
+    "khả năng phục hồi và độ trễ trên thiết kế hiện hành sẽ được bổ sung sau đợt thử nghiệm trên môi trường mô phỏng.",
+    "Các hạn chế chính của luận văn:",
+    "- Cỡ mẫu nhỏ, dữ liệu lấy từ môi trường phát triển, chưa khảo sát trên đường thật.",
+    "- Thử tải và cố ý gây lỗi thực hiện trên môi trường mô phỏng, không trên hạ tầng AWS thật.",
+    "- Kết quả phụ thuộc mô hình STT, LLM, TTS của nhà cung cấp bên ngoài.",
+    "- Chưa huấn luyện lại mô hình nhận dạng giọng nói cho tiếng Việt trong khoang xe.",
+    "Hướng phát triển:",
+    "- Đo lại độ trễ trên thiết kế hiện hành với kịch bản có gắn nhãn, kịch bản mù và nhiều người đọc.",
+    "- Giảm thời gian sinh token đầu: rút gọn lời nhắc hệ thống, giảm số vòng gọi công cụ hoặc dùng mô hình nhanh hơn.",
+    "- Thử tải trên hạ tầng AWS thật với tự động điều chỉnh số bản sao tác nhân.",
+    "- Bổ sung ngôn ngữ và giọng vùng miền.",
+    "- Thử nghiệm thực địa có kiểm soát an toàn để đo tác động tới thao tác nhìn và chạm khi lái.",
 ]
 
 APPENDIX_A_INTRO = (
-    "Bảng A.1 liệt kê toàn bộ công cụ (function tool) mà trợ lý giọng nói có thể gọi ở gói ngôn "
-    "ngữ tiếng Việt tại thời điểm viết luận văn: 46 công cụ, trong đó khoảng 40 phục vụ tài xế "
-    "và phần còn lại phục vụ luồng khách. Gói tiếng Anh có tập công cụ đối xứng. Mô tả rút gọn từ "
-    "schema trong tệp app/voicebot/locales/vn/tools_definition.py của mã nguồn."
+    "Bảng A.1 liệt kê 45 công cụ (function tool) của gói ngôn ngữ tiếng Việt: 39 công cụ cho phiên tài xế "
+    "trong ứng dụng (trong đó confirm_trip và reject_trip cũng là tập công cụ của phiên mời nhận chuyến) và "
+    "7 công cụ cho phiên khách hàng (answer_app_faq dùng chung). Gói tiếng Anh có cùng 39 công cụ cho tài xế. "
+    "Mô tả rút gọn từ lược đồ công cụ trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
 )
 
 APPENDIX_A_TOOLS = [
     ("check_upcoming_trips", "Đếm/liệt kê chuyến theo phạm vi; mặc định chỉ nói số chuyến rồi hỏi chi tiết chuyến nào."),
-    ("create_walkup_trip", "Tài xế tự tạo chuyến đón đường; vào thẳng trạng thái đang chạy."),
+    ("create_walkup_trip", "Tài xế tạo chuyến cho khách vãng lai; chuyến được tạo ở trạng thái đã xác nhận."),
     ("refresh_latest_data", "Lấy dữ liệu trực tiếp cho chủ đề vừa trả lời (lịch, thu nhập, chuyến hiện tại…)."),
     ("get_current_trip_info", "Thông tin chuyến đang chạy: khách, số điện thoại, điểm đón – trả, giá, thời gian dự kiến, trạng thái."),
     ("suggest_next_stop", "Gợi ý nên đón/trả khách nào tiếp theo dựa trên vị trí tài xế và toàn bộ lịch trình."),
@@ -129,7 +129,6 @@ APPENDIX_A_TOOLS = [
     ("get_earnings_summary", "Xem thu nhập theo tuần (7 ngày) hoặc tháng (30 ngày)."),
     ("check_trip_history", "Xem chuyến đã hoàn thành hoặc bị hủy trong hôm nay."),
     ("get_driver_stats", "Xem thống kê tài xế: điểm đánh giá, tỷ lệ nhận, tỷ lệ hoàn thành, tổng số chuyến."),
-    ("get_bonus_info", "Xem các chương trình thưởng và vùng tăng giá đang hoạt động."),
     ("report_customer_no_show", "Báo cáo khách không xuất hiện tại điểm đón."),
     ("report_trip_issue", "Báo cáo sự cố trong chuyến: hành vi không phù hợp, hư hỏng xe, địa chỉ sai…"),
     ("extend_wait_time", "Yêu cầu thêm thời gian chờ khách tại điểm đón."),
@@ -175,7 +174,7 @@ APPENDIX_B_DIALOGUES = [
         ],
     ),
     (
-        "Kịch bản B.2 — Nhận chuyến qua cuộc gọi đề nghị (phiên SIP, tập công cụ hẹp)",
+        "Kịch bản B.2 — Nhận chuyến qua cuộc gọi mời nhận chuyến (phiên SIP, tập công cụ hẹp)",
         [
             "Trợ lý: Có chuyến mới đón tại 88 Pasteur, Quận 3. Bạn có nhận chuyến này không?",
             "Tài xế: Xác nhận nhận chuyến.  [LLM + công cụ — confirm_trip]",
@@ -185,22 +184,26 @@ APPENDIX_B_DIALOGUES = [
 ]
 
 APPENDIX_D_INTRO = (
-    "Bảng D.1 tóm tắt các biến môi trường chính để chạy llm-orchestrator. Giá trị nhạy cảm (khóa API, "
-    "token, mật khẩu, đường dẫn credential) không đưa vào luận văn; xem tệp mẫu "
-    "envs/.env.example trong mã nguồn. Cột cuối ghi giá trị dùng cho số liệu Chương 6."
+    "Bảng D.1 tóm tắt cấu hình chính của tác nhân hội thoại. Cấu hình không bí mật nằm trong tệp "
+    "envs/config.<môi trường>.toml, khóa bí mật nằm trong tệp .env không đưa vào kho mã nguồn; tệp mẫu "
+    "envs/config.example.toml và envs/.env.example được cung cấp để tái lập môi trường. Cột cuối ghi giá trị "
+    "dùng cho số liệu Chương 6."
 )
 
 APPENDIX_D_ENV = [
-    ("VOICE_AGENT_LANG", "Gói ngôn ngữ trợ lý", "vn (lựa chọn: vn / en)"),
+    ("AGENT_LANG", "Gói ngôn ngữ mặc định của tác nhân", "vn (lựa chọn: vn / en)"),
     ("STT_PROVIDER", "Nhà cung cấp nhận dạng giọng nói", "google (lựa chọn: openai / deepgram / inference)"),
     ("GOOGLE_STT_MODEL", "Mô hình STT của Google", "chirp_3"),
     ("STT_LANGUAGE", "Ngôn ngữ nhận dạng (BCP-47)", "vi-VN"),
-    ("LLM_PROVIDER", "Nhà cung cấp mô hình ngôn ngữ", "openai (lựa chọn: anthropic / google / kimi)"),
+    ("LLM_PROVIDER", "Nhà cung cấp mô hình ngôn ngữ", "openai (lựa chọn: gemini / kimi)"),
     ("LLM_MODEL", "Mô hình ngôn ngữ", "gpt-5.6-luna"),
     ("TTS_PROVIDER", "Nhà cung cấp tổng hợp giọng nói", "google (lựa chọn: elevenlabs / gemini / openai)"),
     ("GOOGLE_TTS_VOICE", "Giọng đọc tiếng Việt", "vi-VN-Chirp3-HD-Kore"),
-    ("GOOGLE_TTS_SPEAKING_RATE", "Tốc độ đọc", "0,95 (chậm nhẹ cho số và địa chỉ rõ hơn)"),
-    ("GOOGLE_TTS_PITCH", "Cao độ giọng", "-2,0 (sắc thái xuống nhẹ giọng Bắc)"),
+    ("GOOGLE_TTS_SPEAKING_RATE", "Tốc độ đọc", "0,95"),
+    ("GOOGLE_TTS_PITCH", "Cao độ giọng", "-2,0"),
+    ("STT_FALLBACK, LLM_FALLBACK, TTS_FALLBACK", "Nhà cung cấp dự phòng (danh sách, phân cách bằng dấu phẩy)", "Không cấu hình trong đợt đo"),
+    ("EXTERNAL_API_SERVICE_URL", "Địa chỉ Dịch vụ Chuyến đi và Điều phối", "http://localhost:8002 (cục bộ)"),
+    ("CALL_RECORDS_SERVICE_URL", "Địa chỉ Dịch vụ Nhật ký cuộc gọi", "http://localhost:8001 (cục bộ)"),
     ("LIVEKIT_URL", "Địa chỉ LiveKit Cloud", "wss://<tên-project>.livekit.cloud"),
 ]
 
@@ -208,9 +211,9 @@ APPENDIX_D_ENV = [
 APPENDIX_C_FIGURES = [
     ("thesis_screenshots/register.jpg", "Hình C.1. Màn hình đăng ký trở thành tài xế trên ứng dụng Czen Driver."),
     ("thesis_screenshots/trolyczen2.jpg", "Hình C.2. Biểu tượng trợ lý giọng nói ở trạng thái đang kết nối."),
-    ("thesis_screenshots/caidattroly.jpg", "Hình C.3. Cài đặt trợ lý: chọn ngôn ngữ và chế độ gọi khách mặc định (AI gọi hộ / tài xế nói trực tiếp)."),
+    ("thesis_screenshots/caidattroly.jpg", "Hình C.3. Cài đặt trợ lý: chọn ngôn ngữ và chế độ gọi khách mặc định (tác nhân gọi thay hoặc tài xế nói trực tiếp)."),
     ("thesis_screenshots/caidattroly2.jpg", "Hình C.4. Cài đặt trợ lý: kích hoạt rảnh tay bằng từ khóa đánh thức và các tùy chọn nhắc khách."),
-    ("thesis_screenshots/mapdetails.jpg", "Hình C.5. Điều hướng dẫn đường trên bản đồ: thông báo rẽ, khoảng cách và thời gian còn lại."),
+    ("thesis_screenshots/mapdetails.jpg", "Hình C.5. Màn hình dẫn đường trên bản đồ của ứng dụng tài xế (chức năng bản đồ, không thuộc trợ lý giọng nói): hướng rẽ, khoảng cách và thời gian còn lại."),
     ("thesis_screenshots/chuyendidangchay.jpg", "Hình C.6. Gợi ý lộ trình tối ưu cho nhiều điểm đón/trả trong danh sách chuyến đang chạy."),
     ("thesis_screenshots/themchuyen2.jpg", "Hình C.7. Tài xế tự tạo chuyến cho khách vãng lai, kèm các yêu cầu đặc biệt (hàng cồng kềnh, đi cùng trẻ em)."),
     ("thesis_screenshots/profile.jpg", "Hình C.8. Màn hình hồ sơ tài xế và các chỉ số vận hành (đánh giá, số chuyến, tỷ lệ nhận/hoàn thành)."),
@@ -220,15 +223,95 @@ APPENDIX_C_FIGURES = [
     ("thesis_screenshots/admin/taixe.png", "Hình C.12. Trang quản trị: danh sách tài xế, trạng thái trực tuyến và khóa tài khoản."),
     ("thesis_screenshots/admin/khachhang.png", "Hình C.13. Trang quản trị: danh sách khách hàng và trạng thái tài khoản."),
     ("thesis_screenshots/admin/nhatkicuocgoi.png", "Hình C.14. Trang quản trị: nhật ký cuộc gọi kèm tóm tắt nội dung hội thoại."),
-    ("thesis_screenshots/superadmin/tongquan2.png", "Hình C.15. Super Admin: tổng quan sức khỏe các dịch vụ backend (6/6 hoạt động)."),
-    ("thesis_screenshots/superadmin/config.png", "Hình C.16. Super Admin: cấu hình chuỗi STT–LLM–TTS của llm-orchestrator theo gói ngôn ngữ."),
-    ("thesis_screenshots/superadmin/logs.png", "Hình C.17. Super Admin: nhật ký log thời gian thực, dùng để đo độ trễ tổng hợp giọng nói (ttfb)."),
-    ("thesis_screenshots/superadmin/cuocgoi.png", "Hình C.18. Super Admin: bản ghi và tóm tắt cuộc gọi tổng hợp qua ops-service."),
+    ("thesis_screenshots/superadmin/tongquan2.png", "Hình C.15. Trang giám sát hệ thống: tình trạng hoạt động của các dịch vụ backend (6/6 đang chạy)."),
+    ("thesis_screenshots/superadmin/config.png", "Hình C.16. Trang giám sát hệ thống: cấu hình chuỗi STT – LLM – TTS của tác nhân hội thoại theo gói ngôn ngữ."),
+    ("thesis_screenshots/superadmin/logs.png", "Hình C.17. Trang giám sát hệ thống: nhật ký thời gian thực của các dịch vụ, dùng để đọc độ trễ tổng hợp giọng nói (TTFB)."),
+    ("thesis_screenshots/superadmin/cuocgoi.png", "Hình C.18. Trang giám sát hệ thống: bản ghi và tóm tắt cuộc gọi, lấy qua Dịch vụ Giám sát vận hành."),
 ]
+# Phụ lục E — ma trận đối chiếu yêu cầu (Requirements Traceability Matrix)
+APPENDIX_E_RTM = [
+    # (mã, RQ, thành phần, sequence, hiện thực chính, kịch bản Ch.6, kết quả)
+    ("FR-T01, FR-T02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S2, S3", "check_upcoming_trips, get_current_trip_info; routes/drivers.ts", "UC01", "Bảng 6.8"),
+    ("FR-T03", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S3", "update_trip_status; routes/trips.ts", "UC03", "Không đủ mẫu"),
+    ("FR-T04", "RQ4", "Dịch vụ Chuyến đi và Điều phối; LiveKit SIP", "S4", "confirm_trip, reject_trip; dispatchService.ts", "UC02", "Bảng 6.8"),
+    ("FR-T05", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S3", "request_cancel_trip, confirm_cancel_trip", "UC05", "Bảng 6.10"),
+    ("FR-T06, FR-T07", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "—", "create_walkup_trip; suggest_next_stop, get_optimal_route, get_trip_traffic", "—", "Chưa đánh giá riêng"),
+    ("FR-C01, FR-C02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối; LiveKit SIP", "S5", "call_customer, call_custom_number; callService.ts", "UC04", "Bảng 6.8, Bảng 6.14"),
+    ("FR-C03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Kênh liên lạc", "S5", "send_sms_to_customer; smsService.ts", "—", "Chưa đánh giá riêng"),
+    ("FR-C04", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "—", "get_customer_location", "—", "Bảng 6.13"),
+    ("FR-C05", "RQ4", "Dịch vụ Nhật ký cuộc gọi", "S6", "summarize_last_call; conversation_service.py", "—", "Bảng 6.14"),
+    ("FR-W01, FR-W02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "—", "create_reminder, extend_wait_time", "—", "Chưa đánh giá riêng"),
+    ("FR-I01, FR-I02", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "—", "report_customer_no_show, report_trip_issue", "UC06", "Bảng 6.10"),
+    ("FR-E01, FR-E02", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "—", "get_today_earnings, get_earnings_summary, set_driver_status", "UC08", "Bảng 6.8"),
+    ("FR-F01", "RQ4", "Tác nhân (truy xuất tri thức)", "—", "answer_app_faq; app/rag", "UC07", "Bảng 6.8"),
+    ("FR-L01", "—", "Tác nhân", "—", "voicebot/locales/vn, voicebot/locales/en", "—", "Chưa đánh giá riêng"),
+    ("FR-L02", "RQ4", "Tác nhân", "—", "Theo dõi im lặng trong session.py", "UC09", "Bảng 6.10"),
+    ("FR-L03", "RQ4", "Tác nhân", "S4", "Tập công cụ theo loại phiên trong locales/*/agent.py", "UC02", "Bảng 6.8"),
+    ("FR-A01", "—", "Ứng dụng tài xế", "S2", "wakeWordService.ts", "UC10", "Chưa đo"),
+    ("FR-A02", "—", "Tác nhân", "S5", "Cụm từ kết thúc chế độ nói trực tiếp", "—", "Chưa đánh giá riêng"),
+    ("FR-O01, FR-O02", "—", "Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi; tác nhân", "S7", "session_metrics.py; ops-service/src/services/reports; ReportsPage.tsx", "UC11", "Bảng 6.14"),
+    ("NFR-01", "RQ4", "Tác nhân", "S3", "Phân loại phiên; hành động chờ xác nhận", "Danh mục hành vi", "Bảng 6.10"),
+    ("NFR-02", "RQ2", "Tác nhân; nhà cung cấp AI", "S2, S3", "turn_filler.py; prefetch.py; context_store.py", "UC01, UC03, UC04, UC07", "Bảng 6.4, Bảng 6.6"),
+    ("NFR-03", "RQ1", "Tác nhân (ECS); các Lambda; DynamoDB", "—", "infra/llm-orchestrator/cfn.yaml (DesiredCount); infra/*/sam.yaml", "SC-01 đến SC-03", "Bảng 6.11"),
+    ("NFR-04", "RQ1", "Tác nhân; Dịch vụ Nhật ký cuộc gọi; nhà cung cấp AI", "S3, S6", "providers/fallback.py; backend_api.py; conversation_service.py", "RS-01 đến RS-05", "Bảng 6.12"),
+    ("NFR-05", "—", "Dịch vụ Định danh; mọi dịch vụ", "S1", "tokenService.ts; middleware xác minh JWT; tham số NoEcho", "Danh mục bảo mật", "Bảng 6.13"),
+    ("CON-01", "—", "Tác nhân", "S3", "backend_api.py", "Kiểm tra mã nguồn", "Bảng 6.13"),
+    ("CON-02", "—", "Mọi dịch vụ", "—", "Bảng DynamoDB riêng từng stack", "Kiểm tra cấu hình", "Bảng 5.6"),
+    ("CON-03", "—", "Dịch vụ Định danh", "S1", "tokenService.ts", "Kiểm tra mã nguồn", "Bảng 6.13"),
+    ("CON-04", "—", "Mọi dịch vụ", "—", "Nhật ký gắn room và conv", "Kiểm tra nhật ký", "Bảng 6.13"),
+]
+
+# Phụ lục F — đối chiếu sequence diagram với mã nguồn (đường dẫn tính từ src/backend/)
+APPENDIX_F_SEQUENCE = [
+    ("S1", "1", "POST /api/v1/auth/login", "identity-service/src/routes/auth.ts:109"),
+    ("S1", "6", "Ký access token, refresh token", "identity-service/src/services/tokenService.ts:16, :22"),
+    ("S1", "9", "POST /api/v1/auth/refresh", "identity-service/src/routes/auth.ts:142"),
+    ("S2", "1", "POST /api/v1/voice/token", "external-api-service/src/routes/voice.ts:47"),
+    ("S2", "4", "Tạo phòng driver-{số}-{UUID}", "external-api-service/src/routes/voice.ts:96"),
+    ("S2", "5", "Ký token LiveKit", "external-api-service/src/routes/voice.ts:157"),
+    ("S2", "6", "Phân công tác nhân", "external-api-service/src/routes/voice.ts:160; services/voiceSessionService.ts:38"),
+    ("S2", "10", "PUT /api/v1/drivers/me/session", "llm-orchestrator/app/services/backend_api.py:501; external-api-service/src/routes/drivers.ts:164"),
+    ("S2", "12", "GET /api/v1/drivers/me/context", "llm-orchestrator/app/services/backend_api.py:217; external-api-service/src/routes/drivers.ts:91"),
+    ("S3", "2, 4", "Chuỗi nhà cung cấp dự phòng, thời gian chờ 5 giây", "llm-orchestrator/app/providers/__init__.py:80, :98, :115"),
+    ("S3", "5", "Câu đệm sau 2 giây", "llm-orchestrator/app/voicebot/processors/turn_filler.py:19"),
+    ("S3", "7", "PATCH /api/v1/trips/{tripId}, thời gian chờ 8 giây", "llm-orchestrator/app/services/backend_api.py:242; external-api-service/src/routes/trips.ts:256"),
+    ("S4", "1", "POST /api/v1/trips/{tripId}/dispatch", "external-api-service/src/routes/trips.ts:540"),
+    ("S4", "2–5", "Tạo phòng, phân công tác nhân, quay số SIP", "external-api-service/src/services/dispatchService.ts:24"),
+    ("S4", "8", "confirm_trip, reject_trip cập nhật trạng thái", "llm-orchestrator/app/voicebot/processors/confirm_trip_flow.py:34"),
+    ("S5", "2", "POST /api/v1/calls/start, thời gian chờ 25 giây", "llm-orchestrator/app/services/backend_api.py:289; external-api-service/src/routes/calls.ts:46"),
+    ("S5", "2–4", "Ba chế độ gọi, quay số SIP", "external-api-service/src/services/callService.ts:123, :148; services/telephony/livekit.ts:19"),
+    ("S5", "6", "POST /api/v1/calls/complete", "llm-orchestrator/app/services/backend_api.py:390; external-api-service/src/routes/calls.ts:127"),
+    ("S5", "7–9", "POST /api/v1/sms/send", "llm-orchestrator/app/services/backend_api.py:322; external-api-service/src/routes/sms.ts:7; services/smsService.ts:5; external-channel-service/src/routes/sms.ts:7"),
+    ("S6", "2", "POST /api/v1/records, thử lại có giới hạn", "llm-orchestrator/app/services/conversation_service.py:270; call-records-service/src/routes/records.ts:6"),
+    ("S6", "5–7", "GET /api/v1/calls/latest, GET /api/v1/records", "external-api-service/src/routes/calls.ts:140; call-records-service/src/routes/records.ts:15, :28"),
+    ("S5", "11", "Lưu sự kiện vào channel-events", "external-channel-service/src/services/twilioMonitor.ts; services/events/dynamoStore.ts"),
+    ("S7", "1", "Sự kiện theo lịch source=ops.schedule", "ops-service/src/index.ts (handler); infra/ops-service/sam.yaml (ScheduleV2)"),
+    ("S7", "2–3", "GET /api/v1/records?date=&cursor=", "ops-service/src/services/reports/index.ts (fetchRecords); call-records-service/src/services/recordService.ts (listByDate)"),
+    ("S7", "4–6", "Tổng hợp; chấm LLM trên mẫu", "ops-service/src/services/reports/aggregate.ts; judge.ts"),
+    ("S7", "7–9", "Lưu daily-reports; GET /api/v1/reports/daily", "ops-service/src/services/reports/store.ts; ops-service/src/routes/reports.ts"),
+]
+
+# Phụ lục G — ánh xạ tên thành phần
+APPENDIX_G_NAMES = [
+    ("Dịch vụ Định danh", "identity-service", "Lambda, API Gateway REST, DynamoDB (accounts, driver-settings)", "Microservices; Data"),
+    ("Dịch vụ Chuyến đi và Điều phối", "external-api-service", "Lambda, API Gateway REST và WebSocket, DynamoDB (trips, ws-connections)", "Microservices; API Gateway; Data"),
+    ("Dịch vụ Kênh liên lạc", "external-channel-service", "Lambda, API Gateway REST, DynamoDB (channel-events)", "Microservices; Data"),
+    ("Dịch vụ Nhật ký cuộc gọi", "call-records-service", "Lambda, API Gateway REST, DynamoDB (call-records)", "Microservices; Data"),
+    ("Dịch vụ Giám sát vận hành", "ops-service", "Lambda, API Gateway REST, DynamoDB (daily-reports), EventBridge Scheduler", "Microservices; Data; Cross-cutting"),
+    ("Tác nhân hội thoại giọng nói", "llm-orchestrator", "ECS Fargate, ECR, CloudWatch Logs", "Real-time Communication & Conversational AI"),
+    ("Nền tảng truyền thông thời gian thực", "LiveKit Cloud", "Dịch vụ bên ngoài", "Real-time Communication & Conversational AI"),
+    ("Ứng dụng tài xế", "driver-app", "—", "Client"),
+    ("Ứng dụng khách hàng", "customer-app, customer-web", "S3 (bản web)", "Client"),
+    ("Trang quản trị điều hành", "admin-panel", "S3", "Client"),
+    ("Trang giám sát hệ thống", "super-admin-panel", "S3", "Client"),
+    ("Nhà cung cấp dịch vụ thoại", "Twilio", "Dịch vụ bên ngoài", "External Systems"),
+]
+
 # Style/section template. Prefer the original GVHD source if present; else reuse FINAL
 # via a temp copy so we never open+overwrite the same path.
 _SRC_PRIMARY = ROOT / "LUẬN VĂN THẠC SĨ _ TRƯƠNG BÁ CHÍNH.docx"
-OUT = ROOT / "LUAN_VAN_THAC_SI_FINAL.docx"
+# THESIS_OUT lets a preview build run while Word holds the FINAL file open.
+OUT = Path(os.environ["THESIS_OUT"]) if os.environ.get("THESIS_OUT") else ROOT / "LUAN_VAN_THAC_SI_FINAL.docx"
 if _SRC_PRIMARY.is_file():
     SRC = _SRC_PRIMARY
 elif OUT.is_file():
@@ -265,6 +348,12 @@ TEXT_BLACK = RGBColor(0, 0, 0)
 
 REFERENCES = [
     (
+        "ref_aws_waf2024",
+        "Amazon Web Services. (2024). AWS Well-Architected Framework (Reliability Pillar; "
+        "Performance Efficiency Pillar). https://docs.aws.amazon.com/wellarchitected/latest/framework/",
+        "Amazon Web Services, 2024",
+    ),
+    (
         "ref_alvestrand2021",
         "Alvestrand, H. (2021). Overview: Real-Time Protocols for Browser-Based Applications "
         "(RFC 8825). IETF. https://www.rfc-editor.org/rfc/rfc8825",
@@ -277,6 +366,12 @@ REFERENCES = [
         "Avances en Interacción Humano-Computadora, 9(1), 11–15. "
         "https://doi.org/10.47756/aihc.y9i1.138",
         "Alvarado Contreras et al., 2024",
+    ),
+    (
+        "ref_bass2021",
+        "Bass, L., Clements, P., & Kazman, R. (2021). Software Architecture in Practice (4th ed.). "
+        "Addison-Wesley. ISBN 978-0-13-688597-9",
+        "Bass et al., 2021",
     ),
     (
         "ref_chen2024_voicebench",
@@ -294,10 +389,39 @@ REFERENCES = [
         "Dingus et al., 2016",
     ),
     (
+        "ref_dragoni2017",
+        "Dragoni, N., Giallorenzo, S., Lluch Lafuente, A., Mazzara, M., Montesi, F., Mustafin, R., & Safina, L. (2017). "
+        "Microservices: Yesterday, today, and tomorrow. In M. Mazzara & B. Meyer (Eds.), "
+        "Present and Ulterior Software Engineering (pp. 195–216). Springer. "
+        "https://doi.org/10.1007/978-3-319-67425-4_12",
+        "Dragoni et al., 2017",
+    ),
+    (
         "ref_iihs_distracted",
         "Insurance Institute for Highway Safety. (n.d.). Distracted driving. "
         "https://www.iihs.org/research-areas/distracted-driving",
         "Insurance Institute for Highway Safety, n.d.",
+    ),
+    (
+        "ref_iso25010_2023",
+        "ISO/IEC. (2023). ISO/IEC 25010:2023 Systems and software engineering — Systems and software "
+        "Quality Requirements and Evaluation (SQuaRE) — Product quality model. "
+        "https://www.iso.org/standard/78176.html",
+        "ISO/IEC, 2023",
+    ),
+    (
+        "ref_jonas2019",
+        "Jonas, E., Schleier-Smith, J., Sreekanti, V., Tsai, C.-C., Khandelwal, A., Pu, Q., Shankar, V., "
+        "Carreira, J., Krauth, K., Yadwadkar, N., Gonzalez, J. E., Popa, R. A., Stoica, I., & Patterson, D. A. (2019). "
+        "Cloud Programming Simplified: A Berkeley View on Serverless Computing. arXiv:1902.03383. "
+        "https://arxiv.org/abs/1902.03383",
+        "Jonas et al., 2019",
+    ),
+    (
+        "ref_lewis_fowler2014",
+        "Lewis, J., & Fowler, M. (2014, March 25). Microservices: A definition of this new architectural term. "
+        "https://martinfowler.com/articles/microservices.html",
+        "Lewis & Fowler, 2014",
     ),
     (
         "ref_livekit_agents",
@@ -312,6 +436,23 @@ REFERENCES = [
         "Lyu et al., 2025",
     ),
     (
+        "ref_nhtsa2013",
+        "National Highway Traffic Safety Administration. (2013). Visual-Manual NHTSA Driver Distraction "
+        "Guidelines for In-Vehicle Electronic Devices. Federal Register, 78 FR 24817. https://www.transportation.gov/regulations/federal-register-documents/2013-09883",
+        "National Highway Traffic Safety Administration, 2013",
+    ),
+    (
+        "ref_newman2021",
+        "Newman, S. (2021). Building Microservices: Designing Fine-Grained Systems (2nd ed.). "
+        "O'Reilly Media. ISBN 978-1-492-03402-5",
+        "Newman, 2021",
+    ),
+    (
+        "ref_richardson2018",
+        "Richardson, C. (2018). Microservices Patterns: With examples in Java. Manning. ISBN 978-1-61729-454-9",
+        "Richardson, 2018",
+    ),
+    (
         "ref_schick2023",
         "Schick, T., Dwivedi-Yu, J., Dessì, R., Raileanu, R., Lomeli, M., Hambro, E., "
         "Zettlemoyer, L., Cancedda, N., & Scialom, T. (2023). "
@@ -319,39 +460,162 @@ REFERENCES = [
         "arXiv:2302.04761. https://arxiv.org/abs/2302.04761",
         "Schick et al., 2023",
     ),
+    (
+        "ref_soldani2018",
+        "Soldani, J., Tamburri, D. A., & Van Den Heuvel, W.-J. (2018). The pains and gains of microservices: "
+        "A Systematic grey literature review. Journal of Systems and Software, 146, 215–232. "
+        "https://doi.org/10.1016/j.jss.2018.09.082",
+        "Soldani et al., 2018",
+    ),
+    (
+        "ref_stivers2009",
+        "Stivers, T., Enfield, N. J., Brown, P., Englert, C., Hayashi, M., Heinemann, T., Hoymann, G., "
+        "Rossano, F., de Ruiter, J. P., Yoon, K.-E., & Levinson, S. C. (2009). Universals and cultural "
+        "variation in turn-taking in conversation. Proceedings of the National Academy of Sciences, "
+        "106(26), 10587–10592. https://doi.org/10.1073/pnas.0903616106",
+        "Stivers et al., 2009",
+    ),
 ]
 
+
+# ---- Độ rộng cột bảng ----
+# Word chia đều cột khi không đặt độ rộng, làm cột mã (UC01, NFR-02) rộng bằng
+# cột mô tả dài. Độ rộng được tính từ bề rộng chữ đo bằng font Times New Roman
+# thật: cột ngắn vừa một dòng, cột chữ không hẹp hơn từ dài nhất, phần còn lại
+# chia cho cột chữ theo lượng chữ.
+CELL_PAD_CM = 2 * 90 / 567 + 0.12   # lề trái + phải của ô (tblCellMar 90 twips) + dư an toàn
+SHORT_MAX_CM = 3.0                  # cột có mọi ô vừa một dòng trong mức này là cột ngắn
+_TNR = {}
+
+
+def _font(bold: bool):
+    if bold not in _TNR:
+        try:
+            from PIL import ImageFont
+            name = "Times New Roman Bold.ttf" if bold else "Times New Roman.ttf"
+            _TNR[bold] = ImageFont.truetype(f"/System/Library/Fonts/Supplemental/{name}", 110)
+        except Exception:  # không có PIL hoặc font: dùng ước lượng
+            _TNR[bold] = None
+    return _TNR[bold]
+
+
+def text_cm(text: str, bold: bool = False) -> float:
+    """Bề rộng một dòng chữ ở cỡ TABLE_PT (11 pt), đơn vị cm."""
+    font = _font(bold)
+    if font is None:
+        return len(text) * 0.21
+    return font.getlength(text) / 10 / 72 * 2.54
+
+
+def table_layout(rows: list[list[str]], usable_cm: float) -> tuple[list[float], list[bool]]:
+    n = max(len(r) for r in rows)
+    cols = [[(r[c] if c < len(r) else "") for r in rows] for c in range(n)]
+    one_line, min_word, weight = [], [], []
+    for col in cols:
+        head, body = col[0], (col[1:] or [""])
+        body_line = max(text_cm(x) for x in body)
+        head_word = max((text_cm(w, True) for w in head.split()), default=0.0)
+        body_word = max((text_cm(w) for x in body for w in x.split()), default=0.0)
+        one_line.append(max(body_line, head_word) + CELL_PAD_CM)
+        min_word.append(min(max(body_word, head_word), 4.0) + CELL_PAD_CM)
+        weight.append(max(sum(text_cm(x) for x in body) / len(body), 1.5) ** 0.75)
+    short = [one_line[i] <= SHORT_MAX_CM + CELL_PAD_CM for i in range(n)]
+    # Quá nhiều cột ngắn thì cột chữ bị ép: chuyển cột ngắn rộng nhất sang cột chữ.
+    while sum(one_line[i] for i in range(n) if short[i]) > usable_cm * 0.6 and any(short):
+        widest = max((i for i in range(n) if short[i]), key=lambda i: one_line[i])
+        short[widest] = False
+    if all(short):
+        scale = usable_cm / sum(one_line)
+        return [w * scale for w in one_line], short
+    widths = [one_line[i] if short[i] else 0.0 for i in range(n)]
+    free = usable_cm - sum(widths)
+    # Chia lặp: cột nào có phần chia nhỏ hơn từ dài nhất thì giữ mức đó,
+    # phần còn lại chia tiếp theo trọng số cho các cột chữ khác.
+    pending = [i for i in range(n) if not short[i]]
+    while pending:
+        total_w = sum(weight[i] for i in pending)
+        pinned = [i for i in pending if free * weight[i] / total_w < min_word[i]]
+        if not pinned:
+            for i in pending:
+                widths[i] = free * weight[i] / total_w
+            break
+        for i in pinned:
+            widths[i] = min_word[i]
+            free -= min_word[i]
+            pending.remove(i)
+    total = sum(widths)
+    if total > usable_cm:  # chỉ xảy ra với bảng quá nhiều cột: thu đều
+        widths = [w * usable_cm / total for w in widths]
+    return widths, short
+
+
+_BREAK_AFTER = re.compile(r"([/_.?&,=-])")
+
+
+def soft_breaks(text: str, width_cm: float) -> str:
+    """Cho phép Word ngắt định danh dài (đường dẫn, tên công cụ, biến môi trường)
+    sau / _ . ? & , = - thay vì cắt giữa chữ: chèn zero-width space khi từ rộng hơn ô."""
+    out = []
+    for word in text.split(" "):
+        if text_cm(word) + CELL_PAD_CM > width_cm:
+            word = _BREAK_AFTER.sub("\\1\u200b", word)
+        out.append(word)
+    return " ".join(out)
+
 ABSTRACT_PARAS = [
-    "Trong hoạt động vận tải hành khách bằng xe công nghệ, tài xế thường xuyên phải thực hiện nhiều nghiệp vụ trên điện thoại trong lúc điều khiển phương tiện, tiềm ẩn nguy cơ mất an toàn giao thông. Luận văn này đề xuất, thiết kế, triển khai và đánh giá một hệ thống trợ lý AI bằng giọng nói hỗ trợ tài xế xe công nghệ, cho phép tương tác rảnh tay để thực hiện các nghiệp vụ cốt lõi trong vận hành chuyến đi.",
-    "Về phạm vi chức năng, hệ thống tập trung vào quản lý chuyến đi bằng giọng nói, hỗ trợ liên lạc/xác nhận với khách hàng, nhắc lịch và câu hỏi thường gặp, cùng cơ chế kích hoạt rảnh tay trên ứng dụng tài xế (từ khóa đánh thức). Ứng dụng và dịch vụ quản lý chuyến đóng vai trò nền tảng tích hợp, không nhằm xây dựng toàn bộ hệ thống quản lý vận tải hoàn chỉnh.",
-    "Về kỹ thuật, giải pháp dựa trên kiến trúc nhiều dịch vụ nhỏ phối hợp (microservices) kết hợp truyền thông thời gian thực (WebRTC và SIP), chuỗi xử lý nhận dạng giọng nói – mô hình ngôn ngữ – tổng hợp giọng nói (STT–LLM–TTS) có thể thay nhà cung cấp, và cơ chế gọi công cụ (function calling) để thực thi nghiệp vụ qua giao diện lập trình ứng dụng (API). Điểm thiết kế trọng tâm hiện tại là một đường xử lý duy nhất STT → LLM kèm công cụ → TTS, kèm câu giữ chỗ ngắn khoảng hai giây khi phản hồi chưa kịp phát âm — câu giữ chỗ không chứa sự kiện chuyến hay số liệu. Nạp ngữ cảnh trước vẫn giúp rút ngắn phần thân công cụ. Hệ thống được đánh giá theo: (i) độ trễ phản hồi — thời gian từ khi tài xế dứt câu đến khi trợ lý bắt đầu nói, với ngưỡng định hướng phân vị 95 (P95) không vượt quá 2 giây; (ii) tỷ lệ lỗi từ khi nhận dạng giọng nói (Word Error Rate – WER); (iii) độ chính xác gọi công cụ; và (iv) tỷ lệ hoàn thành nghiệp vụ trên bộ kịch bản thử nghiệm.",
-    "Kết quả trên nguyên mẫu, ở quy mô mẫu nhỏ trong môi trường thử nghiệm: một đợt A/B khi còn bật đường tắt (n = 341 lượt) cho thấy đường tắt khi đó bám ngưỡng (P95 khoảng 2,0 giây) còn đường đủ qua mô hình ngôn ngữ chưa đạt (P95 khoảng 3,8 giây), chi phí trội ở thời gian sinh token đầu. Thiết kế hiện hành đã tắt đường tắt tự gọi công cụ; mọi câu quen thuộc cũng trả chi phí TTFT của LLM, và câu giữ chỗ che khoảng chờ cảm nhận. Các quan sát sơ bộ về WER trong nhiễu và độ chính xác gọi công cụ được trình bày kèm phân tích lỗi; việc khẳng định định lượng đầy đủ cần một đợt đo lại trên thiết kế một đường + câu giữ chỗ, với kịch bản mù và nhiều người tham gia.",
-    "Từ khóa: Trợ lý AI bằng giọng nói, tài xế xe công nghệ, STT, TTS, LLM, gọi công cụ, WebRTC, P95, WER.",
+    "Tài xế xe công nghệ thường phải thao tác trên điện thoại trong lúc lái để xem chuyến, cập nhật trạng thái và liên lạc với khách hàng, làm tăng nguy cơ mất an toàn giao thông. Luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các nghiệp vụ này mà không cần dùng tay.",
+    "Trợ lý hỗ trợ tiếng Việt là ngôn ngữ chính và tiếng Anh là ngôn ngữ thứ hai, với ba nhóm nghiệp vụ: tra cứu và quản lý chuyến đi, liên lạc với khách hàng, hỗ trợ trong lúc vận hành (nhắc giờ đón, trả lời câu hỏi thường gặp). Trợ lý hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
+    "Về phương pháp, luận văn đặc tả năm yêu cầu phi chức năng theo mô hình chất lượng ISO/IEC 25010 (khả năng sử dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật), từ đó lập luận lựa chọn kiến trúc microservices triển khai trên AWS. Tác nhân hội thoại giọng nói xử lý mỗi lượt theo chuỗi nhận dạng giọng nói – mô hình ngôn ngữ lớn kèm gọi công cụ – tổng hợp giọng nói (STT – LLM – TTS), có nhà cung cấp dự phòng cho từng khâu và câu đệm khi phản hồi chậm quá 2 giây. Các nghiệp vụ được thực hiện qua các dịch vụ riêng, mỗi dịch vụ sở hữu dữ liệu của mình.",
+    "Hệ thống được đánh giá theo từng yêu cầu: độ trễ phản hồi (ngưỡng định hướng P95 ≤ 2 giây), tỷ lệ lỗi từ khi nhận dạng giọng nói, độ chính xác gọi công cụ, tỷ lệ hoàn thành nghiệp vụ, khả năng mở rộng và khả năng phục hồi. Chương 6 trình bày số liệu kèm cỡ mẫu và giới hạn của từng phép đo; trong đó phân tích nhật ký hội thoại xác định thời gian mô hình ngôn ngữ sinh token đầu là thành phần lớn nhất của độ trễ phản hồi.",
+    "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, AWS, ISO/IEC 25010, gọi công cụ, STT, LLM, TTS, P95.",
 ]
 
 # Danh mục viết tắt (EN) — chuẩn luận văn VN: ABC; lần đầu trong bài vẫn viết đủ + ngoặc
 # Cột: viết tắt | tiếng Anh | tiếng Việt
 ABBREVIATIONS_EN = [
+    ("ADR", "Architecture Decision Record", "Bản ghi quyết định kiến trúc"),
     ("AI", "Artificial Intelligence", "Trí tuệ nhân tạo"),
     ("API", "Application Programming Interface", "Giao diện lập trình ứng dụng"),
+    ("AWS", "Amazon Web Services", "Nền tảng điện toán đám mây của Amazon"),
+    ("CLI", "Command-Line Interface", "Giao diện dòng lệnh"),
+    ("CON", "Constraint", "Ràng buộc kiến trúc (mã ở Chương 3)"),
+    ("ECR", "Elastic Container Registry", "Kho image container của AWS"),
+    ("ECS", "Elastic Container Service", "Dịch vụ điều phối container của AWS"),
+    ("FaaS", "Function as a Service", "Hàm như dịch vụ"),
     ("FAQ", "Frequently Asked Questions", "Câu hỏi thường gặp"),
     ("FR", "Functional Requirement", "Yêu cầu chức năng"),
     ("HTTP", "Hypertext Transfer Protocol", "Giao thức truyền siêu văn bản"),
+    ("HTTPS", "Hypertext Transfer Protocol Secure", "Giao thức HTTP có mã hóa"),
+    ("IAM", "Identity and Access Management", "Quản lý định danh và quyền truy cập"),
+    ("IIHS", "Insurance Institute for Highway Safety", "Viện Bảo hiểm An toàn Đường cao tốc (Hoa Kỳ)"),
     ("JWT", "JSON Web Token", "Mã thông báo web JSON (xác thực)"),
     ("LLM", "Large Language Model", "Mô hình ngôn ngữ lớn"),
+    ("MSA", "Microservices Architecture", "Kiến trúc microservices"),
     ("NFR", "Non-Functional Requirement", "Yêu cầu phi chức năng"),
-    ("P95", "95th percentile", "Phân vị 95 — mốc độ trễ mà khoảng 95% lần đo không vượt quá"),
+    ("NHTSA", "National Highway Traffic Safety Administration", "Cục An toàn Giao thông Đường cao tốc (Hoa Kỳ)"),
+    ("P50", "50th percentile (median)", "Trung vị: một nửa số lần đo nhanh hơn hoặc bằng mức này"),
+    ("P90", "90th percentile", "Mức thời gian mà 90% số lần đo nhanh hơn hoặc bằng"),
+    ("P95", "95th percentile", "Mức thời gian mà 95% số lần đo nhanh hơn hoặc bằng; chỉ 5% lần chậm nhất vượt mức này"),
     ("PSTN", "Public Switched Telephone Network", "Mạng điện thoại công cộng"),
     ("RAG", "Retrieval-Augmented Generation", "Sinh câu trả lời có truy xuất tri thức"),
+    ("REST", "Representational State Transfer", "Kiểu thiết kế API qua HTTP"),
     ("RQ", "Research Question", "Câu hỏi nghiên cứu"),
+    ("SAM", "Serverless Application Model", "Mô hình ứng dụng serverless của AWS (hạ tầng dạng mã)"),
+    ("SDK", "Software Development Kit", "Bộ công cụ phát triển phần mềm"),
     ("SIP", "Session Initiation Protocol", "Giao thức khởi tạo phiên thoại"),
     ("SMS", "Short Message Service", "Dịch vụ tin nhắn ngắn"),
     ("STT", "Speech-to-Text", "Nhận dạng giọng nói thành chữ"),
+    ("TTFB", "Time to First Byte", "Thời gian đến khi nhận byte (âm thanh) đầu tiên"),
+    ("TTL", "Time to Live", "Thời hạn tồn tại của bản ghi hoặc token"),
     ("TTS", "Text-to-Speech", "Tổng hợp giọng nói từ chữ"),
-    ("UC", "Use Case", "Tình huống sử dụng"),
+    ("UC", "Use Case", "Trường hợp sử dụng"),
+    ("URL", "Uniform Resource Locator", "Địa chỉ tài nguyên trên mạng"),
+    ("UUID", "Universally Unique Identifier", "Mã định danh duy nhất"),
     ("VAD", "Voice Activity Detection", "Phát hiện hoạt động giọng nói"),
+    ("VPC", "Virtual Private Cloud", "Mạng riêng ảo trên AWS"),
     ("WebRTC", "Web Real-Time Communication", "Truyền thông thời gian thực trên web/ứng dụng"),
     ("WER", "Word Error Rate", "Tỷ lệ lỗi từ khi nhận dạng giọng nói (so với câu đúng)"),
+    ("WSS", "WebSocket Secure", "WebSocket có mã hóa"),
 ]
 
 # Front-matter metadata (Vietnamese academic cover — do not clone English UofT-style template)
@@ -591,6 +855,29 @@ def build() -> Path:
         else:
             body.append(el)
 
+    landscape_open = False
+
+    def section_break(landscape: bool, host=None):
+        """Kết thúc section hiện tại bằng một bản sao sectPr chính (giữ footer số trang,
+        không đánh số lại). landscape=True: section vừa kết thúc là trang A4 ngang."""
+        sp = deepcopy(sectPr)
+        for tag in ("w:pgNumType", "w:titlePg"):
+            for el in sp.findall(qn(tag)):
+                sp.remove(el)
+        if landscape:
+            sz = sp.find(qn("w:pgSz"))
+            sz.set(qn("w:w"), "16838")
+            sz.set(qn("w:h"), "11906")
+            sz.set(qn("w:orient"), "landscape")
+            mar = sp.find(qn("w:pgMar"))
+            for side, cm in (("top", 2.0), ("bottom", 2.0), ("left", 2.5), ("right", 2.5)):
+                mar.set(qn(f"w:{side}"), str(int(cm * 567)))
+        if host is None:
+            p = OxmlElement("w:p")
+            insert_before_sect(p)
+            host = Paragraph(p, new)
+        host._p.get_or_add_pPr().append(sp)
+
     def clone_para(paragraph):
         return deepcopy(paragraph._element)
 
@@ -660,6 +947,24 @@ def build() -> Path:
         if bookmark:
             add_bookmark(paragraph, bookmark, bookmark_id)
             bookmark_id += 1
+        return paragraph
+
+    def add_list_item(raw: str):
+        """Gạch đầu dòng (–) hoặc danh sách số, thụt lề treo; giữ chữ đậm của nhãn đầu ý."""
+        m = re.match(r"^(- |\d+\. )(.*)$", raw)
+        marker = "–" if m.group(1) == "- " else m.group(1).strip()
+        body_text = m.group(2).replace("`", "")
+        paragraph = add_styled("", "Normal", first_line_indent=False, space_after=3)
+        pf = paragraph.paragraph_format
+        pf.left_indent = Cm(1.0)
+        pf.first_line_indent = Cm(-0.6)
+        pf.tab_stops.add_tab_stop(Cm(1.0))
+        run = paragraph.add_run(marker + "\t")
+        set_run_font(run, BODY_PT)
+        for k, seg in enumerate(body_text.split("**")):
+            if seg:
+                run = paragraph.add_run(seg.replace("*", ""))
+                set_run_font(run, BODY_PT, bold=(k % 2 == 1))
         return paragraph
 
     def add_blank(n: int = 1):
@@ -791,7 +1096,9 @@ def build() -> Path:
     def add_figure_caption(text: str):
         p = add_styled(text, "Normal", first_line_indent=False, space_after=6, line_spacing=1.0)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.keep_with_next = True
+        # Chú thích hình nằm dưới hình: hình giữ với chú thích (keep_with_next ở đoạn ảnh),
+        # còn chú thích không kéo đoạn phía sau theo, tránh đẩy cả khối sang trang mới.
+        p.paragraph_format.keep_with_next = False
         for run in p.runs:
             set_run_font(run, CAPTION_PT, bold=True)
         return p
@@ -815,6 +1122,8 @@ def build() -> Path:
         pf = paragraph.paragraph_format
         pf.space_before = Pt(6)
         pf.space_after = Pt(6)
+        # Chú thích nằm dưới hình: giữ hình cùng trang với chú thích.
+        pf.keep_with_next = True
         return paragraph
 
     def set_cell_border(cell):
@@ -845,9 +1154,13 @@ def build() -> Path:
         tcPr.append(shd)
 
     def add_bordered_table(data_rows: list[list[str]]):
-        cols = len(data_rows[0])
+        cols = max(len(r) for r in data_rows)
+        data_rows = [r + [""] * (cols - len(r)) for r in data_rows]
+        usable_cm = 21.0 - MARGIN_LEFT_CM - MARGIN_RIGHT_CM
+        widths, short = table_layout(data_rows, usable_cm)
         table = new.add_table(rows=len(data_rows), cols=cols)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        table.autofit = False
         tbl = table._tbl
         body.remove(tbl)
         insert_before_sect(tbl)
@@ -855,6 +1168,24 @@ def build() -> Path:
         if tblPr is None:
             tblPr = OxmlElement("w:tblPr")
             tbl.insert(0, tblPr)
+        for tag in ("w:tblW", "w:tblLayout", "w:tblCellMar"):
+            old = tblPr.find(qn(tag))
+            if old is not None:
+                tblPr.remove(old)
+        tbl_w = OxmlElement("w:tblW")
+        tbl_w.set(qn("w:w"), str(int(sum(widths) * 567)))
+        tbl_w.set(qn("w:type"), "dxa")
+        tblPr.append(tbl_w)
+        layout = OxmlElement("w:tblLayout")
+        layout.set(qn("w:type"), "fixed")
+        tblPr.append(layout)
+        cell_mar = OxmlElement("w:tblCellMar")
+        for edge, val in (("top", 40), ("bottom", 40), ("left", 90), ("right", 90)):
+            el = OxmlElement(f"w:{edge}")
+            el.set(qn("w:w"), str(val))
+            el.set(qn("w:type"), "dxa")
+            cell_mar.append(el)
+        tblPr.append(cell_mar)
         borders = OxmlElement("w:tblBorders")
         for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
             el = OxmlElement(f"w:{edge}")
@@ -867,6 +1198,9 @@ def build() -> Path:
         if old is not None:
             tblPr.remove(old)
         tblPr.append(borders)
+        grid = tbl.tblGrid
+        for gc, w in zip(grid.findall(qn("w:gridCol")), widths):
+            gc.set(qn("w:w"), str(int(w * 567)))
         for r_idx, row in enumerate(data_rows):
             tr = table.rows[r_idx]._tr
             trPr = tr.get_or_add_trPr()
@@ -880,14 +1214,24 @@ def build() -> Path:
                 trPr.append(tbl_header)
             for c_idx, val in enumerate(row):
                 cell = table.cell(r_idx, c_idx)
-                cell.text = val
+                cell.width = Cm(widths[c_idx])
+                cell.text = soft_breaks(val, widths[c_idx])
                 set_cell_border(cell)
+                tcPr = cell._tc.get_or_add_tcPr()
+                v_align = OxmlElement("w:vAlign")
+                v_align.set(qn("w:val"), "center")
+                tcPr.append(v_align)
                 if r_idx == 0:
                     shade_cell(cell)
                 for p in cell.paragraphs:
-                    p.paragraph_format.space_before = Pt(4)
-                    p.paragraph_format.space_after = Pt(4)
+                    p.paragraph_format.space_before = Pt(2)
+                    p.paragraph_format.space_after = Pt(2)
                     p.paragraph_format.line_spacing = REF_LINE
+                    p.paragraph_format.first_line_indent = Cm(0)
+                    p.alignment = (WD_ALIGN_PARAGRAPH.CENTER if (r_idx == 0 or short[c_idx])
+                                   else WD_ALIGN_PARAGRAPH.LEFT)
+                    if r_idx == 0:
+                        p.paragraph_format.keep_with_next = True   # hàng tiêu đề không rời hàng đầu
                     for run in p.runs:
                         set_run_font(run, TABLE_PT, bold=(r_idx == 0))
         return table
@@ -969,64 +1313,29 @@ def build() -> Path:
     for para in THANKS_PARAS:
         add_styled(para, "Normal", first_line_indent=True)
 
+    def collect_captions(prefix: str) -> list[str]:
+        """Captions in chapter order, read from the chapter drafts so the lists never drift."""
+        found: list[str] = []
+        for md in CHAPTER_MDS:
+            for line in md.read_text(encoding="utf-8").splitlines():
+                if line.startswith("## Tài liệu trích dẫn") or line.startswith("## Self-review"):
+                    break
+                t = line.strip()
+                if t.startswith(f"**{prefix} ") and "**" in t[2:]:
+                    found.append(clean_inline(t).strip().rstrip("."))
+        return found
+
     add_heading1_new_page("Danh sách hình ảnh", bookmark="ds_hinh")
-    for caption in [
-        "Hình 4.1. Sơ đồ kiến trúc tổng thể (ứng dụng – LiveKit – llm-orchestrator – external-api-service / external-channel-service và dịch vụ liên quan)",
-        "Hình 4.2. Chuỗi xử lý hội thoại một đường: STT → LLM kèm công cụ → TTS, kèm câu giữ chỗ khoảng hai giây",
-        "Hình 5.1. Màn hình chào (landing) của ứng dụng tài xế Czen Driver",
-        "Hình 5.2. Màn hình đăng nhập tài xế bằng số điện thoại và mật khẩu",
-        "Hình 5.3. Màn hình bản đồ sau khi đăng nhập và bật trạng thái hoạt động",
-        "Hình 5.4. Phiên trợ lý giọng nói — biểu tượng trợ lý ở trạng thái đang xử lý",
-        "Hình 5.5. Hội thoại mẫu: tra cứu lịch trình và thông tin chuyến bằng giọng nói",
-        "Hình 6.1. Độ trễ cảm nhận P50/P95 theo đường xử lý — đợt A/B khi còn đường tắt (n = 341 lượt, 2026-09-05..06)",
-        "Hình 6.2. So sánh WER điều kiện yên tĩnh (3,1%) và nhiễu khoang xe giả lập (7,3%)",
-    ]:
-        add_styled(caption, "Normal", first_line_indent=False)
-    for _p, caption in APPENDIX_C_FIGURES:
+    for caption in collect_captions("Hình") + [c for _p, c in APPENDIX_C_FIGURES]:
         add_styled(caption, "Normal", first_line_indent=False)
 
     add_heading1_new_page("Danh sách bảng", bookmark="ds_bang")
-    for caption in [
-        "Bảng 1.1. Chỉ mục ánh xạ mục tiêu nghiên cứu – câu hỏi nghiên cứu – chương trả lời",
-        "Bảng 2.1. Các chỉ số đánh giá và ý nghĩa thực tiễn",
-        "Bảng 3.1. Ba chế độ gọi khách (yêu cầu hành vi)",
-        "Bảng 3.2. Thành phần hệ thống và ràng buộc tích hợp",
-        "Bảng 3.3. Yêu cầu chức năng nhóm chuyến đi (FR-T)",
-        "Bảng 3.4. Yêu cầu chức năng nhóm liên lạc khách (FR-C)",
-        "Bảng 3.5. Yêu cầu chức năng cho chờ đón, sự cố, thu nhập, FAQ và ngôn ngữ",
-        "Bảng 3.6. Việc ngoài lượt thoại công cụ: từ khóa đánh thức và kết thúc bridge",
-        "Bảng 3.7. Ánh xạ nhóm yêu cầu chức năng sang dịch vụ",
-        "Bảng 3.8. Use case cốt lõi",
-        "Bảng 3.9. Nhóm NFR chuẩn, mã chi tiết và tính chất MSA liên quan",
-        "Bảng 3.10. NFR nhìn từ trải nghiệm lái xe (bổ sung diễn giải)",
-        "Bảng 3.11. Từ yêu cầu sang chỉ số",
-        "Bảng 4.1. Vai trò từng phần (nhìn theo việc)",
-        "Bảng 4.2. Các đường gọi chính",
-        "Bảng 4.2a. So sánh các phương án kiến trúc đã cân nhắc",
-        "Bảng 4.2b. Chuỗi bước mở phiên trong ứng dụng",
-        "Bảng 4.3. Ba đường xử lý một câu nói",
-        "Bảng 4.4. Loại phiên và tập việc mở",
-        "Bảng 4.4b. Chuỗi bước gọi khách theo chế độ",
-        "Bảng 4.5a. Nhóm năng lực hội thoại, API và FR",
-        "Bảng 4.5b. Nội dung ngữ cảnh phiên",
-        "Bảng 5.1. Công nghệ chính theo lớp",
-        "Bảng 5.1b. Tổ chức mã nguồn theo thư mục dịch vụ",
-        "Bảng 5.1c. Dấu hiệu phòng và chế độ agent tương ứng",
-        "Bảng 5.2. Nhóm API external-api-service phục vụ hội thoại",
-        "Bảng 5.3. Thành phần demo đầu cuối tối thiểu",
-        "Bảng 5.4. Đối chiếu quyết định thiết kế và hiện thực",
-        "Bảng 6.1. Môi trường thực nghiệm",
-        "Bảng 6.2. Ánh xạ use case với chỉ số ưu tiên",
-        "Bảng 6.3. Độ trễ phản hồi cảm nhận theo đường xử lý — đợt A/B khi còn đường tắt",
-        "Bảng 6.4. Tách nút nghẽn độ trễ trong một lượt",
-        "Bảng 6.5. WER theo điều kiện âm thanh",
-        "Bảng 6.6. Độ đúng công cụ và hoàn thành UC",
-        "Bảng 6.7. Phân loại lỗi quan sát",
-        "Bảng 6.8. Danh mục kiểm tra trải nghiệm theo ngữ cảnh lái xe",
-        "Bảng 6.9. Kết quả test case phía khách",
-        "Bảng 6.10. Danh mục kiểm tra bảo mật và chia sẻ vị trí",
-        "Bảng A.1. Danh mục công cụ gói tiếng Việt (46 công cụ)",
-        "Bảng D.1. Biến môi trường chính của llm-orchestrator",
+    for caption in collect_captions("Bảng") + [
+        "Bảng A.1. Danh mục công cụ gói tiếng Việt (45 công cụ)",
+        "Bảng D.1. Cấu hình chính của tác nhân hội thoại",
+        "Bảng E.1. Ma trận đối chiếu yêu cầu",
+        "Bảng F.1. Đối chiếu các bước sequence với mã nguồn",
+        "Bảng G.1. Ánh xạ tên thành phần",
     ]:
         add_styled(caption, "Normal", first_line_indent=False)
 
@@ -1064,6 +1373,7 @@ def build() -> Path:
         return content_lines
 
     def render_chapter(md_path: Path, bookmark: str) -> None:
+        nonlocal landscape_open
         content_lines = load_chapter_body(md_path)
         first_h1 = True
         i = 0
@@ -1094,13 +1404,21 @@ def build() -> Path:
                 add_table_caption(clean_inline(s).strip())
                 continue
             if s.startswith("**Hình ") and "**" in s[2:]:
-                add_figure_caption(clean_inline(s).strip())
+                cap = add_figure_caption(clean_inline(s).strip())
+                if landscape_open:
+                    section_break(landscape=True, host=cap)   # trang ngang kết thúc ở chú thích
+                    landscape_open = False
                 continue
             if s.startswith("![") and "](" in s and s.endswith(")"):
                 # ![alt](relative/path.png)
                 path = s.split("](", 1)[1][:-1]
-                if "H4_2" in path:
-                    width = 12.0
+                if "H4_1_aws_architecture" in path:
+                    # Hình 4.1 in trên một trang A4 ngang riêng (vùng hình 24,7 × 14,5 cm).
+                    section_break(landscape=False)
+                    landscape_open = True
+                    width = figure_width_cm(ROOT / path, max_w=24.7, max_h=14.5)
+                elif "diagrams/H4_S" in path:
+                    width = figure_width_cm(ROOT / path, max_h=17.0)   # sequence: chừa chỗ tiêu đề mục, chú thích
                 else:
                     width = figure_width_cm(ROOT / path)
                 add_figure_image(path, width_cm=width)
@@ -1122,8 +1440,8 @@ def build() -> Path:
             text = clean_inline(s)
             if any(f"({label})" in text for _, _, label in REFERENCES):
                 add_paragraph_with_cite_links(text)
-            elif s.startswith("- ") or (len(s) > 2 and s[0].isdigit() and s[1] == "."):
-                add_styled(text, "Normal", first_line_indent=False)
+            elif re.match(r"^(- |\d+\. )", s):
+                add_list_item(s)
             else:
                 add_styled(text, "Normal", first_line_indent=True)
 
@@ -1132,15 +1450,18 @@ def build() -> Path:
 
     add_heading1_new_page("Kết luận và hướng phát triển", bookmark="ket_luan")
     for para in CONCLUSION_PARAS:
-        add_styled(para, "Normal", first_line_indent=True)
+        if para.startswith("- "):
+            add_list_item(para)
+        else:
+            add_styled(para, "Normal", first_line_indent=True)
 
     add_heading1_new_page("Tài liệu tham khảo", bookmark="tai_lieu_tham_khao")
     add_styled(
-        "Danh mục dưới đây gồm các nguồn đã trích dẫn trong Chương 1–2 (các chương sau chủ yếu đối chiếu hiện trạng hệ thống và kết quả tự đo). Click các trích dẫn trong bài để nhảy tới mục tương ứng.",
+        "Danh mục dưới đây gồm các nguồn được trích dẫn trong luận văn, xếp theo thứ tự chữ cái của tác giả.",
         "Normal",
         first_line_indent=True,
     )
-    for n, (bm, ref, _label) in enumerate(REFERENCES, 1):
+    for n, (bm, ref, _label) in enumerate(sorted(REFERENCES, key=lambda r: r[1].lower()), 1):
         p = add_styled(
             f"[{n}] {ref}",
             "Normal",
@@ -1154,8 +1475,9 @@ def build() -> Path:
 
     add_heading1_new_page("Phụ lục", bookmark="phu_luc")
     add_styled(
-        "Phụ lục chứa thông tin bổ trợ để giữ thân bài gọn: A — danh mục công cụ; "
-        "B — kịch bản thoại mẫu; C — ảnh giao diện; D — cấu hình môi trường (không chứa bí mật).",
+        "Phụ lục gồm: A — danh mục công cụ; B — kịch bản hội thoại mẫu; C — ảnh giao diện; "
+        "D — cấu hình môi trường (không chứa bí mật); E — ma trận đối chiếu yêu cầu; "
+        "F — bảng đối chiếu sequence diagram với mã nguồn; G — bảng ánh xạ tên thành phần.",
         "Normal",
         first_line_indent=True,
     )
@@ -1163,7 +1485,7 @@ def build() -> Path:
     # ---- Phụ lục A: danh mục công cụ ----
     add_styled("Phụ lục A. Danh mục công cụ của trợ lý giọng nói", "Heading 2", first_line_indent=False)
     add_styled(APPENDIX_A_INTRO, "Normal", first_line_indent=True)
-    add_table_caption("Bảng A.1. Danh mục công cụ gói tiếng Việt (46 công cụ)")
+    add_table_caption("Bảng A.1. Danh mục công cụ gói tiếng Việt (45 công cụ)")
     add_bordered_table(
         [["STT", "Tên công cụ", "Mô tả ngắn"]]
         + [[str(i), name, desc] for i, (name, desc) in enumerate(APPENDIX_A_TOOLS, 1)]
@@ -1189,18 +1511,14 @@ def build() -> Path:
         first_line_indent=True,
     )
     for rel_path, caption in APPENDIX_C_FIGURES:
+        add_figure_image(rel_path, width_cm=figure_width_cm(ROOT / rel_path))
         add_figure_caption(caption)
-        if "H4_2" in rel_path:
-            w = 12.0
-        else:
-            w = figure_width_cm(ROOT / rel_path)
-        add_figure_image(rel_path, width_cm=w)
         add_styled("", "Normal", first_line_indent=False, space_after=4, line_spacing=1.0)
 
     # ---- Phụ lục D: cấu hình môi trường ----
     add_styled("Phụ lục D. Cấu hình môi trường triển khai", "Heading 2", first_line_indent=False)
     add_styled(APPENDIX_D_INTRO, "Normal", first_line_indent=True)
-    add_table_caption("Bảng D.1. Biến môi trường chính của llm-orchestrator (giá trị Chương 6 in đậm)")
+    add_table_caption("Bảng D.1. Cấu hình chính của tác nhân hội thoại")
     add_bordered_table(
         [["Biến", "Ý nghĩa", "Giá trị"]] + [list(row) for row in APPENDIX_D_ENV]
     )
@@ -1209,6 +1527,50 @@ def build() -> Path:
         "Normal",
         first_line_indent=True,
         italic=True,
+    )
+
+    # ---- Phụ lục E: ma trận đối chiếu yêu cầu ----
+    add_styled("Phụ lục E. Ma trận đối chiếu yêu cầu", "Heading 2", first_line_indent=False)
+    add_styled(
+        "Bảng E.1 liên kết từng yêu cầu với câu hỏi nghiên cứu, thành phần, sequence diagram, hiện thực "
+        "trong mã nguồn, kịch bản đánh giá và bảng kết quả ở Chương 6.",
+        "Normal",
+        first_line_indent=True,
+    )
+    add_table_caption("Bảng E.1. Ma trận đối chiếu yêu cầu")
+    add_bordered_table(
+        [["Mã yêu cầu", "RQ", "Thành phần", "Sequence", "Hiện thực chính", "Kịch bản", "Kết quả"]]
+        + [list(row) for row in APPENDIX_E_RTM]
+    )
+    add_styled("", "Normal", first_line_indent=False, space_after=6)
+
+    # ---- Phụ lục F: đối chiếu sequence ----
+    add_styled("Phụ lục F. Đối chiếu sequence diagram với mã nguồn", "Heading 2", first_line_indent=False)
+    add_styled(
+        "Bảng F.1 ghi vị trí mã nguồn (tệp và dòng, tính từ thư mục src/backend/ tại thời điểm viết) "
+        "hiện thực các bước của sequence S1–S6 ở mục 4.5.",
+        "Normal",
+        first_line_indent=True,
+    )
+    add_table_caption("Bảng F.1. Đối chiếu các bước sequence với mã nguồn")
+    add_bordered_table(
+        [["Sequence", "Bước", "Thông điệp", "Vị trí mã nguồn"]]
+        + [list(row) for row in APPENDIX_F_SEQUENCE]
+    )
+    add_styled("", "Normal", first_line_indent=False, space_after=6)
+
+    # ---- Phụ lục G: ánh xạ tên ----
+    add_styled("Phụ lục G. Bảng ánh xạ tên thành phần", "Heading 2", first_line_indent=False)
+    add_styled(
+        "Thân luận văn dùng tên tiếng Việt theo chức năng; Bảng G.1 đối chiếu với tên thư mục mã nguồn, "
+        "tài nguyên AWS và lớp trên Hình 4.1.",
+        "Normal",
+        first_line_indent=True,
+    )
+    add_table_caption("Bảng G.1. Ánh xạ tên thành phần")
+    add_bordered_table(
+        [["Tên trong luận văn", "Tên trong mã nguồn", "Tài nguyên triển khai", "Lớp trên Hình 4.1"]]
+        + [list(row) for row in APPENDIX_G_NAMES]
     )
 
     new.save(str(OUT))

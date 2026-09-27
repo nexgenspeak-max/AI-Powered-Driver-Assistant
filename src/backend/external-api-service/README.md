@@ -43,14 +43,14 @@ TWILIO_VERIFIED_TO=+84867347452  # Twilio trial: dial verified number locally
 CALL_FORCE_VERIFIED_TO=true
 ```
 
-`CALL_CENTER_URL` is **not** required for in-room agent/bridge calls (legacy Twilio-only path removed).
+`EXTERNAL_CHANNEL_SERVICE_URL` is not required for in-room agent or bridge calls. Twilio SMS and PSTN live in external-channel-service.
 
 ### 3. Start the service
 
 ```bash
-cd src/external-api-service
-pip install -r requirements.txt
-AWS_PROFILE=david uvicorn app.main:app --reload --port 8002
+cd src/backend/external-api-service
+npm install
+npm run dev
 ```
 
 ### 4. Test the full flow
@@ -107,7 +107,8 @@ pending → calling → confirmed
 
 ```bash
 bash infra/external-api-service/deploy.sh dev
-# Output: TRIP_SERVICE_URL=https://xxx... → paste into llm-orchestrator .env.dev
+# Output: EXTERNAL_API_SERVICE_URL=https://xxx... → paste into llm-orchestrator envs/.env.dev
+# TRIP_SERVICE_URL is still accepted as an alias.
 
 bash infra/external-api-service/teardown.sh dev   # DynamoDB table is kept
 ```

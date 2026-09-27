@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { isLogServiceId, snapshotLines, tailMatching } from '../services/logs';
+import { cloudwatchLines } from '../services/logs/cloudwatch';
+import { config } from '../config';
 import { getLogger } from '../services/logger';
 
 const router = Router();
@@ -14,16 +16,40 @@ function readFilter(req: Request) {
   return { service, room, conv, q };
 }
 
-router.get('/', (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   const filter = readFilter(req);
   const limit = Math.min(Number(req.query.limit) || 200, 1000);
-  const lines = snapshotLines(filter.service, filter, limit);
-  log.info('snapshot', { ok: true, count: lines.length });
-  res.json({ lines });
+  try {
+    const lines = config.logSource === 'cloudwatch'
+      ? (await cloudwatchLines(filter.service, filter, limit)).lines
+      : snapshotLines(filter.service, filter, limit);
+    log.info('snapshot', { ok: true, count: lines.length });
+    res.json({ lines });
+  } catch (err) {
+    log.error('snapshot failed', { ok: false, error: String(err) });
+    res.status(502).json({ detail: 'log source unavailable' });
+  }
 });
 
-router.get('/stream', (req: Request, res: Response) => {
+router.get('/stream', async (req: Request, res: Response) => {
   const filter = readFilter(req);
+  if (config.logSource === 'cloudwatch') {
+    // API Gateway REST cannot hold a stream open. Reply with the new lines and
+    // close; EventSource reconnects after `retry` ms and sends Last-Event-ID,
+    // which turns the stream into polling with no duplicates.
+    const since = Number(req.headers['last-event-id']) || Date.now() - 5 * 60 * 1000;
+    try {
+      const { lines, lastTs } = await cloudwatchLines(filter.service, filter, 200, since + 1);
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      const body = ['retry: 5000', ...lines.map((line) => `data: ${JSON.stringify({ line })}\n`), `id: ${lastTs}`, ''].join('\n');
+      res.send(`${body}\n`);
+    } catch (err) {
+      log.error('stream poll failed', { ok: false, error: String(err) });
+      res.status(502).json({ detail: 'log source unavailable' });
+    }
+    return;
+  }
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');

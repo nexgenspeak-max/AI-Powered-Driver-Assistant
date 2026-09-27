@@ -3,7 +3,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from pydantic import AliasChoices, Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettingsSource
+
+from app.config.local_config import config_path
 
 # Anchored to this file's location (not the process's CWD) so the right .env
 # still loads no matter which directory the agent (or a spawned job process)
@@ -24,13 +26,16 @@ class Settings(BaseSettings):
 
     # ── Provider selection ────────────────────────────────────────────────────
     stt_provider: str = "openai"        # openai | deepgram | google | inference
+    stt_fallback: str = ""              # comma-separated backups; empty = no fallback
     stt_model: str = "whisper-1"
     stt_language: str = "vi-VN"         # BCP-47, e.g. vi-VN | en-US (comma-separated for Google)
 
     llm_provider: str = "openai"        # openai | gemini | kimi
+    llm_fallback: str = ""              # comma-separated backups; empty = no fallback
     llm_model: str = "gpt-4o-mini"
 
     tts_provider: str = "elevenlabs"    # elevenlabs | google | gemini
+    tts_fallback: str = ""              # comma-separated backups; empty = no fallback
     tts_voice: str = ""
 
     # ── OpenAI ────────────────────────────────────────────────────────────────
@@ -128,13 +133,35 @@ class Settings(BaseSettings):
     # ── Agent locale (routing) ───────────────────────────────────────────────
     # Default voice-agent language when room.metadata.lang is absent.
     # Pair with STT_LANGUAGE + GOOGLE_TTS_VOICE (or provider voice) for the
-    # same locale bundle — see envs/.env.example "Locale bundles".
-    voice_agent_lang: str = "vn"  # vn | en
+    # same locale bundle — see envs/config.example.toml "Locale bundle".
+    # dual-read: AGENT_LANG preferred; VOICE_AGENT_LANG still accepted
+    agent_lang: str = Field(
+        default="vn",  # vn | en
+        validation_alias=AliasChoices(
+            "AGENT_LANG", "VOICE_AGENT_LANG", "agent_lang", "voice_agent_lang"
+        ),
+    )
 
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE if os.path.exists(_ENV_FILE) else None,
         extra="ignore",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        # Env and .env (secrets) win. The toml file only fills what they omit.
+        path = config_path()
+        sources = (init_settings, env_settings, dotenv_settings)
+        if path is not None:
+            sources = (*sources, TomlConfigSettingsSource(settings_cls, toml_file=path))
+        return (*sources, file_secret_settings)
 
     @model_validator(mode="after")
     def _require_jwt_secret(self) -> "Settings":

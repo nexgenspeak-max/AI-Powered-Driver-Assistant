@@ -190,7 +190,7 @@ export function loadAgentSnapshot(root = config.voiceAgentRoot): AgentSnapshot {
   return {
     source: label,
     env_mtime,
-    default_locale: pick('VOICE_AGENT_LANG', manifest.default || '-'),
+    default_locale: pick('AGENT_LANG', pick('VOICE_AGENT_LANG', manifest.default || '-')),
     locales,
     models: {
       stt: {

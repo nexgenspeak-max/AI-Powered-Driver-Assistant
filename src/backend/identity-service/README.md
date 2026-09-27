@@ -125,8 +125,9 @@ curl http://localhost:8003/api/v1/auth/me -H "Authorization: Bearer <access_toke
 
 ```bash
 bash infra/identity-service/deploy.sh dev
-# Output: ApiUrl → copy into external-api-service/envs/.env.dev as AUTH_SERVICE_URL,
-# and make sure JwtSecret passed here matches external-api-service's and llm-orchestrator's.
+# Output: ApiUrl → copy into external-api-service/envs/.env.dev as IDENTITY_SERVICE_URL.
+# AUTH_SERVICE_URL is still accepted as an alias.
+# JwtSecret must match external-api-service and llm-orchestrator.
 
 bash infra/identity-service/teardown.sh dev   # DynamoDB table is kept (DeletionPolicy: Retain)
 ```

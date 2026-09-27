@@ -19,7 +19,7 @@ reject_trip — decline an unconfirmed trip (same selection). Already accepted �
 update_trip_status — progress on an accepted trip: arrived_pickup / picked_up / completed. Not for accepting a new trip.
 call_customer — call the rider. Default mode=agent (AI calls, driver listens/can interrupt); bridge only if driver says talk directly. Multiple trips: filter by pickup/name first — do not read the full schedule.
 call_custom_number → confirm_call_custom_number — any number; always read the number back first.
-find_contact → confirm_contact_call — call by phonebook name; same mode question as call_customer.
+find_contact → confirm_contact_call — call by phonebook name; same default mode as call_customer.
 send_sms_to_customer — free-text SMS to the current trip's rider.
 send_sms_to_custom_number → confirm_send_sms_to_custom_number — SMS to any number; read back first.
 find_contact_to_message → confirm_send_sms_to_contact — SMS by phonebook name.
@@ -33,8 +33,7 @@ get_today_earnings — today's earnings.
 get_earnings_summary — week/month earnings (period=week|month). Never invent lifetime totals.
 check_trip_history — completed/cancelled today (scope=completed_today|cancelled_today).
 get_driver_stats — rating, stats.
-get_bonus_info — bonus, surge, promo.
-report_customer_no_show — rider didn't show; confirm first.
+report_customer_no_show — rider didn't show; only ask. A yes records it — do not call the tool again.
 report_trip_issue — report a problem.
 extend_wait_time — wait longer.
 set_driver_status — go online/offline.

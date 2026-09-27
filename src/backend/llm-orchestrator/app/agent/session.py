@@ -44,6 +44,7 @@ from app.voicebot.processors.spoken_intent import (
     driver_text_input_cb,
 )
 from app.voicebot.customer_call_agent import CustomerCallAgent
+from app.services import session_metrics
 from app.services.conversation_service import ConversationService, CALL_TRANSCRIPT_TOPIC
 from app.services.logger import bind, clear
 from app.services.session_devlog import attach_session_devlog
@@ -298,6 +299,8 @@ async def entrypoint(ctx: JobContext) -> None:
     if mode in ("driver", "outbound") and phone:
         asyncio.create_task(_register_driver_session_safe(phone, room_name))
 
+    # Before any session task starts, so every later task reports into it.
+    metrics = session_metrics.start(mode)
     conv_service = ConversationService(ctx)
     bind(conv=conv_service.call_id)
     silence_tracker: SilenceTracker | None = None
@@ -509,6 +512,8 @@ async def entrypoint(ctx: JobContext) -> None:
         # the separate agent_state_changed handler further below that drives
         # the silence tracker) — the driver-app orb needs this on every
         # session. See agent_state.py.
+        session.on("function_tools_executed", metrics.on_tools_executed)
+
         @session.on("agent_state_changed")
         def _on_agent_state_broadcast(ev) -> None:
             publish_agent_state(ev.new_state)

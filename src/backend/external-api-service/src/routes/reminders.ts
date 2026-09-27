@@ -16,7 +16,14 @@ router.post('/', async (req: Request, res: Response) => {
     await driverContextService.invalidateDriverContext(driverPhone);
     return res.status(201).json(reminder);
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'TRIP_NOT_FOUND') {
+      return res.status(404).json({ detail: 'Trip not found' });
+    }
+    if (message === 'NO_PICKUP_TIME') {
+      return res.status(400).json({ detail: 'Trip has no pickup time' });
+    }
+    return res.status(500).json({ error: message });
   }
 });
 

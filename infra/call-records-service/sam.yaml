@@ -1,16 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Driver Assistant - call-records-service service (Lambda + API Gateway + DynamoDB)
+Description: Driver Assistant - call-records-service (Dịch vụ Lưu vết cuộc gọi) - Lambda + API Gateway + DynamoDB
 
 Parameters:
   Environment:
     Type: String
     Default: dev
     AllowedValues: [dev, uat, prod]
-
   AppName:
     Type: String
     Default: driver-assistant
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Same value as identity-service; this service only verifies tokens.
 
 Globals:
   Function:
@@ -20,105 +23,97 @@ Globals:
     Environment:
       Variables:
         ENV: !Ref Environment
-        DYNAMODB_TABLE: !Sub "${Environment}-${AppName}-call-records"
+        DYNAMODB_TABLE: !Ref CallRecordsTable
+        JWT_SECRET: !Ref JwtSecret
 
 Resources:
-
-  CallLoggerApi:
+  CallRecordsRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "${Environment}-${AppName}-call-logger-api"
+      Name: !Sub "${Environment}-${AppName}-call-records-service-api"
       StageName: !Ref Environment
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: call-records-service, layer: api-gateway, component: rest-api }
 
-  CallLoggerFunction:
+  CallRecordsFunction:
     Type: AWS::Serverless::Function
+    DependsOn: CallRecordsFunctionLogGroup
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-call-logger"
+      FunctionName: !Sub "${Environment}-${AppName}-call-records-service-fn"
       CodeUri: ../../src/backend/call-records-service/
       Handler: src/index.handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CallRecordsTable
       Events:
-        Health:
+        Root:
           Type: Api
-          Properties:
-            RestApiId: !Ref CallLoggerApi
-            Path: /health
-            Method: GET
-        SaveRecord:
+          Properties: { RestApiId: !Ref CallRecordsRestApi, Path: "/", Method: ANY }
+        Proxy:
           Type: Api
-          Properties:
-            RestApiId: !Ref CallLoggerApi
-            Path: /api/v1/records
-            Method: POST
-        ListRecords:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallLoggerApi
-            Path: /api/v1/records
-            Method: GET
-        GetRecord:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallLoggerApi
-            Path: /api/v1/records/{call_id}
-            Method: GET
+          Properties: { RestApiId: !Ref CallRecordsRestApi, Path: "/{proxy+}", Method: ANY }
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: call-records-service, layer: microservices, component: lambda }
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
         Target: "es2020"
-        EntryPoints:
-          - src/index.ts
-        External:
-          - "@aws-sdk/*"
+        EntryPoints: [src/index.ts]
+        External: ["@aws-sdk/*"]
 
-  CallLoggerFunctionLogGroup:
+  CallRecordsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-logger"
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-records-service-fn"
       RetentionInDays: 30
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: call-records-service }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
 
+  # Transcript (turns) + summary + per-session metrics of every conversation.
   CallRecordsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "${Environment}-${AppName}-call-records"
+      TableName: !Sub "${Environment}-${AppName}-call-records-service-call-records"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: call_id
-          AttributeType: S
-        - AttributeName: caller
-          AttributeType: S
-        - AttributeName: started_at
-          AttributeType: S
+        - { AttributeName: call_id, AttributeType: S }
+        - { AttributeName: caller, AttributeType: S }
+        - { AttributeName: started_at, AttributeType: S }
+        - { AttributeName: record_date, AttributeType: S }
       KeySchema:
-        - AttributeName: call_id
-          KeyType: HASH
+        - { AttributeName: call_id, KeyType: HASH }
       GlobalSecondaryIndexes:
         - IndexName: caller-started_at-index
           KeySchema:
-            - AttributeName: caller
-              KeyType: HASH
-            - AttributeName: started_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
+            - { AttributeName: caller, KeyType: HASH }
+            - { AttributeName: started_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        # Daily report (ops-service): all records of one Vietnam calendar day.
+        - IndexName: record_date-started_at-index
+          KeySchema:
+            - { AttributeName: record_date, KeyType: HASH }
+            - { AttributeName: started_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: call-records-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-call-records }
 
 Outputs:
-  ApiUrl:
-    Description: Call Logger API base URL — set this as CALL_LOGGER_URL in llm-orchestrator
-    Value: !Sub "https://${CallLoggerApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
-
-  CallLoggerFunctionArn:
-    Value: !GetAtt CallLoggerFunction.Arn
-
+  CallRecordsApiUrl:
+    Description: Base URL of call-records-service (CALL_RECORDS_SERVICE_URL for other services)
+    Value: !Sub "https://${CallRecordsRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
   CallRecordsTableName:
     Value: !Ref CallRecordsTable

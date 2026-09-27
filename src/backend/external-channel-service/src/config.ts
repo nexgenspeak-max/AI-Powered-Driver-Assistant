@@ -24,4 +24,7 @@ export const config = {
   // Local/dev default only — production must set BASE_URL explicitly.
   baseUrl: process.env.BASE_URL || (env === 'local' ? 'http://localhost:8000' : ''),
   jwtSecret: resolveJwtSecret(),
+  awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
+  // DynamoDB table for carrier events; empty = local JSONL file (dev only).
+  eventsTable: process.env.EVENTS_TABLE || '',
 };

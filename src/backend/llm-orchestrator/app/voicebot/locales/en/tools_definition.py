@@ -566,16 +566,6 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
-    "get_bonus_info": {
-        "type": "function",
-        "name": "get_bonus_info",
-        "description": (
-            "Check active bonuses and surge pricing zones. "
-            "Use when the driver asks 'any bonuses', 'surge areas', 'promotions today'."
-        ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
-    },
-
     # ── Trip issue reporting ──────────────────────────────────────────────────
 
     "report_customer_no_show": {
@@ -763,9 +753,9 @@ raw_schema = {
             "required": ["question"],
         },
     },
-    "end_call": {
+    "end_conversation": {
         "type": "function",
-        "name": "end_call",
+        "name": "end_conversation",
         "description": (
             "Proactively end the call with the AI assistant at the driver's request. "
             "Call when the driver says goodbye or asks to stop/end the assistant, e.g. "

@@ -13,6 +13,10 @@ _env_file = _base_dir / "envs" / f".env.{_env}"
 if _env_file.exists():
     load_dotenv(_env_file)
 
+from app.config.local_config import load_config_env
+
+load_config_env()
+
 from app.config.logging import setup_logging
 setup_logging()
 

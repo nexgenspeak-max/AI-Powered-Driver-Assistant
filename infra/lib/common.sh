@@ -4,6 +4,8 @@
 
 if [[ -z "${INFRA_COMMON_LOADED:-}" ]]; then
   INFRA_COMMON_LOADED=1
+  INFRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  REPO_ROOT="$(cd "$INFRA_DIR/.." && pwd)"
 
   infra_root() {
     local dir
@@ -52,22 +54,11 @@ if [[ -z "${INFRA_COMMON_LOADED:-}" ]]; then
     fi
   }
 
-  # Glossary folder name → existing CloudFormation stack suffix (one-release dual-compat).
-  aws_stack_suffix() {
-    case "$1" in
-      identity-service) echo "auth-service" ;;
-      external-api-service) echo "trip-service" ;;
-      external-channel-service) echo "call-center" ;;
-      call-records-service) echo "call-logger" ;;
-      llm-orchestrator) echo "voice-agent" ;;
-      *) echo "$1" ;;
-    esac
-  }
-
+  # Stack name = <env>-driver-assistant-<service folder> (see infra/README.md naming).
   stack_name() {
     local service="$1"
     local env="${2:-${ENV:-dev}}"
-    echo "${env}-driver-assistant-$(aws_stack_suffix "$service")"
+    echo "${env}-driver-assistant-${service}"
   }
 
   stack_exists() {

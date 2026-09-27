@@ -14,6 +14,15 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const date = req.query.date ? String(req.query.date) : '';
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ detail: 'date must be YYYY-MM-DD' });
+      }
+      const pageSize = Math.min(Number(req.query.limit) || 100, 500);
+      const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
+      return res.json(await recordService.listByDate(date, pageSize, cursor));
+    }
     const limit = Math.min(Number(req.query.limit) || 20, 100);
     const caller = req.query.caller ? String(req.query.caller) : '';
     if (caller) {

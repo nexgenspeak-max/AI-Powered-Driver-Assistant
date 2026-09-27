@@ -1,267 +1,266 @@
 # Chương 3. Phân tích yêu cầu
 
-Chương này trả lời câu hỏi thực tiễn: tài xế cần trợ lý làm những gì, trong tình huống nào, và hệ thống phải ứng xử ra sao khi thành công hoặc khi lỗi. Phân tích dựa trên phạm vi Chương 1, khoảng trống Chương 2, tài liệu yêu cầu nội bộ và cách nguyên mẫu đang vận hành trong kho mã nguồn dùng chung. Các yêu cầu chức năng (FR) được gắn với dịch vụ chịu trách nhiệm theo kiến trúc microservices (Microservices Architecture – MSA); các yêu cầu phi chức năng (NFR) được nhóm theo lớp chuẩn và liên hệ với tính chất MSA (khả năng mở rộng, độc lập triển khai, biên dịch vụ rõ).
+Chương này xác định hệ thống phải làm gì (yêu cầu chức năng) và phải làm tốt đến mức nào (yêu cầu phi chức năng). Yêu cầu chức năng được gắn với thành phần phụ trách và điều kiện chấp nhận quan sát được; yêu cầu phi chức năng được phân loại theo mô hình chất lượng ISO/IEC 25010 và đặc tả dưới dạng kịch bản thuộc tính chất lượng (mục 2.4). Cuối chương, các yêu cầu phi chức năng được đối chiếu với tính chất của kiến trúc microservices, làm căn cứ cho quyết định kiến trúc ở Chương 4.
 
-## 3.1. Cách tiếp cận: từ việc tài xế làm hàng ngày
+## 3.1. Phương pháp xác định yêu cầu
 
-Thay vì liệt kê chức năng theo kiểu “hệ thống phải có thành phần X”, luận văn xuất phát từ các việc tài xế thường xuyên làm trên ứng dụng khi đang hoặc chuẩn bị lái xe:
+Yêu cầu được xác định từ ba nguồn:
 
-- Xem hôm nay còn những chuyến nào và chuyến đang chạy đến đâu.
-- Nhận hoặc từ chối chuyến mới, đặc biệt khi điện thoại reo đề nghị chuyến.
-- Cập nhật tiến độ chuyến: đã đón, đang giao, hoàn thành.
-- Gọi hoặc nhắn khách khi đến điểm đón, khi khách chậm, hoặc khi cần xác nhận địa chỉ.
-- Hỏi cách dùng ứng dụng (câu hỏi thường gặp – FAQ) mà không phải dừng xe đọc hướng dẫn dài.
-- Theo dõi thu nhập trong ngày hoặc trong khoảng thời gian gần đây.
-- Kết thúc trợ lý khi xong việc, hoặc mở trợ lý bằng giọng nói (từ khóa đánh thức – wake-word) khi tay bận.
+- **Nghiệp vụ hằng ngày của tài xế:** các thao tác tài xế thường làm trên ứng dụng khi đang hoặc chuẩn bị lái xe.
+- **Tài liệu nội bộ của dự án:** tài liệu yêu cầu và bộ kịch bản hội thoại mẫu.
+- **Ràng buộc an toàn khi lái:** các tiêu chí đã phân tích ở mục 2.7.
 
-Mỗi việc trên được chuyển thành FR, kèm điều kiện chấp nhận quan sát được. Song song, NFR nêu rõ “nhanh thế nào”, “sai thì nói ra sao”, “không được bịa dữ liệu”, và vì sao các ràng buộc đó dẫn tới tách dịch vụ theo MSA (làm rõ ở mục 3.6 và Chương 4).
+Các nghiệp vụ thường xuyên của tài xế gồm:
 
-## 3.2. Ai dùng hệ thống và họ gặp trợ lý ở đâu?
+- Xem các chuyến trong ngày và tình trạng chuyến đang thực hiện.
+- Nhận hoặc từ chối chuyến mới, đặc biệt khi hệ thống gọi điện mời nhận chuyến.
+- Cập nhật tiến độ chuyến: đã đến điểm đón, đã đón khách, hoàn thành.
+- Gọi hoặc nhắn tin cho khách khi đến điểm đón, khi khách đến muộn hoặc khi cần xác nhận địa chỉ.
+- Hỏi cách sử dụng ứng dụng mà không phải dừng xe đọc hướng dẫn.
+- Theo dõi thu nhập trong ngày hoặc trong một khoảng thời gian.
+- Mở trợ lý bằng từ khóa đánh thức khi không thể dùng tay, và kết thúc phiên khi xong việc.
 
-**Tài xế** là người dùng chính và là đối tượng tham gia đánh giá trọng tâm. Họ mở trợ lý trên **ứng dụng tài xế** (micro trong ứng dụng qua WebRTC) hoặc nhận **cuộc gọi điện thoại** khi hệ thống đề nghị chuyến (SIP). Hai cửa vào này khác trải nghiệm nhưng cùng cần nghiệp vụ đúng.
+Mỗi nghiệp vụ được chuyển thành một hoặc nhiều yêu cầu chức năng có mã định danh. Mã định danh được dùng xuyên suốt các chương sau và trong ma trận đối chiếu yêu cầu (Phụ lục E).
 
-**Hành vi thực tế khi đang chạy xe (cơ sở viết yêu cầu):** tài xế mắt nhìn đường, tay giữ vô-lăng; không muốn nghe danh sách dài hay địa chỉ đọc từng ký tự; câu hỏi thường ngắn và theo việc đang làm (“mấy chuyến”, “đến nơi rồi”, “gọi khách”, “thu nhập hôm nay”); thao tác rủi ro (hủy chuyến, báo khách không ra) cần hỏi lại một lần trước khi ghi nhận; khi im lâu hoặc API lỗi, bot không được “bịa chuyến” cho có chuyện nói. Phân loại câu hỏi nội bộ của dự án cũng cho thấy nhóm **chuyến đi** và **thu nhập** là lõi; chỉ đường rẽ từng bước, xăng hoặc sạc, pháp lý, và **quét/tạo đơn giao hàng từ ảnh** nằm ngoài phạm vi trợ lý và luận văn này.
+## 3.2. Đối tượng sử dụng và kênh tương tác
 
-**Khách hàng** có trợ lý và luồng thoại riêng: đặt chuyến, theo dõi, xem thời gian đến dự kiến, hoặc để bot gọi thay tài xế trong chế độ agent hoặc gọi nền. Luận văn **không** tổ chức khảo sát trải nghiệm sử dụng với khách thật trên đường. Tính “khách có thể dùng” được chấp nhận qua **bộ test case** (kiểm thử tự động và kịch bản hội thoại đã thiết kế), chấm đạt hoặc không đạt theo điều kiện nghiệp vụ, không suy ra mức hài lòng của toàn bộ khách hàng.
+### 3.2.1. Đối tượng sử dụng
 
-**Điều phối và quản trị** tạo chuyến thử, theo dõi cuộc gọi trên bảng quản trị; **vận hành kỹ thuật** xem tổng quan qua **ops-service**. Các vai trò này không đứng trên đường nóng “tài xế đang nói với bot”, nhưng cần có để nguyên mẫu chạy được từ đầu đến cuối.
+**Tài xế** là người dùng chính và là đối tượng đánh giá trọng tâm. Tài xế tương tác với trợ lý qua hai kênh: kênh trong ứng dụng (WebRTC) khi chủ động mở trợ lý, và kênh điện thoại (SIP) khi hệ thống gọi điện mời nhận chuyến. Hai kênh khác nhau về trải nghiệm nhưng dùng chung logic nghiệp vụ.
 
-Về phía phần mềm, hệ thống được tổ chức thành các dịch vụ độc lập theo chức năng (chi tiết ràng buộc ở Bảng 3.2; ánh xạ FR ở Bảng 3.7):
+Hành vi của tài xế khi đang lái là cơ sở để xác định yêu cầu:
 
-| Dịch vụ | Vai trò ngắn |
-|---|---|
-| **identity-service** | Tài khoản, đăng nhập, cấp và xác minh JWT, cài đặt tài xế (ví dụ chế độ gọi khách mặc định) |
-| **external-api-service** | Nguồn sự thật nghiệp vụ: chuyến, ngữ cảnh tài xế, token thoại LiveKit, điều phối đề nghị chuyến |
-| **llm-orchestrator** | Worker hội thoại trên LiveKit: STT → LLM kèm công cụ → TTS; gọi HTTP, không mở cơ sở dữ liệu |
-| **external-channel-service** | Kênh ra thế giới ngoài (PSTN/SMS qua nhà cung cấp thoại, ví dụ Twilio) |
-| **call-records-service** | Lưu vết / tóm tắt cuộc gọi phục vụ đối soát |
-| **ops-service** | Tổng quan vận hành, proxy nhật ký và sức khỏe dịch vụ cho Super Admin |
+- Mắt nhìn đường, tay giữ vô-lăng, nên không thể đọc hay chạm màn hình.
+- Không muốn nghe danh sách dài hoặc địa chỉ đọc từng ký tự.
+- Câu hỏi thường ngắn và gắn với việc đang làm: "còn mấy chuyến", "đến nơi rồi", "gọi khách", "thu nhập hôm nay".
+- Thao tác có rủi ro (hủy chuyến, báo khách không có mặt) cần được xác nhận trước khi ghi nhận.
 
-Ứng dụng tài xế lo giao diện, lấy JWT từ identity-service, lấy token thoại từ external-api-service, từ khóa đánh thức trên máy và tham gia phòng LiveKit. LiveKit là nền tảng truyền âm thanh thời gian thực (WebRTC trong ứng dụng; SIP khi cần mạng điện thoại công cộng), không thay thế lớp nghiệp vụ.
+**Khách hàng** có luồng hội thoại riêng: đặt chuyến, theo dõi chuyến, hỏi thời gian tài xế đến, hoặc nghe cuộc gọi do tác nhân thực hiện thay tài xế. Luận văn không khảo sát trải nghiệm của khách hàng thật; luồng khách hàng được đánh giá qua bộ trường hợp kiểm thử (test case) với tiêu chí đạt hoặc không đạt theo điều kiện nghiệp vụ.
 
-## 3.3. Bối cảnh vận hành: một phiên trợ lý diễn ra thế nào?
+**Người điều phối và quản trị viên** tạo chuyến thử nghiệm và theo dõi cuộc gọi trên trang quản trị điều hành; **người vận hành kỹ thuật** giám sát tình trạng hệ thống và xem báo cáo vận hành hằng ngày trên trang giám sát hệ thống. Các đối tượng này không nằm trên luồng xử lý chính của hội thoại nhưng cần thiết để nguyên mẫu vận hành đầy đủ.
+
+### 3.2.2. Thành phần hệ thống
+
+Hệ thống gồm các thành phần sau; tên tiếng Việt được dùng trong toàn bộ luận văn, tên kỹ thuật tương ứng trong mã nguồn nêu trong ngoặc và tổng hợp ở Phụ lục G. Bảng 3.1 mô tả trách nhiệm và ranh giới của từng thành phần.
+
+**Bảng 3.1.** Thành phần hệ thống, trách nhiệm và ranh giới
+
+| Thành phần | Trách nhiệm | Ranh giới (không thực hiện) |
+|---|---|---|
+| Ứng dụng tài xế (driver-app) | Đăng nhập, xin token thoại, tham gia phòng hội thoại, thu và phát âm thanh, nhận dạng từ khóa đánh thức, hiển thị giao diện | Không tự tạo dữ liệu chuyến; không phát hành JWT |
+| Dịch vụ Định danh (identity-service) | Quản lý tài khoản, đăng nhập, phát hành JWT, lưu cài đặt tài xế | Không ghi dữ liệu chuyến |
+| Dịch vụ Chuyến đi và Điều phối (external-api-service) | Nguồn dữ liệu chuẩn về chuyến đi; cung cấp ngữ cảnh tài xế; cấp token thoại; gửi lời mời nhận chuyến; khởi tạo cuộc gọi thoại qua nền tảng truyền thông thời gian thực (SIP) | Không phát hành JWT đăng nhập; không gửi SMS trực tiếp |
+| Tác nhân hội thoại giọng nói (llm-orchestrator) | Xử lý hội thoại STT – LLM kèm gọi công cụ – TTS; gọi API nghiệp vụ qua HTTP | Không truy cập cơ sở dữ liệu; không lưu dữ liệu nghiệp vụ |
+| Nền tảng truyền thông thời gian thực (LiveKit Cloud) | Truyền âm thanh qua WebRTC; quay số ra mạng điện thoại qua SIP trunk; phân công tác nhân vào phòng | Không chứa logic nghiệp vụ |
+| Dịch vụ Kênh liên lạc (external-channel-service) | Gửi tin nhắn SMS; nhận và lưu sự kiện do nhà cung cấp dịch vụ thoại (Twilio) gửi về (trạng thái cuộc gọi, tin nhắn đến, kết quả gửi SMS) | Không phải nguồn dữ liệu chuyến; không tham gia cuộc gọi thoại qua SIP |
+| Dịch vụ Nhật ký cuộc gọi (call-records-service) | Lưu bản ghi hội thoại, tóm tắt và chỉ số chất lượng của phiên do tác nhân gửi khi kết thúc phiên; cung cấp bản ghi để tra cứu theo người gọi hoặc theo ngày | Không điều khiển nghiệp vụ chuyến |
+| Dịch vụ Giám sát vận hành (ops-service) | Tổng hợp tình trạng các dịch vụ, nhật ký và cấu hình tác nhân; lập và lưu báo cáo vận hành hằng ngày | Không nằm trên luồng xử lý chính của hội thoại; chỉ đọc dữ liệu của dịch vụ khác qua API |
+
+## 3.3. Kịch bản vận hành của phiên trợ lý
 
 ### 3.3.1. Tài xế chủ động mở trợ lý trong ứng dụng
 
-Khi tài xế bấm trợ lý (hoặc từ khóa đánh thức kích hoạt kết nối), ứng dụng dùng phiên đã đăng nhập (JWT từ **identity-service**) để xin token thoại từ **external-api-service**, rồi tham gia phòng hội thoại LiveKit; **llm-orchestrator** nhận việc và kết nối âm thanh. Nếu phiên trước vẫn còn agent trong phòng, hệ thống tái sử dụng phòng đó thay vì tạo mới. Bot chào nhanh trước (“Chào bạn, tôi là Czen…”) trong khi nạp ngữ cảnh tài xế — danh sách chuyến, chuyến hiện tại, thu nhập hôm nay, cấu hình gọi khách mặc định — rồi hỏi tài xế cần gì. Chuỗi bước chi tiết trình bày ở mục 4.2b; đường dẫn API cụ thể ở Chương 5.
+Khi tài xế bấm nút trợ lý hoặc nói từ khóa đánh thức, ứng dụng dùng JWT đã được Dịch vụ Định danh phát hành để xin token thoại từ Dịch vụ Chuyến đi và Điều phối, sau đó tham gia phòng hội thoại trên nền tảng truyền thông thời gian thực; tác nhân hội thoại được phân công vào phòng và kết nối âm thanh. Nếu phòng của phiên trước vẫn còn tác nhân, hệ thống tái sử dụng phòng đó. Tác nhân phát lời chào ngắn ngay khi vào phòng, đồng thời tải trước ngữ cảnh tài xế (danh sách chuyến, chuyến hiện tại, thu nhập trong ngày, chế độ gọi khách mặc định), sau đó hỏi tài xế cần hỗ trợ gì. Chuỗi bước chi tiết trình bày ở sequence S2 (mục 4.5).
 
-Ngữ cảnh được giữ trong bộ nhớ phiên để các câu hỏi kiểu “hôm nay còn mấy chuyến?” có thể trả lời từ dữ liệu đã tải (hoặc làm mới qua API), giảm chờ gọi mạng lặp lại — vẫn **không** được bịa số liệu khi ngữ cảnh trống hoặc API lỗi.
+Ngữ cảnh được giữ trong trạng thái phiên để các câu hỏi như "hôm nay còn mấy chuyến?" được trả lời từ dữ liệu đã tải hoặc làm mới qua API, giảm số lần gọi mạng lặp lại. Khi ngữ cảnh trống hoặc API lỗi, tác nhân phải thông báo chưa có dữ liệu thay vì tạo ra thông tin không có nguồn.
 
-**Một đường xử lý lượt nói (yêu cầu hành vi):** mỗi câu tài xế đi theo chuỗi **STT → LLM kèm công cụ → TTS**. Khi phản hồi chậm khoảng từ hai giây trở lên, hệ thống có thể phát **câu giữ chỗ** ngắn (ví dụ “Đợi mình một chút…”) — câu này **không** chứa sự kiện chuyến, thu nhập hay kết quả cuộc gọi. Không có “đường tắt” tự bịa trạng thái chuyến để nói cho nhanh. Chi tiết thiết kế ở Chương 4; ngưỡng cảm nhận gắn NFR-P01.
+Mỗi phát ngôn của tài xế được xử lý theo một luồng duy nhất: STT, LLM kèm gọi công cụ, rồi TTS. Khi phản hồi chưa sẵn sàng sau khoảng hai giây, hệ thống phát một câu đệm ngắn (ví dụ "Đợi mình một chút") không chứa dữ liệu nghiệp vụ.
 
-### 3.3.2. Hệ thống gọi tài xế đề nghị chuyến
+### 3.3.2. Hệ thống chủ động gọi điện mời tài xế nhận chuyến
 
-Khi có chuyến mới cần hỏi nhận/từ chối, **external-api-service** điều phối cuộc gọi SIP tới tài xế (qua LiveKit SIP / kênh thoại), tạo phòng hội thoại gắn metadata chuyến, và agent chỉ mở **hai việc chính**: nhận chuyến hoặc từ chối. Lời chào nêu điểm đón và hỏi có nhận không. Cách làm này khớp thực tiễn: lúc điện thoại reo, tài xế không cần (và không nên) bị đưa vào menu công cụ đầy đủ như lúc chủ động mở trợ lý trong ứng dụng.
+Khi có chuyến mới cần tài xế xác nhận, Dịch vụ Chuyến đi và Điều phối khởi tạo cuộc gọi SIP tới tài xế thông qua nền tảng truyền thông thời gian thực, tạo phòng hội thoại gắn thông tin chuyến. Trong phiên này, tác nhân chỉ được phép thực hiện hai thao tác: nhận chuyến hoặc từ chối chuyến. Lời chào nêu điểm đón và hỏi tài xế có nhận chuyến không. Việc giới hạn tập công cụ phù hợp với thực tế: khi điện thoại đổ chuông, tài xế không nên được đưa vào toàn bộ chức năng như khi chủ động mở trợ lý. Nếu tài xế đang có phiên trợ lý trong ứng dụng, hệ thống gửi thông báo vào phòng hiện có thay vì tạo cuộc gọi mới.
 
-Nếu tài xế **đang** mở phiên trợ lý trong ứng dụng, hệ thống có thể đẩy thông báo vào phòng hiện có thay vì luôn gọi SIP mới — tránh “hai nơi hỏi cùng một chuyến” một cách lẫn lộn.
+### 3.3.3. Ba chế độ gọi khách hàng
 
-### 3.3.3. Ba cách gọi khách — nhu cầu khác nhau
+Khi tài xế yêu cầu gọi khách, hệ thống hỗ trợ ba chế độ tương ứng ba hoàn cảnh sử dụng (Bảng 3.2).
 
-Khi tài xế nói “gọi khách”, thực tế có ba cách làm việc, phản ánh đúng hoàn cảnh trên xe:
+**Bảng 3.2.** Ba chế độ gọi khách hàng
 
-**Bảng 3.1.** Ba chế độ gọi khách (yêu cầu hành vi)
-
-| Chế độ | Tài xế trải nghiệm thế nào | Khi nào hợp |
+| Chế độ | Hành vi | Hoàn cảnh phù hợp |
 |---|---|---|
-| Agent gọi hộ | Bot nói chuyện với khách; tài xế có thể nghe / chen khi cần | Muốn bot hỏi hộ, mình vẫn theo dõi |
-| Nói trực tiếp (bridge) | Kết nối để tài xế nói thẳng với khách; bot không “nói đè” | Cần trao đổi nhanh, cá nhân |
-| Gọi nền | Bot gọi trong phòng riêng; tài xế tiếp tục hỏi việc khác trên trợ lý | Đang bận lái / làm việc khác, chỉ cần kết quả sau |
+| Tác nhân gọi thay | Tác nhân trao đổi với khách; tài xế nghe và có thể can thiệp | Tài xế muốn tác nhân hỏi thay nhưng vẫn theo dõi |
+| Nói trực tiếp (bridge) | Kết nối để tài xế nói trực tiếp với khách; tác nhân không phát âm chồng lấn | Cần trao đổi nhanh, mang tính cá nhân |
+| Gọi nền | Tác nhân gọi trong phòng riêng; tài xế tiếp tục sử dụng trợ lý cho việc khác | Tài xế đang bận, chỉ cần kết quả sau cuộc gọi |
 
-Mặc định lấy từ **cài đặt tài xế** (lưu qua **identity-service**, đưa vào ngữ cảnh phiên qua **external-api-service**), để bot không hỏi lại “chọn chế độ nào?” mỗi lần — trừ khi tài xế nói rõ (“nói trực tiếp”, “gọi nền”). Gọi số không thuộc chuyến hiện tại bắt buộc có bước xác nhận trước khi quay số. Quay số và SMS ra ngoài đi qua **external-channel-service**; tóm tắt/lưu vết cuộc gọi thuộc **call-records-service**.
+Chế độ mặc định lấy từ cài đặt của tài xế (lưu ở Dịch vụ Định danh và đưa vào ngữ cảnh phiên), trừ khi tài xế nêu rõ chế độ khác trong câu nói. Gọi số điện thoại không thuộc chuyến hiện tại bắt buộc có bước xác nhận trước khi quay số.
 
-**Bảng 3.2.** Thành phần hệ thống và ràng buộc tích hợp
+## 3.4. Yêu cầu chức năng
 
-| Thành phần | Việc phải làm cho trợ lý | Ràng buộc quan trọng |
-|---|---|---|
-| Ứng dụng tài xế | Đăng nhập, lấy token thoại, vào phòng, mic/loa, từ khóa đánh thức, giao diện | Không tự bịa dữ liệu chuyến; JWT chỉ nhận từ identity-service |
-| identity-service | Đăng nhập, JWT, cài đặt (ví dụ chế độ gọi mặc định) | **Duy nhất** nơi cấp/xác minh JWT đăng nhập; không ghi sổ chuyến |
-| external-api-service | Ngữ cảnh, chuyến, token thoại, điều phối đề nghị chuyến | Nguồn sự thật nghiệp vụ chuyến; không thay identity cấp JWT đăng nhập |
-| llm-orchestrator | STT–LLM+công cụ–TTS; chọn công cụ; gọi HTTP | Không truy cập cơ sở dữ liệu trực tiếp; không bịa sự kiện chuyến |
-| LiveKit | Truyền âm thanh thời gian thực; SIP khi cần | Phân biệt trong ứng dụng và cuộc gọi điện thoại |
-| external-channel-service | Quay số / SMS ra mạng công cộng | Không phải nguồn sự thật chuyến |
-| call-records-service | Lưu vết / tóm tắt cuộc gọi | Phục vụ đối soát, không điều khiển nghiệp vụ chuyến |
-| ops-service | Tổng quan sức khỏe, nhật ký vận hành | Không nằm trên đường nóng lượt thoại tài xế |
+Yêu cầu chức năng được nhóm theo nghiệp vụ. Mỗi yêu cầu nêu hành vi hệ thống phải thực hiện, thành phần phụ trách chính và điều kiện chấp nhận. Điều kiện chấp nhận chung cho mọi yêu cầu: tác nhân không được tạo ra dữ liệu chuyến, thu nhập, vị trí hoặc kết quả cuộc gọi không có nguồn từ API nghiệp vụ. Tập công cụ tiếng Việt hiện thực các yêu cầu này gồm 45 công cụ: 39 công cụ cho phiên tài xế trong ứng dụng, 2 công cụ cho phiên mời nhận chuyến (dùng chung với phiên trong ứng dụng) và 7 công cụ cho phiên khách hàng (1 công cụ hỏi đáp dùng chung); danh mục ở Phụ lục A. Gói tiếng Anh có cùng 39 công cụ cho tài xế; phía khách hàng, gói tiếng Anh hiện có 4 công cụ.
 
-## 3.4. Yêu cầu chức năng theo việc làm thật
+### 3.4.1. Nhóm nghiệp vụ chuyến đi
 
-Danh mục công cụ đầy đủ ở Phụ lục A (Bảng A.1): **46 công cụ** gói tiếng Việt, trong đó khoảng 40 phục vụ tài xế (kèm FAQ và kết thúc phiên), phần còn lại phục vụ luồng khách. Gói tiếng Anh có tập công cụ đối xứng. (Một số công cụ liên quan đơn giao hàng trong mã nguồn lịch sử **không** thuộc phạm vi đánh giá luận văn — xem mục 3.7.)
-
-### 3.4.1. Việc liên quan chuyến đi
-
-Nhóm này gồm các yêu cầu quanh vòng đời một chuyến: xem lịch, theo dõi chuyến đang chạy, cập nhật tiến độ, nhận hoặc từ chối chuyến mới và hủy chuyến. Mỗi dòng trong Bảng 3.3 nêu câu tài xế thường nói, việc hệ thống phải làm và điều kiện để coi là chấp nhận được.
+Nhóm này gồm các yêu cầu trong vòng đời một chuyến, từ xem lịch, nhận chuyến, cập nhật tiến độ đến hủy chuyến (Bảng 3.3).
 
 **Bảng 3.3.** Yêu cầu chức năng nhóm chuyến đi (FR-T)
 
-| Mã | Việc tài xế muốn | Hệ thống phải | Điều kiện chấp nhận |
+| Mã | Yêu cầu | Thành phần phụ trách | Điều kiện chấp nhận |
 |---|---|---|---|
-| FR-T01 | “Hôm nay còn chuyến nào?” | Đọc lịch/chuyến sắp tới từ ngữ cảnh hoặc API | Nêu đúng dữ liệu; không bịa chuyến |
-| FR-T02 | “Chuyến hiện tại thế nào?” | Nêu điểm đón/trả, trạng thái đang có | Thiếu dữ liệu thì nói thiếu, không đoán |
-| FR-T03 | “Đã đón khách / cập nhật tiến độ” | Đổi trạng thái qua backend khi đủ điều kiện | Xác nhận lại bằng lời ngắn **sau** khi API thành công |
-| FR-T04 | Nhận / từ chối chuyến mới | Đúng công cụ nhận hoặc từ chối (đặc biệt lúc hệ thống gọi đề nghị chuyến) | Không nhầm với hủy chuyến đang chạy |
-| FR-T05 | “Hủy chuyến này” | Hai bước: hỏi chắc, rồi mới hủy | Không hủy chỉ vì một câu mơ hồ |
+| FR-T01 | Liệt kê các chuyến sắp tới trong ngày | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối | Số chuyến và thông tin khớp dữ liệu API |
+| FR-T02 | Cung cấp thông tin chuyến hiện tại (điểm đón, điểm trả, trạng thái) | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối | Thiếu dữ liệu thì thông báo thiếu |
+| FR-T03 | Cập nhật trạng thái chuyến (đã đến, đã đón, hoàn thành) | Dịch vụ Chuyến đi và Điều phối | Chỉ xác nhận bằng lời sau khi API trả về thành công |
+| FR-T04 | Nhận hoặc từ chối chuyến mới, cả trong ứng dụng và trong cuộc gọi mời nhận chuyến | Dịch vụ Chuyến đi và Điều phối; nền tảng truyền thông thời gian thực (SIP) | Chọn đúng thao tác nhận/từ chối, không nhầm với hủy chuyến |
+| FR-T05 | Hủy chuyến theo hai bước: đề nghị rồi xác nhận | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối | Chỉ hủy sau khi tài xế xác nhận |
+| FR-T06 | Tài xế tạo chuyến cho khách vãng lai | Dịch vụ Chuyến đi và Điều phối | Chuyến được tạo với trạng thái đã xác nhận |
+| FR-T07 | Gợi ý điểm dừng tiếp theo, lộ trình tối ưu và tình trạng giao thông | Dịch vụ Chuyến đi và Điều phối (dịch vụ bản đồ) | Thông tin lấy từ API bản đồ; không đọc hướng dẫn rẽ từng bước |
 
-### 3.4.2. Việc liên lạc khách
+### 3.4.2. Nhóm nghiệp vụ liên lạc khách hàng
 
-Nhóm này gồm các yêu cầu quanh việc gọi và nhắn khách: gọi khách của chuyến theo chế độ đã chọn, gọi số khác có xác nhận, gửi tin nhắn, hỏi vị trí khách và đọc lại tóm tắt cuộc gọi. Bảng 3.4 liệt kê chi tiết.
+Nhóm này gồm các yêu cầu gọi điện, nhắn tin và theo dõi kết quả liên lạc với khách hàng (Bảng 3.4).
 
-**Bảng 3.4.** Yêu cầu chức năng nhóm liên lạc khách (FR-C)
+**Bảng 3.4.** Yêu cầu chức năng nhóm liên lạc khách hàng (FR-C)
 
-| Mã | Việc tài xế muốn | Hệ thống phải | Điều kiện chấp nhận |
+| Mã | Yêu cầu | Thành phần phụ trách | Điều kiện chấp nhận |
 |---|---|---|---|
-| FR-C01 | “Gọi khách giúp” | Gọi theo chế độ agent / nói trực tiếp / gọi nền | Đúng khách của chuyến; tôn trọng mặc định + lời nói rõ khác mặc định |
-| FR-C02 | Gọi số khác / danh bạ | Hỏi xác nhận rồi mới quay | Có bước xác nhận rõ |
-| FR-C03 | Nhắn SMS | Gửi qua backend khi được hỗ trợ | Báo thành công/thất bại ngắn |
-| FR-C04 | “Khách đang ở đâu / xác nhận với khách” | Dùng API vị trí / xác nhận nếu có | Không bịa vị trí |
-| FR-C05 | “Gọi xong chưa? Tóm tắt cuộc gọi” | Đọc trạng thái / tóm tắt từ nhật ký | Không có dữ liệu thì nói chưa có |
+| FR-C01 | Gọi khách của chuyến theo một trong ba chế độ (Bảng 3.2) | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối; nền tảng truyền thông thời gian thực (SIP) | Gọi đúng khách; áp dụng chế độ mặc định trừ khi tài xế nêu khác |
+| FR-C02 | Gọi số điện thoại khác hoặc liên hệ trong danh bạ | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối; nền tảng truyền thông thời gian thực (SIP) | Có bước xác nhận trước khi quay số |
+| FR-C03 | Gửi tin nhắn SMS cho khách hoặc số khác | Dịch vụ Chuyến đi và Điều phối; Dịch vụ Kênh liên lạc | Thông báo ngắn kết quả thành công hoặc thất bại |
+| FR-C04 | Cung cấp vị trí khách và xác nhận chuyến với khách | Dịch vụ Chuyến đi và Điều phối | Không đưa ra vị trí không có trong dữ liệu |
+| FR-C05 | Thông báo trạng thái và tóm tắt cuộc gọi gần nhất | Dịch vụ Chuyến đi và Điều phối; Dịch vụ Nhật ký cuộc gọi | Chưa có dữ liệu thì thông báo chưa có |
 
-### 3.4.3. Chờ đón, sự cố, thu nhập, FAQ, ngôn ngữ
+### 3.4.3. Nhóm nghiệp vụ chờ đón, sự cố, thu nhập, hỗ trợ và ngôn ngữ
 
-Nhóm này gộp các yêu cầu còn lại của luồng tài xế: đặt nhắc và gia hạn thời gian chờ, báo khách không ra hoặc báo sự cố, tra thu nhập và bật tắt nhận chuyến, hỏi cách dùng ứng dụng, và chuyển đổi ngôn ngữ phiên. Bảng 3.5 nêu yêu cầu cốt lõi cho từng việc.
+Nhóm này gồm các yêu cầu còn lại của luồng tài xế (Bảng 3.5).
 
-**Bảng 3.5.** Yêu cầu chức năng cho chờ đón, sự cố, thu nhập, FAQ và ngôn ngữ
+**Bảng 3.5.** Yêu cầu chức năng nhóm chờ đón, sự cố, thu nhập, hỗ trợ và ngôn ngữ
 
-| Mã | Việc tài xế muốn | Yêu cầu cốt lõi |
-|---|---|---|
-| FR-W01 | Đặt nhắc | Tạo nhắc và đọc lại thời điểm |
-| FR-W02 | “Cho thêm vài phút chờ” | Gia hạn chờ qua backend |
-| FR-I01 | “Khách không ra” | Gợi ý chờ/gọi nếu hợp lý; báo khách không ra sau xác nhận |
-| FR-I02 | Báo sự cố | Hỏi loại sự cố; ghi nhận; không xử lý tranh chấp pháp lý/thanh toán |
-| FR-E01–E03 | Thu nhập / thống kê / bật–tắt nhận chuyến | Lấy số từ API; thiếu thì nói chưa có |
-| FR-F01–F02 | Hỏi cách dùng ứng dụng | Ưu tiên FAQ/tri thức; ngoài phạm vi thì từ chối đúng cách |
-| FR-L01–L03 | Tiếng Việt / Anh; tắt trợ lý; đúng kiểu phiên | Hành vi công cụ tương đương; không trộn công cụ phiên trong ứng dụng với phiên đề nghị chuyến qua điện thoại |
-
-### 3.4.4. Từ khóa đánh thức và kết thúc nói trực tiếp (ngoài lượt công cụ chuẩn)
-
-Hai việc sau thuộc phạm vi sản phẩm nhưng **không** đi theo lượt thoại rồi gọi công cụ như “xem lịch”. Quét đơn giao hàng từ ảnh (**FR-D01** trong tài liệu cũ) **đã loại khỏi phạm vi** luận văn. Bảng 3.6 mô tả các việc còn giữ.
-
-**Bảng 3.6.** Việc ngoài lượt thoại công cụ: từ khóa đánh thức và kết thúc bridge
-
-| Mã | Việc | Cách vận hành thực tế |
-|---|---|---|
-| FR-D02 | Gọi trợ lý bằng từ khóa | Nhận dạng từ khóa trên máy (wake-word) → mở cùng luồng lấy token + vào phòng như bấm mic |
-| FR-D03 | Kết thúc nói chuyện trực tiếp với khách | Trong chế độ nói trực tiếp, dùng cụm từ kết thúc (ví dụ “Trợ lý kết thúc”) |
-
-### 3.4.5. Ánh xạ FR → dịch vụ (MSA)
-
-Bảng 3.7 neo từng nhóm FR vào dịch vụ chịu trách nhiệm chính. Một FR có thể **xuyên** nhiều dịch vụ (ví dụ gọi khách: llm-orchestrator chọn công cụ → external-api-service khởi tạo → external-channel-service quay số), nhưng mỗi dịch vụ vẫn có biên “sở hữu / không sở hữu” rõ để độc lập triển khai.
-
-**Bảng 3.7.** Ánh xạ nhóm yêu cầu chức năng sang dịch vụ
-
-| Nhóm FR | Dịch vụ chính | Dịch vụ hỗ trợ / nền tảng |
-|---|---|---|
-| FR-T01–T05 (chuyến) | external-api-service (dữ liệu + đổi trạng thái); llm-orchestrator (hội thoại + công cụ) | LiveKit (âm thanh); identity-service (JWT khi app gọi API) |
-| FR-C01–C05 (liên lạc khách) | llm-orchestrator; external-api-service; external-channel-service | call-records-service (tóm tắt); identity-service (mặc định chế độ gọi) |
-| FR-W / FR-I / FR-E / FR-F / FR-L | llm-orchestrator + external-api-service (và FAQ trong orchestrator) | identity-service (cài đặt / ngôn ngữ phiên khi áp dụng) |
-| FR-D02–D03 | Ứng dụng tài xế (wake-word; cụm kết thúc bridge) + cùng đường mở phiên | llm-orchestrator sau khi vào phòng |
-| Đăng nhập / phiên người dùng | **identity-service** (JWT) | Ứng dụng lưu token; các API khác **xác minh** JWT, không tự cấp JWT đăng nhập |
-| Đề nghị chuyến qua điện thoại | external-api-service (điều phối) + LiveKit SIP | llm-orchestrator (chỉ nhận/từ chối) |
-| Quan sát vận hành | ops-service | call-records-service (đối soát cuộc gọi) |
-
-## 3.5. Use case chính (kèm luồng thành công / thất bại)
-
-**Bảng 3.8.** Use case cốt lõi
-
-| Mã | Tình huống | Thành công khi | Thất bại / ngoại lệ phải xử lý |
+| Mã | Yêu cầu | Thành phần phụ trách | Điều kiện chấp nhận |
 |---|---|---|---|
-| UC01 | Xem lịch chuyến trong ứng dụng | Nêu đúng danh sách từ ngữ cảnh/API | Ngữ cảnh trống → nói chưa có chuyến / nhờ làm mới |
-| UC02 | Gọi điện đề nghị chuyến → nhận/từ chối | Cập nhật đúng quyết định | Không nghe rõ → hỏi lại; API lỗi → báo không cập nhật được |
-| UC03 | Cập nhật tiến độ | Trạng thái mới được xác nhận | Không đủ điều kiện nghiệp vụ → giải thích ngắn |
-| UC04 | Gọi khách (một trong ba chế độ) | Cuộc gọi khởi tạo đúng chế độ | Đang có cuộc gọi → không mở thêm; lỗi quay số → báo rõ |
-| UC05 | Hủy chuyến hai bước | Chỉ hủy sau “đồng ý” | “Không” → hủy thao tác, giữ chuyến |
-| UC06 | Báo khách không ra / sự cố | Ghi nhận sau xác nhận | Không bịa quy định bồi thường |
-| UC07 | Hỏi FAQ | Trả lời theo playbook | Ngoài phạm vi → hướng dẫn kênh phù hợp |
-| UC08 | Thu nhập / online–offline | Đúng số liệu hoặc trạng thái API | Thiếu API → nói chưa có dữ liệu |
-| UC09 | Im lặng lâu / API lỗi giữa chừng | Hỏi còn đó không, hoặc báo lỗi ngắn, không làm sập phiên | Không bịa chuyến để “cho có chuyện nói” |
-| UC10 | Từ khóa đánh thức mở trợ lý | Vào được phiên trong ứng dụng bình thường | Không nhận từ khóa → tài xế vẫn bấm mic được |
+| FR-W01 | Tạo nhắc việc và đọc lại thời điểm nhắc | Tác nhân hội thoại | Thời điểm đọc lại khớp yêu cầu |
+| FR-W02 | Gia hạn thời gian chờ khách | Dịch vụ Chuyến đi và Điều phối | Gia hạn được ghi nhận qua API |
+| FR-I01 | Báo khách không có mặt sau khi xác nhận | Dịch vụ Chuyến đi và Điều phối | Chỉ ghi nhận sau khi tài xế xác nhận |
+| FR-I02 | Báo sự cố trong chuyến | Dịch vụ Chuyến đi và Điều phối | Hỏi loại sự cố; không xử lý tranh chấp thanh toán hoặc pháp lý |
+| FR-E01 | Tra cứu thu nhập trong ngày và theo kỳ, lịch sử chuyến và chỉ số tài xế | Dịch vụ Chuyến đi và Điều phối | Số liệu lấy từ API; thiếu thì thông báo chưa có |
+| FR-E02 | Bật hoặc tắt trạng thái sẵn sàng nhận chuyến | Dịch vụ Chuyến đi và Điều phối | Trạng thái mới được xác nhận qua API |
+| FR-F01 | Trả lời câu hỏi về cách sử dụng ứng dụng | Tác nhân hội thoại (truy xuất tri thức) | Trả lời theo tài liệu hướng dẫn; câu hỏi ngoài phạm vi được từ chối và hướng dẫn kênh phù hợp |
+| FR-L01 | Hỗ trợ tiếng Việt và tiếng Anh cho luồng tài xế | Tác nhân hội thoại | Cùng tập công cụ tài xế ở hai ngôn ngữ |
+| FR-L02 | Kết thúc phiên theo yêu cầu hoặc sau khi tài xế im lặng kéo dài | Tác nhân hội thoại; Dịch vụ Chuyến đi và Điều phối | Nhắc tối đa hai lần (khoảng 15 giây mỗi lần) rồi kết thúc lịch sự |
+| FR-L03 | Giới hạn tập công cụ theo loại phiên (trong ứng dụng, mời nhận chuyến, khách hàng) | Tác nhân hội thoại | Phiên mời nhận chuyến chỉ có nhận/từ chối |
 
-Chi tiết lời thoại mẫu từng lượt để ở Phụ lục B.
+### 3.4.4. Nhóm kích hoạt và kết thúc chế độ nói trực tiếp
 
-## 3.6. Yêu cầu phi chức năng: lớp chuẩn, trải nghiệm lái xe và tính chất MSA
+Hai yêu cầu trong nhóm này không đi qua lượt gọi công cụ như các nhóm trên (Bảng 3.6). Từ khóa đánh thức được nhận dạng ngay trên điện thoại thay vì tách thành một dịch vụ riêng trên máy chủ, vì ba lý do:
 
-Các NFR được phát biểu ở hai lớp gắn nhau: (1) **lớp chuẩn** dùng trong kỹ nghệ phần mềm và MSA; (2) **cách hiểu thực tiễn** khi tài xế vừa lái vừa nói. Mục này trả lời câu hỏi của hướng dẫn: *vì sao các NFR này dẫn tới kiến trúc microservices?* — vì hiệu năng cảm nhận, độ tin cậy nghiệp vụ, bảo mật JWT và khả năng mở rộng từng kênh (thoại, PSTN, sổ chuyến) đòi hỏi **tách biên**, **độc lập triển khai** và **không chia sẻ cơ sở dữ liệu** giữa worker hội thoại và dịch vụ nghiệp vụ.
+- Phải phản hồi tức thì khi tài xế nói từ khóa.
+- Không nên gửi âm thanh liên tục lên máy chủ khi trợ lý chưa được kích hoạt.
+- Sau khi kích hoạt, chỉ cần dùng lại luồng mở phiên đã có.
 
-### 3.6.1. Nhóm NFR theo lớp chuẩn và ánh xạ MSA
+**Bảng 3.6.** Yêu cầu chức năng nhóm kích hoạt (FR-A)
 
-**Bảng 3.9.** Nhóm NFR chuẩn, mã chi tiết và tính chất MSA liên quan
-
-| Lớp NFR | Mã | Yêu cầu (tóm tắt) | Tính chất MSA được hỗ trợ |
+| Mã | Yêu cầu | Thành phần phụ trách | Điều kiện chấp nhận |
 |---|---|---|---|
-| Hiệu năng (Performance) | NFR-P01 | P95 độ trễ cảm nhận (dứt câu → bot bắt đầu nói) ≤ 2 giây trên việc cốt lõi | Tách I/O: prefetch ngữ cảnh, filler giữ chỗ; scale worker llm-orchestrator độc lập app |
-| Hiệu năng | NFR-P02 | Prefetch / cache ngữ cảnh giảm chờ API lặp trên câu đầu phiên | Biên rõ: orchestrator đọc qua HTTP, không nhúng logic DB |
-| Hiệu năng | NFR-P03 | Filler ~2 giây không chứa sự kiện chuyến | Độc lập trải nghiệm thoại khỏi độ trễ LLM nhà cung cấp |
-| Độ tin cậy / đúng đắn (Reliability) | NFR-R01 | Không bịa chuyến / thu nhập / cuộc gọi / vị trí | Nguồn sự thật chỉ ở external-api-service (+ call-records khi tóm tắt) |
-| Độ tin cậy | NFR-R02 | Thao tác rủi ro phải hỏi lại (hủy, khách không ra, số lạ) | Hành vi an toàn không phụ thuộc “đường tắt” bịa trạng thái |
-| Độ tin cậy | NFR-R03 | Câu trả lời ngắn trên loa (một ý chính mỗi lượt khi có thể) | Giảm tải nhận thức; không đòi hỏi dịch vụ UI riêng |
-| Khả năng mở rộng (Scalability) | NFR-SC01 | Tăng tải thoại / PSTN / API chuyến có thể scale theo dịch vụ | MSA: scale llm-orchestrator, external-channel-service, external-api-service tách nhau |
-| Độc lập & biên rõ (Independence / clear boundaries) | NFR-I01 | llm-orchestrator chỉ HTTP; không mở DB | Autonomy: đổi STT/LLM/TTS không đụng schema chuyến |
-| Độc lập & biên rõ | NFR-I02 | JWT đăng nhập **chỉ** qua identity-service | Auth tập trung; dịch vụ khác chỉ verify |
-| Độc lập & biên rõ | NFR-I03 | external-api (sổ chuyến) ≠ external-channel (PSTN/SMS) | Không gộp SIP LiveKit với Twilio thành một “hộp thoại” mơ hồ |
-| Bảo mật & riêng tư (Security) | NFR-S01–S02 | Hạn chế lộ SĐT/token trên loa và nhật ký | Biên dịch vụ + chính sách log theo phòng |
-| Bảo mật & riêng tư | NFR-S03 | Vị trí / điểm đón chỉ mức đủ dùng; không bịa tọa độ | Khớp FR-C04 |
-| Quan sát được (Observability) | NFR-O01 | Lỗi lần theo được theo phiên (`room=`) | ops-service + log gắn phiên; gỡ một cuộc hội thoại |
-| Đa ngôn ngữ | NFR-L01 | Việt / Anh cùng việc | Gói công cụ đối xứng trong orchestrator |
-| Trải nghiệm sử dụng (Usability) | NFR-U01 | Ngắn, ít bước việc quen; xác nhận trước hành động phá hủy | Đo ở Chương 6 bằng danh mục kiểm tra hành vi, không bắt buộc thang SUS |
+| FR-A01 | Mở trợ lý bằng từ khóa đánh thức | Ứng dụng tài xế (nhận dạng trên thiết bị) | Mở phiên theo cùng luồng như khi bấm nút; nếu không nhận được từ khóa, tài xế vẫn mở được bằng nút |
+| FR-A02 | Kết thúc chế độ nói trực tiếp bằng cụm từ quy định | Tác nhân hội thoại | Tác nhân trở lại hội thoại với tài xế sau khi nghe cụm từ kết thúc |
 
-### 3.6.2. Cách hiểu thực tiễn trên xe
+### 3.4.5. Nhóm giám sát vận hành
 
-**Bảng 3.10.** NFR nhìn từ trải nghiệm lái xe (bổ sung diễn giải)
+Người vận hành cần đánh giá hệ thống theo từng ngày mà không phải đọc từng bản ghi hội thoại. Yêu cầu này làm Dịch vụ Giám sát vận hành sở hữu một loại dữ liệu của riêng nó là báo cáo đã tổng hợp (Bảng 3.7).
 
-| Mã | Cách hiểu thực tiễn |
-|---|---|
-| NFR-P01 | Tài xế dứt câu → nghe bot nói lại trong khoảng chấp nhận được khi đang lái |
-| NFR-P02–P03 | Câu đầu về lịch/chuyến tận dụng ngữ cảnh đã nạp; nếu LLM chậm thì nghe filler trung tính, không nghe “đã nhận chuyến” giả |
-| NFR-R01 | Sai thì nhận thiếu dữ liệu — độ chính xác nghiệp vụ ưu tiên hơn sự trôi chảy giả tạo |
-| NFR-R02 | Hủy chuyến, khách không ra, gọi số lạ: hỏi lại một lần |
-| NFR-U01 | Trả lời ngắn; việc quen thuộc ít bước; đo hoàn thành nghiệp vụ ở Chương 6 |
+**Bảng 3.7.** Yêu cầu chức năng nhóm giám sát vận hành (FR-O)
 
-Về hành vi im lặng: nguyên mẫu hiện nhắc tài xế khi im lâu (khoảng 15 giây, tối đa hai lần nhắc rồi kết thúc lịch sự). Đây là yêu cầu trải nghiệm cần giữ khi đánh giá UC09.
+| Mã | Yêu cầu | Thành phần phụ trách | Điều kiện chấp nhận |
+|---|---|---|---|
+| FR-O01 | Lập báo cáo vận hành cho từng ngày (giờ Việt Nam): số phiên và số tài xế được phục vụ; tỷ lệ công cụ thành công, tỷ lệ API lỗi và tỷ lệ trả lời đúng trên mẫu có chấm; lỗi theo loại; độ trễ phản hồi trung bình, P50, P95 | Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi (dữ liệu nguồn); tác nhân hội thoại (chỉ số phiên) | Báo cáo tự lập sau nửa đêm cho ngày trước, lập lại được theo yêu cầu, ghi rõ cỡ mẫu và phương pháp chấm |
+| FR-O02 | Xem báo cáo theo ngày và xu hướng 7 ngày trên trang giám sát hệ thống | Dịch vụ Giám sát vận hành; trang giám sát hệ thống | Chỉ tài khoản quản trị hệ thống truy cập được |
 
-Các NFR trên là đầu vào thiết kế Chương 4: MSA được chọn không phải vì “chia nhỏ cho đẹp”, mà vì Performance + Reliability + Security + Scalability đòi hỏi tách **hội thoại**, **sổ chuyến**, **kênh PSTN**, **định danh** và **quan sát vận hành**.
+## 3.5. Trường hợp sử dụng chính
 
-## 3.7. Trong phạm vi và ngoài phạm vi
+Bảng 3.8 tóm tắt mười một trường hợp sử dụng (use case) cốt lõi cùng luồng thành công và luồng ngoại lệ; lời thoại mẫu đặt ở Phụ lục B.
 
-**Trong phạm vi:** FR-T, FR-C, FR-W, FR-I, FR-E, FR-F, FR-L, FR-D02, FR-D03 và toàn bộ NFR mục 3.6 — kênh trong ứng dụng và gọi điện khi cần, FAQ, từ khóa đánh thức (tóm tắt khớp mục 1.5 sau khi loại quét đơn).
+**Bảng 3.8.** Trường hợp sử dụng cốt lõi
 
-**Ngoài phạm vi luận văn:**
+| Mã | Trường hợp sử dụng | Yêu cầu liên quan | Kết quả thành công | Ngoại lệ phải xử lý |
+|---|---|---|---|---|
+| UC01 | Xem lịch chuyến trong ứng dụng | FR-T01, FR-T02 | Danh sách đúng theo dữ liệu | Ngữ cảnh trống: thông báo chưa có chuyến hoặc làm mới |
+| UC02 | Nhận hoặc từ chối chuyến qua cuộc gọi mời nhận chuyến | FR-T04, FR-L03 | Quyết định được cập nhật | Không nghe rõ: hỏi lại; API lỗi: thông báo không cập nhật được |
+| UC03 | Cập nhật tiến độ chuyến | FR-T03 | Trạng thái mới được xác nhận | Không đủ điều kiện nghiệp vụ: giải thích ngắn |
+| UC04 | Gọi khách hàng | FR-C01, FR-C02 | Cuộc gọi khởi tạo đúng chế độ | Đang có cuộc gọi: không mở thêm; lỗi quay số: thông báo rõ |
+| UC05 | Hủy chuyến hai bước | FR-T05 | Chỉ hủy sau khi tài xế đồng ý | Tài xế không đồng ý: giữ nguyên chuyến |
+| UC06 | Báo khách không có mặt hoặc báo sự cố | FR-I01, FR-I02 | Ghi nhận sau xác nhận | Không đưa ra quy định bồi thường |
+| UC07 | Hỏi cách sử dụng ứng dụng | FR-F01 | Trả lời theo tài liệu hướng dẫn | Ngoài phạm vi: hướng dẫn kênh phù hợp |
+| UC08 | Tra cứu thu nhập, bật/tắt nhận chuyến | FR-E01, FR-E02 | Số liệu hoặc trạng thái đúng | API không trả dữ liệu: thông báo chưa có |
+| UC09 | Im lặng kéo dài hoặc lỗi API giữa phiên | FR-L02, NFR-04 | Nhắc tài xế hoặc thông báo lỗi ngắn; phiên không bị kết thúc bất thường | Không tạo thông tin thay thế cho dữ liệu lỗi |
+| UC10 | Mở trợ lý bằng từ khóa đánh thức | FR-A01 | Vào phiên trong ứng dụng | Không nhận từ khóa: vẫn mở bằng nút |
+| UC11 | Người vận hành xem báo cáo ngày | FR-O01, FR-O02 | Báo cáo hiển thị đủ các nhóm chỉ số | Chưa có báo cáo: cho phép lập lại từ bản ghi |
 
-- Quét / tạo đơn giao hàng từ ảnh (**FR-D01** / delivery scan) và nghiệp vụ đơn giao hàng gắn ảnh;
-- Nhắn tin nhóm tài xế; chỉ đường rẽ từng bước thay Google Maps/Waze;
-- Tranh chấp thanh toán–hoàn tiền–bảo hiểm; đổi hồ sơ/biển số bằng giọng nói; quên mật khẩu;
-- Thao tác ứng dụng hãng khác; huấn luyện lại mô hình nhận dạng/sinh giọng từ dữ liệu riêng quy mô lớn;
-- Nhà cung cấp định danh đám mây kiểu Cognito nếu không hiện diện trong mã nguồn nguyên mẫu (nguyên mẫu dùng **identity-service**).
+## 3.6. Yêu cầu phi chức năng
 
-## 3.8. Tiêu chí chấp nhận đưa sang Chương 6
+### 3.6.1. Đặc tả yêu cầu phi chức năng
 
-**Bảng 3.11.** Từ yêu cầu sang chỉ số
+Luận văn tập trung vào năm yêu cầu phi chức năng: khả năng sử dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi và bảo mật. Mỗi yêu cầu được phân loại theo đặc tính của ISO/IEC 25010 (ISO/IEC, 2023) và đặc tả dưới dạng kịch bản thuộc tính chất lượng (Bass et al., 2021) như trình bày trong Bảng 3.9.
 
-| Nhóm việc | Đo bằng gì | Use case ưu tiên |
+**Bảng 3.9.** Yêu cầu phi chức năng theo ISO/IEC 25010 và kịch bản thuộc tính chất lượng
+
+| Mã | Phân loại (ISO/IEC 25010) | Kích thích và môi trường | Phản ứng mong đợi | Thước đo |
+|---|---|---|---|---|
+| NFR-01 | Usability (Interaction capability) | Tài xế thực hiện nghiệp vụ cốt lõi bằng giọng nói khi đang lái | Mỗi lượt phản hồi chứa một ý chính; thao tác có rủi ro được xác nhận trước khi thực thi | 100% thao tác rủi ro có bước xác nhận; tỷ lệ đạt danh mục kiểm tra hành vi khi lái (Chương 6) |
+| NFR-02 | Performance efficiency (time behaviour) | Tài xế kết thúc phát ngôn trong phiên hội thoại bình thường | Hệ thống bắt đầu phát âm thanh trả lời; phát câu đệm nếu phản hồi chưa sẵn sàng sau khoảng 2 giây | P95 độ trễ phản hồi ≤ 2 giây trên luồng cốt lõi |
+| NFR-03 | Scalability (thuộc Flexibility) | Số phiên hội thoại đồng thời tăng từ 1 lên 20 | Hệ thống mở rộng theo chiều ngang bằng cách tăng số bản sao tác nhân, không thay đổi mã hay các dịch vụ khác | P95 ở 20 phiên (với số bản sao tương ứng) tăng không quá 20% so với 1 phiên; tỷ lệ phiên lỗi < 1% |
+| NFR-04 | Reliability: availability, fault tolerance, recoverability (khả năng phục hồi) | Một dịch vụ phụ trợ, API nghiệp vụ hoặc nhà cung cấp AI chính gặp lỗi trong phiên; hoặc một bản sao tác nhân bị dừng | Phiên hội thoại tiếp tục; tác nhân thông báo rõ thao tác không thực hiện được; nhà cung cấp AI dự phòng được sử dụng; bản sao tác nhân được thay thế | 100% phiên không bị kết thúc bất thường trong các kịch bản tiêm lỗi; thời gian khôi phục bản sao tác nhân được đo và báo cáo |
+| NFR-05 | Security (confidentiality, authenticity) | Người dùng hoặc dịch vụ truy cập API; hệ thống ghi nhật ký | Chỉ Dịch vụ Định danh phát hành JWT, các dịch vụ khác xác minh; tham số bí mật không nằm trong mã nguồn; nhật ký không chứa số điện thoại đầy đủ hoặc token | 100% mục đạt trong danh mục kiểm tra bảo mật (Chương 6) |
+
+### 3.6.2. Ràng buộc kiến trúc
+
+Bên cạnh các yêu cầu phi chức năng, hệ thống có bốn ràng buộc kiến trúc (Bảng 3.10). Đây là quy tắc thiết kế bắt buộc được rút ra từ yêu cầu, dùng để kiểm tra tính tuân thủ của hiện thực.
+
+**Bảng 3.10.** Ràng buộc kiến trúc
+
+| Mã | Ràng buộc | Yêu cầu nguồn |
 |---|---|---|
-| Chuyến + gọi khách (tài xế) | Đúng công cụ; xong việc; danh mục kiểm tra trải nghiệm khi lái | UC01–UC06 |
-| FAQ | Đúng FAQ; không bịa chính sách | UC07 |
-| Độ trễ (**ưu tiên cao nhất**) | P95 ≤ 2s (speech → first audio); có filler khi chậm | UC01, UC03, UC04, UC07 |
-| Nghe trong ồn | WER yên vs nhiễu | Mẫu đọc cố định |
-| Luồng khách (chấp nhận qua test case) | Đạt/không đạt test case (công cụ + chế độ gọi) | TC gọi khách / custcall / ghi nhận yêu cầu khách |
-| Bảo mật, JWT và vị trí | Danh mục kiểm tra NFR-S / NFR-I02 | Gắn với UC vị trí, gọi, nhật ký, đăng nhập |
-| Từ khóa đánh thức | Kiểm riêng | UC10 |
-| Im lặng / lỗi API | Hành vi an toàn; không bịa chuyến | UC09 |
-| Biên MSA | Orchestrator không mở DB; JWT chỉ identity-service | Kiểm mã / danh mục NFR-I |
+| CON-01 | Tác nhân hội thoại chỉ truy cập dữ liệu nghiệp vụ qua API HTTP, không kết nối trực tiếp cơ sở dữ liệu | Điều kiện chấp nhận chung của FR; NFR-03; NFR-04 |
+| CON-02 | Mỗi dịch vụ sở hữu dữ liệu của mình; dịch vụ khác truy cập qua API | NFR-03; NFR-04 |
+| CON-03 | JWT đăng nhập chỉ do Dịch vụ Định danh phát hành | NFR-05 |
+| CON-04 | Mọi phiên hội thoại được gắn mã phòng trên nhật ký để theo dõi và tìm nguyên nhân lỗi | NFR-04 |
+
+## 3.7. Từ yêu cầu phi chức năng đến tính chất của kiến trúc microservices
+
+Bảng 3.11 đối chiếu từng yêu cầu phi chức năng với tính chất của kiến trúc microservices có khả năng đáp ứng yêu cầu đó (mục 2.5), cùng cơ chế dự kiến trong hệ thống. Bảng này là đầu vào cho quyết định kiến trúc ở mục 4.2.
+
+**Bảng 3.11.** Đối chiếu yêu cầu phi chức năng với tính chất của kiến trúc microservices
+
+| Yêu cầu | Tính chất microservices | Cơ chế dự kiến trong hệ thống |
+|---|---|---|
+| NFR-02 Performance | Dị biệt công nghệ; tách xử lý thời gian thực khỏi xử lý giao dịch | Tác nhân hội thoại viết bằng Python, chạy dài hạn trên container, duy trì kết nối âm thanh; API giao dịch viết bằng Node.js chạy trên FaaS; tải trước ngữ cảnh phiên |
+| NFR-03 Scalability | Mở rộng độc lập từng dịch vụ (trục X và trục Y của scale cube) | Tăng số bản sao tác nhân độc lập với API; API nghiệp vụ tự động mở rộng theo số yêu cầu; cơ sở dữ liệu tính phí theo yêu cầu |
+| NFR-04 Resilience | Thiết kế cho lỗi; cô lập lỗi; dịch vụ phi trạng thái; mỗi dịch vụ một cơ sở dữ liệu | Thời gian chờ và suy giảm có kiểm soát khi gọi API; dự phòng nhà cung cấp STT, LLM, TTS; nền tảng container tự thay thế bản sao lỗi; chỉ số phiên và báo cáo ngày để phát hiện suy giảm |
+| NFR-05 Security | Xác thực tập trung, xác minh phân tán; đặc quyền tối thiểu | Dịch vụ Định danh phát hành JWT, các dịch vụ khác xác minh bằng khóa bí mật dùng chung; vai trò IAM riêng cho từng dịch vụ |
+| NFR-01 Usability | Ngữ cảnh giới hạn (bounded context) theo kênh | Phiên trong ứng dụng, phiên mời nhận chuyến và phiên khách hàng có tập công cụ riêng |
+
+Từ Bảng 3.11 có thể thấy bốn trên năm yêu cầu phi chức năng (hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) đòi hỏi tách tác nhân hội thoại khỏi các dịch vụ nghiệp vụ, tách các chức năng phụ trợ (tin nhắn, nhật ký cuộc gọi) khỏi nguồn dữ liệu chuyến để lỗi của chúng không lan sang luồng chính, và tập trung định danh vào một dịch vụ. Đây là các tính chất đặc trưng của kiến trúc microservices; Chương 4 lập luận lựa chọn này so với các phương án thay thế.
+
+## 3.8. Phạm vi yêu cầu
+
+**Trong phạm vi:** các nhóm FR-T, FR-C, FR-W, FR-I, FR-E, FR-F, FR-L, FR-A, FR-O và năm yêu cầu phi chức năng NFR-01 đến NFR-05.
+
+**Ngoài phạm vi:** các chức năng dưới đây không được xây dựng trong luận văn.
+
+- **Nhắn tin nhóm giữa các tài xế:** không thuộc nghiệp vụ của một chuyến đi.
+- **Dẫn đường từng ngã rẽ:** tài xế đã dùng ứng dụng bản đồ chuyên dụng; trợ lý chỉ gợi ý điểm dừng và tình trạng giao thông (FR-T07).
+- **Thanh toán, hoàn tiền, bảo hiểm và tranh chấp:** cần quy trình pháp lý và con người xử lý, không phù hợp để tự động hóa bằng giọng nói.
+- **Thay đổi hồ sơ, biển số xe, khôi phục mật khẩu:** là thao tác nhạy cảm về bảo mật, tài xế thực hiện trên màn hình khi xe đã dừng.
+- **Thao tác trên ứng dụng của hãng gọi xe khác:** trợ lý chỉ làm việc với hệ thống chuyến đi của luận văn.
+- **Huấn luyện lại mô hình nhận dạng hoặc tổng hợp giọng nói:** luận văn dùng mô hình có sẵn của nhà cung cấp (mục 1.5.3).
+
+## 3.9. Tiêu chí chấp nhận
+
+Tiêu chí chấp nhận là điều kiện đo được để kết luận một yêu cầu đã được đáp ứng. Bảng 3.12 nêu, cho từng nhóm yêu cầu, chỉ số cần đo, ngưỡng đạt và trường hợp sử dụng hoặc kịch bản dùng để đo. Chương 6 đánh giá hệ thống theo đúng các tiêu chí này.
+
+**Bảng 3.12.** Tiêu chí chấp nhận theo yêu cầu
+
+| Yêu cầu | Chỉ số | Ngưỡng | Trường hợp sử dụng / kịch bản |
+|---|---|---|---|
+| FR-T, FR-C, FR-W, FR-I, FR-E | Độ chính xác chọn công cụ; tỷ lệ hoàn thành nghiệp vụ | Báo cáo theo nhóm kịch bản | UC01–UC06, UC08 |
+| FR-F01 | Tỷ lệ trả lời đúng theo tài liệu hướng dẫn | Không đưa ra chính sách không có trong tài liệu | UC07 |
+| FR-L02, FR-A01 | Hành vi khi im lặng; mở phiên bằng từ khóa | Đạt / không đạt | UC09, UC10 |
+| Luồng khách hàng | Tỷ lệ trường hợp kiểm thử đạt | Đạt / không đạt | Bộ trường hợp kiểm thử khách hàng |
+| NFR-01 | Danh mục kiểm tra hành vi khi lái | 100% thao tác rủi ro có xác nhận | UC01–UC06 |
+| NFR-02 | P50, P95 độ trễ phản hồi | P95 ≤ 2 giây | UC01, UC03, UC04, UC07 |
+| NFR-03 | P95 và tỷ lệ phiên lỗi theo số phiên đồng thời | Tăng P95 ≤ 20%; lỗi < 1% | Kịch bản SC-01 đến SC-03 |
+| NFR-04 | Tỷ lệ phiên duy trì khi tiêm lỗi; thời gian khôi phục | 100% phiên duy trì | Kịch bản RS-01 đến RS-05 |
+| NFR-05 | Danh mục kiểm tra bảo mật | 100% mục đạt | Kiểm tra mã nguồn và cấu hình |
+| FR-O01, FR-O02 | Báo cáo được lập đúng từ bản ghi mẫu; hiển thị trên trang giám sát | Đạt / không đạt | UC11 |
+| Nhận dạng giọng nói | Tỷ lệ lỗi từ yên tĩnh so với nhiễu | So sánh tương đối | Bộ câu tham chiếu cố định |
 
 ## Kết luận chương
 
-Chương 3 đã neo yêu cầu vào **hành vi tài xế khi chạy xe** (câu ngắn, rảnh tay, xác nhận rủi ro), vào luồng vận hành thật với **một đường thoại** STT → LLM+công cụ → TTS, và làm rõ phía khách được chấp nhận qua test case chứ không phải khảo sát trên đường. FR được ánh xạ sang bộ dịch vụ MSA (identity-service, external-api-service, llm-orchestrator, external-channel-service, call-records-service, ops-service); NFR được nhóm theo lớp chuẩn và gắn với khả năng mở rộng, độc lập và biên rõ — làm tiền đề thiết kế Chương 4. Quét đơn giao hàng (FR-D01) nằm ngoài phạm vi.
-
----
-
-## Self-review (Chương 3 — rà NFR/MSA 2026-09-24)
-
-| Hạng mục | Kết quả |
-|---|---|
-| Tên dịch vụ mới (glossary) | Đạt |
-| FR-D01 / delivery out of scope | Đạt |
-| FR → service map (Bảng 3.7) | Đạt |
-| NFR lớp chuẩn + MSA (Bảng 3.9) | Đạt |
-| Single voice path + filler không bịa | Đạt |
-| JWT chỉ identity-service | Đạt |
-| Không claim Cognito | Đạt |
-| Ảnh UI / hình mới | Không tạo — Chinh vẽ sau |
-| Đồng bộ Ch.4–6 / kết luận build (một đường + câu giữ chỗ) | Đã chỉnh — đường tắt chỉ còn như đợt A/B lịch sử ở Ch.6 |
+Chương 3 đã xác định các yêu cầu chức năng theo nhóm nghiệp vụ, gắn với thành phần phụ trách và điều kiện chấp nhận; đặc tả năm yêu cầu phi chức năng theo ISO/IEC 25010 dưới dạng kịch bản đo được; nêu bốn ràng buộc kiến trúc; và đối chiếu các yêu cầu phi chức năng với tính chất của kiến trúc microservices. Chương 4 dùng các yêu cầu này làm động lực kiến trúc để lựa chọn và thiết kế hệ thống.

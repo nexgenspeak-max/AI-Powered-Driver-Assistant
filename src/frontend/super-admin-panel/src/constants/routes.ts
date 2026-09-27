@@ -6,4 +6,5 @@ export const ROUTES = {
   PROMPTS: '/prompts',
   LOGS: '/logs',
   CALLS: '/calls',
+  REPORTS: '/reports',
 } as const

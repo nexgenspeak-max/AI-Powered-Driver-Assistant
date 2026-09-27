@@ -1,0 +1,64 @@
+# Non-secret settings. Copy to config.local.toml (gitignored) and edit.
+# API keys, JWT, and LiveKit secret stay in .env.local — see .env.example.
+# A variable already set in the shell or in .env overrides this file.
+
+env = "local"
+agent_name = "driver-assistant"
+livekit_url = "wss://your-project.livekit.cloud"
+
+# Locale bundle: change agent_lang + stt_language + google_tts_voice together, then restart.
+# vn bundle is the default. en bundle example:
+#   agent_lang = "en"
+#   stt_language = "en-US"
+#   google_tts_voice = "en-US-Chirp3-HD-Kore"
+agent_lang = "vn"
+
+stt_provider = "openai"          # openai | deepgram | google | inference
+stt_fallback = ""                # used only if stt_provider fails
+stt_model = "whisper-1"          # openai: whisper-1 | deepgram: nova-2 | google: chirp_3 | inference: deepgram/nova-3
+stt_language = "vi-VN"
+
+llm_provider = "openai"          # openai | gemini | kimi
+llm_fallback = ""
+llm_model = "gpt-5.6-luna"       # gpt-5.6-luna | gpt-4o | gpt-4o-mini | moonshotai/kimi-k2.6
+
+tts_provider = "google"          # google | elevenlabs | gemini | openai
+tts_fallback = ""
+tts_voice = ""                   # empty = provider default below
+
+kimi_base_url = "https://api.moonshot.ai/v1"
+kimi_provider = ""               # optional inference provider, e.g. baseten
+
+google_credentials_file = "./envs/credentials.json"
+google_stt_model = "chirp_3"
+google_stt_location = "us"       # chirp_3: us | eu; chirp_2: asia-southeast1 | us
+google_tts_voice = "vi-VN-Chirp3-HD-Kore"
+google_tts_speaking_rate = 0.95
+google_tts_pitch = -2.0
+
+gemini_tts_model = "gemini-3.1-flash-tts-preview"
+gemini_tts_voice = "Kore"
+gemini_tts_location = "us-central1"
+gemini_tts_use_vertexai = true
+
+elevenlabs_voice_id = "s6W2NupNY6TykGJoDtWy"
+elevenlabs_model = "eleven_flash_v2_5"
+cartesia_voice_id = ""
+
+# external-api-service (trips, driver context, LiveKit token)
+trip_service_url = "http://localhost:8002"
+# call-records-service; empty skips saving call records locally
+call_logger_url = "http://localhost:8001"
+
+faq_rag_enabled = true
+faq_knowledge_dir = "requirements/knowledge"
+faq_index_dir = "data/faq_index"
+faq_embed_model = "text-embedding-3-small"
+faq_top_k = 4
+
+silence_tracker_enabled = true
+silence_threshold_seconds = 0
+silence_max_consecutive = 0
+silence_end_session = true
+
+twilio_phone_number = "+19068288788"

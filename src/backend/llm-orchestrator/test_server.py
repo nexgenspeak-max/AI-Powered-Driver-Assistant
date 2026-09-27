@@ -10,6 +10,9 @@ import os
 _env = os.getenv("ENV", "local")
 load_dotenv(f"envs/.env.{_env}")
 
+from app.config.local_config import load_config_env
+load_config_env()
+
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import uuid

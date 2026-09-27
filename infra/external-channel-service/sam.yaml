@@ -1,32 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Driver Assistant - external-channel-service service (Lambda + API Gateway)
+Description: Driver Assistant - external-channel-service (Dịch vụ Kênh liên lạc) - Lambda + API Gateway + DynamoDB
 
 Parameters:
   Environment:
     Type: String
     Default: dev
     AllowedValues: [dev, uat, prod]
-
   AppName:
     Type: String
     Default: driver-assistant
-
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Same value as identity-service; REST routes verify it, Twilio webhooks stay open.
   TwilioAccountSid:
     Type: String
     NoEcho: true
-
   TwilioAuthToken:
     Type: String
     NoEcho: true
-
   TwilioPhoneNumber:
     Type: String
-
-  CallCenterBaseUrl:
+  ExternalChannelBaseUrl:
     Type: String
     Default: ""
-    Description: API Gateway base URL — set after first deploy
+    Description: Public base URL Twilio calls back; filled by deploy.sh after the first deploy.
 
 Globals:
   Function:
@@ -36,142 +35,98 @@ Globals:
     Environment:
       Variables:
         ENV: !Ref Environment
+        JWT_SECRET: !Ref JwtSecret
         TWILIO_ACCOUNT_SID: !Ref TwilioAccountSid
         TWILIO_AUTH_TOKEN: !Ref TwilioAuthToken
         TWILIO_PHONE_NUMBER: !Ref TwilioPhoneNumber
-        BASE_URL: !Ref CallCenterBaseUrl
+        BASE_URL: !Ref ExternalChannelBaseUrl
+        EVENTS_TABLE: !Ref ExternalChannelEventsTable
 
 Resources:
-
-  CallCenterApi:
+  ExternalChannelRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "${Environment}-${AppName}-call-center-api"
+      Name: !Sub "${Environment}-${AppName}-external-channel-service-api"
       StageName: !Ref Environment
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: external-channel-service, layer: api-gateway, component: rest-api }
 
-  CallsFunction:
+  ExternalChannelFunction:
     Type: AWS::Serverless::Function
+    DependsOn: ExternalChannelFunctionLogGroup
     Properties:
-      FunctionName: !Sub "${Environment}-${AppName}-call-center"
+      FunctionName: !Sub "${Environment}-${AppName}-external-channel-service-fn"
       CodeUri: ../../src/backend/external-channel-service/
       Handler: src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExternalChannelEventsTable
       Events:
-        Health:
+        Root:
           Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /health
-            Method: GET
-        InboundWebhook:
+          Properties: { RestApiId: !Ref ExternalChannelRestApi, Path: "/", Method: ANY }
+        Proxy:
           Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/inbound/webhook
-            Method: POST
-        InboundRecorded:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/inbound/recorded
-            Method: POST
-        InboundRecordingStatus:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/inbound/recording-status
-            Method: POST
-        InboundTranscription:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/inbound/transcription
-            Method: POST
-        InboundStatus:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/inbound/status
-            Method: POST
-        OutboundTwiml:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/outbound/twiml
-            Method: POST
-        OutboundGather:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/outbound/gather
-            Method: POST
-        OutboundStatus:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/outbound/status
-            Method: POST
-        OutboundDial:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/outbound/dial
-            Method: POST
-        GetCallStatus:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/status/{call_sid}
-            Method: GET
-        ListRecentCalls:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/recent
-            Method: GET
-        ListTwilioCalls:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/twilio
-            Method: GET
-        ListEvents:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/events
-            Method: GET
-        MonitorCall:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CallCenterApi
-            Path: /api/v1/calls/monitor/{call_sid}
-            Method: GET
+          Properties: { RestApiId: !Ref ExternalChannelRestApi, Path: "/{proxy+}", Method: ANY }
+      Tags: { app: !Ref AppName, env: !Ref Environment, service: external-channel-service, layer: microservices, component: lambda }
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
         Target: "es2020"
-        EntryPoints:
-          - src/index.ts
-        External:
-          - "@aws-sdk/*"
+        EntryPoints: [src/index.ts]
+        External: ["@aws-sdk/*"]
 
-  CallsFunctionLogGroup:
+  ExternalChannelFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-call-center"
-      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/${Environment}-${AppName}-external-channel-service-fn"
+      RetentionInDays: 30
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: external-channel-service }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
+
+  # Carrier events: Twilio webhooks (call status, inbound SMS, recordings), API dials, SMS sends.
+  ExternalChannelEventsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${Environment}-${AppName}-external-channel-service-channel-events"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: sid, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+        - { AttributeName: event_date, AttributeType: S }
+      KeySchema:
+        - { AttributeName: sid, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      GlobalSecondaryIndexes:
+        - IndexName: event_date-sk-index
+          KeySchema:
+            - { AttributeName: event_date, KeyType: HASH }
+            - { AttributeName: sk, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: external-channel-service }
+        - { Key: layer, Value: data }
+        - { Key: component, Value: dynamodb-channel-events }
 
 Outputs:
-  ApiUrl:
-    Description: API Gateway base URL
-    Value: !Sub "https://${CallCenterApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
-
-  InboundWebhookUrl:
-    Description: Paste this into Twilio Console Voice webhook
-    Value: !Sub "https://${CallCenterApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/api/v1/calls/inbound/webhook"
-
-  CallsFunctionArn:
-    Value: !GetAtt CallsFunction.Arn
+  ExternalChannelApiUrl:
+    Description: Base URL of external-channel-service (EXTERNAL_CHANNEL_SERVICE_URL for other services)
+    Value: !Sub "https://${ExternalChannelRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  ExternalChannelInboundWebhookUrl:
+    Description: Set as the Voice webhook of the Twilio number
+    Value: !Sub "https://${ExternalChannelRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/api/v1/calls/inbound/webhook"
+  ExternalChannelEventsTableName:
+    Value: !Ref ExternalChannelEventsTable

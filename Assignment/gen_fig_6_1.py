@@ -13,9 +13,9 @@ OUT = Path(__file__).resolve().parent / "thesis_screenshots"
 
 # (nhãn, P50, P95, n) — extract_ch6_metrics.py, cửa sổ 2026-09-05..06
 GROUPS = [
-    ("Đường tắt", 0.21, 2.00, 167),
-    ("Đường đủ (LLM)", 1.54, 3.75, 174),
-    ("Gộp mọi lượt", 0.50, 2.87, 341),
+    ("Nhánh rút gọn (đã loại bỏ)", 0.21, 2.00, 167),
+    ("Luồng đầy đủ qua LLM", 1.54, 3.75, 174),
+    ("Toàn bộ lượt", 0.50, 2.87, 341),
 ]
 THRESHOLD = 2.0
 Y_MAX = 4.0
@@ -23,6 +23,11 @@ Y_MAX = 4.0
 W, H = 900, 540
 ML, MR, MT, MB = 80, 30, 40, 90
 PW, PH = W - ML - MR, H - MT - MB
+
+
+def vn(v: float) -> str:
+    """Số thập phân kiểu Việt Nam (dấu phẩy), khớp bảng trong luận văn."""
+    return f"{v:.2f}".replace(".", ",")
 
 
 def y(v: float) -> float:
@@ -66,7 +71,7 @@ def main() -> None:
             s.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bw-6}" '
                      f'height="{MT+PH-by:.1f}" fill="{fill}"/>')
             s.append(f'<text x="{bx+(bw-6)/2:.1f}" y="{by-6:.1f}" text-anchor="middle" '
-                     f'font-size="13" fill="#111827">{val:.2f}</text>')
+                     f'font-size="13" fill="#111827">{vn(val)}</text>')
         s.append(f'<text x="{cx:.1f}" y="{MT+PH+24:.1f}" text-anchor="middle" '
                  f'font-size="15" fill="#111827">{label}</text>')
         s.append(f'<text x="{cx:.1f}" y="{MT+PH+43:.1f}" text-anchor="middle" '

@@ -617,16 +617,6 @@ raw_schema = {
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 
-    "get_bonus_info": {
-        "type": "function",
-        "name": "get_bonus_info",
-        "description": (
-            "Xem các chương trình thưởng và vùng tăng giá đang hoạt động. "
-            "Gọi khi tài xế hỏi 'có thưởng không', 'vùng tăng giá ở đâu', 'khuyến mãi hôm nay'."
-        ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
-    },
-
     # ── Trip issue reporting ──────────────────────────────────────────────────
 
     "report_customer_no_show": {

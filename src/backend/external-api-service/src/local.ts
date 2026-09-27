@@ -9,6 +9,7 @@ import remindersRouter from './routes/reminders';
 import customersRouter from './routes/customers';
 import placesRouter from './routes/places';
 import { authenticate } from './middleware/authenticate';
+import { deliverDueReminders } from './services/reminderDelivery';
 import { attachLocalWebSocketServer } from './services/notify';
 import { cacheGet } from './cache/redis';
 import { attachLogContext, getLogger } from './services/logger';
@@ -42,3 +43,10 @@ const log = getLogger('listen');
 void cacheGet('__warmup__');
 const server = app.listen(PORT, () => log.info('listening', { port: PORT }));
 attachLocalWebSocketServer(server);
+setInterval(() => {
+  deliverDueReminders().catch((err) => {
+    log.warning('reminder tick failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}, 30_000);

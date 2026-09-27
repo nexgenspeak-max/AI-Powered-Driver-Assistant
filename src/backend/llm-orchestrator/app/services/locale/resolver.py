@@ -23,11 +23,11 @@ def normalize_routing_lang(raw: str | None) -> VoiceRoutingLang | None:
 
 
 def resolve_routing_lang(*, room_meta_lang: str | None = None) -> VoiceRoutingLang:
-    """room.metadata.lang overrides worker default from VOICE_AGENT_LANG."""
+    """room.metadata.lang overrides worker default from AGENT_LANG."""
     from_meta = normalize_routing_lang(room_meta_lang)
     if from_meta:
         return from_meta
-    from_env = normalize_routing_lang(get_settings().voice_agent_lang)
+    from_env = normalize_routing_lang(get_settings().agent_lang)
     if from_env:
         return from_env
     return _DEFAULT_ROUTING

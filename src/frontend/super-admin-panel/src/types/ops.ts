@@ -89,3 +89,56 @@ export type PromptsSnapshot = {
   source: string
   prompts: PromptFile[]
 }
+
+/** Daily operations report (ops-service GET /api/v1/reports/daily). Mirrors ops-service reports/types.ts. */
+export type DailyReport = {
+  report_date: string
+  timezone: string
+  generated_at: string
+  activity: {
+    sessions: number
+    sessions_by_mode: Record<string, number>
+    drivers_served: number
+    customers_served: number
+    customer_calls: number
+    turns: number
+    total_duration_s: number
+    avg_session_s: number | null
+  }
+  latency_ms: {
+    turns_measured: number
+    mean: number | null
+    p50: number | null
+    p95: number | null
+    max: number | null
+    slow_ratio: number | null
+    meets_nfr02: boolean | null
+  }
+  fillers: { count: number; per_turn: number | null }
+  accuracy: {
+    tool_calls: number
+    tool_errors: number
+    tool_success_rate: number | null
+    http_calls: number
+    http_errors: number
+    http_error_rate: number | null
+    judged: {
+      method: string
+      model: string
+      sample_size: number
+      correct: number
+      incorrect: number
+      unclear: number
+      correct_rate: number | null
+      examples_incorrect: { call_id: string; user: string; assistant: string; reason: string }[]
+    } | null
+  }
+  errors: {
+    total: number
+    by_kind: Record<string, number>
+    top_http: { key: string; count: number }[]
+    sessions_with_errors: number
+  }
+  fallbacks: { total: number; by_provider: Record<string, number> }
+  coverage: { records: number; with_metrics: number; notes: string[] }
+}

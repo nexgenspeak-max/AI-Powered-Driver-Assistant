@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Driver Assistant - llm-orchestrator service (ECS Fargate)
+Description: Driver Assistant - llm-orchestrator (Tác tử hội thoại giọng nói) on Amazon ECS Fargate
+
+# Naming convention (see Assignment/KE_HOACH_SUA_LUAN_VAN_NFR_MSA.md §12.1):
+#   stack          ${Environment}-${AppName}-llm-orchestrator
+#   logical ID     LlmOrchestrator<Role>
+#   physical name  ${Environment}-${AppName}-llm-orchestrator[-<role>]
+#   tags           app, env, service, layer, component
 
 Parameters:
   Environment:
@@ -13,7 +19,7 @@ Parameters:
 
   ImageUri:
     Type: String
-    Description: ECR image URI (e.g. 123456789.dkr.ecr.ap-southeast-1.amazonaws.com/dev-driver-assistant-voice-agent:latest)
+    Description: ECR image URI (e.g. 123456789.dkr.ecr.ap-southeast-1.amazonaws.com/dev-driver-assistant-llm-orchestrator:latest)
 
   LivekitUrl:
     Type: String
@@ -61,65 +67,73 @@ Parameters:
     Type: String
     Default: openai
 
+  LlmModel:
+    Type: String
+    Default: gpt-4o-mini
+    Description: Passed as LLM_MODEL (read by Settings.llm_model)
+
   TtsProvider:
     Type: String
     Default: elevenlabs
-
-  OpenaiModel:
-    Type: String
-    Default: gpt-4o-mini
 
   TwilioPhoneNumber:
     Type: String
     Default: ""
 
-  CallLoggerUrl:
-    Type: String
-    Default: ""
-    Description: Call-logger API Gateway URL for saving call records
-
   JwtSecret:
     Type: String
     NoEcho: true
-    Description: Must match the JwtSecret used by identity-service/external-api-service — llm-orchestrator signs its own service token with this to call external-api-service.
+    Description: Must match identity-service / external-api-service; used to sign the service token for external-api-service calls.
 
-  TripServiceUrl:
+  ExternalApiServiceUrl:
     Type: String
     Default: ""
-    Description: external-api-service API Gateway URL
+    Description: external-api-service (Dịch vụ Chuyến đi và Điều phối) API Gateway base URL
+
+  CallRecordsServiceUrl:
+    Type: String
+    Default: ""
+    Description: call-records-service (Dịch vụ Lưu vết cuộc gọi) API Gateway base URL; empty disables call-record persistence
 
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: VPC to deploy ECS service into
+    Description: VPC for the ECS tasks
 
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: Public subnets for ECS tasks
+    Description: Public subnets for the ECS tasks (outbound-only worker, no load balancer)
 
   DesiredCount:
     Type: Number
     Default: 1
+    Description: Number of agent worker tasks (horizontal scaling)
 
 Resources:
 
-  # ── ECR Repository ──────────────────────────────────────────
-  ECRRepository:
+  # ── Container registry ──────────────────────────────────────
+  LlmOrchestratorRepository:
     Type: AWS::ECR::Repository
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      RepositoryName: !Sub "${Environment}-${AppName}-voice-agent"
+      RepositoryName: !Sub "${Environment}-${AppName}-llm-orchestrator"
       LifecyclePolicy:
         LifecyclePolicyText: |
           {"rules":[{"rulePriority":1,"description":"Keep last 5 images",
           "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},
           "action":{"type":"expire"}}]}
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: container-registry }
 
-  # ── IAM Roles ────────────────────────────────────────────────
-  ECSExecutionRole:
+  # ── IAM roles ───────────────────────────────────────────────
+  LlmOrchestratorExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${Environment}-${AppName}-voice-agent-execution-role"
+      RoleName: !Sub "${Environment}-${AppName}-llm-orchestrator-execution-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -129,11 +143,17 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: iam-execution-role }
 
-  ECSTaskRole:
+  LlmOrchestratorTaskRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${Environment}-${AppName}-voice-agent-task-role"
+      RoleName: !Sub "${Environment}-${AppName}-llm-orchestrator-task-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -150,46 +170,70 @@ Resources:
                 Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: !GetAtt LogGroup.Arn
+                Resource: !GetAtt LlmOrchestratorLogGroup.Arn
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: iam-task-role }
 
-  # ── CloudWatch Log Group ─────────────────────────────────────
-  LogGroup:
+  # ── Observability ───────────────────────────────────────────
+  LlmOrchestratorLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub "/ecs/${Environment}-${AppName}-voice-agent"
+      LogGroupName: !Sub "/ecs/${Environment}-${AppName}-llm-orchestrator"
       RetentionInDays: 14
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: cross-cutting }
+        - { Key: component, Value: log-group }
 
-  # ── Security Groups ──────────────────────────────────────────
-  # LiveKit worker only needs outbound (LiveKit Cloud, external-api-service, STT/LLM/TTS).
-  # No public HTTP listener — delivery vision-api ALB was removed with that feature.
-  SecurityGroup:
+  # ── Network ─────────────────────────────────────────────────
+  # The agent worker only opens outbound connections (LiveKit Cloud,
+  # external-api-service, STT/LLM/TTS providers); no inbound listener.
+  LlmOrchestratorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub "${Environment}-${AppName}-voice-agent"
+      GroupName: !Sub "${Environment}-${AppName}-llm-orchestrator-sg"
+      GroupDescription: !Sub "${Environment}-${AppName}-llm-orchestrator outbound-only"
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: realtime-ai }
+        - { Key: component, Value: security-group }
 
-  # ── ECS Cluster ──────────────────────────────────────────────
-  ECSCluster:
+  # ── Compute ─────────────────────────────────────────────────
+  LlmOrchestratorCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !Sub "${Environment}-${AppName}-voice-agent"
+      ClusterName: !Sub "${Environment}-${AppName}-llm-orchestrator"
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: realtime-ai }
+        - { Key: component, Value: ecs-cluster }
 
-  # ── Task Definition ──────────────────────────────────────────
-  TaskDefinition:
+  LlmOrchestratorTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Sub "${Environment}-${AppName}-voice-agent"
+      Family: !Sub "${Environment}-${AppName}-llm-orchestrator"
       NetworkMode: awsvpc
       RequiresCompatibilities: [FARGATE]
       Cpu: "1024"
       Memory: "2048"
-      ExecutionRoleArn: !GetAtt ECSExecutionRole.Arn
-      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ExecutionRoleArn: !GetAtt LlmOrchestratorExecutionRole.Arn
+      TaskRoleArn: !GetAtt LlmOrchestratorTaskRole.Arn
       ContainerDefinitions:
         - Name: llm-orchestrator
           Image: !Ref ImageUri
@@ -197,7 +241,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref LogGroup
+              awslogs-group: !Ref LlmOrchestratorLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ecs
           Environment:
@@ -211,8 +255,6 @@ Resources:
               Value: !Ref LivekitApiSecret
             - Name: OPENAI_API_KEY
               Value: !Ref OpenaiApiKey
-            - Name: OPENAI_MODEL
-              Value: !Ref OpenaiModel
             - Name: ELEVENLABS_API_KEY
               Value: !Ref ElevenLabsApiKey
             - Name: ELEVENLABS_VOICE_ID
@@ -227,40 +269,57 @@ Resources:
               Value: !Ref SttProvider
             - Name: LLM_PROVIDER
               Value: !Ref LlmProvider
+            - Name: LLM_MODEL
+              Value: !Ref LlmModel
             - Name: TTS_PROVIDER
               Value: !Ref TtsProvider
             - Name: TWILIO_PHONE_NUMBER
               Value: !Ref TwilioPhoneNumber
-            - Name: CALL_LOGGER_URL
-              Value: !Ref CallLoggerUrl
-            - Name: TRIP_SERVICE_URL
-              Value: !Ref TripServiceUrl
+            - Name: EXTERNAL_API_SERVICE_URL
+              Value: !Ref ExternalApiServiceUrl
+            - Name: CALL_RECORDS_SERVICE_URL
+              Value: !Ref CallRecordsServiceUrl
             - Name: JWT_SECRET
               Value: !Ref JwtSecret
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: realtime-ai }
+        - { Key: component, Value: ecs-task-definition }
 
-  # ── ECS Services ─────────────────────────────────────────────
-  ECSService:
+  LlmOrchestratorService:
     Type: AWS::ECS::Service
     Properties:
-      ServiceName: !Sub "${Environment}-${AppName}-voice-agent"
-      Cluster: !Ref ECSCluster
-      TaskDefinition: !Ref TaskDefinition
+      ServiceName: !Sub "${Environment}-${AppName}-llm-orchestrator"
+      Cluster: !Ref LlmOrchestratorCluster
+      TaskDefinition: !Ref LlmOrchestratorTaskDefinition
       DesiredCount: !Ref DesiredCount
       LaunchType: FARGATE
+      PropagateTags: SERVICE
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets: !Ref SubnetIds
           SecurityGroups:
-            - !Ref SecurityGroup
+            - !Ref LlmOrchestratorSecurityGroup
+      Tags:
+        - { Key: app, Value: !Ref AppName }
+        - { Key: env, Value: !Ref Environment }
+        - { Key: service, Value: llm-orchestrator }
+        - { Key: layer, Value: realtime-ai }
+        - { Key: component, Value: ecs-service }
 
 Outputs:
-  ECRRepositoryUri:
-    Description: ECR repository URI
-    Value: !GetAtt ECRRepository.RepositoryUri
+  LlmOrchestratorRepositoryUri:
+    Description: ECR repository URI for the llm-orchestrator image
+    Value: !GetAtt LlmOrchestratorRepository.RepositoryUri
 
-  ECSClusterName:
-    Value: !Ref ECSCluster
+  LlmOrchestratorClusterName:
+    Value: !Ref LlmOrchestratorCluster
 
-  ECSServiceName:
-    Value: !GetAtt ECSService.Name
+  LlmOrchestratorServiceName:
+    Value: !GetAtt LlmOrchestratorService.Name
+
+  LlmOrchestratorLogGroupName:
+    Value: !Ref LlmOrchestratorLogGroup

@@ -14,6 +14,7 @@ from livekit.agents import AgentSession, JobContext
 from livekit.agents.llm import ChatMessage
 
 from app.config.settings import get_settings
+from app.services import session_metrics
 from app.devlog import event as dev_event
 from app.services.service_token import auth_headers
 
@@ -181,6 +182,10 @@ class ConversationService:
             "turns":            self.turns,
             "summary":          await self._generate_summary(),
         }
+        metrics = session_metrics.current()
+        if metrics is not None:
+            record["mode"] = metrics.mode
+            record["metrics"] = metrics.snapshot()
 
         logger.info(
             "── call ended ── caller=%s turns=%d duration=%ds",
@@ -258,6 +263,9 @@ class ConversationService:
             "duration_seconds": int(sub_turns[-1]["ts"] - sub_turns[0]["ts"]),
             "turns":            sub_turns,
             "summary":          summary,
+            # Customer leg inside the driver's session: its quality numbers are
+            # already part of the driver session's metrics, so none here.
+            "mode":             f"customer_{mode}" if mode else "customer_call",
         }
 
         logger.info(

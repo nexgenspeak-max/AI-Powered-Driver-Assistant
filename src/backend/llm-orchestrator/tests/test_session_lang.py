@@ -22,7 +22,7 @@ def test_to_spoken_lang():
 
 
 def test_resolve_routing_lang_room_meta_wins(monkeypatch):
-    monkeypatch.setenv("VOICE_AGENT_LANG", "en")
+    monkeypatch.setenv("AGENT_LANG", "en")
     from app.config.settings import get_settings
 
     get_settings.cache_clear()
@@ -31,7 +31,7 @@ def test_resolve_routing_lang_room_meta_wins(monkeypatch):
 
 
 def test_resolve_routing_lang_env_fallback(monkeypatch):
-    monkeypatch.setenv("VOICE_AGENT_LANG", "en")
+    monkeypatch.setenv("AGENT_LANG", "en")
     from app.config.settings import get_settings
 
     get_settings.cache_clear()
@@ -40,9 +40,20 @@ def test_resolve_routing_lang_env_fallback(monkeypatch):
 
 
 def test_resolve_routing_lang_default_vn(monkeypatch):
+    monkeypatch.delenv("AGENT_LANG", raising=False)
     monkeypatch.delenv("VOICE_AGENT_LANG", raising=False)
     from app.config.settings import get_settings
 
     get_settings.cache_clear()
     assert resolve_routing_lang(room_meta_lang=None) == "vn"
+    get_settings.cache_clear()
+
+
+def test_resolve_routing_lang_legacy_env_alias(monkeypatch):
+    monkeypatch.delenv("AGENT_LANG", raising=False)
+    monkeypatch.setenv("VOICE_AGENT_LANG", "en")
+    from app.config.settings import get_settings
+
+    get_settings.cache_clear()
+    assert resolve_routing_lang(room_meta_lang=None) == "en"
     get_settings.cache_clear()

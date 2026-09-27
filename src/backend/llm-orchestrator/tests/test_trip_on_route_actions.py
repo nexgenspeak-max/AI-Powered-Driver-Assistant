@@ -109,14 +109,35 @@ async def test_extend_wait_no_trip():
     assert "Không có chuyến" in context.session.say.await_args.args[0]
 
 
-async def test_no_show_clears_current_trip():
+async def test_no_show_asks_before_recording():
     userdata = _active_userdata()
     context = _ctx(userdata)
     with patch(
         "app.voicebot.locales.vn.tools.report_customer_no_show.backend_api.report_no_show",
         new_callable=AsyncMock,
-    ):
+    ) as report:
         await _run(report_customer_no_show, context, {})
+    report.assert_not_called()
+    spoken = context.session.say.await_args.args[0]
+    assert "chắc" in spoken.lower()
+    assert context_store.get_current_trip(userdata) is not None
+    assert context_store.get_pending_driver_action(userdata)["intent"] == "no_show"
+
+
+async def test_no_show_clears_current_trip():
+    userdata = _active_userdata()
+    context = _ctx(userdata)
+    from app.voicebot.locales.vn.tools.report_customer_no_show import commit_customer_no_show
+
+    userdata["pending_no_show_trip_id"] = "t-active"
+    with patch(
+        "app.voicebot.locales.vn.tools.report_customer_no_show.backend_api.report_no_show",
+        new_callable=AsyncMock,
+    ):
+        try:
+            await commit_customer_no_show({}, context)
+        except StopResponse:
+            pass
     spoken = context.session.say.await_args.args[0]
     assert "không xuất hiện" in spoken
     assert "không bị trừ điểm" not in spoken.lower()
@@ -127,12 +148,17 @@ async def test_no_show_clears_current_trip():
 async def test_no_show_api_fail_keeps_trip_and_speaks_error():
     userdata = _active_userdata()
     context = _ctx(userdata)
+    from app.voicebot.locales.vn.tools.report_customer_no_show import commit_customer_no_show
+
     with patch(
         "app.voicebot.locales.vn.tools.report_customer_no_show.backend_api.report_no_show",
         new_callable=AsyncMock,
         side_effect=RuntimeError("down"),
     ):
-        await _run(report_customer_no_show, context, {})
+        try:
+            await commit_customer_no_show({}, context)
+        except StopResponse:
+            pass
     spoken = context.session.say.await_args.args[0]
     assert "không thể" in spoken.lower()
     assert "đã báo cáo" not in spoken.lower()
