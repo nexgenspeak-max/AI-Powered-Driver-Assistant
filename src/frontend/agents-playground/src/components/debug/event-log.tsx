@@ -42,6 +42,26 @@ const TYPE_FILTER_STYLE: Record<
     background: "rgba(148, 163, 184, 0.16)",
     color: "#94A3B8",
   },
+  functionToolsStarted: {
+    background: "rgba(168, 85, 247, 0.16)",
+    color: "#C084FC",
+  },
+  toolExecutionUpdated: {
+    background: "rgba(217, 70, 239, 0.16)",
+    color: "#E879F9",
+  },
+  eotPrediction: {
+    background: "rgba(20, 184, 166, 0.16)",
+    color: "#2DD4BF",
+  },
+  amdPrediction: {
+    background: "rgba(249, 115, 22, 0.16)",
+    color: "#FB923C",
+  },
+  debugMessage: {
+    background: "rgba(100, 116, 139, 0.16)",
+    color: "#CBD5E1",
+  },
 };
 
 const CONTROL_BUTTON_CLASS =
@@ -56,6 +76,8 @@ export const ALL_EVENT_TYPES: SessionEventType[] = ALL_SESSION_EVENT_TYPES;
 
 export const DEFAULT_DISABLED_EVENT_TYPES = new Set<SessionEventType>([
   "sessionUsageUpdated",
+  "eotPrediction",
+  "debugMessage",
 ]);
 
 const GRID_COLUMNS = "minmax(0px,24ch) minmax(0px,28ch) minmax(0px,1fr)";

@@ -1,5 +1,21 @@
 # Cách chạy toàn bộ service (`run/start-all.ps1` hoặc `run/start-all.sh`)
 
+## macOS / Linux: `run/start-all-mac.sh`
+
+Hai script bên dưới chỉ chạy trên Windows. Trên macOS/Linux dùng:
+
+```bash
+bash run/start-all-mac.sh                              # 6 backend + 5 web frontend
+bash run/start-all-mac.sh ops-service super-admin-panel  # chỉ các service được liệt kê
+bash run/start-all-mac.sh driver-app                   # app Expo chỉ chạy khi gọi tên
+bash run/start-all-mac.sh --list                       # danh sách service, cổng, lệnh
+```
+
+Tất cả chạy trong một terminal, mỗi dòng log có tiền tố `[tên-service]`; **Ctrl+C tắt tất cả**.
+Service bị bỏ qua (kèm cảnh báo) nếu chưa `npm install`, chưa có `.venv` (llm-orchestrator), hoặc
+cổng đang bị chiếm. Danh sách này có thêm `ops-service` (8004) và `super-admin-panel` (5176) mà
+bản Windows chưa có.
+
 ## Khuyến nghị: dùng `run/start-all.ps1`
 
 Sau khi vật lộn với `run/start-all.sh` bị lỗi WSL/Git Bash tuỳ máy (chi tiết bên dưới), kết

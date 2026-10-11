@@ -33,6 +33,12 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/** One refresh shared by every caller that hit 401 at the same time. */
+export function refreshAccessTokenOnce(): Promise<string | null> {
+  refreshing ??= refreshAccessToken().finally(() => { refreshing = null })
+  return refreshing
+}
+
 opsClient.interceptors.response.use(
   response => response,
   async error => {
@@ -40,8 +46,7 @@ opsClient.interceptors.response.use(
     const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
     if (status === 401 && original && !original._retry && useAuthStore.getState().refreshToken) {
       original._retry = true
-      refreshing ??= refreshAccessToken().finally(() => { refreshing = null })
-      const newAccessToken = await refreshing
+      const newAccessToken = await refreshAccessTokenOnce()
       if (newAccessToken) {
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return opsClient.request(original)

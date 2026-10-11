@@ -48,6 +48,11 @@ export const ALL_SESSION_EVENT_TYPES: SessionEventType[] = [
   "error",
   "overlappingSpeech",
   "sessionUsageUpdated",
+  "functionToolsStarted",
+  "toolExecutionUpdated",
+  "eotPrediction",
+  "amdPrediction",
+  "debugMessage",
 ];
 
 export function timestampToSeconds(ts: Timestamp | undefined): number {
@@ -86,6 +91,11 @@ const EVENT_TYPE_LABELS: Record<SessionEventType, string> = {
   error: "error",
   overlappingSpeech: "overlapping speech",
   sessionUsageUpdated: "session usage updated",
+  functionToolsStarted: "function tools started",
+  toolExecutionUpdated: "tool execution updated",
+  eotPrediction: "end-of-turn prediction",
+  amdPrediction: "answering machine prediction",
+  debugMessage: "debug message",
 };
 
 export function eventTypeLabel(eventCase: SessionEventType): string {
