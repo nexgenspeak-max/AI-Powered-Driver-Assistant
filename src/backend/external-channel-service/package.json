@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "build": "tsc",
-    "verify:events": "ts-node-dev --respawn=false --transpile-only src/services/events/selfcheck.ts"
+    "verify:events": "ts-node-dev --respawn=false --transpile-only src/services/events/selfcheck.ts",
+    "verify:sms": "ts-node --transpile-only src/services/smsSelfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",

@@ -10,10 +10,11 @@ Công nghệ được chọn theo vai trò của từng lớp trong kiến trúc
 
 | Lớp | Công nghệ | Vai trò |
 |---|---|---|
-| Máy khách | React Native (Expo), TypeScript, Tamagui; React (Vite) cho trang web | Ứng dụng tài xế, ứng dụng khách hàng, trang quản trị |
-| Hội thoại AI | Python, LiveKit Agents | Tác nhân hội thoại: STT, LLM kèm gọi công cụ, TTS |
+| Máy khách | React Native (Expo), TypeScript, Tamagui; React (Vite) cho trang web | Ứng dụng tài xế, trang quản trị (ứng dụng khách hàng có trong mã nguồn nhưng ngoài phạm vi luận văn) |
+| Hội thoại AI | Python, LiveKit Agents | Dịch vụ Liên lạc hội thoại thời gian thực: STT, LLM kèm gọi công cụ, TTS |
 | Microservices | Node.js 20, TypeScript, Express, serverless-http | Các dịch vụ nghiệp vụ, chạy cục bộ bằng Express và trên AWS Lambda |
 | Truyền thông thời gian thực | LiveKit Cloud (WebRTC, SIP), Twilio (SIP trunk, SMS) | Phòng hội thoại, cuộc gọi ra mạng điện thoại |
+| Bản đồ | Goong Maps API, Google Maps Platform (chọn bằng biến `MAPS_PROVIDER`) | Tìm địa chỉ, tính lộ trình, thời gian đến dự kiến có xét giao thông, ma trận khoảng cách cho sắp xếp điểm dừng |
 | Dữ liệu | Amazon DynamoDB; Redis (tùy chọn) | Dữ liệu nghiệp vụ; trạng thái phiên ngắn hạn |
 | Truy xuất tri thức | LlamaIndex, tài liệu hướng dẫn dạng Markdown | Trả lời câu hỏi về cách sử dụng ứng dụng |
 | Hạ tầng dạng mã | AWS SAM, AWS CloudFormation, Docker | Định nghĩa và triển khai tài nguyên AWS |
@@ -22,20 +23,20 @@ Nhà cung cấp STT, LLM và TTS được chọn bằng cấu hình thông qua l
 
 ## 5.2. Tổ chức mã nguồn
 
-Mã nguồn được tổ chức thành một kho đơn (monorepo) gồm ba nhánh: `src/backend/` chứa các dịch vụ, `src/frontend/` chứa ứng dụng và trang quản trị, `src/e2e/` chứa kịch bản kiểm thử đầu cuối; thư mục `infra/` chứa hạ tầng dạng mã. Bảng 5.2 liệt kê các thư mục chính; bảng ánh xạ tên thư mục với tên thành phần dùng trong luận văn ở Phụ lục G.
+Toàn bộ mã nguồn của nguyên mẫu được lưu trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered-Driver-Assistant (phiên bản dùng cho luận văn: commit aa05ba7, ngày 11/10/2026). Mã nguồn được tổ chức thành một kho đơn (monorepo) gồm ba nhánh: `src/backend/` chứa các dịch vụ, `src/frontend/` chứa ứng dụng và trang quản trị, `src/e2e/` chứa kịch bản kiểm thử đầu cuối; thư mục `infra/` chứa hạ tầng dạng mã. Bảng 5.2 liệt kê các thư mục chính; bảng ánh xạ tên thư mục với tên thành phần dùng trong luận văn ở Phụ lục G.
 
 **Bảng 5.2.** Tổ chức mã nguồn
 
 | Nhánh | Thư mục | Thành phần |
 |---|---|---|
-| Backend | `llm-orchestrator` | Tác nhân hội thoại giọng nói |
+| Backend | `llm-orchestrator` | Dịch vụ Liên lạc hội thoại thời gian thực |
 | Backend | `identity-service` | Dịch vụ Định danh |
 | Backend | `external-api-service` | Dịch vụ Chuyến đi và Điều phối |
-| Backend | `external-channel-service` | Dịch vụ Kênh liên lạc |
+| Backend | `external-channel-service` | Dịch vụ Liên lạc bằng tin nhắn |
 | Backend | `call-records-service` | Dịch vụ Nhật ký cuộc gọi |
 | Backend | `ops-service` | Dịch vụ Giám sát vận hành |
 | Frontend | `driver-app` | Ứng dụng tài xế |
-| Frontend | `customer-app`, `customer-web` | Ứng dụng khách hàng |
+| Frontend | `customer-app`, `customer-web` | Ứng dụng khách hàng (có trong mã nguồn, ngoài phạm vi luận văn) |
 | Frontend | `admin-panel` | Trang quản trị điều hành |
 | Frontend | `super-admin-panel` | Trang giám sát hệ thống |
 | Kiểm thử | `e2e` | Kịch bản kiểm thử đầu cuối và dữ liệu mẫu |
@@ -43,11 +44,11 @@ Mã nguồn được tổ chức thành một kho đơn (monorepo) gồm ba nhá
 
 Mỗi dịch vụ Node.js có hai điểm vào: `src/local.ts` chạy máy chủ Express khi phát triển cục bộ và `src/index.ts` bọc cùng ứng dụng Express thành hàm Lambda. Nhờ đó, cùng một mã nguồn chạy được ở cả hai môi trường.
 
-## 5.3. Hiện thực tác nhân hội thoại giọng nói
+## 5.3. Hiện thực Dịch vụ Liên lạc hội thoại thời gian thực
 
 ### 5.3.1. Khởi tạo phiên và phân loại phòng
 
-Điểm vào của tác nhân (`app/agent/session.py`) phân loại phiên theo tên phòng và metadata (Bảng 4.14): phòng `driver-…` là phiên tài xế, có metadata chuyến thì là phiên mời nhận chuyến; phòng `custcall-…` là cuộc gọi khách nền; phòng `customer-…` là phiên khách hàng. Tập công cụ tương ứng được định nghĩa trong gói ngôn ngữ (`voicebot/locales/vn/agent.py`, `voicebot/locales/en/agent.py`).
+Điểm vào của tác nhân (`app/agent/session.py`) phân loại phiên theo tên phòng và metadata (Bảng 4.14): phòng `driver-…` là phiên tài xế, có metadata chuyến thì là phiên mời nhận chuyến; phòng `custcall-…` là cuộc gọi khách nền; phòng `customer-…` là phiên của ứng dụng khách hàng (ngoài phạm vi luận văn, mục 3.5). Tập công cụ tương ứng được định nghĩa trong gói ngôn ngữ (`voicebot/locales/vn/agent.py`, `voicebot/locales/en/agent.py`).
 
 Với phiên tài xế trong ứng dụng, tác nhân đăng ký phiên với Dịch vụ Chuyến đi và Điều phối (chạy song song, lỗi chỉ ghi nhật ký), phát lời chào cố định, sau đó tải trước ngữ cảnh tài xế vào trạng thái phiên (`processors/context_store.py`) rồi hỏi tài xế cần hỗ trợ gì (sequence S2). Khi tiến trình khởi động, tác nhân nạp trước gói ngôn ngữ và mô hình phát hiện giọng nói để giảm độ trễ của phiên đầu tiên.
 
@@ -69,7 +70,7 @@ Bảng 5.3 minh họa một lượt thực tế trích từ nhật ký tác nhâ
 |---|---|---|
 | 1 | Nhận dạng giọng nói (STT) | "Nhắn cho khách là 15 phút nữa tôi đến đón."; phát hiện kết thúc câu sau 1,54 giây |
 | 2 | Mô hình ngôn ngữ (LLM) | Chọn công cụ `send_sms_to_customer` với nội dung "Tôi sẽ đến đón bạn trong khoảng 15 phút nữa."; thời gian sinh token đầu 3,48 giây |
-| 3 | Gọi API nghiệp vụ | `POST /api/v1/sms/send` tới Dịch vụ Chuyến đi và Điều phối; việc chuyển tiếp sang Dịch vụ Kênh liên lạc thất bại nên dịch vụ trả mã 503 sau 1,31 giây |
+| 3 | Gọi API nghiệp vụ | `POST /api/v1/sms/send` tới Dịch vụ Chuyến đi và Điều phối; việc chuyển tiếp sang Dịch vụ Liên lạc bằng tin nhắn thất bại nên dịch vụ trả mã 503 sau 1,31 giây |
 | 4 | Xử lý lỗi trong công cụ | Công cụ bắt lỗi HTTP, ghi nhật ký `ok=false`, trả câu thông báo lỗi soạn sẵn (`ERR_SMS_SEND_FAILED`) thay vì để mô hình tự diễn đạt |
 | 5 | Tổng hợp giọng nói (TTS) | Tác nhân nói "Không thể gửi tin nhắn lúc này. Vui lòng thử lại."; âm thanh đầu tiên sau 0,17 giây |
 | 6 | Tiếp tục phiên | Phiên không bị ngắt; tài xế tiếp tục cập nhật trạng thái chuyến, báo khách không có mặt, hỏi thu nhập và đặt nhắc việc trong các lượt sau |
@@ -106,15 +107,15 @@ Dịch vụ là nguồn dữ liệu chuẩn cho chuyến đi và là điểm kh�
 | Thu nhập, trạng thái | `GET /api/v1/drivers/me/earnings/today`, `/earnings/summary`; `PATCH /api/v1/drivers/me/status` | Thu nhập, bật/tắt nhận chuyến |
 | Nhắc việc | `POST /api/v1/reminders` | Tạo nhắc việc |
 
-Cuộc gọi thoại được khởi tạo qua SIP của LiveKit Cloud (`services/telephony/livekit.ts`) với SIP trunk nối tới Twilio; tin nhắn SMS được chuyển tiếp tới Dịch vụ Kênh liên lạc (`services/smsService.ts`). Khi có chuyến mới và tài xế đang mở phiên, thông báo được gửi vào phòng hiện có (`services/driverReachService.ts`); nếu không, thông báo được lưu tạm và phát khi tài xế mở trợ lý. Thông báo đẩy tới ứng dụng dùng thư viện WebSocket khi chạy cục bộ và API Gateway WebSocket khi chạy trên AWS.
+Cuộc gọi thoại được khởi tạo qua SIP của LiveKit Cloud (`services/telephony/livekit.ts`) với SIP trunk nối tới Twilio; tin nhắn SMS được chuyển tiếp tới Dịch vụ Liên lạc bằng tin nhắn (`services/smsService.ts`). Tại thời điểm đánh giá, tin SMS chưa giao được tới thuê bao Việt Nam vì chưa có tên người gửi đã đăng ký với nhà mạng; mã nguồn đã hỗ trợ cấu hình tên người gửi qua biến `TWILIO_SMS_FROM` (mục 6.13). Khi có chuyến mới và tài xế đang mở phiên, thông báo được gửi vào phòng hiện có (`services/driverReachService.ts`); nếu không, thông báo được lưu tạm và phát khi tài xế mở trợ lý. Thông báo đẩy tới ứng dụng dùng thư viện WebSocket khi chạy cục bộ và API Gateway WebSocket khi chạy trên AWS.
 
 ### 5.4.2. Dịch vụ Định danh
 
 Tài xế đăng nhập bằng số điện thoại và mật khẩu (vai trò `driver`); mật khẩu được lưu dưới dạng băm bcrypt. Dịch vụ phát hành access token và refresh token; giá trị băm của refresh token được lưu để có thể thu hồi. Cài đặt tài xế, trong đó có trường `default_customer_call_mode` (chế độ gọi khách mặc định), được lưu ở bảng riêng và đưa vào ngữ cảnh phiên.
 
-### 5.4.3. Dịch vụ Kênh liên lạc, Dịch vụ Nhật ký cuộc gọi và Dịch vụ Giám sát vận hành
+### 5.4.3. Dịch vụ Liên lạc bằng tin nhắn, Dịch vụ Nhật ký cuộc gọi và Dịch vụ Giám sát vận hành
 
-- **Dịch vụ Kênh liên lạc:** gửi SMS qua Twilio và tiếp nhận webhook trạng thái, tin nhắn đến từ Twilio. Các webhook của Twilio không yêu cầu JWT; các API còn lại yêu cầu JWT. Sự kiện nhà cung cấp (webhook, lượt quay số, kết quả gửi SMS) được lưu qua một cổng lưu trữ (`services/events/store.ts`) có hai bộ điều hợp: bảng DynamoDB `channel-events` khi cấu hình `EVENTS_TABLE` (môi trường triển khai), tệp JSONL cục bộ khi chạy phát triển. Việc ghi được chờ xong trước khi trả lời webhook vì trên Lambda, tác vụ còn chạy sau khi trả lời có thể bị dừng; lỗi ghi chỉ được ghi nhật ký.
+- **Dịch vụ Liên lạc bằng tin nhắn:** gửi SMS qua Twilio và tiếp nhận webhook trạng thái, tin nhắn đến từ Twilio. Các webhook của Twilio không yêu cầu JWT; các API còn lại yêu cầu JWT. Sự kiện nhà cung cấp (webhook, lượt quay số, kết quả gửi SMS) được lưu qua một cổng lưu trữ (`services/events/store.ts`) có hai bộ điều hợp: bảng DynamoDB `channel-events` khi cấu hình `EVENTS_TABLE` (môi trường triển khai), tệp JSONL cục bộ khi chạy phát triển. Việc ghi được chờ xong trước khi trả lời webhook vì trên Lambda, tác vụ còn chạy sau khi trả lời có thể bị dừng; lỗi ghi chỉ được ghi nhật ký.
 - **Dịch vụ Nhật ký cuộc gọi:** lưu và truy vấn bản ghi hội thoại (`/api/v1/records`) trên bảng DynamoDB riêng. Mỗi bản ghi được gán trường `record_date` (ngày theo giờ Việt Nam) khi lưu; truy vấn `GET /api/v1/records?date=` dùng chỉ mục phụ `record_date-started_at-index`, có phân trang bằng con trỏ, và tự chuyển sang quét có lọc khi bảng cũ chưa có chỉ mục. Cấu trúc một bản ghi được trình bày ở Bảng 5.5.
 - **Dịch vụ Giám sát vận hành:** thăm dò tình trạng các dịch vụ qua điểm cuối `/health`, cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát hệ thống; chỉ tài khoản quản trị hệ thống được truy cập. Mô-đun báo cáo (`services/reports/`) gồm hàm tổng hợp thuần, bộ chấm LLM trên mẫu cố định theo ngày (xáo trộn có hạt giống là ngày báo cáo nên lập lại cho cùng kết quả), cổng lưu trữ với bộ điều hợp DynamoDB `daily-reports` hoặc tệp JSON cục bộ, và API `GET /api/v1/reports/daily`, `POST /api/v1/reports/daily/{date}/rebuild`. Trên AWS, hàm Lambda của dịch vụ nhận hai loại sự kiện: yêu cầu HTTP qua API Gateway và sự kiện theo lịch từ EventBridge Scheduler. Vì không đọc được tệp của các dịch vụ khác, trên AWS dịch vụ đọc nhật ký từ CloudWatch Logs, kiểm tra tác nhân qua số tác vụ ECS đang chạy, và dùng ảnh chụp cấu hình tác nhân được đóng gói lúc triển khai.
 
@@ -131,6 +132,17 @@ Tài xế đăng nhập bằng số điện thoại và mật khẩu (vai trò `
 | `stt_provider`, `llm_provider`, `llm_model` | Nhà cung cấp và mô hình đã dùng trong phiên | `google`, `openai`, `gpt-5.6-luna` |
 | `mode`, `metrics` | Loại phiên và chỉ số chất lượng phiên (mục 5.3.6); chỉ có ở bản ghi tạo sau khi triển khai chỉ số phiên | Không có ở bản ghi ví dụ này |
 | `ttl` | Thời điểm DynamoDB tự xóa bản ghi | Tùy chọn |
+
+### 5.4.4. Tích hợp dịch vụ bản đồ
+
+Dữ liệu vị trí và lộ trình do Dịch vụ Chuyến đi và Điều phối lấy từ dịch vụ bản đồ bên ngoài (khối "Dịch vụ bản đồ" trên Hình 4.1); tác nhân hội thoại không gọi nhà cung cấp bản đồ; ứng dụng tài xế chỉ tải lớp bản đồ nền trực tiếp từ Goong bằng một khóa riêng dành cho hiển thị (luồng ㉕ ở Bảng 4.4), còn mọi lời gọi tìm địa chỉ, chỉ đường và ma trận khoảng cách đi qua backend (luồng ㉓), nên khóa API dịch vụ bản đồ chỉ nằm ở backend. Mô-đun `services/mapsService.ts` là một lớp trừu tượng nhà cung cấp, cùng ý tưởng với lớp trừu tượng nhà cung cấp AI ở mục 5.3.4: hai bộ điều hợp `services/maps/goong.ts` (Goong, dữ liệu bản đồ Việt Nam) và `services/maps/google.ts` (Google Maps Platform) cùng trả về một kiểu dữ liệu chung, và biến `MAPS_PROVIDER` chọn bộ điều hợp; môi trường thực nghiệm dùng Goong. Tích hợp bản đồ phục vụ bốn chức năng:
+
+- **Tìm và chuẩn hóa địa chỉ:** API `GET /api/v1/places/autocomplete`, `/places/detail` và `/places/reverse` gợi ý địa chỉ khi nhập, lấy tọa độ của địa chỉ được chọn và đổi tọa độ thành địa chỉ (`services/maps/goongPlaces.ts`). Khi đã có tọa độ chính xác từ bước chọn địa chỉ, dịch vụ dùng thẳng tọa độ thay vì tìm lại theo chuỗi địa chỉ.
+- **Lộ trình và tình trạng giao thông của chuyến:** khi tạo chuyến (kể cả chuyến vãng lai, UC16), dịch vụ gọi API chỉ đường để lấy quãng đường, thời gian đến dự kiến có xét giao thông, tọa độ điểm đón, trả và đường đi mã hóa (polyline). Độ chậm so với lúc thông thoáng được đổi thành câu ngắn như "Giao thông chậm, thêm khoảng 6 phút", lưu cùng chuyến để công cụ `get_trip_traffic` đọc lại cho tài xế mà không phải gọi lại nhà cung cấp (FR-T07).
+- **Sắp xếp thứ tự ghé các điểm dừng:** `services/routeOptimizationService.ts` lấy ma trận khoảng cách đường bộ từ vị trí hiện tại của tài xế tới mọi điểm đón, trả đang chờ, rồi tìm thứ tự ghé bằng heuristic láng giềng gần nhất kết hợp cải tiến 2-opt (`utils/twoOpt.ts`). Thuật toán có ràng buộc thứ tự: điểm đón của một chuyến luôn đứng trước điểm trả của chính chuyến đó, nên bài toán là bài toán đón và trả khách (pickup and delivery) chứ không phải bài toán người du lịch thông thường. Kết quả được lưu đệm và chỉ tính lại khi trạng thái chuyến thay đổi. Kết quả được đưa vào ngữ cảnh phiên để công cụ `get_optimal_route` của trợ lý đọc thứ tự ghé cho tài xế; công cụ `suggest_next_stop` chỉ gợi ý một điểm gần nhất tiếp theo (FR-T07, UC16).
+- **Hiển thị bản đồ và chỉ đường trong ứng dụng:** ứng dụng tài xế vẽ bản đồ, vị trí xe, điểm đón, trả và đường đi (Hình 5.3); API `GET /api/v1/drivers/me/navigation` trả về chỉ dẫn từng chặng cho khung điều hướng trên màn hình (`features/home/components/NavigationHud.tsx`). Trợ lý giọng nói không đọc chỉ dẫn rẽ từng bước; phần này chỉ hiển thị trên màn hình (mục 3.5).
+
+Lỗi của dịch vụ bản đồ không làm dừng nghiệp vụ, phù hợp chiến thuật suy giảm có kiểm soát của NFR-04: nếu không lấy được ma trận khoảng cách, thứ tự ghé được tính theo khoảng cách đường chim bay với tốc độ trung bình giả định 25 km/h, và kết quả được gắn nhãn nguồn `haversine_fallback` để trợ lý nói rõ đây là ước lượng; nếu không lấy được chỉ đường, API điều hướng trả mã 502 kèm thông báo thử lại, còn chuyến vẫn được tạo với quãng đường và thời gian bằng 0. Chất lượng thứ tự ghé so với lời giải tối ưu được đánh giá ở Bảng 6.16; độ chính xác thời gian đến dự kiến trên đường thật chưa được đo.
 
 ## 5.5. Hiện thực ứng dụng tài xế
 
@@ -188,23 +200,26 @@ Mỗi dịch vụ có một stack hạ tầng dạng mã riêng trong thư mục
 | call-records-service | API Gateway REST; Lambda; DynamoDB (call-records, chỉ mục theo người gọi và theo ngày, TTL); CloudWatch Logs | Node.js 20, 256 MB | NFR-04, FR-O01 |
 | ops-service | API Gateway REST; Lambda; DynamoDB (daily-reports); EventBridge Scheduler (00:15, múi giờ Asia/Ho_Chi_Minh); quyền đọc CloudWatch Logs và ECS; CloudWatch Logs | Node.js 20, 512 MB, thời gian chạy tối đa 120 giây | FR-O01, NFR-04 |
 | llm-orchestrator | Amazon ECR; ECS cluster, task definition, service trên Fargate; security group; vai trò IAM; CloudWatch Logs | 1 vCPU, 2 GB; `DesiredCount` điều chỉnh số bản sao; public subnet, chỉ kết nối chiều ra | NFR-02, NFR-03, NFR-04 |
-| frontend | Amazon S3 | Lưu trữ tĩnh trang quản trị và ứng dụng web | — |
+| frontend | Amazon S3 | Lưu trữ tĩnh trang quản trị, trang giám sát và bản web (`infra/frontend/deploy.sh`) | FR-Q, FR-S (giao diện cho điều phối viên, quản trị viên hệ thống) |
 
-Tham số bí mật (khóa API, khóa JWT, thông tin LiveKit, Twilio) được khai báo với thuộc tính `NoEcho` trong template và nạp từ tệp môi trường cục bộ không nằm trong kho mã nguồn (NFR-05). Kịch bản `infra/deploy-all.sh` triển khai các stack theo thứ tự phụ thuộc (Dịch vụ Định danh, Dịch vụ Nhật ký cuộc gọi, Dịch vụ Kênh liên lạc, Dịch vụ Chuyến đi và Điều phối, tác nhân hội thoại, Dịch vụ Giám sát vận hành) và ghi địa chỉ API của stack trước vào tệp môi trường của stack sau; phần xây dựng, triển khai và gỡ bỏ dùng chung thư viện `infra/lib/sam.sh`; `infra/scale-ecs.sh` điều chỉnh số bản sao tác nhân.
+Tham số bí mật (khóa API, khóa JWT, thông tin LiveKit, Twilio) được khai báo với thuộc tính `NoEcho` trong template và nạp từ tệp môi trường cục bộ không nằm trong kho mã nguồn (NFR-05). Kịch bản `infra/deploy-all.sh` triển khai các stack theo thứ tự phụ thuộc (Dịch vụ Định danh, Dịch vụ Nhật ký cuộc gọi, Dịch vụ Liên lạc bằng tin nhắn, Dịch vụ Chuyến đi và Điều phối, tác nhân hội thoại, Dịch vụ Giám sát vận hành) và ghi địa chỉ API của stack trước vào tệp môi trường của stack sau; phần xây dựng, triển khai và gỡ bỏ dùng chung thư viện `infra/lib/sam.sh`; `infra/scale-ecs.sh` điều chỉnh số bản sao tác nhân.
+
+**Trạng thái triển khai tại thời điểm đánh giá.** Mã hạ tầng của các stack trong Bảng 5.6 đã hoàn chỉnh, nhưng nguyên mẫu dùng trong thực nghiệm chưa chạy trên kiến trúc AWS đầy đủ. Kiểm tra tài khoản AWS (vùng ap-southeast-1) ngày 13/10/2026 cho thấy: (1) dữ liệu nằm trên Amazon DynamoDB thật, trong bộ bảng dành cho môi trường phát triển (tiền tố `local-driver-assistant-`, ví dụ bảng nhật ký cuộc gọi có 774 bản ghi); (2) chỉ có hai stack Lambda của một phiên bản cũ, trước khi đổi tên dịch vụ (Dịch vụ Định danh và Dịch vụ Chuyến đi), và nhóm nhật ký CloudWatch của chúng không có dữ liệu; (3) chưa có cụm ECS, nghĩa là tác nhân hội thoại chưa chạy trên Fargate. Như vậy, các dịch vụ Node.js và tác nhân trong thực nghiệm chạy trên máy phát triển, kết nối DynamoDB trên AWS và LiveKit Cloud (mục 5.6.2). Hệ quả là các kết quả ở Chương 6 phản ánh tính chất của kiến trúc và mã nguồn, chưa phản ánh hành vi của Lambda, API Gateway và Fargate trên AWS; giới hạn này được tính trong các mối đe dọa độ tin cậy ở mục 6.13.
 
 ### 5.6.2. Môi trường phát triển và thử nghiệm
 
-Trong quá trình phát triển và thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express, tác nhân hội thoại chạy cục bộ và kết nối LiveKit Cloud; ứng dụng tài xế trỏ tới địa chỉ dịch vụ qua biến môi trường `EXPO_PUBLIC_*`. Cấu hình không bí mật của tác nhân (nhà cung cấp, mô hình, giọng đọc, địa chỉ dịch vụ) nằm trong tệp `envs/config.<môi trường>.toml`; khóa bí mật nằm trong tệp `.env` không đưa vào kho mã nguồn. Tệp mẫu `envs/.env.example` và `envs/config.example.toml` được cung cấp để tái lập môi trường (Phụ lục D). Bảng 5.7 liệt kê các thành phần tối thiểu để chạy nguyên mẫu đầu cuối.
+Trong quá trình phát triển và thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express và đọc, ghi các bảng DynamoDB của môi trường phát triển trên AWS; tác nhân hội thoại chạy cục bộ và kết nối LiveKit Cloud; ứng dụng tài xế trỏ tới địa chỉ dịch vụ qua biến môi trường `EXPO_PUBLIC_*`. Cấu hình không bí mật của tác nhân (nhà cung cấp, mô hình, giọng đọc, địa chỉ dịch vụ) nằm trong tệp `envs/config.<môi trường>.toml`; khóa bí mật nằm trong tệp `.env` không đưa vào kho mã nguồn. Tệp mẫu `envs/.env.example` và `envs/config.example.toml` được cung cấp để tái lập môi trường (Phụ lục D). Bảng 5.7 liệt kê các thành phần tối thiểu để chạy nguyên mẫu đầu cuối.
 
 **Bảng 5.7.** Thành phần tối thiểu để chạy nguyên mẫu đầu cuối
 
 | Thành phần | Cần cho | Ghi chú |
 |---|---|---|
 | Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối | Đăng nhập, token thoại, ngữ cảnh | Bắt buộc |
-| Tác nhân hội thoại, LiveKit Cloud | Hội thoại trong ứng dụng | Tác nhân phải đăng ký thành công với LiveKit |
+| Dịch vụ Liên lạc hội thoại thời gian thực, LiveKit Cloud | Hội thoại trong ứng dụng | Tác nhân phải đăng ký thành công với LiveKit |
 | Ứng dụng tài xế | Giao diện, micro, loa | Thiết bị thật hoặc trình giả lập |
 | SIP trunk (Twilio) | Mời nhận chuyến qua điện thoại, gọi khách | Có thể bỏ qua nếu chỉ thử trong ứng dụng |
-| Dịch vụ Kênh liên lạc | Gửi SMS | Có thể bỏ qua |
+| Dịch vụ bản đồ (khóa API Goong hoặc Google) | Tạo chuyến có lộ trình, thời gian đến dự kiến, thứ tự ghé, tìm địa chỉ | Thiếu khóa thì thứ tự ghé dùng khoảng cách đường chim bay |
+| Dịch vụ Liên lạc bằng tin nhắn | Gửi SMS | Có thể bỏ qua |
 | Dịch vụ Nhật ký cuộc gọi | Lưu và tóm tắt cuộc gọi | Tắt không ảnh hưởng hội thoại |
 
 ## 5.7. Đối chiếu thiết kế và hiện thực
@@ -236,4 +251,4 @@ Bảng 5.8 đối chiếu các quyết định thiết kế ở Chương 4 với
 
 ## Kết luận chương
 
-Chương 5 đã trình bày công nghệ, tổ chức mã nguồn, hiện thực tác nhân hội thoại với lớp trừu tượng và dự phòng nhà cung cấp AI, các dịch vụ backend, ứng dụng tài xế, hạ tầng dạng mã trên AWS và bảng đối chiếu thiết kế với hiện thực. Chương 6 đánh giá nguyên mẫu theo từng yêu cầu đã đặc tả ở Chương 3.
+Chương 5 đã trình bày công nghệ, tổ chức mã nguồn, hiện thực tác nhân hội thoại với lớp trừu tượng và dự phòng nhà cung cấp AI, các dịch vụ backend kèm tích hợp dịch vụ bản đồ, ứng dụng tài xế, hạ tầng dạng mã trên AWS cùng trạng thái triển khai thực tế và bảng đối chiếu thiết kế với hiện thực. Chương 6 đánh giá nguyên mẫu theo từng yêu cầu đã đặc tả ở Chương 3.

@@ -17,6 +17,7 @@ from app.voicebot.locales.en.tools_mapping import (
 from app.voicebot.locales.en.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.processors import context_store
+from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
@@ -120,7 +121,7 @@ _DRIVER_OUTBOUND_TOOLS = [confirm_trip, reject_trip]
 _CUSTOMER_TOOLS = [get_my_trip, cancel_my_trip, get_driver_eta, answer_app_faq]
 
 
-class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
+class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent):
     """
     Handles both inbound and outbound driver sessions.
     All responses are in English.
@@ -218,7 +219,7 @@ class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
         return msg
 
 
-class CustomerAgent(SpeechTextFixMixin, Agent):
+class CustomerAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from English-speaking customers."""
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:

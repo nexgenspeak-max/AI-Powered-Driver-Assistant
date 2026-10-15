@@ -17,6 +17,7 @@ from typing import Any
 
 from app.services import session_metrics
 from app.services.logger.format import fmt_value
+from app.services.prompt_trace.ops import record_op
 
 logger = logging.getLogger("llm-orchestrator.dev")
 
@@ -30,6 +31,7 @@ def event(kind: str, *, ok: bool = True, **fields: Any) -> None:
         parts.append(f"{key}={fmt_value(value)}")
     line = " ".join(parts)
     session_metrics.observe(kind, ok, fields)
+    record_op(kind, ok, fields)
     if ok:
         logger.info(line)
     else:

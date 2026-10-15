@@ -11,6 +11,7 @@ const PromptsPage = lazy(() => import('../pages/PromptsPage'))
 const LogsPage = lazy(() => import('../pages/LogsPage'))
 const CallsPage = lazy(() => import('../pages/CallsPage'))
 const ReportsPage = lazy(() => import('../pages/ReportsPage'))
+const TracesPage = lazy(() => import('../pages/TracesPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 
 function PageLoader() {
@@ -43,6 +44,7 @@ export function AppRoutes() {
         <Route path={ROUTES.LOGS} element={<ProtectedRoute><LogsPage /></ProtectedRoute>} />
         <Route path={ROUTES.CALLS} element={<ProtectedRoute><CallsPage /></ProtectedRoute>} />
         <Route path={ROUTES.REPORTS} element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+        <Route path={ROUTES.TRACES} element={<ProtectedRoute><TracesPage /></ProtectedRoute>} />
       </Routes>
     </Suspense>
   )

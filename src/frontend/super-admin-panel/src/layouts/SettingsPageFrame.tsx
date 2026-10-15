@@ -12,7 +12,7 @@ export function SettingsPageFrame({ children }: { children: ReactNode }) {
   const { locale, t } = useOpsLocale()
   const title = meta ? navItemLabel(meta, locale) : t.shell.fallbackName
   const description = meta ? navItemDescription(meta, locale) : undefined
-  const wide = pathname === ROUTES.LOGS || pathname === ROUTES.PROMPTS
+  const wide = pathname === ROUTES.LOGS || pathname === ROUTES.PROMPTS || pathname === ROUTES.TRACES
 
   return (
     <Box sx={{ width: '100%', maxWidth: wide ? 1400 : 960, mx: 'auto' }}>

@@ -1,5 +1,6 @@
 import { opsClient } from './opsClient'
 import type { AgentSnapshot, CallRecord, DailyReport, ProbeResult, PromptsSnapshot } from '../../types/ops'
+import type { TraceSessionDetail, TraceSessionSummary } from '../../features/traces/types'
 
 export const opsService = {
   status: () =>
@@ -25,6 +26,12 @@ export const opsService = {
 
   dailyReports: (from: string, to: string) =>
     opsClient.get<DailyReport[]>('/api/v1/reports/daily', { params: { from, to } }).then(r => r.data),
+
+  listTraces: (params?: { limit?: number; mode?: string }) =>
+    opsClient.get<TraceSessionSummary[]>('/api/v1/traces', { params }).then(r => r.data),
+
+  getTrace: (room: string) =>
+    opsClient.get<TraceSessionDetail>(`/api/v1/traces/${encodeURIComponent(room)}`).then(r => r.data),
 
   rebuildDailyReport: (date: string) =>
     opsClient.post<DailyReport>(`/api/v1/reports/daily/${date}/rebuild`).then(r => r.data),

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import * as tripService from '../services/tripService';
 import * as smsService from '../services/smsService';
+import { SmsTargetError } from '../services/sms/resolveSmsTarget';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.post('/send', async (req: Request, res: Response) => {
     const result = await smsService.sendSms(phone, message as string);
     return res.json(result);
   } catch (err) {
+    if (err instanceof SmsTargetError) return res.status(400).json({ detail: err.message });
     return res.status(503).json({ detail: String(err) });
   }
 });

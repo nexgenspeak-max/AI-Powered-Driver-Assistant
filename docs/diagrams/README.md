@@ -4,15 +4,19 @@ Nguồn: `gen_drawio.py` (sinh lại bằng `python3 docs/diagrams/gen_drawio.py
 
 | Tệp | Trang | Hình trong luận văn | PNG cần xuất (build tự chèn) |
 |---|---|---|---|
-| `H4_1_aws_architecture.drawio` | H4.1 Kiến trúc AWS | Hình 4.1 | `H4_1_aws_architecture.png` |
-| `H4_sequences.drawio` | S1 Đăng nhập | Hình 4.2 | `H4_S1_identity_login.png` |
-| | S2 Khởi tạo phiên | Hình 4.3 | `H4_S2_voice_session.png` |
-| | S3 Một lượt hội thoại | Hình 4.4 | `H4_S3_voice_turn.png` |
-| | S4 Mời nhận chuyến | Hình 4.5 | `H4_S4_trip_offer.png` |
-| | S5 Gọi khách và SMS | Hình 4.6 | `H4_S5_customer_call.png` |
-| | S6 Nhật ký cuộc gọi | Hình 4.7 | `H4_S6_call_records.png` |
-| | S7 Báo cáo ngày | Hình 4.8 | `H4_S7_daily_report.png` |
-| `H4_2_turn_pipeline.drawio` | H4.9 Một lượt hội thoại | Hình 4.9 | `H4_2_turn_pipeline.png` |
+| `H4_1_aws_architecture.drawio` | H4.1 Kiến trúc tổng thể | Hình 4.1 | `H4_1_aws_architecture.png` |
+| | H4.2 Luồng hành vi: Tài xế | Hình 4.2 | `H4_1_aws_architecture_driver.png` |
+| | H4.3 Luồng hành vi: Khách hàng | Hình 4.3 | `H4_1_aws_architecture_customer.png` |
+| | H4.4 Luồng hành vi: Điều phối viên | Hình 4.4 | `H4_1_aws_architecture_dispatcher.png` |
+| | H4.5 Luồng hành vi: Quản trị viên hệ thống | Hình 4.5 | `H4_1_aws_architecture_sysadmin.png` |
+| `H4_sequences.drawio` | S1 Đăng nhập | Hình 4.6 | `H4_S1_identity_login.png` |
+| | S2 Khởi tạo phiên | Hình 4.7 | `H4_S2_voice_session.png` |
+| | S3 Một lượt hội thoại | Hình 4.8 | `H4_S3_voice_turn.png` |
+| | S4 Mời nhận chuyến | Hình 4.9 | `H4_S4_trip_offer.png` |
+| | S5 Gọi khách và SMS | Hình 4.10 | `H4_S5_customer_call.png` |
+| | S6 Nhật ký cuộc gọi | Hình 4.11 | `H4_S6_call_records.png` |
+| | S7 Báo cáo ngày | Hình 4.12 | `H4_S7_daily_report.png` |
+| `H4_2_turn_pipeline.drawio` | H4.9 Một lượt hội thoại | Hình 4.13 | `H4_2_turn_pipeline.png` |
 
 Xuất PNG: File → Export as → PNG, **Zoom 200%** (≈ 300 dpi khi in), bỏ chọn "Transparent background", lưu vào thư mục này với đúng tên ở cột cuối, rồi chạy `docs/thesis/.venv-docx/bin/python docs/thesis/build_thesis_final.py`.
 
@@ -29,7 +33,7 @@ Hoặc bằng draw.io desktop CLI (mỗi trang một lệnh, `N` bắt đầu t�
 - **Lớp (cột, trái → phải):** Client · Real-time Communication & Conversational AI · API Gateway · Microservices · Data; dải Cross-cutting Concerns ở đáy; hộp xám nét đứt = hệ thống bên ngoài AWS. Mỗi Lambda cùng hàng với bảng DynamoDB của nó.
 - **Nhãn:** tên chức năng tiếng Việt in đậm, tên kỹ thuật chữ nhỏ bên dưới (Phụ lục G).
 - **Dịch vụ:** mỗi dịch vụ một khung nét đứt bao Lambda và bảng DynamoDB riêng của nó (database per service).
-- **Luồng:** số ①–㉒ trên mũi tên = Bảng 4.4; mỗi bước sequence ghi số luồng tương ứng; mũi tên nét đứt = luồng phụ trợ.
+- **Luồng:** trang H4.1 (cấu trúc) vẽ mọi kết nối không số; các trang H4.2–H4.5 chỉ vẽ luồng của một nhóm người dùng, thành phần không liên quan được làm mờ, số ①–㉔ = Bảng 4.4; mỗi bước sequence ghi số luồng tương ứng; mũi tên nét đứt = luồng phụ trợ.
 - **Sequence:** UML (lifeline, thông điệp đồng bộ mũi tên đặc, phản hồi nét đứt, khung `alt`/`opt`); nhãn thông điệp ngắn, chi tiết và ghi chú nằm ở cột "Ghi chú" của bảng bước. Bước và endpoint khớp Bảng 4.6–4.12 và Phụ lục F (tệp:dòng).
 - **Truy vết:** mỗi hình khối có thuộc tính `service`, `layer`, `aws_resource`, `source` (Edit Data trên draw.io). `aws_resource` dùng quy ước tên mới (mục 12.1 kế hoạch); các stack SAM còn tên cũ sẽ khớp sau khi đổi tên hạ tầng.
 

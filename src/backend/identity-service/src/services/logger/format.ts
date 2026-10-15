@@ -4,6 +4,15 @@ export type LogFields = Record<string, unknown>;
 
 const MAX_VALUE = 240;
 
+// Vietnamese phone numbers (0xxxxxxxxx, 84xxxxxxxxx, +84xxxxxxxxx). Every log line
+// passes through formatLine, so masking here covers all call sites (NFR-05).
+const PHONE_RE = /(?<!\d)(\+?84|0)(\d{3})\d{3}(\d{3})(?!\d)/g;
+
+/** 0888123798 -> 0888xxx798; keeps enough digits to tell sessions apart. */
+export function maskPhones(text: string): string {
+  return text.replace(PHONE_RE, (_m, cc: string, head: string, tail: string) => `${cc}${head}xxx${tail}`);
+}
+
 export function fmtValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '-';
@@ -52,13 +61,13 @@ export function formatLine(opts: {
     }
   }
   if (body && extras.length) {
-    return `${prefix} — ${body} ${extras.join(' ')}`;
+    return maskPhones(`${prefix} — ${body} ${extras.join(' ')}`);
   }
   if (body) {
-    return `${prefix} — ${body}`;
+    return maskPhones(`${prefix} — ${body}`);
   }
   if (extras.length) {
-    return `${prefix} — ${extras.join(' ')}`;
+    return maskPhones(`${prefix} — ${extras.join(' ')}`);
   }
-  return prefix;
+  return maskPhones(prefix);
 }

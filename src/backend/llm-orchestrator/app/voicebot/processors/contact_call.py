@@ -28,9 +28,9 @@ def _room_missing(lang: str) -> str:
 
 def _dial_failed(name: str, lang: str) -> str:
     return (
-        f"Không thể gọi {name} lúc này. Kiểm tra trip-service (:8002) và SIP_TRUNK_ID."
+        f"Không thể gọi {name} lúc này. Bạn thử lại sau ít phút nhé."
         if lang == "vn"
-        else f"Unable to call {name}. Check trip-service (:8002) and SIP_TRUNK_ID."
+        else f"Unable to call {name}. Please try again in a moment."
     )
 
 

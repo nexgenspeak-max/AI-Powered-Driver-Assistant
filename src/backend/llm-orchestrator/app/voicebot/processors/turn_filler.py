@@ -78,8 +78,32 @@ def mark_reply_started(session: Any) -> None:
     if not isinstance(userdata, dict):
         return
     state = userdata.get(_STATE_KEY)
-    if isinstance(state, dict):
-        state["reply_started"] = True
+    if not isinstance(state, dict):
+        return
+    state["reply_started"] = True
+    _drop_queued_filler(session, state)
+
+
+def _drop_queued_filler(session: Any, state: dict) -> None:
+    """say() queues behind an already-scheduled reply; drop the filler if the reply plays first."""
+    handle = state.get("handle")
+    if handle is None or getattr(session, "current_speech", None) is handle:
+        return
+    try:
+        if handle.done():
+            return
+        handle.interrupt()
+    except Exception:
+        logger.warning("turn_filler drop failed", exc_info=True)
+        return
+    state["handle"] = None
+    started_at = float(state.get("started_at") or time.perf_counter())
+    event(
+        "turn_filler_skip",
+        ok=True,
+        reason="reply_first",
+        duration_ms=(time.perf_counter() - started_at) * 1000,
+    )
 
 
 def schedule_turn_filler(session: Any, *, lang: str, delay_s: float = FILLER_DELAY_S) -> None:
@@ -172,6 +196,8 @@ def schedule_turn_filler(session: Any, *, lang: str, delay_s: float = FILLER_DEL
             result = say(phrase, allow_interruptions=True)
             if asyncio.iscoroutine(result):
                 await result
+            elif result is not None:
+                cur["handle"] = result
         except Exception:
             event(
                 "turn_filler",

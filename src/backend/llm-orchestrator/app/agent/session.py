@@ -47,6 +47,7 @@ from app.voicebot.customer_call_agent import CustomerCallAgent
 from app.services import session_metrics
 from app.services.conversation_service import ConversationService, CALL_TRANSCRIPT_TOPIC
 from app.services.logger import bind, clear
+from app.services.prompt_trace import start_prompt_trace, stop_prompt_trace
 from app.services.session_devlog import attach_session_devlog
 from app.services.silence_tracker import SilenceTracker
 
@@ -76,6 +77,18 @@ _TRIP_RE     = re.compile(r"^trip-[a-z0-9]+$")      # trip-abc12345  (SIP outbou
 _CUSTCALL_RE = re.compile(r"^custcall-[a-z0-9]+-\d+$")  # background customer call
 
 RoomMode = Literal["driver", "customer", "outbound", "custcall"]
+
+# Initial agent per mode (handoffs via update_agent are traced per llm_request).
+_TRACE_AGENT_BY_MODE = {"custcall": "CustomerCallAgent", "customer": "CustomerAgent"}
+
+
+def _first_participant_identity(ctx: JobContext) -> str | None:
+    try:
+        for participant in ctx.room.remote_participants.values():
+            return participant.identity or None
+    except Exception:
+        return None
+    return None
 
 
 def turn_handling_for_lang(lang: str) -> dict:
@@ -304,6 +317,8 @@ async def entrypoint(ctx: JobContext) -> None:
     conv_service = ConversationService(ctx)
     bind(conv=conv_service.call_id)
     silence_tracker: SilenceTracker | None = None
+    trace_writer = None
+    trace_end_reason = "room_disconnected"
     settings = get_settings()
 
     try:
@@ -386,6 +401,14 @@ async def entrypoint(ctx: JobContext) -> None:
         attach_session_devlog(session, room=room_name, mode=mode, lang=lang)
         attach_spoken_intent_preemptive_cancel(session, lang=lang, mode=mode)
         turn_metrics.attach(session)
+        trace_writer = start_prompt_trace(
+            session,
+            room=room_name,
+            mode=mode,
+            lang=lang,
+            agent=_TRACE_AGENT_BY_MODE.get(mode, "DriverAgent"),
+            participant=_first_participant_identity(ctx),
+        )
 
         # Prefetch BEFORE session.start so tools + greeting have warm context.
         # Inbound driver: defer prefetch so connect filler TTS can start first.
@@ -927,8 +950,11 @@ async def entrypoint(ctx: JobContext) -> None:
 
         logger.info("room disconnected | room=%s", room_name)
 
-    except Exception:
+    except Exception as exc:
         logger.error("session crashed:\n%s", traceback.format_exc())
+        trace_end_reason = "session_crashed"
+        if trace_writer is not None:
+            trace_writer.emit("error", where="session", message=f"{type(exc).__name__}: {exc}")
     finally:
         if silence_tracker:
             # Must never block conv_service.finish() below — a crash here
@@ -943,4 +969,5 @@ async def entrypoint(ctx: JobContext) -> None:
         await conv_service.finish()
         if mode in ("driver", "outbound") and phone:
             await _clear_driver_session_safe(phone)
+        stop_prompt_trace(trace_writer, trace_end_reason)
         clear()

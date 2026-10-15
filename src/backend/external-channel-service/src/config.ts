@@ -21,6 +21,9 @@ export const config = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+  // SMS sender: a registered alphanumeric Sender ID (required by Vietnamese carriers) or a number.
+  // Falls back to TWILIO_PHONE_NUMBER, which calls keep using.
+  twilioSmsFrom: process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || '',
   // Local/dev default only — production must set BASE_URL explicitly.
   baseUrl: process.env.BASE_URL || (env === 'local' ? 'http://localhost:8000' : ''),
   jwtSecret: resolveJwtSecret(),

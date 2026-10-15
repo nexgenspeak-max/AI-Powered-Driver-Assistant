@@ -5,6 +5,7 @@ import logsRouter from './routes/logs';
 import recordsRouter from './routes/records';
 import agentRouter from './routes/agent';
 import reportsRouter from './routes/reports';
+import tracesRouter from './routes/traces';
 import { requireSuperAdmin } from './middleware/authenticate';
 import { attachLogContext, getLogger } from './services/logger';
 import { config } from './config';
@@ -30,6 +31,7 @@ app.use('/api/v1/logs', logsRouter);
 app.use('/api/v1/records', recordsRouter);
 app.use('/api/v1/agent', agentRouter);
 app.use('/api/v1/reports', reportsRouter);
+app.use('/api/v1/traces', tracesRouter);
 
 const log = getLogger('listen');
 app.listen(config.port, () => log.info('listening', { port: config.port }));

@@ -4,13 +4,14 @@ import logging
 from livekit.agents import Agent
 
 from app.voicebot.prompts.bridge_call import build_bridge_instructions
+from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.bridge_call_tools import end_bridge_call
 
 logger = logging.getLogger("llm-orchestrator.bridge_call_agent")
 
 
-class BridgeCallAgent(SpeechTextFixMixin, Agent):
+class BridgeCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     """
     Activated when call_customer(mode='bridge').
     Customer joins via SIP; agent output is muted but STT stays on for driver wake phrases.

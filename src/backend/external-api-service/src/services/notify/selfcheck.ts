@@ -146,7 +146,7 @@ if (require.main === module) {
       process.stdout.write(`notify ws ok open_ms=${m.open_ms} push_ms=${m.push_ms}\n`);
     })
     .catch((err) => {
-      console.error(err);
+      process.stderr.write(`${err instanceof Error ? err.stack : String(err)}\n`);
       process.exit(1);
     });
 }

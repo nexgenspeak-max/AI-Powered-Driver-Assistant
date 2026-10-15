@@ -16,6 +16,17 @@ Service bị bỏ qua (kèm cảnh báo) nếu chưa `npm install`, chưa có `.
 cổng đang bị chiếm. Danh sách này có thêm `ops-service` (8004) và `super-admin-panel` (5176) mà
 bản Windows chưa có.
 
+**Tự tắt khi rảnh:** sau `IDLE_MINUTES` phút (mặc định 10) không ai dùng, launcher tự tắt tất cả.
+"Đang dùng" nghĩa là có client kết nối tới cổng backend (8000–8004) hoặc Metro (8081/8083) — điện
+thoại, trình duyệt, curl — hoặc llm-orchestrator vừa ghi log trong 1 phút (đang có phiên gọi). Kết nối
+giữa các service với nhau và websocket HMR của Vite/Next không tính. Một phút trước khi tắt sẽ có
+dòng cảnh báo `[idle-watchdog]`.
+
+```bash
+IDLE_MINUTES=30 bash run/start-all-mac.sh   # đổi thời gian chờ
+IDLE_MINUTES=0 bash run/start-all-mac.sh    # tắt tính năng tự tắt
+```
+
 ## Khuyến nghị: dùng `run/start-all.ps1`
 
 Sau khi vật lộn với `run/start-all.sh` bị lỗi WSL/Git Bash tuỳ máy (chi tiết bên dưới), kết

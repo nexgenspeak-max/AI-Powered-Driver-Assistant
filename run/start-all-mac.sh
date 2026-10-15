@@ -6,6 +6,11 @@
 #   bash run/start-all-mac.sh ops-service super-admin-panel   # chi chay cac service duoc liet ke
 #   bash run/start-all-mac.sh driver-app         # app Expo chi chay khi goi ten
 #   bash run/start-all-mac.sh --list
+#   IDLE_MINUTES=30 bash run/start-all-mac.sh    # tu tat sau 30 phut khong dung (0 = tat tinh nang)
+#
+# Tu tat khi ranh: sau IDLE_MINUTES (mac dinh 10) khong co client nao (dien thoai,
+# trinh duyet, curl...) ket noi toi cong backend/Metro va llm-orchestrator khong ghi
+# log phien goi nao, launcher tu tat tat ca service.
 #
 # Tuong thich bash 3.2 mac dinh cua macOS.
 
@@ -109,6 +114,64 @@ if [ "$started" -eq 0 ]; then
     exit 1
 fi
 
+IDLE_MINUTES="${IDLE_MINUTES:-10}"
+IDLE_CHECK_S="${IDLE_CHECK_S:-30}"
+# Frontend dev server (Vite/Next) giu websocket HMR khi tab con mo nen khong tinh.
+ACTIVITY_PORTS="8000 8001 8002 8003 8004 8081 8083"
+ORCH_LOG_DIR="$REPO_ROOT/src/backend/llm-orchestrator/logs"
+LAUNCHER_PID=$$
+
+# Client that khong phai service cua minh: ket noi tu may khac (dien thoai) toi cong,
+# hoac tien trinh khong phai node/python (trinh duyet, curl) tren may nay.
+has_client_connection() {
+    local port
+    for port in $ACTIVITY_PORTS; do
+        lsof -nP -iTCP:"$port" -sTCP:ESTABLISHED 2>/dev/null | awk -v port="$port" '
+            NR == 1 { next }
+            {
+                name = $9; split(name, ends, "->"); local_end = ends[1]; remote_end = ends[2]
+                if (local_end ~ (":" port "$")) {
+                    if (remote_end !~ /^(127\.0\.0\.1|\[::1\]):/) found = 1
+                } else if ($1 != "node" && $1 !~ /^[Pp]ython/) {
+                    found = 1
+                }
+            }
+            END { exit found ? 0 : 1 }' && return 0
+    done
+    return 1
+}
+
+has_voice_activity() {
+    [ -d "$ORCH_LOG_DIR" ] || return 1
+    [ -n "$(find "$ORCH_LOG_DIR" -maxdepth 1 -name '*.log' -mmin -1 2>/dev/null | head -1)" ]
+}
+
+idle_watchdog() {
+    local limit=$((IDLE_MINUTES * 60)) idle_s=0 warned=0
+    while sleep "$IDLE_CHECK_S"; do
+        if has_client_connection || has_voice_activity; then
+            idle_s=0
+            warned=0
+            continue
+        fi
+        idle_s=$((idle_s + IDLE_CHECK_S))
+        if [ "$warned" -eq 0 ] && [ $((limit - idle_s)) -le 60 ] && [ "$idle_s" -lt "$limit" ]; then
+            echo "[idle-watchdog] Khong ai dung ${idle_s}s - se tu tat sau $((limit - idle_s))s"
+            warned=1
+        fi
+        if [ "$idle_s" -ge "$limit" ]; then
+            echo "[idle-watchdog] Khong ai dung trong ${IDLE_MINUTES} phut - tu tat tat ca service"
+            kill -TERM "$LAUNCHER_PID"
+            return
+        fi
+    done
+}
+
 echo
-echo "Da khoi dong $started service. Ctrl+C de tat tat ca."
+if [ "$IDLE_MINUTES" -gt 0 ] 2>/dev/null; then
+    idle_watchdog &
+    echo "Da khoi dong $started service. Tu tat sau ${IDLE_MINUTES} phut khong dung. Ctrl+C de tat tat ca."
+else
+    echo "Da khoi dong $started service. Ctrl+C de tat tat ca."
+fi
 wait

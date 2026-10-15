@@ -126,7 +126,7 @@ def is_container(st: dict, label: str, vid: str) -> bool:
         st.get("container") == "1"
         or shape == "mxgraph.aws4.group"
         or shape == "umlFrame"
-        or vid.startswith(("band-", "grp-", "cross-box", "aws-cloud", "region", "vpc", "subnet"))
+        or vid.startswith(("band-", "grp-", "cross-box", "ext-box", "aws-cloud", "region", "vpc", "subnet")) or vid == "sys"
         or (st.get("dashed") == "1" and not label and "rounded" in st)
     )
 
@@ -166,6 +166,8 @@ def load(path: Path):
                     elif tw:
                         sl = float(st.get("spacingLeft", 0))
                         top = float(st.get("spacingTop", 0)) + 4
+                        if st.get("verticalAlign") == "bottom":  # title drawn at the bottom edge
+                            top = b.h - th - float(st.get("spacingBottom", 0)) - 4
                         if st.get("align") == "left" or st.get("shape") == "mxgraph.aws4.group":
                             v.label_box = Box(b.x + sl, b.y + top, tw, th)
                         else:
@@ -383,7 +385,7 @@ def print_check(name: str, verts: dict[str, Vertex], edges: list[Edge]) -> tuple
     x0 = min(b.x for b in boxes); y0 = min(b.y for b in boxes)
     x1 = max(b.x + b.w for b in boxes); y1 = max(b.y + b.h for b in boxes)
     w, h = x1 - x0, y1 - y0
-    max_w, max_h = (LANDSCAPE_CM if name.startswith("H4.1")
+    max_w, max_h = (LANDSCAPE_CM if name.startswith(("H4.1 ", "H4.2 ", "H4.3 ", "H4.4 ", "H4.5 "))
                     else SEQUENCE_CM if re.match(r"S\d ", name) else PORTRAIT_CM)
     width_cm = min(max_w, w / h * max_h)
     pt_per_px = width_cm / 2.54 * 72 / w

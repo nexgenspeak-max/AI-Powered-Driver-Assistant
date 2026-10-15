@@ -6,6 +6,7 @@ import logsRouter from './routes/logs';
 import recordsRouter from './routes/records';
 import agentRouter from './routes/agent';
 import reportsRouter from './routes/reports';
+import tracesRouter from './routes/traces';
 import { buildDailyReport, vnDate } from './services/reports';
 import { requireSuperAdmin } from './middleware/authenticate';
 import { attachLogContext } from './services/logger';
@@ -30,6 +31,7 @@ app.use('/api/v1/logs', logsRouter);
 app.use('/api/v1/records', recordsRouter);
 app.use('/api/v1/agent', agentRouter);
 app.use('/api/v1/reports', reportsRouter);
+app.use('/api/v1/traces', tracesRouter);
 
 export default app;
 

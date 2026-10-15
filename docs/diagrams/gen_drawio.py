@@ -9,7 +9,7 @@ Output (same folder):
 Font sizes are chosen for print: every figure must read ≥ 8 pt at the size
 build_thesis_final.py places it (check_layout.py reports PRINT). Every shape carries
 custom data (service, aws_resource, source) so a reviewer can trace a box to infra/ and
-to the code. Flow numbers ①–㉒ match Bảng 4.4; sequence steps match Bảng 4.6–4.12.
+to the code. Flow numbers ①–㉕ match Bảng 4.4; sequence steps match Bảng 4.6–4.12.
 Edit this script and rerun; do not hand-edit the generated files.
 """
 from __future__ import annotations
@@ -99,17 +99,17 @@ EN = {
     # sequence participants
     "Ứng dụng tài xế": "Driver app", "Cổng API REST": "REST API", "Dịch vụ Định danh": "Identity service",
     "Dịch vụ Chuyến đi và Điều phối": "Trip & dispatch service", "Nền tảng truyền thông": "Real-time media",
-    "Tác nhân hội thoại": "Voice agent", "Nhà cung cấp AI": "AI providers", "Bộ nhớ đệm phiên": "Session cache",
+    "Liên lạc hội thoại thời gian thực": "Voice agent", "Nhà cung cấp AI": "AI providers", "Bộ nhớ đệm phiên": "Session cache",
     "Trang quản trị điều hành": "Admin panel", "Nhà cung cấp thoại": "Voice carrier",
-    "Dịch vụ Kênh liên lạc": "Channel service", "Dịch vụ Nhật ký cuộc gọi": "Call records service",
+    "Dịch vụ Liên lạc bằng tin nhắn": "Channel service", "Dịch vụ Nhật ký cuộc gọi": "Call records service",
     "Kênh thông báo WebSocket": "WebSocket push", "Lịch chạy báo cáo": "Report schedule",
     "Dịch vụ Giám sát vận hành": "Ops service", "Mô hình chấm": "Grader model", "Trang giám sát hệ thống": "Ops panel",
     # architecture
     "Tài xế": "Driver", "Ứng dụng\nkhách hàng": "Rider app", "Quản trị viên": "Operators",
     "Nền tảng\ntruyền thông\nthời gian thực": "Real-time\nmedia\nplatform", "Nhà cung cấp\ndịch vụ thoại": "Voice\ncarrier",
     "Nhà cung cấp\nmô hình AI": "AI model\nproviders", "STT · LLM · TTS\nchính và dự phòng": "STT · LLM · TTS\nprimary + fallback",
-    "Tác nhân\nhội thoại\ngiọng nói": "Voice\nagent", "Cụm ECS": "ECS\ncluster", "Kênh thông báo\nthời gian thực": "Real-time\npush channel",
-    "Định danh": "Identity", "Chuyến đi và\nĐiều phối": "Trips &\ndispatch", "Kênh liên lạc": "Channel",
+    "Liên lạc\nhội thoại\nthời gian thực": "Voice\nagent", "Cụm ECS": "ECS\ncluster", "Kênh thông báo\nthời gian thực": "Real-time\npush channel",
+    "Định danh": "Identity", "Chuyến đi và\nĐiều phối": "Trips &\ndispatch", "Liên lạc\nbằng tin nhắn": "Channel",
     "Nhật ký\ncuộc gọi": "Call\nrecords", "Giám sát\nvận hành": "Operations", "Lưu trữ web tĩnh": "Static web hosting",
     "Nhật ký tập trung": "Central logs", "Quyền truy cập": "Access control", "Hạ tầng dạng mã": "Infra as code",
     "Lịch báo cáo ngày": "Daily report job", "Dịch vụ bản đồ": "Maps service",
@@ -230,7 +230,19 @@ ARCH_TECH_PX = 23   # tên kỹ thuật cỡ nhỏ
 ARCH_TITLE_PX = 30  # tên lớp
 
 
-def architecture() -> Diagram:
+ARCH_VIEWS = {
+    "structure": "H4.1 Kiến trúc tổng thể",
+    "driver": "H4.2 Luồng hành vi: Tài xế",
+    "customer": "H4.3 Luồng hành vi: Khách hàng",
+    "dispatcher": "H4.4 Luồng hành vi: Điều phối viên",
+    "sysadmin": "H4.5 Luồng hành vi: Quản trị viên hệ thống",
+}
+# Ở hình theo người dùng, thành phần không nằm trên luồng của người dùng đó được làm mờ.
+FADE = "opacity=20;textOpacity=25;"
+NEVER_FADE = ("band-", "aws-cloud", "region", "vpc", "subnet", "ext-box", "cross-box")
+
+
+def architecture(view: str = "structure") -> Diagram:
     """Hình 4.1 — năm lớp là năm cột từ trái sang phải (Client → Real-time & AI → API Gateway →
     Microservices → Data), dải Cross-cutting ở đáy. Hình in trên trang A4 ngang; cỡ chữ và
     khung được chọn để chữ ≥ 8 pt khi in (check_layout.py kiểm tra PRINT, CROSS, LABEL…).
@@ -241,7 +253,7 @@ def architecture() -> Diagram:
       (giao thức và mục đích ở Bảng 4.4).
     """
     F, T = ARCH_PX, ARCH_TECH_PX
-    d = Diagram("H4.1 Kiến trúc AWS", 2260, 1330)
+    d = Diagram(ARCH_VIEWS[view], 2260, 1380)
 
     def lab(title: str, tech: str = "") -> str:
         title, tech = tr(title), tr(tech)
@@ -282,21 +294,24 @@ def architecture() -> Diagram:
     ]:
         d.vertex(cid, text, column.format(fill=fill), x, 10, w, 1100, data={"layer": cid.removeprefix("band-")})
 
-    d.vertex("aws-cloud", "AWS Cloud", group("group_aws_cloud_alt", "#232F3E"), 620, 110, 1630, 1210)
-    d.vertex("region", "Region ap-southeast-1", group("group_region", "#00A4A6", dashed=1), 636, 150, 1608, 1166)
+    d.vertex("aws-cloud", "AWS Cloud", group("group_aws_cloud_alt", "#232F3E"), 620, 110, 1630, 1260)
+    d.vertex("region", "Region ap-southeast-1", group("group_region", "#00A4A6", dashed=1), 636, 150, 1608, 1216)
     d.vertex("vpc", "VPC", group("group_vpc2", "#8C4FFF"), 640, 240, 300, 380)
     d.vertex("subnet", "Public subnet", group("group_security_group", "#7AA116", fill="#F2F6E8"), 656, 290, 272, 320)
-    d.vertex("ext-box", "External Systems", region_box, 20, 1125, 580, 185)
-    d.vertex("cross-box", "Cross-cutting Concerns", region_box, 650, 1125, 1580, 182)
+    # Tiêu đề khung đặt ở đáy để mũi tên vào hai hộp từ phía trên không cắt chữ.
+    d.vertex("ext-box", "External Systems", region_box.replace("verticalAlign=top;", "verticalAlign=bottom;spacingBottom=6;"), 20, 1165, 580, 185)
+    d.vertex("cross-box", "Cross-cutting Concerns", region_box, 650, 1165, 1580, 182)
 
     # ── Client ──
     d.vertex("driver", lab("Tài xế"), general("user"), 151, 130, 48, 48)
     d.vertex("driver-app", lab("Ứng dụng tài xế", "driver-app"), general("mobile_client"), 151, 250, 48, 74,
              data={"service": "driver-app", "layer": "client", "source": "src/frontend/driver-app"})
-    d.vertex("customer-app", lab("Ứng dụng\nkhách hàng", "customer-app"), general("mobile_client"), 151, 440, 48, 74,
-             data={"service": "customer-app", "layer": "client", "source": "src/frontend/customer-app"})
-    d.vertex("admin", lab("Quản trị viên", "admin-panel\nsuper-admin-panel"), general("client"), 145, 640, 60, 58,
-             data={"service": "admin-panel, super-admin-panel", "layer": "client"})
+    d.vertex("customer", lab("Khách hàng", "điện thoại thường"), general("user"), 151, 450, 48, 48,
+             data={"layer": "client", "external": "true"})
+    d.vertex("dispatcher", lab("Điều phối viên", "admin-panel"), general("client"), 145, 650, 60, 58,
+             data={"service": "admin-panel", "layer": "client", "source": "src/frontend/admin-panel"})
+    d.vertex("sysadmin", lab("Quản trị viên\nhệ thống", "super-admin-panel"), general("client"), 145, 830, 60, 58,
+             data={"service": "super-admin-panel", "layer": "client", "source": "src/frontend/super-admin-panel"})
 
     # ── Real-time communication & conversational AI ──
     d.vertex("livekit", lab("Nền tảng\ntruyền thông\nthời gian thực", "LiveKit Cloud\nWebRTC · SIP"),
@@ -306,7 +321,7 @@ def architecture() -> Diagram:
     d.vertex("ai", lab("Nhà cung cấp\nmô hình AI", "STT · LLM · TTS\nchính và dự phòng"),
              ext_box, 370, 760, 225, 190, data={"layer": "realtime-ai", "external": "true",
                                                 "source": "src/backend/llm-orchestrator/app/providers"})
-    d.vertex("agent", lab("Tác nhân\nhội thoại\ngiọng nói", "llm-orchestrator\nAWS Fargate"),
+    d.vertex("agent", lab("Liên lạc\nhội thoại\nthời gian thực", "llm-orchestrator\nAWS Fargate"),
              icon("fargate", "containers"), 758, 350, 64, 64,
              data={"service": "llm-orchestrator", "layer": "realtime-ai",
                    "aws_resource": "LlmOrchestratorService, LlmOrchestratorTaskDefinition",
@@ -331,7 +346,7 @@ def architecture() -> Diagram:
     rows = [
         ("identity", "Định danh", "identity-service", "Identity", 190, [("accounts", "Accounts"), ("driver-settings", "DriverSettings")]),
         ("trip", "Chuyến đi và\nĐiều phối", "external-api-\nservice", "ExternalApi", 380, [("trips", "Trips"), ("ws-connections", "WsConnections")]),
-        ("channel", "Kênh liên lạc", "external-channel-\nservice", "ExternalChannel", 570, [("channel-events", "ChannelEvents")]),
+        ("channel", "Liên lạc\nbằng tin nhắn", "external-channel-\nservice", "ExternalChannel", 570, [("channel-events", "ChannelEvents")]),
         ("records", "Nhật ký\ncuộc gọi", "call-records-\nservice", "CallRecords", 760, [("call-records", "")]),
         ("ops", "Giám sát\nvận hành", "ops-service", "Ops", 950, [("daily-reports", "DailyReports")]),
     ]
@@ -354,47 +369,87 @@ def architecture() -> Diagram:
         ("cfn", "Hạ tầng dạng mã", "CloudFormation · SAM", "cloudformation", "management", 2060),
         ("sched", "Lịch báo cáo ngày", "EventBridge Scheduler", "eventbridge", "integration", 1740),
     ]:
-        d.vertex(cid, lab(title, tech), icon(res, cat), cx - 28, 1172, 56, 56,
+        d.vertex(cid, lab(title, tech), icon(res, cat), cx - 28, 1212, 56, 56,
                  data={"layer": "cross-cutting", "aws_resource": tech})
-    d.vertex("maps", lab("Dịch vụ bản đồ", "Goong · Google Maps"), ext_box, 34, 1178, 270, 110,
-             data={"layer": "external", "external": "true"})
-    d.vertex("redis", lab("Bộ nhớ đệm phiên", "Redis (Upstash)"), ext_box, 316, 1178, 270, 110,
-             data={"layer": "external", "external": "true"})
+    d.vertex("maps", lab("Dịch vụ bản đồ", "Goong · Google Maps"), ext_box, 34, 1180, 270, 110,
+             data={"layer": "external", "external": "true",
+                   "source": "src/backend/external-api-service/src/services/mapsService.ts"})
+    d.vertex("redis", lab("Bộ nhớ đệm phiên", "Redis (tùy chọn)"), ext_box, 316, 1180, 270, 110,
+             data={"layer": "external", "external": "true",
+                   "source": "src/backend/external-api-service/src/cache/redis.ts"})
 
-    # ── Luồng đánh số (Bảng 4.4) ──
+    # ── Luồng (Bảng 4.4) ──
+    # view="structure": mọi kết nối, không số, nét xám mảnh (mô hình cấu trúc, Hình 4.1).
+    # view=driver|customer|admin: chỉ các luồng của nhóm người dùng đó, có số (Hình 4.2–4.4).
+    # Mỗi luồng: (id, nguồn, đích, {view: nhãn}, ports, points, kiểu, vị trí nhãn).
     aux = EDGE + "dashed=1;"
     both = EDGE + "startArrow=block;startFill=1;"
     big = f"fontSize={F};"
-
-    def e(cid, src, dst, text, ports, points=None, style=EDGE, at=0.0):
-        d.edge(cid, src, dst, text, style=style + big, ports=ports, points=points, at=at)
-
-    e("f1", "driver-app", "apigw-rest", "① ③", (1, .8, 0, .75), [(320, 309), (320, 1030), (970, 1030), (970, 398)], at=-0.05)
-    e("f1b", "apigw-rest", "fn-identity", "①", (1, .2, .5, 0), [(1300, 363), (1300, 130), (1672, 130)], at=0.45)
-    e("f2", "fn-identity", "tbl-accounts", "②", (1, .5, 0, .5))
-    e("f3", "apigw-rest", "fn-trip", "③ ⑧", (1, .5, .5, 0), [(1320, 382), (1320, 320), (1672, 320)], at=0.3)
-    e("f4", "fn-trip", "livekit", "④", (.25, 0, 1, .1), [(1656, 332), (1310, 332), (1310, 230), (610, 230), (610, 280)], at=0.3)
-    e("f5", "driver-app", "livekit", "⑤", (1, .5, 0, .135), style=both)
-    e("f6", "livekit", "agent", "⑥", (1, .53, 0, .25), [(700, 366)], style=both)
-    e("f7", "agent", "ai", "⑦", (0, .5, 1, .53), [(628, 382), (628, 860)], at=-0.55)
-    e("f8", "agent", "apigw-rest", "⑧ ⑭", (1, .35, 0, .35))
-    e("f9", "fn-trip", "tbl-trips", "⑨", (1, .5, 0, .5))
-    e("f10a", "fn-trip", "apigw-ws", "⑩", (1, .9, 1, .78), [(1720, 438), (1720, 880)], at=0.2)
-    e("f10b", "apigw-ws", "driver-app", "⑩", (0, .5, 1, .3), [(1000, 862), (1000, 1000), (335, 1000), (335, 272)], style=aux, at=-0.3)
-    e("f11", "livekit", "twilio", "⑪", (.5, 1, .5, 0))
-    e("f12", "fn-trip", "fn-channel", "⑫", (.5, 1, .5, 0))
-    e("f12b", "fn-channel", "twilio", "⑫ ⑬", (1, .9, 0, .79), [(1760, 628), (1760, 1115), (360, 1115), (360, 650)], style=both, at=0.25)
-    e("f14", "apigw-rest", "fn-records", "⑭ ⑮", (1, .8, .5, 0), [(1340, 401), (1340, 700), (1672, 700)], at=0.45)
-    e("f16", "fn-records", "tbl-call-records", "⑯", (1, .5, 0, .5))
-    e("f17", "admin", "apigw-rest", "⑰", (1, .5, 0, .95), [(305, 669), (305, 1060), (985, 1060), (985, 411)], at=0.05)
-    e("f18a", "agent", "cw", "⑱", (1, .8, .3, 0), [(945, 401), (945, 1090), (1089, 1090)], style=aux, at=0.0)
-    e("f18b", "fn-ops", "cw", "⑱", (.25, 1, .7, 0), [(1656, 1100), (1111, 1100)], style=aux, at=0.0)
-    e("f19", "sched", "fn-ops", "⑲", (.5, 0, .75, 1), [(1740, 1098), (1688, 1098)], at=0.0)
-    e("f20", "fn-ops", "fn-records", "⑳", (.5, 0, .5, 1))
-    e("f21", "fn-ops", "tbl-daily-reports", "㉑", (1, .5, 0, .5))
-    e("f22", "fn-channel", "tbl-channel-events", "㉒", (1, .5, 0, .5))
-    e("f-ecs", "ecs", "agent", "", (.5, 0, 0, .75), [(700, 630), (660, 630), (660, 398)], style=aux)
-    e("f-ecr", "ecr", "ecs", "", (0, .5, 1, .5), style=aux)
+    small = f"fontSize={F};labelBackgroundColor=#FFFFFF;"
+    jump = "jumpStyle=arc;jumpSize=12;"
+    D, C, P, Q = "driver", "customer", "dispatcher", "sysadmin"
+    flows = [
+        ("f1", "driver-app", "apigw-rest", {"structure": "HTTPS", D: "① ③"}, (1, .8, 0, .75), [(320, 309), (320, 1030), (970, 1030), (970, 398)], EDGE, -0.05),
+        ("f1b", "apigw-rest", "fn-identity", {D: "① ㉖", P: "⑰ ㉖", Q: "⑰ ㉗"}, (1, .2, .5, 0), [(1300, 363), (1300, 130), (1672, 130)], EDGE, 0.45),
+        ("f2", "fn-identity", "tbl-accounts", {D: "②", P: "②", Q: "②"}, (1, .5, 0, .5), None, EDGE, 0.0),
+        ("f3", "apigw-rest", "fn-trip", {D: "③ ⑧", C: "⑧", P: "⑰", Q: "㉗"}, (1, .5, .5, 0), [(1320, 382), (1320, 320), (1672, 320)], EDGE, 0.3),
+        ("f4", "fn-trip", "livekit", {"structure": "HTTPS", D: "④", C: "④", P: "④"}, (.25, 0, 1, .1), [(1656, 332), (1310, 332), (1310, 230), (610, 230), (610, 280)], EDGE, 0.3),
+        ("f5", "driver-app", "livekit", {"structure": "WebRTC", D: "⑤"}, (1, .5, 0, .135), None, both, 0.0),
+        ("f6", "livekit", "agent", {"structure": "WebRTC", D: "⑥", C: "⑥"}, (1, .53, 0, .25), [(700, 366)], both, 0.0),
+        ("f7", "agent", "ai", {D: "⑦", C: "⑦"}, (0, .5, 1, .53), [(628, 382), (628, 860)], EDGE, -0.55),
+        ("f8", "agent", "apigw-rest", {"structure": "HTTPS", D: "⑧ ⑭", C: "⑧ ⑭"}, (1, .35, 0, .35), None, EDGE, 0.0),
+        ("f9", "fn-trip", "tbl-trips", {D: "⑨", C: "⑨", P: "⑨"}, (1, .5, 0, .5), None, EDGE, 0.0),
+        ("f10a", "fn-trip", "apigw-ws", {D: "⑩"}, (1, .9, 1, .78), [(1720, 438), (1720, 880)], EDGE, 0.2),
+        ("f10b", "apigw-ws", "driver-app", {"structure": "WSS", D: "⑩"}, (0, .5, 1, .3), [(1000, 862), (1000, 1000), (335, 1000), (335, 272)], aux, -0.3),
+        ("f11", "livekit", "twilio", {"structure": "SIP", D: "⑪", C: "⑪", P: "⑪"}, (.5, 1, .5, 0), None, EDGE, 0.0),
+        # Gọi giữa các dịch vụ đi qua Cổng API REST của dịch vụ đích (URL ...ApiUrl do deploy-all.sh gán, kèm JWT dịch vụ).
+        ("f12a", "fn-trip", "apigw-rest", {D: "⑫ ⑮ ㉖", C: "⑫", P: "㉖", "structure": "HTTPS"}, (.5, 1, 1, .35), [(1672, 480), (1395, 480), (1395, 372)], EDGE, 0.78),
+        ("f12c", "apigw-rest", "fn-channel", {D: "⑫", C: "⑫", Q: "㉗"}, (.5, 1, .5, 0), [(1125, 515), (1672, 515)], EDGE, 0.5),
+        ("f12b", "fn-channel", "twilio", {"structure": "HTTPS · webhook", D: "⑫ ⑬", C: "⑫ ⑬"}, (1, .9, 0, .79), [(1760, 628), (1760, 1108), (360, 1108), (360, 650)], both, 0.4),
+        ("f14", "apigw-rest", "fn-records", {D: "⑭ ⑮", C: "⑭", P: "⑰", Q: "⑳ ㉗"}, (1, .8, .5, 0), [(1340, 401), (1340, 700), (1672, 700)], EDGE, 0.45),
+        ("f16", "fn-records", "tbl-call-records", {D: "⑯", C: "⑯", P: "⑯", Q: "⑯"}, (1, .5, 0, .5), None, EDGE, 0.0),
+        ("k1", "twilio", "customer", {"structure": "PSTN", C: "⑪ ⑫"}, (0, .3, 1, .5), [(300, 557), (300, 474)], both, -0.75),
+        ("k2", "customer", "dispatcher", {"structure": "Zalo / gọi điện", C: "Zalo / gọi điện", P: "Zalo / gọi điện"}, (0, .5, 0, .5), [(40, 474), (40, 679)], EDGE + "dashed=1;", 0.25),
+        ("f17", "dispatcher", "apigw-rest", {"structure": "HTTPS", P: "⑰"}, (1, .5, 0, .95), [(305, 679), (305, 1060), (985, 1060), (985, 411)], EDGE, 0.05),
+        ("f17s", "sysadmin", "apigw-rest", {"structure": "HTTPS", Q: "⑰"}, (1, .5, 0, .1), [(298, 859), (298, 1075), (955, 1075), (955, 356)], EDGE, 0.05),
+        ("a-ops", "apigw-rest", "fn-ops", {Q: "⑰"}, (1, .95, .15, 0), [(1360, 411), (1360, 920), (1650, 920)], EDGE, 0.3),
+        ("f18a", "agent", "cw", {D: "⑱", C: "⑱"}, (1, .8, .3, 0), [(945, 401), (945, 1090), (1089, 1090)], aux, 0.0),
+        ("f18b", "fn-ops", "cw", {Q: "⑱ ㉙"}, (.25, 1, .7, 0), [(1656, 1100), (1111, 1100)], aux, 0.0),
+        ("f19", "sched", "fn-ops", {Q: "⑲"}, (.5, 0, .75, 1), [(1740, 1098), (1688, 1098)], EDGE, 0.0),
+        ("f20a", "fn-ops", "apigw-rest", {Q: "⑳ ㉗"}, (.75, 0, 1, .65), [(1688, 900), (1375, 900), (1375, 392)], EDGE, 0.8),
+        # Dịch vụ bản đồ và bộ nhớ đệm phiên: chỉ Dịch vụ Chuyến đi và Điều phối gọi; ứng dụng tài xế tải bản đồ nền.
+        ("f23", "fn-trip", "maps", {D: "㉓", P: "㉓", "structure": "HTTPS"}, (.15, 1, .5, 0), [(1650, 495), (1270, 495), (1270, 1140), (169, 1140)], EDGE, 0.85),
+        ("f24", "fn-trip", "redis", {D: "㉔", P: "㉔", "structure": "TLS"}, (.3, 1, .5, 0), [(1659, 507), (1282, 507), (1282, 1152), (451, 1152)], aux, 0.85),
+        ("f25", "driver-app", "maps", {D: "㉕", "structure": "HTTPS"}, (0, .5, 0, .5), [(25, 287), (25, 1235)], EDGE, 0.66),
+        # Giám sát vận hành: mô hình chấm của báo cáo ngày (reports/judge.ts) và trạng thái tác vụ tác nhân (status/ecsProbe.ts).
+        ("f28", "fn-ops", "ai", {Q: "㉘", "structure": "HTTPS"}, (.5, 1, .49, 1), [(1672, 1130), (480, 1130)], EDGE, -0.2),
+        ("f29", "fn-ops", "ecs", {Q: "㉙"}, (.4, 1, 0, .5), [(1665.6, 1120), (650, 1120), (650, 682)], EDGE, 0.7),
+        ("f21", "fn-ops", "tbl-daily-reports", {Q: "㉑"}, (1, .5, 0, .5), None, EDGE, 0.0),
+        ("f22", "fn-channel", "tbl-channel-events", {D: "㉒", C: "㉒"}, (1, .5, 0, .5), None, EDGE, 0.0),
+        ("f-ecs", "ecs", "agent", {}, (.5, 0, 0, .75), [(700, 630), (660, 630), (660, 398)], aux, 0.0),
+        ("f-ecr", "ecr", "ecs", {}, (0, .5, 1, .5), None, aux, 0.0),
+    ]
+    thin = "strokeColor=#879196;strokeWidth=1.2;"
+    for cid, src, dst, labels, ports, points, style, at in flows:
+        if view == "structure":
+            # Hình cấu trúc: nhãn là giao thức (chi tiết ở Bảng 4.4), chữ nhỏ hơn nhãn số luồng.
+            d.edge(cid, src, dst, labels.get("structure", ""), style=style + small + thin + jump,
+                   ports=ports, points=points, at=at)
+        elif view in labels:
+            d.edge(cid, src, dst, labels[view], style=style + big + jump, ports=ports, points=points, at=at)
+    if view != "structure":
+        used = {n for cid, src, dst, labels, *_ in flows if view in labels for n in (src, dst)}
+        if view == "driver":
+            used.add("driver")
+        import re as _re
+        for k, cell in enumerate(d.cells):
+            m = _re.match(r'<object id="([^"]+)"', cell)
+            if not m or 'vertex="1"' not in cell:
+                continue
+            cid = m.group(1)
+            if cid in used or cid.startswith(NEVER_FADE):
+                continue
+            d.cells[k] = cell.replace('<mxCell style="', '<mxCell style="' + FADE, 1)
     return d
 
 
@@ -477,14 +532,14 @@ def sequences() -> list[Diagram]:
     idn = ("idn", "Dịch vụ Định danh", "identity-service")
     trip = ("trip", "Dịch vụ Chuyến đi và Điều phối", "external-api-service")
     lk = ("lk", "Nền tảng truyền thông", "LiveKit Cloud")
-    agent = ("agent", "Tác nhân hội thoại", "llm-orchestrator")
+    agent = ("agent", "Liên lạc hội thoại thời gian thực", "llm-orchestrator")
     ai = ("ai", "Nhà cung cấp AI", "STT · LLM · TTS")
     ddb_acc = ("ddb", "DynamoDB", "accounts")
     ddb_trip = ("ddb", "DynamoDB", "trips")
     redis = ("redis", "Bộ nhớ đệm phiên", "Redis")
     admin = ("admin", "Trang quản trị điều hành", "admin-panel")
     twilio = ("tw", "Nhà cung cấp thoại", "Twilio")
-    chan = ("chan", "Dịch vụ Kênh liên lạc", "external-channel-service")
+    chan = ("chan", "Dịch vụ Liên lạc bằng tin nhắn", "external-channel-service")
     rec = ("rec", "Dịch vụ Nhật ký cuộc gọi", "call-records-service")
     ddb_rec = ("ddb", "DynamoDB", "call-records")
     wsgw = ("ws", "Kênh thông báo WebSocket", "API Gateway")
@@ -665,8 +720,95 @@ def pipeline() -> Diagram:
     return d
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Hình 3.1, 3.2 — sơ đồ use case UML theo chân dung người sử dụng
+# ─────────────────────────────────────────────────────────────────────────────
+
+UC_PX = 22  # in rộng 14,5 cm trên khung ~1000 px: ≥ 8 pt
+
+
+def _uc_page(name: str, groups: list[tuple[str, str, list[tuple[str, str]]]],
+             support: list[tuple[str, str, list[str]]], height: int) -> Diagram:
+    """groups: (actor_id, actor_label, [(uc_id, text)]); support: (id, label, [uc_id])."""
+    d = Diagram(name, 1000, height)
+    F = UC_PX
+    actor = (f"shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;"
+             f"fillColor=#FFFFFF;strokeColor=#232F3E;strokeWidth=2;fontSize={F};fontStyle=1;fontColor={TEXT};" + FONT)
+    ell = (f"ellipse;whiteSpace=wrap;html=1;fillColor=#F2F6FC;strokeColor=#3B5B8C;strokeWidth=1.5;"
+           f"fontSize={F};fontColor={TEXT};spacing=6;" + FONT)
+    boundary = (f"rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#545B64;strokeWidth=1.5;"
+                f"verticalAlign=top;align=center;fontSize={F + 2};fontStyle=1;fontColor={TEXT};spacingTop=6;" + FONT)
+    line = f"endArrow=none;html=1;strokeColor=#545B64;strokeWidth=1.3;" + FONT
+    n = sum(len(u) for _, _, u in groups)
+    gap_group = 26
+    top, step, h = 72, 90, 74
+    bottom = top + n * step + (len(groups) - 1) * gap_group
+    d.vertex("sys", "Hệ thống trợ lý giọng nói hỗ trợ tài xế", boundary, 250, 15, 520, bottom - 15 + 14)
+    y = top
+    for gid, glabel, ucs in groups:
+        y0 = y
+        for uid, text in ucs:
+            d.vertex(uid, f"<b>{escape(uid)}</b><br>{escape(text)}", ell, 270, y, 480, h)
+            y += step
+        mid = (y0 + y - step + h) / 2
+        d.vertex(gid, escape(glabel).replace("\n", "<br>"), actor, 95, mid - 45, 44, 80)
+        for uid, _ in ucs:
+            d.edge(f"e-{gid}-{uid}", gid, uid, "", style=line, ports=(1, .4, 0, .5))
+        y += gap_group
+    for k, (sid, slabel, targets) in enumerate(support):
+        ys = [float(c.split('y="')[1].split('"')[0]) for c in d.cells if any(f'id="{t}"' in c for t in targets)]
+        mid = sum(ys) / len(ys) + h / 2 if ys else 200 + 200 * k
+        d.vertex(sid, escape(slabel).replace("\n", "<br>"), actor.replace("fontStyle=1;", "fontStyle=0;"),
+                 860, mid - 45, 44, 80)
+        for t in targets:
+            d.edge(f"e-{sid}-{t}", t, sid, "", style=line, ports=(1, .5, 0, .4))
+    return d
+
+
+def usecases() -> list[Diagram]:
+    driver = _uc_page(
+        "H3.1 Use case: Tài xế",
+        [("a-driver", "Tài xế", [
+            ("UC01", "Xem lịch chuyến"),
+            ("UC02", "Nhận hoặc từ chối chuyến khi được gọi mời"),
+            ("UC03", "Cập nhật tiến độ chuyến"),
+            ("UC05", "Hủy chuyến hai bước"),
+            ("UC16", "Tạo chuyến vãng lai, hỏi lộ trình"),
+            ("UC04", "Liên lạc với khách hàng"),
+            ("UC15", "Chờ đón khách"),
+            ("UC06", "Báo khách vắng mặt hoặc sự cố"),
+            ("UC08", "Xem thu nhập, bật/tắt nhận chuyến"),
+            ("UC07", "Hỏi cách sử dụng"),
+            ("UC10", "Mở trợ lý bằng từ khóa đánh thức"),
+            ("UC09", "Kết thúc phiên trợ lý"),
+        ])],
+        [("s-voice", "Hệ thống thoại\n(LiveKit, Twilio)", ["UC02", "UC04"])],
+        1190,
+    )
+    others = _uc_page(
+        "H3.2 Use case: Khách hàng, Điều phối viên, Quản trị viên hệ thống",
+        [("a-customer", "Khách hàng", [
+            ("UC12", "Nhận cuộc gọi từ trợ lý hoặc tài xế"),
+            ("UC13", "Nhận tin nhắn xác nhận chuyến"),
+         ]),
+         ("a-dispatcher", "Điều phối viên", [
+            ("UC14", "Tạo chuyến và mời tài xế"),
+            ("UC17", "Quản lý tài xế, khách hàng, cuộc gọi"),
+         ]),
+         ("a-sysadmin", "Quản trị viên\nhệ thống", [
+            ("UC18", "Giám sát dịch vụ, cấu hình, nhật ký"),
+            ("UC11", "Xem báo cáo vận hành ngày"),
+         ])],
+        [("s-voice2", "Hệ thống thoại\n(LiveKit, Twilio)", ["UC12", "UC13", "UC14"]),
+         ("s-timer", "Bộ hẹn giờ\n(EventBridge)", ["UC11"])],
+        690,
+    )
+    return [driver, others]
+
+
 if __name__ == "__main__":
     for LANG, suffix in (("vn", ""), ("en", "_en")):   # _en: bản tiếng Anh cho README
-        write(OUT_DIR / f"H4_1_aws_architecture{suffix}.drawio", [architecture()])
+        write(OUT_DIR / f"H4_1_aws_architecture{suffix}.drawio", [architecture(v) for v in ARCH_VIEWS])
         write(OUT_DIR / f"H4_sequences{suffix}.drawio", sequences())
         write(OUT_DIR / f"H4_2_turn_pipeline{suffix}.drawio", [pipeline()])
+        write(OUT_DIR / f"H3_usecases{suffix}.drawio", usecases())

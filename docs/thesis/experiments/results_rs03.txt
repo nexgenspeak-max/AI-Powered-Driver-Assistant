@@ -1,0 +1,13 @@
+RS-03 | trials=10
+trial 0: dừng w1; phiên B được phục vụ sau 0.0 s; phiên A không được phân công lại
+trial 1: dừng w1; phiên B được phục vụ sau -0.4 s; phiên A không được phân công lại
+trial 2: dừng w1; phiên B được phục vụ sau 0.1 s; phiên A không được phân công lại
+trial 3: dừng w2; phiên B được phục vụ sau 0.4 s; phiên A không được phân công lại
+trial 4: dừng w1; phiên B được phục vụ sau 0.3 s; phiên A không được phân công lại
+trial 5: dừng w2; phiên B được phục vụ sau 0.4 s; phiên A không được phân công lại
+trial 6: dừng w1; phiên B được phục vụ sau 0.0 s; phiên A không được phân công lại
+trial 7: dừng w2; phiên B được phục vụ sau 0.0 s; phiên A không được phân công lại
+trial 8: dừng w2; phiên B được phục vụ sau -0.1 s; phiên A không được phân công lại
+trial 9: dừng w2; phiên B được phục vụ sau 0.2 s; phiên A không được phân công lại
+lượt bổ sung: không còn bản sao khi mở phiên mới; bản sao khởi động lại sau 40 s; phiên KHÔNG được phục vụ trong 30 s sau khi có bản sao mới
+RS-03 | phiên mới được phục vụ: 10/10 | thời gian từ lúc dừng tới khi tác nhân vào phiên mới: trung vị 0.1 s, lớn nhất 0.4 s (độ phân giải 1 s) | phiên đang chạy được phân công lại: 0/10

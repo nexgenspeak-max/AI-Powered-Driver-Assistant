@@ -64,7 +64,7 @@ class CustomerToolsMixin:
             logger.error("call_customer — start_call failed", exc_info=True)
             return (
                 f"Không thể kết nối cuộc gọi đến {name} lúc này. "
-                "Kiểm tra trip-service (:8002) và call-center (:8000) đang chạy."
+                "Bạn thử lại sau ít phút nhé."
             )
 
         dialed = result.get("dialed_number", phone)

@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 _MAX_VALUE = 240
+
+# Vietnamese phone numbers (0xxxxxxxxx, 84xxxxxxxxx, +84xxxxxxxxx). Every log line
+# passes through format_line, so masking here covers all call sites (NFR-05).
+_PHONE_RE = re.compile(r"(?<!\d)(\+?84|0)(\d{3})\d{3}(\d{3})(?!\d)")
+
+
+def mask_phones(text: str) -> str:
+    """0888123798 -> 0888xxx798; keeps enough digits to tell sessions apart."""
+    return _PHONE_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}xxx{m.group(3)}", text)
 
 
 def fmt_value(value: Any) -> str:
@@ -65,9 +75,11 @@ def format_line(
                 continue
             extras.append(f"{key}={fmt_value(value)}")
     if body and extras:
-        return f"{prefix} — {body} {' '.join(extras)}"
-    if body:
-        return f"{prefix} — {body}"
-    if extras:
-        return f"{prefix} — {' '.join(extras)}"
-    return prefix
+        line = f"{prefix} — {body} {' '.join(extras)}"
+    elif body:
+        line = f"{prefix} — {body}"
+    elif extras:
+        line = f"{prefix} — {' '.join(extras)}"
+    else:
+        line = prefix
+    return mask_phones(line)

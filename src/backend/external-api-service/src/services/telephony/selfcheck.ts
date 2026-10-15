@@ -80,7 +80,7 @@ if (require.main === module) {
     assertTelephonyGoldenContract();
     process.stdout.write('telephony golden contract ok\n');
   } catch (err) {
-    console.error(err);
+    process.stderr.write(`${err instanceof Error ? err.stack : String(err)}\n`);
     process.exit(1);
   }
 }

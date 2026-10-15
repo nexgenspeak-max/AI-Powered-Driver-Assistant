@@ -140,3 +140,51 @@ async def test_schedule_fires_on_remaining_time_not_a_fresh_two_seconds():
         await asyncio.sleep(0.08)
     session.say.assert_called_once()
     assert session.say.call_args.args[0] == FILLER_VN
+
+
+def _queued_handle() -> MagicMock:
+    handle = MagicMock()
+    handle.done.return_value = False
+    return handle
+
+
+@pytest.mark.asyncio
+async def test_queued_filler_is_dropped_when_real_reply_plays_first():
+    """Reply already queued when filler fires: say() lands behind it — drop the filler."""
+    filler_handle = _queued_handle()
+    session = SimpleNamespace(
+        userdata={},
+        say=MagicMock(return_value=filler_handle),
+        agent_state="thinking",
+        current_speech=None,
+    )
+    with patch("app.voicebot.processors.turn_filler.event") as mock_event:
+        schedule_turn_filler(session, lang="vn", delay_s=0.01)
+        await asyncio.sleep(0.05)
+        session.current_speech = _queued_handle()
+        mark_reply_started(session)
+
+    filler_handle.interrupt.assert_called_once()
+    drop_calls = [
+        c for c in mock_event.call_args_list
+        if c.args and c.args[0] == "turn_filler_skip" and c.kwargs.get("reason") == "reply_first"
+    ]
+    assert drop_calls
+
+
+@pytest.mark.asyncio
+async def test_filler_is_kept_when_it_is_the_speech_playing():
+    filler_handle = _queued_handle()
+    session = SimpleNamespace(
+        userdata={},
+        say=MagicMock(return_value=filler_handle),
+        agent_state="thinking",
+        current_speech=None,
+    )
+    with patch("app.voicebot.processors.turn_filler.event"):
+        schedule_turn_filler(session, lang="vn", delay_s=0.01)
+        await asyncio.sleep(0.05)
+        session.current_speech = filler_handle
+        mark_reply_started(session)
+
+    filler_handle.interrupt.assert_not_called()

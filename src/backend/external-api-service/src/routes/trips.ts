@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import * as tripService from '../services/tripService';
 import * as smsService from '../services/smsService';
+import { SmsTargetError } from '../services/sms/resolveSmsTarget';
+import { buildTripConfirmationSms } from '../services/sms/messages';
 import * as mapsService from '../services/mapsService';
 import * as dispatchService from '../services/dispatchService';
 import * as driverContextService from '../services/driverContextService';
@@ -438,10 +440,11 @@ router.post('/:tripId/confirm-with-customer', async (req: Request, res: Response
     if (!trip.customer_phone) {
       return res.status(400).json({ detail: 'Trip has no customer phone' });
     }
-    const message = req.body.message || 'Tài xế đã xác nhận chuyến đi và sẽ đến đón đúng giờ.';
+    const message = req.body.message || buildTripConfirmationSms(trip);
     const result = await smsService.sendSms(trip.customer_phone, message);
-    return res.json({ status: 'sent', method: 'sms', sid: result.sid, message });
+    return res.json({ status: 'sent', method: 'sms', sid: result.sid, twilio_status: result.status, message });
   } catch (err) {
+    if (err instanceof SmsTargetError) return res.status(400).json({ detail: err.message });
     return res.status(503).json({ detail: String(err) });
   }
 });

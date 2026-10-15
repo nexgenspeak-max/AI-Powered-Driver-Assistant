@@ -104,6 +104,15 @@ class Settings(BaseSettings):
     jwt_secret: str = ""  # must match identity-service / external-api-service
     env: str = "local"
 
+    # ── Prompt trace (local/dev only) ─────────────────────────────────────────
+    # Per-session JSONL of every LLM request/response at
+    # <prompt_trace_dir>/<room>.jsonl, read by ops-service. Ignored unless
+    # env is local or dev.
+    prompt_trace_enabled: bool = True
+    prompt_trace_dir: str = "logs/traces"
+    # Trace files older than this are deleted when a new session opens one (0 = keep).
+    prompt_trace_retention_days: float = 7
+
     # Call-record retention — call-logger's DynamoDB table has TTL enabled on
     # its `ttl` attribute (see infra/call-records-service/sam.yaml), but nothing ever
     # populated that attribute, so records piled up forever despite the infra

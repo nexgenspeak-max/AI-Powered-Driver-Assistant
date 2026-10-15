@@ -3,7 +3,7 @@
  * Run: npx ts-node --transpile-only src/services/logger/selfcheck.ts
  */
 import { execSync } from 'child_process';
-import { formatLine } from './format';
+import { formatLine, maskPhones } from './format';
 import { currentRoom, runWithLogContext } from './context';
 
 const GOLDEN =
@@ -38,6 +38,27 @@ async function assertConcurrentRoomsDoNotMix(): Promise<void> {
   }
 }
 
+export function assertPhonesMasked(): void {
+  const cases: Array<[string, string]> = [
+    ['call 0888123798 now', 'call 0888xxx798 now'],
+    ['to=+84901234567', 'to=+84901xxx567'],
+    ['phone=84901234567', 'phone=84901xxx567'],
+    ['room=driver-0888123798-509f', 'room=driver-0888xxx798-509f'],
+    ['ts=1760300000000 id=12345678901234', 'ts=1760300000000 id=12345678901234'],
+  ];
+  for (const [input, want] of cases) {
+    const got = maskPhones(input);
+    if (got !== want) throw new Error(`phone mask: ${input} -> ${got}, want ${want}`);
+  }
+  const line = formatLine({
+    ts: '2026-10-13 10:00:00', level: 'INFO', service: 'external-api-service', fn: 'calls',
+    room: 'driver-0888123798-abc', conv: '-', msg: 'dial', fields: { to: '+84901234567' },
+  });
+  if (/\d{10}/.test(line.replace(/\d{4}-\d{2}-\d{2}/, ''))) {
+    throw new Error(`unmasked phone in log line: ${line}`);
+  }
+}
+
 function assertNoRawConsoleInSrc(): void {
   const out = execSync(
     "grep -R --include='*.ts' -n -E 'console\\.(log|warn|error|info|debug)' src || true",
@@ -54,11 +75,12 @@ function assertNoRawConsoleInSrc(): void {
 
 if (require.main === module) {
   assertLoggerContract();
+  assertPhonesMasked();
   assertNoRawConsoleInSrc();
   assertConcurrentRoomsDoNotMix()
     .then(() => process.stdout.write('logger contract ok\n'))
     .catch((err) => {
-      console.error(err);
+      process.stderr.write(`${err instanceof Error ? err.stack : String(err)}\n`);
       process.exit(1);
     });
 }

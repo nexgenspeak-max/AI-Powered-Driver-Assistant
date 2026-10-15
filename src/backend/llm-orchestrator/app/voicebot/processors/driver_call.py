@@ -17,9 +17,9 @@ def _room_missing(lang: str) -> str:
 
 def _dial_failed(lang: str) -> str:
     return (
-        "Không thể gọi tài xế lúc này. Kiểm tra trip-service (:8002) và SIP_TRUNK_ID."
+        "Không thể gọi tài xế lúc này. Bạn thử lại sau ít phút nhé."
         if lang == "vn"
-        else "Unable to call the driver right now. Check trip-service (:8002) and SIP_TRUNK_ID."
+        else "Unable to call the driver right now. Please try again in a moment."
     )
 
 

@@ -18,8 +18,8 @@ const navSrc = read('src/layouts/navRegistry.ts')
 const messagesSrc = read('src/i18n/messages.ts')
 const errors = []
 
-const NAV_KEYS = ['overview', 'reports', 'agent', 'tools', 'prompts', 'logs', 'calls']
-const ROUTE_CONST = ['OVERVIEW', 'REPORTS', 'AGENT', 'TOOLS', 'PROMPTS', 'LOGS', 'CALLS']
+const NAV_KEYS = ['overview', 'reports', 'agent', 'tools', 'prompts', 'logs', 'calls', 'traces']
+const ROUTE_CONST = ['OVERVIEW', 'REPORTS', 'AGENT', 'TOOLS', 'PROMPTS', 'LOGS', 'CALLS', 'TRACES']
 const GROUPS = ['observe', 'agent', 'activity']
 
 for (const key of ROUTE_CONST) {

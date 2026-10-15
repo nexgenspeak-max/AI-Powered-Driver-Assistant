@@ -1,7 +1,10 @@
 import {
-  Box, Dialog, DialogTitle, DialogContent, IconButton, Divider, Stack, Typography, CircularProgress,
+  Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Divider, Stack, Typography, CircularProgress,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined'
+import { Link as RouterLink } from 'react-router-dom'
+import { ROUTES } from '../../constants/routes'
 import { useQuery } from '@tanstack/react-query'
 import { opsService } from '../../services/api/ops'
 import { PALETTE } from '../../styles/palette'
@@ -27,6 +30,16 @@ export function TranscriptDialog({ callId, open, onClose }: Props) {
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{t.calls.transcript}</Typography>
+        <Box sx={{ flex: 1 }} />
+        <Button
+          component={RouterLink}
+          to={`${ROUTES.TRACES}?room=${encodeURIComponent(callId)}`}
+          size="small"
+          startIcon={<ForumOutlinedIcon fontSize="small" />}
+          sx={{ minHeight: 44, mr: 1 }}
+        >
+          {t.calls.viewDetails}
+        </Button>
         <IconButton aria-label={t.calls.close} onClick={onClose} sx={{ width: 44, height: 44 }}>
           <CloseIcon fontSize="small" />
         </IconButton>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Box, Chip, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography,
 } from '@mui/material'
@@ -10,7 +11,8 @@ import { useLogStream } from '../features/logs/useLogStream'
 export default function LogsPage() {
   const { t } = useOpsLocale()
   const [service, setService] = useState('')
-  const [room, setRoom] = useState('')
+  const [searchParams] = useSearchParams()
+  const [room, setRoom] = useState(() => searchParams.get('room') ?? '')
   const [conv, setConv] = useState('')
   const [q, setQ] = useState('')
   const { lines, status, bottomRef } = useLogStream({ service, room, conv, q, enabled: true })

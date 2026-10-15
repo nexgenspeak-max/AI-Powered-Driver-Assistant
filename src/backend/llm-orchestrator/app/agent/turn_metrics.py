@@ -17,6 +17,7 @@ from typing import Any
 from livekit.agents.metrics import EOUMetrics, LLMMetrics, TTSMetrics
 
 from app.devlog import event
+from app.services.prompt_trace import emit_for_session
 from app.voicebot.processors.turn_filler import mark_reply_started
 
 logger = logging.getLogger("llm-orchestrator.turn_metrics")
@@ -84,6 +85,15 @@ def attach(session: Any) -> None:
         )
         if tts is not None:
             pending.pop(speech_id, None)
+            emit_for_session(
+                session,
+                "turn_metrics",
+                eou_ms=eou * 1000 if eou is not None else None,
+                llm_ttft_ms=llm * 1000,
+                tts_ttfb_ms=tts * 1000,
+                total_ms=total * 1000,
+                slow=slow,
+            )
 
     @session.on("user_state_changed")
     def _on_user_state(ev: Any) -> None:

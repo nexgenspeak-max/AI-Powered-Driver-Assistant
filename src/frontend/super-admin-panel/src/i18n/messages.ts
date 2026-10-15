@@ -1,5 +1,6 @@
 import type { OpsNavGroupId, OpsNavMessageKey } from '../layouts/navRegistry'
 import type { OpsLocale } from './localeRegistry'
+import { TRACES_MESSAGES, type TracesMessages } from './tracesMessages'
 
 export type OpsMessages = {
   groups: Record<OpsNavGroupId, string>
@@ -147,7 +148,9 @@ export type OpsMessages = {
     assistant: string
     callerTurn: string
     close: string
+    viewDetails: string
   }
+  traces: TracesMessages
 }
 
 export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
@@ -185,6 +188,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       calls: {
         label: 'Calls',
         description: 'Call records and transcripts via ops-service.',
+      },
+      traces: {
+        label: 'Conversations & Prompts',
+        description: 'Every voice session (including tests), live or finished: what the driver said, the exact prompt sent to the LLM, its answer, tools, timings and operations — with hints on what to improve.',
       },
     },
     shell: {
@@ -331,7 +338,9 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       assistant: 'Assistant',
       callerTurn: 'Caller',
       close: 'Close',
+      viewDetails: 'View details',
     },
+    traces: TRACES_MESSAGES.en,
   },
   vi: {
     groups: {
@@ -367,6 +376,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       calls: {
         label: 'Cuộc gọi',
         description: 'Bản ghi cuộc gọi và lời thoại qua ops-service.',
+      },
+      traces: {
+        label: 'Hội thoại & Prompt',
+        description: 'Mọi phiên thoại (kể cả bản test), đang diễn ra hoặc đã xong: tài xế nói gì, prompt gửi sang LLM ra sao, LLM trả lời gì, công cụ, thời gian phản hồi và thao tác hệ thống — kèm gợi ý nên cải thiện gì.',
       },
     },
     shell: {
@@ -513,6 +526,8 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       assistant: 'Trợ lý',
       callerTurn: 'Người gọi',
       close: 'Đóng',
+      viewDetails: 'Xem chi tiết',
     },
+    traces: TRACES_MESSAGES.vi,
   },
 }

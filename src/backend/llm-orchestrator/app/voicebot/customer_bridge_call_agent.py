@@ -7,6 +7,7 @@ from app.voicebot.prompts.customer_bridge_call import (
     bridge_greeting_to_driver,
     build_customer_bridge_instructions,
 )
+from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.customer_bridge_call_tools import end_customer_bridge_call
 from app.voicebot.processors.handback import enter_bridge_listen_mode
@@ -14,7 +15,7 @@ from app.voicebot.processors.handback import enter_bridge_listen_mode
 logger = logging.getLogger("llm-orchestrator.customer_bridge_call_agent")
 
 
-class CustomerBridgeCallAgent(SpeechTextFixMixin, Agent):
+class CustomerBridgeCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     """
     Activated when call_driver() dials the driver into the customer's room.
     Driver joins via SIP; agent output is muted but STT stays on for the customer's wake phrase.

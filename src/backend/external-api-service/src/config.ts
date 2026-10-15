@@ -84,6 +84,8 @@ export const config = {
     process.env.CALL_LOGGER_URL ||
     'http://localhost:8001',
   twilioVerifiedTo: process.env.TWILIO_VERIFIED_TO || '',
+  // Prefix of every SMS sent to customers, e.g. "[Czen]" — the Twilio sender number means nothing to them.
+  smsSenderLabel: process.env.SMS_SENDER_LABEL || '',
   // Opt-IN, not opt-out. When true, EVERY outbound customer/driver call is
   // redirected to TWILIO_VERIFIED_TO regardless of the real trip phone — a
   // Twilio-trial workaround (trial accounts can only dial verified numbers).

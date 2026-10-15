@@ -1,0 +1,5 @@
+runs=200 seed=20261013
+Số chuyến | Số điểm dừng | Đúng tối ưu | Chênh lệch TB so với tối ưu | Chênh lệch lớn nhất | Theo danh sách: chênh lệch TB | Thời gian heuristic TB (ms)
+2 | 4 | 171/200 (85.5%) | 1.2% | 46.7% | 22.9% | 0.004
+3 | 6 | 108/200 (54.0%) | 3.7% | 37.6% | 41.3% | 0.004
+4 | 8 | 80/200 (40.0%) | 6.3% | 49.5% | 62.2% | 0.007

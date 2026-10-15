@@ -20,7 +20,11 @@ export async function logEvent(source: string, payload: Record<string, string>):
   if (payload.CallSid) {
     bind({ conv: payload.CallSid });
   }
-  log.info(source, { status: payload.CallStatus ?? payload.SmsStatus ?? payload.status ?? '-' });
+  // Status and error code only — never the phone number (NFR-05).
+  log.info(source, {
+    status: payload.CallStatus ?? payload.SmsStatus ?? payload.MessageStatus ?? payload.status ?? '-',
+    ...(payload.ErrorCode ? { error_code: payload.ErrorCode } : {}),
+  });
   try {
     await store.put(event);
   } catch (err) {

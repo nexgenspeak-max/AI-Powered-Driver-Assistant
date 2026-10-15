@@ -1,0 +1,4 @@
+attempt_timeout=5.0s primary_latency=1.0s backup_latency=1.0s trials=30
+ok    | Không lỗi (đường cơ sở) | thành công 30/30 | thời gian đến token đầu: trung vị 1.00s, nhỏ nhất 1.00s, lớn nhất 1.00s
+error | Nhà cung cấp chính trả lỗi ngay | thành công 30/30 | thời gian đến token đầu: trung vị 1.05s, nhỏ nhất 1.05s, lớn nhất 1.05s
+hang  | Nhà cung cấp chính treo, không phản hồi | thành công 30/30 | thời gian đến token đầu: trung vị 6.00s, nhỏ nhất 6.00s, lớn nhất 6.00s

@@ -4,6 +4,7 @@ import logging
 from livekit.agents import Agent
 
 from app.voicebot.prompts.customer_call import build_customer_call_opening, build_customer_call_prompt
+from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
 from app.voicebot.tools.customer_call_tools import (
     answer_customer_faq,
@@ -15,7 +16,7 @@ from app.voicebot.tools.customer_call_tools import (
 logger = logging.getLogger("llm-orchestrator.customer_call_agent")
 
 
-class CustomerCallAgent(SpeechTextFixMixin, Agent):
+class CustomerCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     """
     - mode=agent: handoff in driver room; driver listens live.
     - mode=background: separate custcall-* room; driver keeps DriverAgent elsewhere.

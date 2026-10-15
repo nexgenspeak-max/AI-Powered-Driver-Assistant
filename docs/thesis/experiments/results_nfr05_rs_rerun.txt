@@ -1,0 +1,10 @@
+trials=20
+RS-01 | Dịch vụ Nhật ký cuộc gọi không phản hồi (từ chối kết nối) | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 4.03s, lớn nhất 4.06s | ví dụ: không ném ngoại lệ
+RS-01 | Dịch vụ Nhật ký cuộc gọi trả 503 | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 4.03s, lớn nhất 4.04s | ví dụ: không ném ngoại lệ
+RS-02 | Cập nhật trạng thái: API trả 503 | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 0.00s, lớn nhất 0.01s | ví dụ: Không thể cập nhật trạng thái lúc này.
+RS-02 | Cập nhật trạng thái: API treo quá thời gian chờ | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 8.01s, lớn nhất 8.07s | ví dụ: Không thể cập nhật trạng thái lúc này.
+RS-02 | Cập nhật trạng thái: API không phản hồi (từ chối kết nối) | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 0.00s, lớn nhất 0.01s | ví dụ: Không thể cập nhật trạng thái lúc này.
+RS-04 | Gửi SMS: kênh tin nhắn trả lỗi (503) | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 0.00s, lớn nhất 0.00s | ví dụ: Không thể gửi tin nhắn lúc này. Vui lòng thử lại.
+RS-04 | Gọi khách: khởi tạo cuộc gọi trả lỗi (503) | đạt 20/20 | thời gian đến khi báo lỗi: trung vị 0.00s, lớn nhất 0.00s | ví dụ: Không thể gọi An lúc này. Bạn thử lại sau ít phút nhé.
+NFR-05 | dòng nhật ký: 5335 | số điện thoại đầy đủ: 0 | số đã che: 2 | thư mục: /var/folders/qy/6mx3p3dn1kb29z47q0mkm9gc0000gn/T/nfr05_tuprvh_4
+Phát lại 19 tệp nhật ký cũ | số đầy đủ trước khi che: 2352 (5 tệp) | sau khi che: 0

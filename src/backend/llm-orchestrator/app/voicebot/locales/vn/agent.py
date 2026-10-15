@@ -18,6 +18,7 @@ from app.voicebot.locales.vn.tools_mapping import (
 from app.voicebot.locales.vn.pronunciations import PRONUNCIATIONS
 from app.voicebot.speech_text_fix import SpeechTextFixMixin
 from app.voicebot.processors import context_store
+from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
 
@@ -140,7 +141,7 @@ _CUSTOMER_TOOLS = [
 ]
 
 
-class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
+class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent):
     """
     Handles both inbound (driver opens app) and outbound (system notifies driver) modes.
     All responses are in Vietnamese.
@@ -239,7 +240,7 @@ class DriverAgent(SpokenIntentMixin, SpeechTextFixMixin, Agent):
         return msg
 
 
-class CustomerAgent(SpeechTextFixMixin, Agent):
+class CustomerAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     """Handles inbound voice sessions from Vietnamese-speaking customers."""
 
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
