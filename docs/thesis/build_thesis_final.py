@@ -77,6 +77,7 @@ CONCLUSION_PARAS = [
     "- Hệ thống chưa chạy trên kiến trúc AWS đầy đủ (mục 5.6.1): triển khai các stack bằng infra/deploy-all.sh, đo lại độ trễ và khả năng phục hồi trên Lambda, API Gateway và Fargate.",
     "- Cỡ mẫu nhỏ và một người chấm (RQ3, RQ4): mở rộng bộ câu tham chiếu với nhiều người đọc và nhiều mức nhiễu; chấm độ chính xác gọi công cụ bởi hai người độc lập và báo cáo hệ số đồng thuận.",
     "- SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin với nhà mạng qua Twilio rồi đặt TWILIO_SMS_FROM, sau đó gửi thử thật và đo tỷ lệ giao tin qua báo cáo trạng thái; trong thời gian chờ, có thể thay SMS bằng cuộc gọi tự động đọc nội dung tin nhắn cho khách qua kênh thoại sẵn có.",
+    "- Địa chỉ nhận thông báo từ Twilio chưa xác thực chữ ký X-Twilio-Signature, nên có thể bị gửi sự kiện giả vào channel-events: xác thực chữ ký bằng twilio.validateRequest với URL công khai đã cấu hình, thử với Twilio thật trước khi bật.",
     "- Chưa có nghiên cứu người dùng: thử nghiệm có kiểm soát với tài xế trên kịch bản lái mô phỏng, đo thời gian tác vụ, số lần nhìn màn hình và tải nhận thức.",
 ]
 

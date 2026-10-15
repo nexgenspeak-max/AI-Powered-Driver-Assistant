@@ -8,7 +8,12 @@
     "verify:logger": "ts-node --transpile-only src/services/logger/selfcheck.ts",
     "verify:telephony": "ts-node --transpile-only src/services/telephony/selfcheck.ts",
     "verify:ws": "ts-node --transpile-only src/services/notify/selfcheck.ts",
-    "verify:sms": "ts-node --transpile-only src/services/sms/selfcheck.ts"
+    "verify:sms": "ts-node --transpile-only src/services/sms/selfcheck.ts",
+    "verify:driver-status": "ts-node --transpile-only src/services/driverStatus/selfcheck.ts",
+    "verify:customers": "ts-node --transpile-only src/services/customers.selfcheck.ts",
+    "verify:reminders": "ts-node --transpile-only src/services/reminder.selfcheck.ts",
+    "verify:trip-access": "ts-node --transpile-only src/services/trips/access.selfcheck.ts",
+    "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1101.0",

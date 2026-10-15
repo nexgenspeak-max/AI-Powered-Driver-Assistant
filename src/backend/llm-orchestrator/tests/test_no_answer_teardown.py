@@ -38,7 +38,8 @@ async def test_teardown_unanswered_isolated_call():
     userdata = {
         "lang": "vn",
         "isolated_call": True,
-        "customer_call": {"call_id": "c1", "mode": "background"},
+        # Redials already used up (AVDA-120), so this no-answer ends the call.
+        "customer_call": {"call_id": "c1", "mode": "background", "retry_attempt": 2, "customer_name": "An"},
         "driver_phone": "0900000001",
     }
 
@@ -54,7 +55,7 @@ async def test_teardown_unanswered_isolated_call():
     disconnect.assert_awaited_once()
     complete.assert_awaited_once()
     summary = complete.call_args[0][2]
-    assert "Không gọi được" in summary or "Không kết nối" in summary
+    assert "không nghe máy" in summary
 
 
 @pytest.mark.asyncio

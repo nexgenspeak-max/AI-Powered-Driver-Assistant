@@ -6,7 +6,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "build": "tsc",
     "verify:ops": "ts-node-dev --respawn=false --transpile-only src/services/logs/selfcheck.ts && ts-node-dev --respawn=false --transpile-only src/services/traces/selfcheck.ts && ts-node-dev --respawn=false --transpile-only src/services/agent/selfcheck.ts && ts-node-dev --respawn=false --transpile-only src/services/reports/selfcheck.ts",
-    "snapshot:agent": "ts-node-dev --respawn=false --transpile-only scripts/bundle-agent-snapshot.ts"
+    "snapshot:agent": "ts-node-dev --respawn=false --transpile-only scripts/bundle-agent-snapshot.ts",
+    "verify:disk": "ts-node --transpile-only src/services/status/disk.selfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.600.0",

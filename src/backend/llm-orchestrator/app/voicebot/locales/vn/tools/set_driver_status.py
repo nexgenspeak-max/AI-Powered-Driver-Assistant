@@ -1,7 +1,9 @@
 import logging
+
+import httpx
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
-from app.voicebot.locales.vn.constants import ERR_DRIVER_STATUS_FAIL
+from app.voicebot.locales.vn.constants import ERR_DRIVER_STATUS_FAIL, ERR_OFFLINE_ACTIVE_TRIP
 from app.services import backend_api
 from app.voicebot.processors import context_store
 from app.voicebot.processors.tool_response_builders import (
@@ -19,6 +21,21 @@ async def set_driver_status(raw_arguments: dict, context: RunContext) -> str:
 
     try:
         await backend_api.set_driver_online_status(driver_phone, online)
+    except httpx.HTTPStatusError as exc:
+        # 409 ACTIVE_TRIP: backend refuses to go offline while a trip is in progress.
+        active_trip = exc.response is not None and exc.response.status_code == 409
+        if not active_trip:
+            logger.error("set_driver_status API failed", exc_info=True)
+        else:
+            logger.info("set_driver_status refused: trip in progress")
+        return await context_store.speak_and_stop(
+            context.session,
+            build_mutation_response(
+                ERR_OFFLINE_ACTIVE_TRIP if active_trip else ERR_DRIVER_STATUS_FAIL,
+                tool="set_driver_status",
+                lang="vi",
+            ),
+        )
     except Exception:
         logger.error("set_driver_status API failed", exc_info=True)
         return await context_store.speak_and_stop(

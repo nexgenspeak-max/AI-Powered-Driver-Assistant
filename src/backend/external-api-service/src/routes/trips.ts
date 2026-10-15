@@ -4,6 +4,7 @@ import * as smsService from '../services/smsService';
 import { SmsTargetError } from '../services/sms/resolveSmsTarget';
 import { buildTripConfirmationSms } from '../services/sms/messages';
 import * as mapsService from '../services/mapsService';
+import { isTripOwner as isTripOwnerRule } from '../services/trips/access';
 import * as dispatchService from '../services/dispatchService';
 import * as driverContextService from '../services/driverContextService';
 import { authServiceClient } from '../services/authServiceClient';
@@ -103,16 +104,7 @@ function normalizePhone(phone?: string): string {
 // and act on behalf of whoever is on the call — they're trusted, so they bypass this.
 // Real driver/customer sessions can only touch their own trip.
 function isTripOwner(req: Request, trip: tripService.Trip): boolean {
-  const user = req.user;
-  if (!user || user.role === 'admin') return true;
-  if (user.role === 'driver') {
-    return !!user.phone && normalizePhone(user.phone) === normalizePhone(trip.driver_phone);
-  }
-  if (user.role === 'customer') {
-    if (trip.id_account) return trip.id_account === user.sub;
-    return !!user.phone && normalizePhone(user.phone) === normalizePhone(trip.customer_phone);
-  }
-  return false;
+  return isTripOwnerRule(req.user, trip);
 }
 
 router.post('/', async (req: Request, res: Response) => {
@@ -391,6 +383,8 @@ router.get('/:tripId/location', async (req: Request, res: Response) => {
   try {
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
+    // Address and phone of the customer: only the trip's own driver/customer or a trusted caller (AVDA-48).
+    if (!isTripOwner(req, trip)) return res.status(403).json({ detail: 'Not authorized to view this trip' });
     return res.json({
       trip_id: trip.trip_id,
       pickup_address: trip.pickup_address,

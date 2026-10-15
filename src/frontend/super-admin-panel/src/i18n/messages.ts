@@ -42,6 +42,8 @@ export type OpsMessages = {
     prompts: string
     defaultLocale: string
     readOnly: string
+    disk: string
+    diskDetail: (freeGb: string, logsMb: string) => string
   }
   agent: {
     source: string
@@ -231,6 +233,8 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       prompts: 'Prompt files',
       defaultLocale: 'Default locale',
       readOnly: 'Super Admin only reads files. Change voice-agent env, then restart the worker for the new models to run.',
+      disk: 'Disk used',
+      diskDetail: (freeGb, logsMb) => `Disk: ${freeGb} GB free · logs ${logsMb} MB`,
     },
     agent: {
       source: 'Config file',
@@ -419,6 +423,8 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       prompts: 'File prompt',
       defaultLocale: 'Locale mặc định',
       readOnly: 'Super Admin chỉ đọc file. Sửa env voice-agent rồi khởi động lại worker thì mô hình mới mới chạy.',
+      disk: 'Đĩa đã dùng',
+      diskDetail: (freeGb, logsMb) => `Đĩa: còn trống ${freeGb} GB · nhật ký ${logsMb} MB`,
     },
     agent: {
       source: 'File cấu hình',

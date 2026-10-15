@@ -149,6 +149,13 @@ def _parse_room(room_name: str) -> tuple[RoomMode, str]:
     # Fallback: try splitting on "-" for ad-hoc room names
     parts = room_name.split("-")
     phone = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
+    # No known pattern matched: the session still opens as a driver session, but
+    # the mismatch must be visible (wrong tool set or missing context otherwise
+    # fails silently). The room is already on the log line via room=.
+    logger.warning(
+        "room name matched no pattern — falling back to driver mode",
+        extra={"log_fields": {"fallback_phone": phone or "-"}},
+    )
     return "driver", phone
 
 
@@ -381,6 +388,14 @@ async def entrypoint(ctx: JobContext) -> None:
                 # customer_call_tools.py::_finish_isolated_call), so the
                 # driver's own agent can announce the result proactively.
                 "driver_room_name": meta.get("driver_room_name", ""),
+                # No-answer redial (processors/no_answer_retry.py): attempt
+                # number plus what calls/start needs to dial the customer again.
+                "retry_attempt":    int(meta.get("retry_attempt") or 0),
+                "driver_phone":     meta.get("driver_phone", ""),
+                "customer_name":    trip.get("customer_name", ""),
+                "pickup_address":   trip.get("pickup_address", ""),
+                "custom_message":   trip.get("custom_message", ""),
+                "lang":             lang,
             }
 
         # Warm the LLM while agent module loads. For inbound driver we defer

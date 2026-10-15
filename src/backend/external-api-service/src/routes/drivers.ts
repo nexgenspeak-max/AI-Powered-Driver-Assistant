@@ -5,6 +5,7 @@ import * as earningsService from '../services/earningsService';
 import * as driverContextService from '../services/driverContextService';
 import * as routeOptimizationService from '../services/routeOptimizationService';
 import * as mapsService from '../services/mapsService';
+import { offlineBlockedBy } from '../services/driverStatus/guard';
 import { phoneVariants } from '../utils/phone';
 import { distanceMeters } from '../utils/geo';
 import { cacheSet, cacheGet, cacheDel, driverLiveLocationKey, driverOptimizedRouteKey, driverSessionKey } from '../cache/redis';
@@ -147,6 +148,14 @@ router.patch('/me/status', async (req: Request, res: Response) => {
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
     const online = req.body.online ?? req.body.status === 'online';
     const status = online ? 'online' : 'offline';
+    const blocking = offlineBlockedBy(online, await tripsForDriver(driverPhone));
+    if (blocking.length) {
+      return res.status(409).json({
+        detail: 'Driver has a trip in progress; finish or cancel it before going offline',
+        code: 'ACTIVE_TRIP',
+        trip_ids: blocking,
+      });
+    }
     const updated = await driverService.update(driverPhone, { status });
     if (!updated) return res.status(404).json({ detail: 'Driver not found' });
     await driverContextService.invalidateDriverContext(driverPhone);

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import serverless from 'serverless-http';
+import { deliverDueReminders } from './services/reminderDelivery';
 import tripsRouter from './routes/trips';
 import driversRouter from './routes/drivers';
 import callsRouter from './routes/calls';
@@ -39,4 +40,21 @@ app.use('/api/v1/places', placesRouter);
 
 void cacheGet('__warmup__');
 
-export const handler = serverless(app);
+const http = serverless(app);
+
+/** EventBridge Scheduler input for the pickup-reminder tick (infra/external-api-service/sam.yaml). */
+function isReminderTick(event: unknown): boolean {
+  const e = event as { source?: string; action?: string } | null;
+  return e?.source === 'external-api.schedule' && e?.action === 'reminders';
+}
+
+/** Lambda entry: API Gateway requests, or the one-minute reminder tick (two sweeps, 30 s apart). */
+export const handler = async (event: unknown, context: unknown) => {
+  if (isReminderTick(event)) {
+    const first = await deliverDueReminders();
+    await new Promise((resolve) => setTimeout(resolve, 30_000));
+    const second = await deliverDueReminders();
+    return { status: 'ok', delivered: first + second };
+  }
+  return http(event as Parameters<typeof http>[0], context as Parameters<typeof http>[1]);
+};

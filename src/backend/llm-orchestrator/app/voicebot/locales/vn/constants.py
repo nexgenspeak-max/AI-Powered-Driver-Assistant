@@ -61,3 +61,4 @@ ERR_NO_SHOW_FAIL            = "Không thể báo cáo khách không xuất hiệ
 ERR_EXTEND_WAIT_FAIL        = "Không thể gia hạn thời gian chờ lúc này. Vui lòng thử lại."
 ERR_REPORT_ISSUE_FAIL       = "Không thể ghi nhận báo cáo sự cố lúc này. Vui lòng thử lại."
 ERR_DRIVER_STATUS_FAIL      = "Không thể cập nhật trạng thái nhận chuyến lúc này. Vui lòng thử lại."
+ERR_OFFLINE_ACTIVE_TRIP     = "Bạn đang có chuyến chưa hoàn thành nên chưa thể tắt nhận chuyến. Hãy hoàn thành hoặc hủy chuyến trước."

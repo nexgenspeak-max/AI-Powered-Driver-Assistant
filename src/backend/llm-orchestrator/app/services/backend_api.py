@@ -297,6 +297,8 @@ async def start_call(
     lang: str = "vn",
     customer_name: str = "",
     pickup_address: str = "",
+    custom_message: str = "",
+    retry_attempt: int = 0,
 ) -> dict:
     c = _get_client()
     r = await c.post(
@@ -311,6 +313,8 @@ async def start_call(
             "lang":           lang,
             "customerName":   customer_name,
             "pickupAddress":  pickup_address,
+            "customMessage":  custom_message,
+            "retryAttempt":   retry_attempt,
         },
         headers=auth_headers(),
         timeout=25,

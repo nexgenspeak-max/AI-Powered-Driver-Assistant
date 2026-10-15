@@ -363,7 +363,9 @@ def _disconnect_summary(lang: str, mode: str, *, answered: bool) -> str:
     )
 
 
-async def complete_isolated_call(session: AgentSession, userdata: dict, summary: str) -> None:
+async def complete_isolated_call(
+    session: AgentSession, userdata: dict, summary: str, *, notify_driver: bool = True,
+) -> None:
     """Mark a background (isolated) customer call finished and tear down its room.
 
     Shared by: SIP disconnect watcher, the no-answer watchdog, and the
@@ -385,6 +387,11 @@ async def complete_isolated_call(session: AgentSession, userdata: dict, summary:
     if userdata.get("_isolated_call_done"):
         return
     if userdata.get("_handback_in_progress"):
+        return
+    if userdata.get("_redial_pending"):
+        # A no-answer redial is waiting out its delay in this job; deleting the
+        # room now would kill it. _background_no_answer finishes the call itself.
+        logger.info("complete_isolated_call skipped | redial pending")
         return
     userdata["_handback_in_progress"] = True
     userdata["_isolated_call_done"] = True
@@ -430,7 +437,8 @@ async def complete_isolated_call(session: AgentSession, userdata: dict, summary:
         # Proactively tell the driver's own room the result, right after
         # marking it complete — the driver doesn't have to ask "tóm tắt cuộc
         # gọi" first.
-        await notify_driver_of_background_call_result(userdata, summary)
+        if notify_driver:
+            await notify_driver_of_background_call_result(userdata, summary)
         # Explicitly hang up the SIP leg — delete_room alone was relied on to
         # tear this down, but LiveKit's telephony dashboard has shown the SIP
         # call session still ACTIVE after this ran (room gone, backend
@@ -488,9 +496,7 @@ async def teardown_unanswered_call(session: AgentSession, userdata: dict) -> Non
     await disconnect_sip_participant(userdata)
 
     if userdata.get("isolated_call") or mode == "background":
-        summary = _disconnect_summary(lang, "background", answered=False)
-        await complete_isolated_call(session, userdata, summary)
-        dev_event("call_no_answer", ok=True, mode="background")
+        await _background_no_answer(session, userdata, lang)
         return
 
     if userdata.get("bridge_call_active") or mode == "bridge":
@@ -517,6 +523,36 @@ async def teardown_unanswered_call(session: AgentSession, userdata: dict) -> Non
         return
 
     logger.warning("teardown_unanswered_call | no active call flags — skipped")
+
+
+async def _background_no_answer(session: AgentSession, userdata: dict, lang: str) -> None:
+    """Background call not answered: redial (up to MAX_REDIALS, REDIAL_DELAY_SECONDS
+    apart) or, once redials are used up, tell the driver it failed (AVDA-120)."""
+    from app.voicebot.processors import no_answer_retry as retry
+
+    if userdata.get("_redial_pending") or userdata.get("_isolated_call_done"):
+        return  # watchdog and disconnect watcher can both fire for one no-answer
+    cancel_no_answer_watch(userdata)
+    call_meta = userdata.get("customer_call") or {}
+    name = call_meta.get("customer_name") or ("the customer" if lang == "en" else "khách")
+    attempt = retry.next_attempt(int(call_meta.get("retry_attempt") or 0))
+    if attempt is None:
+        await complete_isolated_call(session, userdata, retry.final_notice(lang, name))
+        dev_event("call_no_answer", ok=True, mode="background", redials_exhausted=True)
+        return
+
+    # Tell the driver now, close this attempt's record and SIP leg, keep the
+    # job alive through the delay, then dial again in a fresh room.
+    userdata["_redial_pending"] = True
+    try:
+        await notify_driver_of_background_call_result(userdata, retry.redial_notice(lang, name, attempt))
+        await disconnect_sip_participant(userdata)
+        dialled = await retry.redial_after_delay(call_meta, attempt)
+    finally:
+        userdata["_redial_pending"] = False
+    summary = retry.redial_notice(lang, name, attempt) if dialled else retry.redial_failed_notice(lang, name)
+    await complete_isolated_call(session, userdata, summary, notify_driver=not dialled)
+    dev_event("call_no_answer", ok=True, mode="background", redial=attempt, redialled=dialled)
 
 
 def schedule_no_answer_watch(
@@ -565,9 +601,13 @@ def register_sip_call_watchers(
                 )
                 return
             lang = userdata.get("lang", "vn")
-            summary = _disconnect_summary(
-                lang, "background", answered=call_leg_was_answered(userdata, participant)
-            )
+            answered = call_leg_was_answered(userdata, participant)
+            if not answered and not _pickup_confirmed(userdata):
+                # Carrier ended the ringing leg before our ring timeout: same
+                # no-answer handling (redial policy) as the watchdog.
+                _run_logged(_background_no_answer(session, userdata, lang), name="background_no_answer")
+                return
+            summary = _disconnect_summary(lang, "background", answered=answered)
             _run_logged(
                 complete_isolated_call(session, userdata, summary),
                 name="auto_complete_isolated",

@@ -1,6 +1,13 @@
 import { config } from '../config';
 import { serviceToken } from './serviceToken';
 
+/** Non-2xx answer from identity-service; keeps the status so callers can map 400/409. */
+export class IdentityServiceError extends Error {
+  constructor(message: string, readonly status: number, readonly body: string) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<{ status: number; data: T | null }> {
   const res = await fetch(`${config.authServiceUrl}${path}`, {
     ...init,
@@ -15,7 +22,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ statu
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`identity-service ${path} failed: ${res.status} ${body}`);
+    throw new IdentityServiceError(`identity-service ${path} failed: ${res.status} ${body}`, res.status, body);
+  }
+  if (res.status === 204) {
+    return { status: 204, data: null };
   }
   const data = (await res.json()) as T;
   return { status: res.status, data };
@@ -34,4 +44,7 @@ export const authServiceClient = {
       body: JSON.stringify(fields),
     }),
   getSettings: <T>(accountId: string) => request<T>(`/api/v1/settings/${encodeURIComponent(accountId)}`),
+  create: <T>(fields: Record<string, unknown>) =>
+    request<T>('/api/v1/accounts', { method: 'POST', body: JSON.stringify(fields) }),
+  remove: (id: string) => request<null>(`/api/v1/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };

@@ -142,3 +142,12 @@ export type DailyReport = {
   fallbacks: { total: number; by_provider: Record<string, number> }
   coverage: { records: number; with_metrics: number; notes: string[] }
 }
+
+export type DiskSnapshot = {
+  taken_at: string
+  volume_path: string
+  total_bytes: number
+  free_bytes: number
+  used_pct: number
+  dirs: { name: string; path: string; bytes: number | null }[]
+}

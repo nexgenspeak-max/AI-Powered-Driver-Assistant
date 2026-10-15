@@ -66,3 +66,4 @@ ERR_NO_SHOW_FAIL            = "Unable to report a no-show right now. Please try 
 ERR_EXTEND_WAIT_FAIL        = "Unable to extend wait time right now. Please try again."
 ERR_REPORT_ISSUE_FAIL       = "Unable to record the trip issue right now. Please try again."
 ERR_DRIVER_STATUS_FAIL      = "Unable to update your online status right now. Please try again."
+ERR_OFFLINE_ACTIVE_TRIP     = "You still have a trip in progress, so you cannot go offline yet. Please finish or cancel it first."

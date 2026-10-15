@@ -5,6 +5,7 @@ import {
   GetCommand,
   QueryCommand,
   UpdateCommand,
+  DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuid } from 'uuid';
 import { config } from '../config';
@@ -122,4 +123,14 @@ export async function update(id: string, fields: Record<string, unknown>, update
     ReturnValues: 'ALL_NEW',
   }));
   return (result.Attributes as User) ?? null;
+}
+
+/** Removes the account row; returns false when it did not exist. */
+export async function remove(id: string): Promise<boolean> {
+  const out = await docClient.send(new DeleteCommand({
+    TableName: config.dynamodbTable,
+    Key: { id },
+    ReturnValues: 'ALL_OLD',
+  }));
+  return Boolean(out.Attributes);
 }

@@ -5,6 +5,7 @@ import TranslateOutlinedIcon from '@mui/icons-material/TranslateOutlined'
 import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined'
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined'
+import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined'
 import { opsService } from '../services/api/ops'
 import { useOpsLocale } from '../i18n/useOpsLocale'
 import { PALETTE } from '../styles/palette'
@@ -25,14 +26,22 @@ export default function OverviewPage() {
     refetchInterval: 12_000,
   })
 
+  const diskQ = useQuery({
+    queryKey: ['ops-disk'],
+    queryFn: opsService.disk,
+    refetchInterval: 15_000,
+  })
+
   const services = statusQ.data?.services ?? []
+  const disk = diskQ.data
+  const logsBytes = (disk?.dirs ?? []).reduce((sum, d) => sum + (d.bytes ?? 0), 0)
   const up = services.filter(s => s.ok).length
   const agent = agentQ.data
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button onClick={() => { void statusQ.refetch(); void agentQ.refetch() }} variant="outlined" sx={{ minHeight: 44 }}>
+        <Button onClick={() => { void statusQ.refetch(); void agentQ.refetch(); void diskQ.refetch() }} variant="outlined" sx={{ minHeight: 44 }}>
           {t.overview.refresh}
         </Button>
       </Box>
@@ -69,8 +78,20 @@ export default function OverviewPage() {
             color: PALETTE.light,
             icon: <LanguageOutlinedIcon fontSize="small" />,
           },
+          {
+            label: t.overview.disk,
+            value: disk ? `${disk.used_pct}%` : '–',
+            color: disk && disk.used_pct >= 90 ? PALETTE.danger : PALETTE.mid,
+            icon: <StorageOutlinedIcon fontSize="small" />,
+          },
         ]}
       />
+
+      {disk ? (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          {t.overview.diskDetail((disk.free_bytes / 1e9).toFixed(1), (logsBytes / 1e6).toFixed(1))}
+        </Typography>
+      ) : null}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
         {t.overview.readOnly}

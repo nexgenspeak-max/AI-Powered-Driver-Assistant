@@ -130,6 +130,8 @@ export async function startCustomerCall(opts: {
   customerName?: string;
   pickupAddress?: string;
   customMessage?: string;
+  /** 0 for the first dial; 1..2 for no-answer redials (AVDA-120). */
+  retryAttempt?: number;
   channel?: TelephonyChannel;
   zaloUid?: string;
 }) {
@@ -172,6 +174,9 @@ export async function startCustomerCall(opts: {
       // announce it proactively instead of only on request.
       driver_room_name: opts.roomName ?? '',
       telephony_channel: dialPlan.channel,
+      // No-answer redial counter, read back by the background agent to decide
+      // whether to redial again or report failure (sip_call_watch.py).
+      retry_attempt: String(opts.retryAttempt ?? 0),
     };
 
     const bgRoom = await createBackgroundCallRoom(baseMeta);

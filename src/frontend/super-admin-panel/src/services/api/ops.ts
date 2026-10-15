@@ -1,10 +1,13 @@
 import { opsClient } from './opsClient'
-import type { AgentSnapshot, CallRecord, DailyReport, ProbeResult, PromptsSnapshot } from '../../types/ops'
+import type { AgentSnapshot, CallRecord, DailyReport, DiskSnapshot, ProbeResult, PromptsSnapshot } from '../../types/ops'
 import type { TraceSessionDetail, TraceSessionSummary } from '../../features/traces/types'
 
 export const opsService = {
   status: () =>
     opsClient.get<{ services: ProbeResult[] }>('/api/v1/status').then(r => r.data),
+
+  disk: () =>
+    opsClient.get<DiskSnapshot>('/api/v1/status/disk').then(r => r.data),
 
   agent: () =>
     opsClient.get<AgentSnapshot>('/api/v1/agent').then(r => r.data),

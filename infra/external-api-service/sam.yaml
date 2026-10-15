@@ -123,6 +123,8 @@ Resources:
       FunctionName: !Sub "${Environment}-${AppName}-external-api-service-fn"
       CodeUri: ../../src/backend/external-api-service/
       Handler: src/index.handler
+      # 45 s so a reminder tick can sweep twice, 30 s apart (API Gateway still cuts requests at 29 s).
+      Timeout: 45
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ExternalApiTripsTable
@@ -142,6 +144,16 @@ Resources:
         Proxy:
           Type: Api
           Properties: { RestApiId: !Ref ExternalApiRestApi, Path: "/{proxy+}", Method: ANY }
+        # Pickup reminders (AVDA-42): local.ts sweeps every 30 s; on Lambda this
+        # schedule does the same (two sweeps per one-minute tick).
+        ReminderTick:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub "${Environment}-${AppName}-external-api-reminder-tick"
+            ScheduleExpression: "rate(1 minute)"
+            Input: '{"source":"external-api.schedule","action":"reminders"}'
+            RetryPolicy:
+              MaximumRetryAttempts: 0
       Tags: { app: !Ref AppName, env: !Ref Environment, service: external-api-service, layer: microservices, component: lambda }
     Metadata:
       BuildMethod: esbuild

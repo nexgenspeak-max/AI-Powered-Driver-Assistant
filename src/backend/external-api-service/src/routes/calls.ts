@@ -85,6 +85,7 @@ router.post('/start', async (req: Request, res: Response) => {
       customerName: (req.body.customerName as string) || '',
       pickupAddress: (req.body.pickupAddress as string) || '',
       customMessage: (req.body.customMessage as string) || '',
+      retryAttempt: Math.min(Math.max(Number(req.body.retryAttempt) || 0, 0), 2),
       channel: channel as TelephonyChannel | undefined,
       zaloUid: (zaloUid as string) || undefined,
     });

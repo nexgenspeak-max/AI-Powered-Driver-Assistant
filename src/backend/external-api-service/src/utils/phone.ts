@@ -13,3 +13,13 @@ export function phoneVariants(phone: string): string[] {
   if (bare.startsWith('0')) variants.push(`+84${bare.slice(1)}`);
   return [...new Set(variants)];
 }
+
+// Vietnamese mobile numbers: 10 digits starting 03/05/07/08/09 in local form.
+const VN_MOBILE = /^0(3|5|7|8|9)\d{8}$/;
+
+/** Local form (0xxxxxxxxx) of a Vietnamese mobile number, or null if it is not one. */
+export function normalizeVnMobile(raw: string): string | null {
+  const digits = String(raw ?? '').replace(/[\s.()-]/g, '').replace(/^\+/, '');
+  const local = digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
+  return VN_MOBILE.test(local) ? local : null;
+}
