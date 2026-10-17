@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
 import { AppText } from "../../../components/AppText";
+import { CzenMark } from "../../../components/CzenMark";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -41,8 +42,42 @@ const STATUS_CAPTION = {
   },
 } as const;
 
+const SUGGESTIONS = {
+  vn: ["Lịch hôm nay", "Gọi khách", "Thu nhập hôm nay", "Nên đi đâu tiếp?"],
+  en: ["Today's schedule", "Call the rider", "Today's earnings", "Where next?"],
+} as const;
+
 interface Props {
   onClose?: () => void;
+}
+
+// Small live state next to the title: Đang nghe / Đang kết nối / Mic tắt / Tắt.
+function StatusChip({
+  voice,
+  lang,
+}: {
+  voice: { status: "idle" | "connecting" | "connected" | "error"; isMicMuted: boolean };
+  lang: "vn" | "en";
+}) {
+  const theme = useTheme();
+  const spec =
+    voice.status === "connected" && voice.isMicMuted
+      ? { label: lang === "en" ? "Mic off" : "Mic tắt", dot: theme.warning.val, bg: "$warningContainer", fg: "$onWarningContainer" }
+      : voice.status === "connected"
+        ? { label: lang === "en" ? "Listening" : "Đang nghe", dot: theme.success.val, bg: "$successContainer", fg: "$onSuccessContainer" }
+        : voice.status === "connecting"
+          ? { label: lang === "en" ? "Connecting" : "Đang kết nối", dot: theme.primary.val, bg: "$primaryContainer", fg: "$onPrimaryContainer" }
+          : voice.status === "error"
+            ? { label: lang === "en" ? "Error" : "Lỗi", dot: theme.danger.val, bg: "$dangerContainer", fg: "$onDangerContainer" }
+            : { label: lang === "en" ? "Off" : "Tắt", dot: theme.textMuted.val, bg: "$chip", fg: "$textSecondary" };
+  return (
+    <XStack alignItems="center" gap={6} paddingHorizontal={10} paddingVertical={4} borderRadius="$pill" backgroundColor={spec.bg}>
+      <View width={6} height={6} borderRadius={3} backgroundColor={spec.dot} />
+      <AppText variant="caption" color={spec.fg}>
+        {spec.label}
+      </AppText>
+    </XStack>
+  );
 }
 
 function headerCaption(voice: {
@@ -79,15 +114,18 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [chats]);
 
-  const handleSend = async () => {
+  const handleSend = () => sendText(msg);
+
+  // Shared by the composer and the suggestion chips.
+  const sendText = async (raw: string) => {
     Keyboard.dismiss();
     if (sendingRef.current) return;
-    if (!msg.trim()) {
+    if (!raw.trim()) {
       setError("Bạn chưa nhập nội dung.");
       return;
     }
     sendingRef.current = true;
-    const text = msg;
+    const text = raw;
     setMsg("");
     setError(null);
     try {
@@ -148,10 +186,13 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
             ) : (
               <View width={40} />
             )}
-            <YStack flex={1} justifyContent="center" gap="$1">
-              <AppText variant="h2" numberOfLines={1}>
-                Trợ lý Czen
-              </AppText>
+            <YStack flex={1} justifyContent="center" gap={2}>
+              <XStack alignItems="center" gap="$2">
+                <AppText variant="h2" numberOfLines={1}>
+                  Czen
+                </AppText>
+                <StatusChip voice={voice} lang={voiceLang} />
+              </XStack>
               <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
                 {headerCaption(voice, voiceLang)}
               </AppText>
@@ -173,6 +214,50 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
           }}
           keyboardShouldPersistTaps="handled"
         >
+          {chats.length === 0 && (
+            <YStack flex={1} alignItems="center" justifyContent="center" gap="$4" paddingVertical="$6">
+              <View
+                width={72}
+                height={72}
+                borderRadius={36}
+                alignItems="center"
+                justifyContent="center"
+                backgroundColor="$primaryContainer"
+              >
+                <CzenMark size={40} color={theme.onPrimaryContainer.val} />
+              </View>
+              <YStack alignItems="center" gap="$1">
+                <AppText variant="title">Nói với Czen</AppText>
+                <AppText variant="body" color="$textSecondary" textAlign="center">
+                  {voice.status === "connected"
+                    ? "Czen đang nghe. Hỏi về chuyến, khách hay thu nhập."
+                    : "Chạm nút Trợ lý bên dưới rồi nói, hoặc chọn một gợi ý."}
+                </AppText>
+              </YStack>
+              <XStack flexWrap="wrap" justifyContent="center" gap="$2">
+                {SUGGESTIONS[voiceLang].map((s) => (
+                  <Pressable
+                    key={s}
+                    onPress={() => sendText(s)}
+                    accessibilityRole="button"
+                    accessibilityLabel={s}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <View
+                      paddingHorizontal="$3"
+                      paddingVertical="$2"
+                      borderRadius="$pill"
+                      backgroundColor="$chip"
+                      borderWidth={StyleSheet.hairlineWidth}
+                      borderColor="$border"
+                    >
+                      <AppText variant="label">{s}</AppText>
+                    </View>
+                  </Pressable>
+                ))}
+              </XStack>
+            </YStack>
+          )}
           {chats.map((chat, i) =>
             chat.who === "me" ? (
               <View

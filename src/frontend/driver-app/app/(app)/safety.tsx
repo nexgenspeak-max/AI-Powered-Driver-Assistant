@@ -22,8 +22,7 @@ export default function SafetyScreen() {
   const theme = useTheme()
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Trung tâm an toàn</AppText>
+    <Screen scroll title="Trung tâm an toàn">
 
       <Surface flat>
         <YStack padding="$4" gap="$1">

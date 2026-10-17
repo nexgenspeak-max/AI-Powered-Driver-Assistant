@@ -67,8 +67,7 @@ export default function AddTripScreen() {
   })
 
   return (
-    <Screen scroll backButton backTo="/dashboard">
-      <AppText variant="h1">Thêm chuyến (tự tạo)</AppText>
+    <Screen scroll title="Thêm chuyến (tự tạo)" backTo="/dashboard">
       <AppText variant="body" color="$textSecondary">
         Chuyến sẽ vào ngay Đang chạy — không hiện banner nhận chuyến.
       </AppText>

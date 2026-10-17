@@ -36,7 +36,7 @@ export default function VehicleScreen() {
 
   if (!driver) {
     return (
-      <Screen scroll backButton>
+      <Screen scroll title="Quản lý xe">
         <Skeleton height={28} width="40%" radius={8} />
         <Skeleton height={200} radius={24} />
         <Skeleton height={52} radius={999} />
@@ -50,8 +50,7 @@ export default function VehicleScreen() {
     vehiclePlate.trim() !== (driver.vehicle_plate ?? '')
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Quản lý xe</AppText>
+    <Screen scroll title="Quản lý xe">
 
       <Surface flat>
         <YStack padding="$4" gap="$4">

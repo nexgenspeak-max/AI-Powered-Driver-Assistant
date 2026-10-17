@@ -144,6 +144,8 @@ Các màn phụ (hồ sơ, xe, giấy tờ, ngân hàng, an toàn, hỗ trợ, c
 
 ## 9. Lộ trình thực hiện
 
+Trạng thái 2026-10-17 (tối): P1, P2, P3 (lộ trình thu gọn), P4, P5 (AppBar cho 11 màn phụ), P6, P7 (chip trạng thái + gợi ý lệnh) đã xong; P0 dùng primitives sẵn có; P8 còn lại.
+
 | Giai đoạn | Nội dung | Tiêu chí nghiệm thu |
 |---|---|---|
 | **P0 — Nền** | Token motion, `Sheet` primitive, `StatTile`, `ListRow`, `ActionBar`; AppBar chuẩn cho màn phụ | tsc sạch; 2 ảnh chụp light/dark |

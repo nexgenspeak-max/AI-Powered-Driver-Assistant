@@ -31,8 +31,7 @@ const SECTIONS = [
 
 export default function TermsScreen() {
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Điều khoản sử dụng & Chính sách bảo mật</AppText>
+    <Screen scroll title="Điều khoản & Bảo mật">
       <YStack gap="$4">
         {SECTIONS.map(section => (
           <YStack key={section.title} gap="$1">

@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, type StyleProp, type ViewStyle } from 'reac
 import { View } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { AppBar } from './AppBar'
 import { BackButton, getBackButtonClearance } from './BackButton'
 import { SCROLL_TAB_BAR_CLEARANCE } from '../constants/layout'
 
@@ -25,6 +26,9 @@ export type ScreenProps = {
   header?: ReactNode
   /** Render floating BackButton and reserve top clearance for it. */
   backButton?: boolean
+  /** Detail-screen title: renders a standard AppBar (with back) as the header.
+   *  Preferred over `backButton` + an in-content h1 for pushed screens. */
+  title?: string
   /** Where the back button navigates — defaults to '/profile'. */
   backTo?: Parameters<typeof router.replace>[0]
   /** Override the screen fill. Defaults to `$background`. */
@@ -43,11 +47,17 @@ export function Screen({
   header,
   backButton = false,
   backTo,
+  title,
   background = '$background',
   contentContainerStyle,
   style,
 }: ScreenProps) {
   const insets = useSafeAreaInsets()
+  if (title && !header) {
+    // Hidden-tab routes have no push history, so back must be an explicit
+    // replace (see AppBar.tsx / BackButton.tsx).
+    header = <AppBar title={title} onBack={() => router.replace(backTo ?? '/profile')} />
+  }
   const top = edges.includes('top') ? insets.top : 0
   const bottom = edges.includes('bottom') ? insets.bottom : 0
 

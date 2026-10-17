@@ -6,7 +6,7 @@ export default function BankInfoScreen() {
   return (
     <Screen
       scroll
-      backButton
+      title="Tài khoản ngân hàng"
       contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
     >
       <EmptyState

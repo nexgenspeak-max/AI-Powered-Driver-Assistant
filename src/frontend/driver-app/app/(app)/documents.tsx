@@ -16,8 +16,7 @@ export default function DocumentsScreen() {
   const theme = useTheme()
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Giấy tờ xác minh</AppText>
+    <Screen scroll title="Giấy tờ xác minh">
       <AppText variant="body" color="$textSecondary">
         Tải lên giấy tờ để được xác minh và tiếp tục nhận chuyến. Tính năng tải ảnh giấy tờ đang được phát triển.
       </AppText>

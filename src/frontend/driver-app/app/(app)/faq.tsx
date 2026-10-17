@@ -4,8 +4,7 @@ import { FaqContent } from '../../src/features/info/components/FaqContent'
 
 export default function FaqScreen() {
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Câu hỏi thường gặp</AppText>
+    <Screen scroll title="Câu hỏi thường gặp">
       <FaqContent />
     </Screen>
   )

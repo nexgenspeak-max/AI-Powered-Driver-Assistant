@@ -80,7 +80,7 @@ export default function AssistantSettingsScreen() {
 
   if (!driver) {
     return (
-      <Screen scroll backButton>
+      <Screen scroll title="Cài đặt trợ lý">
         <Skeleton height={28} width="50%" radius={8} />
         <Skeleton height={48} radius={12} />
         <Skeleton height={160} radius={24} />
@@ -90,8 +90,7 @@ export default function AssistantSettingsScreen() {
   }
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Cài đặt trợ lý</AppText>
+    <Screen scroll title="Cài đặt trợ lý">
       <AppText variant="body" color="$textSecondary">
         Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.
       </AppText>

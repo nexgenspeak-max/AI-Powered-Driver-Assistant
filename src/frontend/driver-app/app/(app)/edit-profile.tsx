@@ -28,7 +28,7 @@ export default function EditProfileScreen() {
 
   if (!driver) {
     return (
-      <Screen scroll backButton>
+      <Screen scroll title="Chỉnh sửa hồ sơ">
         <Skeleton height={28} width="45%" radius={8} />
         <Skeleton height={88} width={88} radius={44} />
         <Skeleton height={52} radius={16} />
@@ -41,8 +41,7 @@ export default function EditProfileScreen() {
   const canSave = trimmedName.length > 0 && trimmedName !== driver.name
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Chỉnh sửa hồ sơ</AppText>
+    <Screen scroll title="Chỉnh sửa hồ sơ">
 
       <YStack alignItems="center" gap="$2">
         <GlossyAvatar letter={(trimmedName || driver.name).charAt(0).toUpperCase()} size={88} />

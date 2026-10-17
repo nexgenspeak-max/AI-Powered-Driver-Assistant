@@ -13,8 +13,7 @@ export default function SupportScreen() {
   const theme = useTheme()
 
   return (
-    <Screen scroll backButton>
-      <AppText variant="h1">Hỗ trợ</AppText>
+    <Screen scroll title="Hỗ trợ">
       <AppText variant="body" color="$textSecondary">
         Cần giúp đỡ? Liên hệ với đội ngũ hỗ trợ tài xế qua các kênh bên dưới, hoặc xem câu hỏi thường gặp.
       </AppText>

@@ -1,5 +1,7 @@
+import { useState } from 'react'
+import { Pressable } from 'react-native'
 import { XStack, YStack, View, useTheme } from 'tamagui'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
 import { colorForTrip } from '../../home/lib/mapConstants'
@@ -25,6 +27,10 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
   const theme = useTheme()
   const colors = colorByTripId(route)
   const stops = route.stops
+  // Collapsed by default: the header already says "3 điểm · 12 km · 35 phút"
+  // and the first stop is on the map; the full order is one tap away.
+  const [expanded, setExpanded] = useState(false)
+  const shownStops = expanded ? stops : stops.slice(0, 1)
 
   if (stops.length < 2) return null
 
@@ -53,7 +59,7 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
       ) : null}
 
       <YStack gap="$3">
-        {stops.map((stop, i) => (
+        {shownStops.map((stop, i) => (
           <XStack key={`${stop.trip_id}-${stop.kind}-${i}`} alignItems="center" gap="$3">
             <View
               width={28}
@@ -81,6 +87,21 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
           </XStack>
         ))}
       </YStack>
+
+      <Pressable
+        onPress={() => setExpanded(v => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? 'Thu gọn lộ trình' : `Xem cả ${stops.length} điểm`}
+        hitSlop={8}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: 'flex-start' })}
+      >
+        <XStack alignItems="center" gap="$1" minHeight={32}>
+          <AppText variant="label" color="$primary">
+            {expanded ? 'Thu gọn' : `Xem cả ${stops.length} điểm`}
+          </AppText>
+          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.primary.val} />
+        </XStack>
+      </Pressable>
     </Surface>
   )
 }
