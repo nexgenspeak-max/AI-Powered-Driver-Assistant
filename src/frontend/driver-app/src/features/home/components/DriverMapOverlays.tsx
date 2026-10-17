@@ -32,6 +32,7 @@ export function DriverMapOverlays({ model }: { model: ReturnType<typeof useDrive
         remainingKm={nav.remainingKm}
         remainingMin={nav.remainingMin}
         arrived={nav.arrived}
+        rerouting={nav.rerouting}
         onExit={() => setNavActive(false)}
         onRefresh={nav.refresh}
       />

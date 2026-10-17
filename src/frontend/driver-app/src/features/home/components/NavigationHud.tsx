@@ -100,6 +100,7 @@ export function NavigationHud({
   remainingKm,
   remainingMin,
   arrived,
+  rerouting = false,
   onExit,
   onRefresh,
 }: {
@@ -110,6 +111,8 @@ export function NavigationHud({
   remainingKm: number | null
   remainingMin: number | null
   arrived: boolean
+  /** Automatic off-route re-fetch in flight — previous steps stay on screen. */
+  rerouting?: boolean
   onExit: () => void
   onRefresh: () => void
 }) {
@@ -146,7 +149,11 @@ export function NavigationHud({
               <AppText variant="title" numberOfLines={2}>
                 {formatNextAction(step.maneuver, distanceToManeuverM)}
               </AppText>
-              {remainingLabel ? (
+              {rerouting ? (
+                <AppText variant="caption" color="$primary">
+                  Đang tính lại đường...
+                </AppText>
+              ) : remainingLabel ? (
                 <AppText variant="caption" color="$textSecondary">
                   Còn {remainingLabel}
                 </AppText>

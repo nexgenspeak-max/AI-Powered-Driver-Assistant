@@ -13,6 +13,7 @@
     "verify:customers": "ts-node --transpile-only src/services/customers.selfcheck.ts",
     "verify:reminders": "ts-node --transpile-only src/services/reminder.selfcheck.ts",
     "verify:trip-access": "ts-node --transpile-only src/services/trips/access.selfcheck.ts",
+    "verify:route-order": "ts-node --transpile-only src/utils/twoOpt.selfcheck.ts",
     "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts"
   },
   "dependencies": {

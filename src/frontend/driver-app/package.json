@@ -21,6 +21,7 @@
     "audit": "bash scripts/audit-report.sh",
     "measure:web-cpu": "node scripts/measure-web-idle.mjs",
     "verify:map": "bash scripts/verify-map.sh",
+    "verify:navigation": "node scripts/verify-navigation.mjs",
     "verify": "npm run audit",
     "postinstall": "patch-package"
   },

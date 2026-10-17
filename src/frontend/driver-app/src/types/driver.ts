@@ -58,6 +58,12 @@ export interface OptimizedRouteStop {
 export interface OptimizedRoute {
   stops: OptimizedRouteStop[]
   source: 'goong_matrix' | 'haversine_fallback'
+  // 'duration' when the order was optimised on traffic-aware travel time,
+  // 'distance' when only metres were available. Optional: older cached
+  // routes (pre-upgrade) lack these three fields.
+  cost_basis?: 'duration' | 'distance'
+  total_distance_m?: number
+  total_duration_s?: number
   computed_at: string
   driver_location: { lat: number; lng: number } | null
   // Road-shaped path (driver location -> stop 1 -> stop 2 -> ...) decoded

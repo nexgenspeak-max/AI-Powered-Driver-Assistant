@@ -51,6 +51,15 @@ export interface OptimizedRouteStop {
 export interface OptimizedRoute {
   stops: OptimizedRouteStop[];
   source: 'goong_matrix' | 'haversine_fallback';
+  // What the visiting order was optimised for. 'duration' whenever the
+  // Distance Matrix returned travel times (traffic-aware), 'distance' when
+  // only metres were available (haversine fallback, or a matrix with no
+  // durations at all). Drivers care about minutes, not metres — see
+  // computeOptimizedRoute.
+  cost_basis: 'duration' | 'distance';
+  // Whole-route totals (driver location -> last stop), summed over `stops`.
+  total_distance_m: number;
+  total_duration_s: number;
   computed_at: string;
   driver_location: LatLng | null;
   // Road-shaped path (driver's location -> stops[0] -> stops[1] -> ...) for
@@ -124,6 +133,32 @@ function haversineMatrix(rows: LatLng[], cols: LatLng[]): number[][] {
 
 function etaFromDistance(distanceM: number): number {
   return Math.round((distanceM / 1000 / FALLBACK_AVG_SPEED_KMH) * 60);
+}
+
+const FALLBACK_SECONDS_PER_METER = 3600 / (FALLBACK_AVG_SPEED_KMH * 1000);
+
+// Picks the cost arrays optimizeOrder should minimise. Exported (pure, no
+// I/O) so utils/twoOpt.selfcheck.ts can pin the duration-vs-distance choice.
+export function orderingCosts(
+  distanceFromStart: number[],
+  distanceMatrix: number[][],
+  durationFromStart: (number | null)[] | null,
+  durationMatrix: (number | null)[][] | null,
+): { costFromStart: number[]; costMatrix: number[][]; basis: 'duration' | 'distance' } {
+  const hasAnyDuration =
+    !!durationFromStart && !!durationMatrix &&
+    (durationFromStart.some(d => typeof d === 'number') ||
+      durationMatrix.some(row => row.some(d => typeof d === 'number')));
+  if (!hasAnyDuration) {
+    return { costFromStart: distanceFromStart, costMatrix: distanceMatrix, basis: 'distance' };
+  }
+  const costFromStart = durationFromStart!.map((d, j) =>
+    typeof d === 'number' ? d : distanceFromStart[j] * FALLBACK_SECONDS_PER_METER,
+  );
+  const costMatrix = durationMatrix!.map((row, i) =>
+    row.map((d, j) => (typeof d === 'number' ? d : distanceMatrix[i][j] * FALLBACK_SECONDS_PER_METER)),
+  );
+  return { costFromStart, costMatrix, basis: 'duration' };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -255,7 +290,17 @@ export async function computeOptimizedRoute(
     }
 
     const precedenceOf: PrecedenceOf = buildPrecedence(candidates);
-    const order = optimizeOrder(costFromStart, costMatrix, precedenceOf);
+
+    // Order by TRAVEL TIME whenever the matrix gave us durations (Goong/
+    // Google both return traffic-aware duration_in_traffic), falling back
+    // to a distance-derived estimate only for the individual cells that
+    // have none. The previous objective was metres only: a 3 km hop through
+    // a jammed centre "won" over a 5 km ring-road hop that was ten minutes
+    // faster, which is exactly the order a driver sees as wrong. Distances
+    // are still reported per stop; only the objective changed.
+    const { costFromStart: orderCostFromStart, costMatrix: orderCostMatrix, basis: costBasis } =
+      orderingCosts(costFromStart, costMatrix, durationFromStart, durationMatrix);
+    const order = optimizeOrder(orderCostFromStart, orderCostMatrix, precedenceOf);
 
     const stops: OptimizedRouteStop[] = order.map((idx, i) => {
       const candidate = candidates[idx];
@@ -282,8 +327,14 @@ export async function computeOptimizedRoute(
       };
     });
 
+    const totalDistanceM = stops.reduce((sum, s) => sum + s.distance_m, 0);
+    const totalDurationS = stops.reduce((sum, s) => sum + s.eta_minutes * 60, 0);
+
     log.info('done', {
       source,
+      cost_basis: costBasis,
+      total_km: Math.round(totalDistanceM / 100) / 10,
+      total_min: Math.round(totalDurationS / 60),
       order: stops.map((s) => `${s.kind}:${s.trip_id.slice(0, 8)}`).join('->'),
     });
 
@@ -294,6 +345,9 @@ export async function computeOptimizedRoute(
     return {
       stops,
       source,
+      cost_basis: costBasis,
+      total_distance_m: Math.round(totalDistanceM),
+      total_duration_s: Math.round(totalDurationS),
       computed_at: new Date().toISOString(),
       driver_location: currentLocation,
       path,

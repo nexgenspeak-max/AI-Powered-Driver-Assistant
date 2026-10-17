@@ -28,6 +28,12 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
 
   if (stops.length < 2) return null
 
+  const totalM = route.total_distance_m ?? stops.reduce((sum, s) => sum + s.distance_m, 0)
+  const totalMin = route.total_duration_s != null
+    ? Math.round(route.total_duration_s / 60)
+    : stops.reduce((sum, s) => sum + s.eta_minutes, 0)
+  const basisLabel = route.cost_basis === 'distance' ? 'ngắn nhất' : 'nhanh nhất theo giao thông'
+
   return (
     <Surface clip borderRadius={24} padding="$4" gap="$3">
       <XStack alignItems="center" gap="$2">
@@ -35,7 +41,7 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
         <YStack flex={1} gap="$1">
           <AppText variant="title">Lộ trình tối ưu</AppText>
           <AppText variant="caption" color="$textSecondary">
-            Thứ tự {stops.length} điểm · quãng đường ngắn hơn
+            {stops.length} điểm · {formatDistance(totalM)} · ~{totalMin} phút · {basisLabel}
           </AppText>
         </YStack>
       </XStack>
