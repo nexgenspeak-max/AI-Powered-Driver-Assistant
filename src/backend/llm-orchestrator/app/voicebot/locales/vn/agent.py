@@ -212,8 +212,16 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
         await self._speak_inbound_greeting()
 
     async def _speak_inbound_greeting(self) -> None:
-        """Czen intro on connect, then help prompt after prefetch."""
+        """Czen intro on connect, then a one-line schedule snapshot after prefetch.
+
+        The snapshot ("Bạn đang có chuyến với An.") comes from the data just
+        prefetched — a driver who opens the assistant mid-trip hears what the
+        assistant already knows instead of a blank "how can I help", and can
+        go straight to "gọi khách" / "đón ở đâu" without re-establishing
+        context. Falls back to the plain help prompt if the snapshot fails.
+        """
         from app.voicebot.processors import prefetch as prefetch_processor
+        from app.voicebot.processors.driver_greeting import build_inbound_context_greeting
         from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
 
         await speak_after_sip_pickup(self.session, GREETING_CONNECT_FILLER)
@@ -222,21 +230,39 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
         if self._driver_phone and not context_store.has_prefetched_context(userdata):
             await prefetch_processor.run_driver(self.session, self._driver_phone)
 
-        await self.session.say(GREETING_AFTER_PREFETCH, allow_interruptions=True)
+        context_line = ""
+        try:
+            context_line = build_inbound_context_greeting(userdata, lang="vi").strip()
+        except Exception:
+            logger.warning("inbound context greeting failed — using plain help prompt", exc_info=True)
+        greeting = f"{context_line} {GREETING_AFTER_PREFETCH}".strip() if context_line else GREETING_AFTER_PREFETCH
+        await self.session.say(greeting, allow_interruptions=True)
 
     def _build_outbound_greeting(self) -> str:
+        """Dispatcher-style trip offer: who, where, fare, how long, then the ask."""
+        from app.voicebot.processors.trip_format import estimated_fare, fmt_money, short_address
+
         t        = self._trip or {}
-        customer = t.get("customer_name", "khách hàng")
-        pickup   = t.get("pickup_address", "")
-        dropoff  = t.get("dropoff_address", "")
-        eta      = t.get("eta_minutes", "")
-        traffic  = t.get("traffic_note", "")
+        customer = t.get("customer_name") or "khách"
+        pickup   = short_address(t.get("pickup_address", ""), 40)
+        dropoff  = short_address(t.get("dropoff_address", ""), 40)
+        eta      = t.get("eta_minutes") or ""
+        km       = t.get("distance_km") or ""
+        traffic  = (t.get("traffic_note") or "").strip()
         msg = f"{GREETING_OUTBOUND_PREFIX} Có chuyến mới: đón {customer} tại {pickup}, đến {dropoff}."
-        if eta:
+        try:
+            fare = estimated_fare(t)
+        except (TypeError, ValueError):
+            fare = 0
+        if fare:
+            msg += f" Giá {fmt_money(fare, 'vi')}."
+        if eta and km:
+            msg += f" Khoảng {km} km, {eta} phút."
+        elif eta:
             msg += f" Ước tính {eta} phút."
-        if traffic:
+        if traffic and "thông thoáng" not in traffic.lower():
             msg += f" {traffic}."
-        msg += " Bạn có nhận chuyến này không?"
+        msg += " Bạn nhận chuyến này không?"
         return msg
 
 

@@ -112,11 +112,19 @@ def extra_stops_suffix(extra: int, lang: str) -> str:
 _CALL_OFFER_DISTANCE_METERS = 1000
 
 
-def build_next_stop_suggestion(userdata: dict, lang: str = "vi", exclude_trip_id: str = "") -> str:
+def build_next_stop_suggestion(
+    userdata: dict,
+    lang: str = "vi",
+    exclude_trip_id: str = "",
+    *,
+    proactive: bool = False,
+) -> str:
     # Driver-level opt-in (off by default, see auth-service's driver-settings
-    # table) — gated here so it covers all three callers listed in this
-    # module's docstring, including the on-demand tool.
-    if not context_store.get_driver_settings(userdata).get("auto_suggest_next_stop"):
+    # table) gates only the PROACTIVE nudges (post-status-change / 200m GPS
+    # trigger). A driver who explicitly asks "nên đi đâu tiếp?" always gets
+    # an answer — telling them to go enable a setting in the app while
+    # driving was the single worst reply this tool could give.
+    if proactive and not context_store.get_driver_settings(userdata).get("auto_suggest_next_stop"):
         return (
             "Tính năng tự động gợi ý điểm dừng tiếp theo hiện đang tắt. Bạn có thể bật trong mục Cài đặt của ứng dụng."
             if lang != "en" else

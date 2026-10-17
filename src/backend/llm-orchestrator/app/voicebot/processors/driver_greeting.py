@@ -16,6 +16,13 @@ def build_inbound_context_greeting(userdata: dict, lang: str = "vi") -> str:
 
     if current:
         customer = current.get("customer_name") or copy.get("default_customer", "")
+        # Other scheduled trips besides the one in progress — "còn N chuyến
+        # nữa" so the driver knows the day's load without asking.
+        current_id = current.get("trip_id")
+        remaining = len([t for t in schedule if not current_id or t.get("trip_id") != current_id])
+        with_more = copy.get("on_current_trip_with_more")
+        if remaining > 0 and with_more:
+            return str(with_more).format(customer=customer, remaining=remaining)
         return str(copy.get("on_current_trip", "")).format(customer=customer)
 
     if schedule:

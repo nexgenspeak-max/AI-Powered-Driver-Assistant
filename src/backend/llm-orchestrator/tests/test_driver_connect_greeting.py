@@ -1,27 +1,49 @@
-"""Inbound connect greeting — filler then schedule context."""
+"""Inbound connect greeting — filler, then a one-line schedule snapshot."""
 import inspect
 
 from app.voicebot.processors.context_store import load_driver_context
 from app.voicebot.processors.driver_greeting import build_inbound_context_greeting
 from app.voicebot.locales.vn.agent import DriverAgent
-from app.voicebot.locales.vn.constants import GREETING_AFTER_PREFETCH, GREETING_CONNECT_FILLER
+from app.voicebot.locales.vn.constants import (
+    GREETING_AFTER_PREFETCH,
+    GREETING_CONNECT_FILLER,
+    SILENCE_CHECK_IN,
+    SILENCE_GOODBYE,
+)
+from app.voicebot.testing.conversation_quality import assert_tts_safe_vn
 
 
 def test_connect_filler_wording():
-    assert GREETING_CONNECT_FILLER == "Chào bạn, tôi là Czen, trợ lý AI của bạn."
+    assert GREETING_CONNECT_FILLER == "Chào bạn, mình là Czen, trợ lý AI của bạn."
     assert "Czen" in GREETING_CONNECT_FILLER
     assert "trợ lý AI" in GREETING_CONNECT_FILLER
 
 
+def test_persona_is_consistent_across_fixed_lines():
+    """Czen says "mình" everywhere — never "tôi"/"em" in one line and "mình" in the next."""
+    for line in (GREETING_CONNECT_FILLER, GREETING_AFTER_PREFETCH, SILENCE_CHECK_IN, SILENCE_GOODBYE):
+        lowered = f" {line.lower()} "
+        assert " tôi " not in lowered, line
+        assert " em " not in lowered, line
+        assert_tts_safe_vn(line)
+
+
 def test_after_prefetch_wording():
-    assert GREETING_AFTER_PREFETCH == "Tôi có thể giúp gì cho bạn?"
+    assert GREETING_AFTER_PREFETCH == "Cần gì bạn cứ nói nhé."
 
 
-def test_inbound_greeting_speaks_filler_then_help_prompt():
+def test_silence_goodbye_is_short_and_signs_off():
+    # Must contain a farewell marker (session.py's _GOODBYE_MARKERS) and stay
+    # under ~3s of TTS — the old 85-char line ran 5s.
+    assert "tạm biệt" in SILENCE_GOODBYE.lower()
+    assert len(SILENCE_GOODBYE) <= 60
+
+
+def test_inbound_greeting_speaks_filler_then_context_snapshot():
     src = inspect.getsource(DriverAgent._speak_inbound_greeting)
     assert "GREETING_CONNECT_FILLER" in src
     assert "GREETING_AFTER_PREFETCH" in src
-    assert "build_inbound_context_greeting" not in src
+    assert "build_inbound_context_greeting" in src
 
 
 def test_speak_after_sip_pickup_waits_for_in_app_audio():
@@ -44,6 +66,22 @@ def test_context_greeting_with_active_trip():
     msg = build_inbound_context_greeting(userdata, lang="vi")
     assert "đang có chuyến" in msg
     assert "An" in msg
+    assert "chuyến nữa" not in msg  # nothing else scheduled
+
+
+def test_context_greeting_with_active_trip_and_more_scheduled():
+    userdata = {}
+    load_driver_context(userdata, {
+        "current_trip": {"trip_id": "t1", "customer_name": "An", "status": "confirmed"},
+        "upcoming_trips": [
+            {"trip_id": "t1", "customer_name": "An", "status": "confirmed"},
+            {"trip_id": "t2"},
+            {"trip_id": "t3"},
+        ],
+    })
+    msg = build_inbound_context_greeting(userdata, lang="vi")
+    assert "An" in msg
+    assert "2 chuyến nữa" in msg
 
 
 def test_context_greeting_with_schedule():
@@ -57,3 +95,34 @@ def test_context_greeting_with_schedule():
     })
     msg = build_inbound_context_greeting(userdata, lang="vi")
     assert "3 chuyến hôm nay" in msg
+
+
+def test_context_greeting_no_trips_uses_minh_persona():
+    userdata = {}
+    load_driver_context(userdata, {})
+    msg = build_inbound_context_greeting(userdata, lang="vi")
+    assert msg
+    assert " em " not in f" {msg.lower()} "
+
+
+def test_outbound_offer_reads_fare_distance_and_asks():
+    agent = DriverAgent(trip={
+        "trip_id": "t9",
+        "customer_name": "Bình",
+        "pickup_address": "54 Liễu Giai, Ba Đình, Hà Nội",
+        "dropoff_address": "Sân bay Nội Bài, Sóc Sơn, Hà Nội",
+        "estimated_fare": 250000,
+        "distance_km": 28.4,
+        "eta_minutes": 41,
+        "traffic_note": "Giao thông thông thoáng",
+    })
+    msg = agent._build_outbound_greeting()
+    assert "Czen" in msg
+    assert "Bình" in msg
+    assert "250.000đ" in msg
+    assert "28.4 km" in msg and "41 phút" in msg
+    # "thông thoáng" adds nothing for an accept/reject decision — only
+    # congestion notes are read out.
+    assert "thông thoáng" not in msg
+    assert msg.endswith("Bạn nhận chuyến này không?")
+    assert_tts_safe_vn(msg)

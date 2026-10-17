@@ -2,10 +2,17 @@
 
 from app.voicebot.prompts.concise_driver import CONVERSATIONAL_LLM_VN
 
-GREETING_CONNECT_FILLER = "Chào bạn, tôi là Czen, trợ lý AI của bạn."
-GREETING_AFTER_PREFETCH = "Tôi có thể giúp gì cho bạn?"
+# One persona everywhere: Czen says "mình", calls the driver "bạn". The
+# connect filler plays before prefetch; the context line (see
+# driver_greeting.build_inbound_context_greeting) + GREETING_AFTER_PREFETCH
+# play once the schedule is loaded.
+GREETING_CONNECT_FILLER = "Chào bạn, mình là Czen, trợ lý AI của bạn."
+GREETING_AFTER_PREFETCH = "Cần gì bạn cứ nói nhé."
 GREETING_INBOUND = "Chào bạn, mình nghe đây nhé."
-GREETING_OUTBOUND_PREFIX = "Alô, chào bạn."
+GREETING_OUTBOUND_PREFIX = "Alô, chào bạn, mình là Czen."
+# Silence handling (driver sessions) — one check-in, then a short sign-off.
+SILENCE_CHECK_IN = "Bạn còn đó không?"
+SILENCE_GOODBYE = "Mình tạm tắt nhé, cần gì bạn gọi lại Czen. Tạm biệt!"
 GREETING_CUSTOMER = "Chào bạn, mình có thể giúp gì? Đặt xe, hỏi chuyến đi, hay việc khác cũng được."
 
 CONVERSATIONAL_LLM_INSTRUCTIONS = CONVERSATIONAL_LLM_VN

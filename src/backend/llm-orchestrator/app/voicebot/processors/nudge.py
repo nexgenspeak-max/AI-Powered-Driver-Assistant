@@ -102,7 +102,9 @@ async def build_nudge_message(
         # (trips.ts) sends no related_trip_id, so it's unaffected — there the
         # trip's candidacy already changed for real (pickup -> dropoff).
         exclude_trip_id = payload.get("related_trip_id", "")
-        return build_next_stop_suggestion(userdata, lang=lang, exclude_trip_id=exclude_trip_id)
+        return build_next_stop_suggestion(
+            userdata, lang=lang, exclude_trip_id=exclude_trip_id, proactive=True,
+        )
 
     if nudge_kind == "new_trip_offer":
         # Mid-session booking: prefetch snapshot is stale until this GET.

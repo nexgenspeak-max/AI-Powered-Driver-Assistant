@@ -71,8 +71,44 @@ def format_route_order(route: dict, lang: str = "vi") -> str:
             "You don't have multiple stops to order right now."
         )
 
-    lines = []
-    for i, s in enumerate(stops, 1):
+    # Spoken form is deliberately short for a driver at the wheel: the FIRST
+    # stop (where to go now) + the total count + the whole-route distance/ETA.
+    # The full numbered order is handed to the LLM as FollowUpKnowledge (see
+    # tool_response_builders.build_route_response / route_order_lines) so
+    # "điểm thứ 2 là gì?" can be answered without re-calling the tool —
+    # reading 5 stops × (address, km, minutes) aloud in one breath was the
+    # old behaviour and nobody could retain it.
+    first = stops[0]
+    customer = first.get("customer_name") or ("khách" if lang != "en" else "the customer")
+    addr = short_address(first.get("address", ""), 40)
+    total_km = round(sum((s.get("distance_m") or 0) for s in stops) / 1000, 1)
+    total_min = sum(int(s.get("eta_minutes") or 0) for s in stops)
+    n = len(stops)
+
+    if lang == "en":
+        verb = "pick up" if first.get("kind") == "pickup" else "drop off"
+        msg = f"Head to {addr} first to {verb} {customer}."
+        if n > 1:
+            msg += f" {n} stops in total, about {total_km} km and {total_min} minutes."
+    else:
+        verb = "đón" if first.get("kind") == "pickup" else "trả"
+        msg = f"Đi {addr} trước để {verb} khách {customer}."
+        if n > 1:
+            msg += f" Tổng {n} điểm, khoảng {total_km} km, {total_min} phút."
+    if route.get("source") == "haversine_fallback":
+        msg += (
+            " Estimated without live traffic."
+            if lang == "en" else
+            " Ước tính chưa có dữ liệu giao thông."
+        )
+    return msg
+
+
+def route_order_lines(route: dict, lang: str = "vi") -> list[str]:
+    """Numbered stop list (one line per stop) for FollowUpKnowledge — the
+    detail format_route_order no longer reads aloud."""
+    lines: list[str] = []
+    for i, s in enumerate(route.get("stops") or [], 1):
         is_pickup = s.get("kind") == "pickup"
         addr = short_address(s.get("address", ""), 40)
         customer = s.get("customer_name") or ("khách" if lang != "en" else "the customer")
@@ -80,24 +116,11 @@ def format_route_order(route: dict, lang: str = "vi") -> str:
         eta = s.get("eta_minutes")
         if lang == "en":
             verb = "pick up" if is_pickup else "drop off"
-            lines.append(f"{i}. {verb} {customer} at {addr} ({dist_km} km, about {eta} min from the previous stop)")
+            lines.append(f"stop {i}: {verb} {customer} at {addr} ({dist_km} km, ~{eta} min from previous)")
         else:
             verb = "đón" if is_pickup else "trả"
-            lines.append(f"{i}. {verb} khách {customer} tại {addr} ({dist_km} km, khoảng {eta} phút từ điểm trước)")
-
-    header = (
-        f"You have {len(stops)} stops, optimal order is"
-        if lang == "en" else
-        f"Bạn có {len(stops)} điểm dừng, thứ tự tối ưu là"
-    )
-    source_note = ""
-    if route.get("source") == "haversine_fallback":
-        source_note = (
-            " (estimated as-the-crow-flies, no live traffic data)"
-            if lang == "en" else
-            " (ước tính theo đường chim bay, chưa có dữ liệu giao thông thực tế)"
-        )
-    return header + ": " + "; ".join(lines) + "." + source_note
+            lines.append(f"điểm {i}: {verb} khách {customer} tại {addr} ({dist_km} km, khoảng {eta} phút từ điểm trước)")
+    return lines
 
 
 def build_outbound_nav_info(trip: dict, lang: str) -> str:

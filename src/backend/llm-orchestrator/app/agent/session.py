@@ -44,6 +44,7 @@ from app.voicebot.processors.spoken_intent import (
     driver_text_input_cb,
 )
 from app.voicebot.customer_call_agent import CustomerCallAgent
+from app.voicebot.locales.vn import constants as vn_constants
 from app.services import session_metrics
 from app.services.conversation_service import ConversationService, CALL_TRANSCRIPT_TOPIC
 from app.services.logger import bind, clear
@@ -661,16 +662,19 @@ async def entrypoint(ctx: JobContext) -> None:
             goodbye_message = None
             driver_check_in = None
             if mode != "custcall":
+                # Short sign-off in the assistant's own voice (same "mình/bạn"
+                # persona as the greeting — the old line switched to "em xin
+                # phép" and ran 5s of TTS right when the driver was busy).
                 goodbye_message = (
-                    "If there's nothing else, I'll go ahead and end the call here. Goodbye!"
+                    "I'll sign off for now. Call me again anytime. Goodbye!"
                     if lang == "en" else
-                    "Nếu bạn không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt bạn!"
+                    vn_constants.SILENCE_GOODBYE
                 )
                 if mode == "driver":
                     driver_check_in = (
                         "Still there?"
                         if lang == "en" else
-                        "Bạn còn đó không?"
+                        vn_constants.SILENCE_CHECK_IN
                     )
 
             silence_tracker = SilenceTracker(

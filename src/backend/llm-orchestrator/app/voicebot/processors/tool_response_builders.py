@@ -10,7 +10,7 @@ from app.voicebot.processors.tool_reply import (
     lang_code,
     trip_actions,
 )
-from app.voicebot.processors.trip_format import format_route_order
+from app.voicebot.processors.trip_format import format_route_order, route_order_lines
 from app.voicebot.prompts.tool_response import ToolResponse
 
 
@@ -74,12 +74,23 @@ def build_route_response(route: dict | None, *, lang: str = "vi") -> ToolRespons
     knowledge = [f"stop_count: {len(stops)}"]
     for i, s in enumerate(stops, 1):
         knowledge.append(f"stop_{i}: {s.get('kind')} {s.get('customer_name')} @ {s.get('address')}")
+    # Per-stop detail lives here so "điểm thứ hai là gì?" / "điểm cuối ở
+    # đâu?" are answered from memory, one stop per turn, instead of
+    # re-reading the whole order.
+    follow_up = route_order_lines(route, lang=lc) + [
+        f"source: {route.get('source', 'maps')}",
+        (
+            "Hỏi điểm thứ N → đọc đúng dòng điểm N, không đọc cả danh sách"
+            if lc != "en" else
+            "Asked about stop N → read only that line, never the whole list"
+        ),
+    ]
     return R(
         "get_optimal_route",
         spoken,
         lang=lc,
         knowledge=knowledge,
-        follow_up=[f"source: {route.get('source', 'maps')}"],
+        follow_up=follow_up,
         action=["refresh_latest_data(topic=optimal_route)", "suggest_next_stop()"],
     )
 

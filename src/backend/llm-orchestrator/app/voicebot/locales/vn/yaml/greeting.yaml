@@ -3,5 +3,6 @@ inbound_context:
   default_customer: khách
   scope_today: hôm nay
   on_current_trip: "Bạn đang có chuyến với {customer}."
-  no_trips_with_earnings: "Chưa thấy chuyến nào hôm nay. Thu nhập khoảng {money}."
-  no_trips: "Em chưa thấy chuyến nào hôm nay."
+  on_current_trip_with_more: "Bạn đang có chuyến với {customer}, sau đó còn {remaining} chuyến nữa."
+  no_trips_with_earnings: "Hôm nay bạn chưa có chuyến nào, thu nhập đang là {money}."
+  no_trips: "Hôm nay bạn chưa có chuyến nào."

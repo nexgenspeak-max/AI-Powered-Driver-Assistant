@@ -21,7 +21,7 @@ def test_resolve_session_locale_vn():
 
 def test_greeting_yaml_vn_no_trips():
     text = build_inbound_context_greeting({}, lang="vi")
-    assert "chưa thấy chuyến" in text.lower()
+    assert "chưa có chuyến" in text.lower()
 
 
 def test_greeting_yaml_en_no_trips():
