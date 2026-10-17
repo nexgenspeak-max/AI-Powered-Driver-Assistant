@@ -1,4 +1,4 @@
-import { ImageBackground, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { XStack, YStack, useThemeName } from 'tamagui'
@@ -9,7 +9,6 @@ import { Button } from '../../../components/Button'
 import { AppText } from '../../../components/AppText'
 import { ThemeToggle } from '../../../components/ThemeToggle'
 import { authGlassTheme } from '../../../theme'
-import { layoutBackground } from '../../../theme/layoutAssets'
 import { useThemeStore } from '../../../stores/themeStore'
 import { BrandHero } from './BrandHero'
 
@@ -19,24 +18,19 @@ export function LandingScreen() {
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
   const titleColor = isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark
-  // Scrim keeps body/title readable over the illustration in both themes.
-  const scrimColors = isLight
-    ? (['rgba(245,244,248,0.55)', 'rgba(245,244,248,0.82)', 'rgba(245,244,248,0.94)'] as const)
-    : (['rgba(18,18,18,0.35)', 'rgba(18,18,18,0.72)', 'rgba(18,18,18,0.92)'] as const)
+  // Clean brand backdrop (no illustration): a quiet violet wash fading into
+  // the screen background, so the mark tile is the only picture on screen.
+  const backdrop = isLight
+    ? (['#EDE9FE', '#F5F4F8', '#F5F4F8'] as const)
+    : (['#2A1B4D', '#1A1420', '#121212'] as const)
 
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
       <View style={styles.root}>
-        <ImageBackground
-          source={layoutBackground('landing', isLight ? 'light' : 'dark')}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-          accessibilityIgnoresInvertColors
-        />
         <LinearGradient
-          colors={[...scrimColors]}
-          locations={[0, 0.45, 1]}
+          colors={[...backdrop]}
+          locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />

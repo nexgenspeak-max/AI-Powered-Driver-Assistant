@@ -25,7 +25,12 @@ export function BrandHero() {
           end={{ x: 0.6, y: 0.7 }}
           style={StyleSheet.absoluteFill}
         />
-        <CzenMark size={TILE * 0.72} />
+        {/* Absolute + zIndex: on web, positioned gradient layers paint above
+            static siblings regardless of DOM order, so the mark must be
+            positioned too or it disappears under the highlight. */}
+        <View style={styles.mark} pointerEvents="none">
+          <CzenMark size={TILE * 0.72} />
+        </View>
       </View>
     </View>
   )
@@ -39,6 +44,12 @@ const styles = StyleSheet.create({
     height: TILE + 80,
     borderRadius: (TILE + 80) / 2,
     backgroundColor: '#7C3AED',
+  },
+  mark: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   tile: {
     width: TILE,
