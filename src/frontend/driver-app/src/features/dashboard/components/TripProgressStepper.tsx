@@ -6,7 +6,7 @@ import type { TripStatus } from "../../../types";
 const STEPS: { status: TripStatus; label: string }[] = [
   { status: "confirmed", label: "Đã nhận" },
   { status: "arrived_pickup", label: "Đã đến" },
-  { status: "picked_up", label: "Đón khách" },
+  { status: "picked_up", label: "Đã đón" },
 ];
 
 export function TripProgressStepper({ status }: { status: TripStatus }) {
@@ -28,7 +28,7 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
             flex={i === STEPS.length - 1 ? 0 : 1}
             alignItems="flex-start"
           >
-            <YStack alignItems="center" gap="$1" width={56} flexShrink={0}>
+            <YStack alignItems="center" gap="$1" width={64} flexShrink={0}>
               <View
                 width={18}
                 height={18}

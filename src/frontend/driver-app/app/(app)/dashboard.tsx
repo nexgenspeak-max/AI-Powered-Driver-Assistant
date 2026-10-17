@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { XStack, YStack, useTheme } from "tamagui";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Screen } from "../../src/components/Screen";
@@ -15,7 +17,6 @@ import { OptimizedRouteCard } from "../../src/features/dashboard/components/Opti
 import { TripCard } from "../../src/features/dashboard/components/TripCard";
 import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTripsState";
 import { EmptyState } from "../../src/components/EmptyState";
-import { GlassButton } from "../../src/components/GlassButton";
 import { SearchInput } from "../../src/components/SearchInput";
 import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
 import { PENDING_STATUSES } from "../../src/constants/status";
@@ -36,6 +37,7 @@ export default function DashboardScreen() {
   // useCurrentUser.ts for why.
   const { data: driver } = useCurrentUser();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const [tripStatusTab, setTripStatusTab] = useState<TripStatusTab>("active");
   const [tripQuery, setTripQuery] = useState("");
 
@@ -138,16 +140,34 @@ export default function DashboardScreen() {
         </XStack>
       </XStack>
 
-      <SearchInput
-        value={tripQuery}
-        onChangeText={setTripQuery}
-        placeholder="Tìm theo tên hoặc số điện thoại..."
-      />
-
-      <GlassButton
-        label="+ Thêm chuyến (tự tạo)"
-        onPress={() => router.push("/add-trip")}
-      />
+      <XStack alignItems="center" gap="$3">
+        <YStack flex={1}>
+          <SearchInput
+            value={tripQuery}
+            onChangeText={setTripQuery}
+            placeholder="Tìm theo tên hoặc số điện thoại..."
+          />
+        </YStack>
+        {/* Walk-up trips are the exception, not the main action — a compact
+            icon button instead of a full-width gradient CTA above the list. */}
+        <Pressable
+          onPress={() => router.push("/add-trip")}
+          accessibilityRole="button"
+          accessibilityLabel="Thêm chuyến tự tạo"
+          hitSlop={6}
+          style={({ pressed }) => ({
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: theme.primaryContainer.val,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Ionicons name="add" size={24} color={theme.onPrimaryContainer.val} />
+        </Pressable>
+      </XStack>
       {/* Short labels, no icons — 3 segments is already tight; an icon +
           "Chưa xác nhận (12)" wrapped to 2 lines inside the control's
           fixed height and visually overlapped the neighboring segment. */}

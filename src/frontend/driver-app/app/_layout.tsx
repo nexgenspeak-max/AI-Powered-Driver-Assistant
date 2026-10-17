@@ -44,6 +44,7 @@ function AppShell() {
         <Stack.Screen name="(app)" />
       </Stack.Protected>
       <Stack.Screen name="map-preview" />
+      <Stack.Screen name="dev-login" />
     </Stack>
   )
 }

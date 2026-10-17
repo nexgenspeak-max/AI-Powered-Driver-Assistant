@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
 
@@ -56,6 +57,9 @@ async function ensurePermission(): Promise<boolean> {
 // driver is online — NOT tied to any specific trip (unlike the old
 // per-trip version of this module). Safe to call repeatedly.
 export async function startTracking(): Promise<boolean> {
+  // expo-location has no background task API on web (the function is simply
+  // absent) — the Chuyến tab crashed the whole web preview on this line.
+  if (Platform.OS === 'web') return false
   const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
 
   if (!alreadyRunning) {

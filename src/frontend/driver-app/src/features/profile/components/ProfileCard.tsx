@@ -19,39 +19,49 @@ export function ProfileCard({ driver, profile }: Props) {
 
   return (
     <YStack gap="$4">
-      <Surface clip alignItems="center" gap="$2" paddingVertical="$5" borderRadius={24}>
-        <GlossyAvatar letter={driver.name.charAt(0).toUpperCase()} size={96} />
-        <AppText variant="h1" marginTop="$2">
-          {driver.name}
-        </AppText>
-        <View>
-          <Badge
-            label={isOnline ? "Đang hoạt động" : "Ngoại tuyến"}
-            backgroundColor={isOnline ? "$successContainer" : "$primaryMuted"}
-            color={isOnline ? "$onSuccessContainer" : "$textPrimary"}
-            icon={
-              <Ionicons
-                name="ellipse"
-                size={7}
-                color={isOnline ? theme.success.val : theme.primary.val}
+      {/* Identity card: avatar + name + phone on one row (Grab/Uber profile
+          header), vehicle as a plate chip, status badge — one glance. */}
+      <Surface clip borderRadius={24} padding="$4" gap="$4">
+        <XStack alignItems="center" gap="$4">
+          <GlossyAvatar letter={driver.name.charAt(0).toUpperCase()} size={64} />
+          <YStack flex={1} gap={2} minWidth={0}>
+            <AppText variant="h2" numberOfLines={1}>
+              {driver.name}
+            </AppText>
+            <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
+              {driver.phone}
+            </AppText>
+            <View alignSelf="flex-start" marginTop={4}>
+              <Badge
+                label={isOnline ? "Đang nhận chuyến" : "Đang nghỉ"}
+                backgroundColor={isOnline ? "$successContainer" : "$chip"}
+                color={isOnline ? "$onSuccessContainer" : "$textSecondary"}
+                glass={false}
+                icon={
+                  <Ionicons
+                    name="ellipse"
+                    size={7}
+                    color={isOnline ? theme.success.val : theme.textMuted.val}
+                  />
+                }
               />
-            }
-          />
-        </View>
-      </Surface>
-
-      <Surface clip borderRadius={24}>
-        <SectionTitle>Thông tin liên hệ</SectionTitle>
-        <InfoRow icon="call-outline" label="Số điện thoại" value={driver.phone} />
+            </View>
+          </YStack>
+        </XStack>
         {!!driver.vehicle_name && (
-          <>
-            <Divider />
-            <InfoRow
-              icon="car-outline"
-              label="Phương tiện"
-              value={`${driver.vehicle_name} · ${driver.vehicle_plate}`}
-            />
-          </>
+          <XStack alignItems="center" gap="$3" paddingTop="$3" borderTopWidth={1} borderTopColor="$divider">
+            <Ionicons name="car-outline" size={20} color={theme.textSecondary.val} />
+            <AppText variant="body" flex={1} numberOfLines={1}>
+              {driver.vehicle_name}
+            </AppText>
+            {!!driver.vehicle_plate && (
+              <View paddingHorizontal={10} paddingVertical={4} borderRadius={8} borderWidth={1} borderColor="$borderStrong">
+                <AppText variant="label" letterSpacing={0.5}>
+                  {driver.vehicle_plate}
+                </AppText>
+              </View>
+            )}
+          </XStack>
         )}
       </Surface>
 
@@ -76,33 +86,4 @@ export function ProfileCard({ driver, profile }: Props) {
       </YStack>
     </YStack>
   );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-}) {
-  const theme = useTheme();
-  return (
-    <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$4">
-      <View width={24} alignItems="center">
-        <Ionicons name={icon} size={20} color={theme.textSecondary.val} />
-      </View>
-      <YStack flex={1}>
-        <AppText variant="caption" color="$textSecondary">
-          {label}
-        </AppText>
-        <AppText variant="body">{value}</AppText>
-      </YStack>
-    </XStack>
-  );
-}
-
-function Divider() {
-  return <View height={1} backgroundColor="$border" alignSelf="stretch" />;
 }

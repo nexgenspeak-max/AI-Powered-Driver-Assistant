@@ -75,6 +75,11 @@ export function SegmentedControl<T extends string>({
       padding={PAD}
       borderRadius="$control"
       backgroundColor="$surfaceVariant"
+      // Explicit containing block: on web a Tamagui View is not
+      // `position: relative` by default, so the absolute pill below anchored
+      // to a distant ancestor and painted as a screen-tall purple bar.
+      position="relative"
+      overflow="hidden"
       onLayout={onLayout}
       style={style}
     >

@@ -80,9 +80,15 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
               <AppText variant="caption" color="$textSecondary" numberOfLines={2}>
                 {stop.address}
               </AppText>
-              <AppText variant="caption" color="$textMuted">
-                {formatDistance(stop.distance_m)} · ~{stop.eta_minutes} phút
-              </AppText>
+              {stop.distance_m > 0 ? (
+                <AppText variant="caption" color="$textMuted">
+                  {formatDistance(stop.distance_m)} · ~{stop.eta_minutes} phút
+                </AppText>
+              ) : i === 0 ? (
+                <AppText variant="caption" color="$textMuted">
+                  Điểm xuất phát (chưa có GPS)
+                </AppText>
+              ) : null}
             </YStack>
           </XStack>
         ))}
