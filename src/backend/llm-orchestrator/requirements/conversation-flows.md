@@ -110,7 +110,7 @@ Handled by `SilenceTracker` (`app/services/silence_tracker.py`):
 | Max consecutive | 3 |
 | Action | Prompt → end session (prod) |
 
-Prompt example: *"Anh/chị còn cần hỗ trợ gì không?"*
+Check-in: *"Bạn còn đó không?"* (once). Sign-off: *"Mình tạm tắt nhé, cần gì bạn gọi lại Czen. Tạm biệt!"*
 
 ---
 

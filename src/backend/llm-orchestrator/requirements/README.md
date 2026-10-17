@@ -40,7 +40,7 @@ See [knowledge/README.md](./knowledge/README.md).
 
 | Mode | Room pattern | Tools | Trigger |
 |------|--------------|-------|---------|
-| **Inbound** | `driver-{phone}-{ts}` | 18 tools (+ RAG FAQ) | Driver opens app → LiveKit WebRTC |
+| **Inbound** | `driver-{phone}-{ts}` | 37 tools (incl. RAG FAQ) | Driver opens app → LiveKit WebRTC |
 | **Outbound** | `trip-{id}` | `confirm_trip`, `reject_trip` | System notifies driver of new trip (SIP) |
 
 Inbound is the main FAQ/support surface documented here.

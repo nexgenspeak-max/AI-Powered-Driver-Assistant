@@ -30,7 +30,7 @@ Use this file for thesis evaluation, manual test planning, and coverage tracking
 | **Grand total (distinct test cases)** | **~80** |
 
 > **Note:** Many FAQ IDs share the same tool (e.g. T01–T04 → `check_upcoming_trips`).  
-> For tool coverage, the bot implements **19 tools** across **10 categories**.
+> For tool coverage, the bot implements **37 inbound tools** (see capability-matrix.md) across **10 categories**; the 19 listed here are the FAQ-mapped core.
 
 ---
 
@@ -102,7 +102,7 @@ Use this file for thesis evaluation, manual test planning, and coverage tracking
 
 | ID | Sample (VI) | Tool | Flow |
 |----|-------------|------|------|
-| T30 | "Gọi cho khách giúp tôi." | `call_customer` | **F1** — ask mode first |
+| T30 | "Gọi cho khách giúp tôi." | `call_customer` | **F1** — driver's saved default mode, no prompt |
 | T31 | "Cho tôi nói chuyện với khách." | `call_customer` → `bridge` | F1 |
 | T32 | "Để AI gọi và tóm tắt lại." | `call_customer` → `agent` | F1 → summarize |
 | T33 | "Cuộc gọi vừa rồi khách nói gì?" | `summarize_last_call` | |

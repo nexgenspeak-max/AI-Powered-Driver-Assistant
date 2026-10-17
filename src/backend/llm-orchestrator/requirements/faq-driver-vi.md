@@ -44,7 +44,7 @@ Sample driver utterances the AI should understand. Each item maps to a tool (see
 
 | ID | Câu hỏi / câu nói mẫu | Tool | Flow |
 |----|------------------------|------|------|
-| T30 | "Gọi cho khách giúp tôi." | `call_customer` | Hỏi mode trước |
+| T30 | "Gọi cho khách giúp tôi." | `call_customer` | Dùng chế độ mặc định của tài xế, không hỏi lại |
 | T31 | "Cho tôi nói chuyện với khách." | `call_customer` → `bridge` | |
 | T32 | "Để AI gọi và tóm tắt lại." | `call_customer` → `agent` | Sau đó `summarize_last_call` |
 | T33 | "Cuộc gọi vừa rồi khách nói gì?" | `summarize_last_call` | |
