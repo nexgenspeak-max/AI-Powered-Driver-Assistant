@@ -9,42 +9,50 @@ const STEPS: { status: TripStatus; label: string }[] = [
   { status: "picked_up", label: "Đã đón" },
 ];
 
+const DOT = 18;
+
+// Three equal columns (dot + label centred in each) with the connector
+// lines drawn underneath between column centres — the previous
+// flex/fixed-width mix let the last label run past the card edge.
 export function TripProgressStepper({ status }: { status: TripStatus }) {
   const theme = useTheme();
   const currentIndex = STEPS.findIndex((s) => s.status === status);
+  const colPct = 100 / STEPS.length;
 
   return (
-    <XStack alignItems="flex-start" width="100%">
-      {STEPS.map((step, i) => {
-        const isDone = i < currentIndex;
-        const isCurrent = i === currentIndex;
-        // The segment after this step only fills once the *next* step is
-        // reached (this step is done, not merely current).
-        const lineColor = isDone ? theme.success.val : theme.border.val;
-
+    <View width="100%" position="relative">
+      {STEPS.slice(0, -1).map((_, i) => {
+        const done = i < currentIndex;
         return (
-          <XStack
-            key={step.status}
-            flex={i === STEPS.length - 1 ? 0 : 1}
-            alignItems="flex-start"
-          >
-            <YStack alignItems="center" gap="$1" width={64} flexShrink={0}>
+          <View
+            key={`line-${i}`}
+            position="absolute"
+            top={DOT / 2 - 1}
+            height={2}
+            left={`${colPct * (i + 0.5)}%`}
+            width={`${colPct}%`}
+            backgroundColor={done ? "$success" : "$border"}
+          />
+        );
+      })}
+      <XStack width="100%">
+        {STEPS.map((step, i) => {
+          const isDone = i < currentIndex;
+          const isCurrent = i === currentIndex;
+          return (
+            <YStack key={step.status} flex={1} alignItems="center" gap="$1">
               <View
-                width={18}
-                height={18}
-                borderRadius={9}
+                width={DOT}
+                height={DOT}
+                borderRadius={DOT / 2}
                 alignItems="center"
                 justifyContent="center"
-                backgroundColor={isDone ? theme.success.val : "transparent"}
+                backgroundColor={isDone ? theme.success.val : theme.surfaceElevated.val}
                 borderWidth={isCurrent ? 2 : isDone ? 0 : 1.5}
                 borderColor={isCurrent ? theme.success.val : theme.borderStrong.val}
               >
-                {isDone && (
-                  <Ionicons name="checkmark" size={11} color={theme.textInverse.val} />
-                )}
-                {isCurrent && (
-                  <View width={6} height={6} borderRadius={3} backgroundColor={theme.success.val} />
-                )}
+                {isDone && <Ionicons name="checkmark" size={11} color={theme.textInverse.val} />}
+                {isCurrent && <View width={6} height={6} borderRadius={3} backgroundColor={theme.success.val} />}
               </View>
               <AppText
                 variant="caption"
@@ -55,12 +63,9 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
                 {step.label}
               </AppText>
             </YStack>
-            {i < STEPS.length - 1 && (
-              <View flex={1} height={2} marginTop={8} backgroundColor={lineColor} />
-            )}
-          </XStack>
-        );
-      })}
-    </XStack>
+          );
+        })}
+      </XStack>
+    </View>
   );
 }

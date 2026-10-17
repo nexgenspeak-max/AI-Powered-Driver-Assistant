@@ -1,12 +1,17 @@
 export function formatDate(iso: string): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+  const d = new Date(iso)
+  // Seeded/legacy trips carry a bare "14:30" — show it as-is rather than "Invalid Date".
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 /** "14:30" — time only, for a pickup slot shown next to a date-less label. */
 export function formatTime(iso: string): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
 /** "4,5 km" under 10 km, "12 km" above — Vietnamese decimal comma. */

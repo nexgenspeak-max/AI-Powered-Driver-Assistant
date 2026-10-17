@@ -77,7 +77,7 @@ export default function EarningsScreen() {
     <YStack
       backgroundColor="$background"
       paddingTop={insets.top + 16}
-      paddingHorizontal={20}
+      paddingHorizontal="$5"
       paddingBottom="$4"
       gap="$4"
       borderBottomWidth={1}

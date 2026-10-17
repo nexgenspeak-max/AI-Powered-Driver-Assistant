@@ -91,7 +91,7 @@ export function EarningsHero({
           <View height={1} backgroundColor="$divider" />
           <XStack gap="$3">
             <Stat label="Chuyến" value={String(tripCount)} />
-            <Stat label="Trung bình/chuyến" value={perTrip != null ? formatCurrency(perTrip, currency) : '—'} />
+            <Stat label="TB/chuyến" value={perTrip != null ? formatCurrency(perTrip, currency) : '—'} />
             {hoursOnline != null ? (
               <Stat label="Giờ online" value={`${hoursOnline.toFixed(1)}h`} />
             ) : bonusEarnings != null ? (

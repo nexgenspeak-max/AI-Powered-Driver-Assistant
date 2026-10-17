@@ -2,7 +2,7 @@ import { Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, View, useTheme } from 'tamagui'
 import { Ionicons } from '@expo/vector-icons'
-import { GlassPanel } from '../../../components/GlassPanel'
+import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { TOP_OVERLAY_CLEARANCE } from '../../../constants'
 
@@ -24,7 +24,7 @@ export function MapStatusPill({
 
   return (
     <>
-      <GlassPanel borderRadius={999} style={{ position: 'absolute', left: 16, top }}>
+      <SolidCard cornerRadius={999} style={{ position: 'absolute', left: 16, top }}>
         <XStack alignItems="center" gap="$2" paddingVertical={8} paddingHorizontal={14}>
           <View
             width={8}
@@ -39,9 +39,9 @@ export function MapStatusPill({
             </AppText>
           ) : null}
         </XStack>
-      </GlassPanel>
+      </SolidCard>
 
-      <GlassPanel borderRadius={22} style={{ position: 'absolute', right: 16, top }}>
+      <SolidCard cornerRadius={22} style={{ position: 'absolute', right: 16, top }}>
         <Pressable
           onPress={onRecenter}
           accessibilityRole="button"
@@ -57,7 +57,7 @@ export function MapStatusPill({
         >
           <Ionicons name="locate" size={20} color={theme.primary.val} />
         </Pressable>
-      </GlassPanel>
+      </SolidCard>
     </>
   )
 }

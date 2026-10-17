@@ -39,11 +39,9 @@ export function WeeklyEarningsChart({ trips, currency = 'VND' }: { trips: Earnin
     <YStack gap="$3">
       <XStack justifyContent="space-between" alignItems="baseline">
         <AppText variant="h2">7 ngày qua</AppText>
-        {best.total > 0 ? (
-          <AppText variant="caption" color="$textSecondary">
-            Cao nhất {best.label}: {formatCurrency(best.total, currency)}
-          </AppText>
-        ) : null}
+        <AppText variant="caption" color="$textSecondary">
+          {best.total > 0 ? `Cao nhất ${best.label}: ${formatCurrency(best.total, currency)}` : 'Chưa có chuyến nào trong 7 ngày'}
+        </AppText>
       </XStack>
       <XStack alignItems="flex-end" justifyContent="space-between" height={BAR_MAX_HEIGHT + 28} gap="$2">
         {days.map(d => {

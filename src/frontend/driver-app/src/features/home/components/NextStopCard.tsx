@@ -2,7 +2,7 @@ import { Linking, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, YStack, View, useTheme } from 'tamagui'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { GlassPanel } from '../../../components/GlassPanel'
+import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { Button } from '../../../components/Button'
 import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
@@ -35,8 +35,8 @@ export function NextStopCard({
   const phone = (stop.customerPhone || '').trim()
 
   return (
-    <GlassPanel
-      borderRadius={24}
+    <SolidCard
+      cornerRadius={24}
       style={{
         position: 'absolute',
         left: 16,
@@ -116,6 +116,6 @@ export function NextStopCard({
           ) : null}
         </XStack>
       </YStack>
-    </GlassPanel>
+    </SolidCard>
   )
 }

@@ -1,6 +1,6 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, YStack } from 'tamagui'
-import { GlassPanel } from '../../../components/GlassPanel'
+import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { Button } from '../../../components/Button'
 import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
@@ -16,8 +16,8 @@ export function GoOnlineCard({ today }: { today: TodayEarnings | null }) {
   const { setOnline, pending, ready } = useOnlineToggle()
 
   return (
-    <GlassPanel
-      borderRadius={24}
+    <SolidCard
+      cornerRadius={24}
       style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE }}
     >
       <YStack padding="$4" gap="$3">
@@ -43,6 +43,6 @@ export function GoOnlineCard({ today }: { today: TodayEarnings | null }) {
           onPress={() => setOnline(true)}
         />
       </YStack>
-    </GlassPanel>
+    </SolidCard>
   )
 }
