@@ -92,9 +92,13 @@ export function GlossyAvatar({ letter, size = 96 }: GlossyAvatarProps) {
           <Shader source={effect!} uniforms={uniforms} />
         </Fill>
       </Canvas>
-      <Text color="#ffffff" fontSize={size * 0.375} fontWeight="700">
-        {letter}
-      </Text>
+      {/* Absolute + zIndex so the letter stays above the Canvas on web too
+          (positioned siblings paint over static ones regardless of order). */}
+      <RNView style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center', zIndex: 1 }]} pointerEvents="none">
+        <Text color="#ffffff" fontSize={size * 0.375} fontWeight="700">
+          {letter}
+        </Text>
+      </RNView>
     </RNView>
   )
 }
