@@ -1,25 +1,24 @@
-import { Pressable } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useTheme } from 'tamagui'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { MAP_OVERLAY_BOTTOM_CLEARANCE } from '../../../constants'
 import { useDriverMapModel } from '../hooks/useDriverMapModel'
-import { DRIVER_COLOR } from '../lib/mapConstants'
+import { MapStatusPill } from './MapStatusPill'
 import { NavigationHud } from './NavigationHud'
+import { NextStopCard } from './NextStopCard'
 
 /**
- * Map chrome only: turn-by-turn HUD when navigating, or navigate FAB.
- * Multi-stop route order is on the map polyline/markers + voice — no list card overlay.
+ * Map chrome: the turn-by-turn HUD while navigating; otherwise the status
+ * pill + recenter button on top and the next-stop card at the bottom.
+ * Multi-stop order itself stays on the map polyline/markers + voice.
  */
 export function DriverMapOverlays({ model }: { model: ReturnType<typeof useDriverMapModel> }) {
-  const insets = useSafeAreaInsets()
-  const theme = useTheme()
   const {
     navActive,
     setNavActive,
     nav,
-    navigationTarget,
+    nextStop,
+    optimizedRoute,
     startNavigation,
+    recenter,
+    isOnline,
+    activeTripCount,
   } = model
 
   if (navActive) {
@@ -39,31 +38,16 @@ export function DriverMapOverlays({ model }: { model: ReturnType<typeof useDrive
     )
   }
 
-  if (!navigationTarget) return null
-
   return (
-    <Pressable
-      onPress={startNavigation}
-      accessibilityRole="button"
-      accessibilityLabel="Bắt đầu chỉ đường"
-      style={{
-        position: 'absolute',
-        right: 16,
-        bottom: insets.bottom + MAP_OVERLAY_BOTTOM_CLEARANCE,
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: DRIVER_COLOR,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 5,
-      }}
-    >
-      <MaterialCommunityIcons name="navigation" size={24} color={theme.textInverse.val} />
-    </Pressable>
+    <>
+      <MapStatusPill isOnline={isOnline} activeTripCount={activeTripCount} onRecenter={recenter} />
+      {nextStop ? (
+        <NextStopCard
+          stop={nextStop}
+          totalStops={optimizedRoute?.stops.length ?? 1}
+          onNavigate={startNavigation}
+        />
+      ) : null}
+    </>
   )
 }

@@ -1,18 +1,20 @@
 import type { TripStatus } from '../types'
 
+// Driver-facing status labels — Vietnamese, phrased from the driver's point
+// of view ("Đang gọi bạn", "Bạn đã huỷ"), not the backend enum names.
 export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
-  pending: 'Pending',
-  notified: 'Notified',
-  calling: 'Calling',
-  confirmed: 'Confirmed',
-  rejected: 'Rejected',
-  no_answer: 'No Answer',
-  arrived_pickup: 'Arrived at Pickup',
-  picked_up: 'Customer Picked Up',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  cancelled_by_driver: 'Cancelled by You',
-  no_show: 'No Show',
+  pending: 'Chờ gán tài xế',
+  notified: 'Chuyến mới',
+  calling: 'Đang gọi bạn',
+  confirmed: 'Đã nhận',
+  rejected: 'Đã từ chối',
+  no_answer: 'Không trả lời',
+  arrived_pickup: 'Đã đến điểm đón',
+  picked_up: 'Đang chở khách',
+  completed: 'Hoàn thành',
+  cancelled: 'Khách đã huỷ',
+  cancelled_by_driver: 'Bạn đã huỷ',
+  no_show: 'Khách vắng mặt',
 }
 
 // Tamagui color-scale token pairs (light background step 4, readable text

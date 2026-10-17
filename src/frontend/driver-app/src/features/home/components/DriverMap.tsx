@@ -148,6 +148,7 @@ export function DriverMap() {
     routeOrderByKey,
     driverUpdatedAt,
     tripIdsKey,
+    recenterTick,
   } = model
 
   const isFocused = useIsFocused()
@@ -170,6 +171,17 @@ export function DriverMap() {
     appliedCamKeyRef.current = key
     setCameraStop(stop)
   }
+
+  // One-shot "my location": keyed on the tick, not the coordinates, so each
+  // tap re-centers even when the driver hasn't moved since the last one.
+  useEffect(() => {
+    if (!isFocused || recenterTick === 0 || !driverPoint) return
+    applyCamera(
+      centerStop(driverPoint, { zoom: navActive ? NAV_ZOOM : DRIVER_INITIAL_ZOOM, duration: 400 }),
+      `recenter:${recenterTick}`,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recenterTick])
 
   useEffect(() => {
     if (!isFocused) return

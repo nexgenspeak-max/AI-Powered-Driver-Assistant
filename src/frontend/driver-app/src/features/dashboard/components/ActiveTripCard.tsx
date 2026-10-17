@@ -1,5 +1,7 @@
-import { Alert } from "react-native";
-import { XStack, YStack, View } from "tamagui";
+import { Alert, Linking } from "react-native";
+import { XStack, YStack, View, useTheme } from "tamagui";
+import { Ionicons } from "@expo/vector-icons";
+import { TripMetaRow } from "./TripMetaRow";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Surface } from "../../../components/Surface";
 import { AppText } from "../../../components/AppText";
@@ -8,7 +10,7 @@ import { Button } from "../../../components/Button";
 import { TripProgressStepper } from "./TripProgressStepper";
 import { tripsService } from "../../../services/api/trips";
 import { confirmDestructive } from "../../../utils/confirmDialog";
-import { formatCurrency, formatDate } from "../../../utils/format";
+import { formatCurrency } from "../../../utils/format";
 import { getCurrentCoords } from "../../../utils/currentLocation";
 import { haptics } from "../../../utils/haptics";
 import type { Trip } from "../../../types";
@@ -43,6 +45,7 @@ export function ActiveTripCard({
   trip: Trip & { estimated_fare?: number };
 }) {
   const qc = useQueryClient();
+  const theme = useTheme();
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ["driverContext"] });
 
@@ -127,7 +130,6 @@ export function ActiveTripCard({
           </AppText>
           <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
             {trip.customer_phone}
-            {trip.pickup_time ? ` · ${formatDate(trip.pickup_time)}` : ""}
           </AppText>
         </YStack>
 
@@ -141,6 +143,13 @@ export function ActiveTripCard({
       <TripProgressStepper status={trip.status} />
 
       <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
+
+      <TripMetaRow
+        distanceKm={trip.distance_km}
+        etaMinutes={trip.eta_minutes}
+        pickupTime={trip.pickup_time}
+        trafficNote={trip.traffic_note}
+      />
 
       {(trip.has_bulky_goods || trip.with_children) && (
         <AppText variant="caption" color="$textSecondary">
@@ -163,15 +172,28 @@ export function ActiveTripCard({
           full
         />
       )}
-      {canCancel && (
-        <Button
-          label="Huỷ chuyến"
-          variant="outline"
-          onPress={confirmCancel}
-          loading={cancelling}
-          disabled={actionPending}
-          full
-        />
+      {!isCompleted && (
+        <XStack gap="$3">
+          {trip.customer_phone ? (
+            <Button
+              label="Gọi khách"
+              variant="outline"
+              icon={<Ionicons name="call-outline" size={18} color={theme.textPrimary.val} />}
+              onPress={() => Linking.openURL(`tel:${trip.customer_phone}`).catch(() => {})}
+              full
+            />
+          ) : null}
+          {canCancel && (
+            <Button
+              label="Huỷ chuyến"
+              variant="outline"
+              onPress={confirmCancel}
+              loading={cancelling}
+              disabled={actionPending}
+              full
+            />
+          )}
+        </XStack>
       )}
     </Surface>
   );

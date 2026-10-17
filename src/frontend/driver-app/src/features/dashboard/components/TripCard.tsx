@@ -5,6 +5,7 @@ import { AppText } from "../../../components/AppText";
 import { RouteLine } from "../../../components/RouteLine";
 import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
+import { TripMetaRow } from "./TripMetaRow";
 import { tripsService } from "../../../services/api/trips";
 import { pushImmediateLocation } from "../../../services/location/pushImmediateLocation";
 import { confirmDestructive } from "../../../utils/confirmDialog";
@@ -12,7 +13,7 @@ import {
   TRIP_STATUS_LABELS,
   TRIP_STATUS_COLORS,
 } from "../../../constants/status";
-import { formatCurrency, formatDate } from "../../../utils/format";
+import { formatCurrency } from "../../../utils/format";
 import { haptics } from "../../../utils/haptics";
 import type { Trip } from "../../../types";
 
@@ -78,7 +79,6 @@ export function TripCard({
           </AppText>
           <AppText variant="caption" color="$textSecondary" numberOfLines={1}>
             {trip.customer_phone}
-            {trip.pickup_time ? ` · ${formatDate(trip.pickup_time)}` : ""}
           </AppText>
         </YStack>
 
@@ -98,6 +98,13 @@ export function TripCard({
       </XStack>
 
       <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
+
+      <TripMetaRow
+        distanceKm={trip.distance_km}
+        etaMinutes={trip.eta_minutes}
+        pickupTime={trip.pickup_time}
+        trafficNote={trip.traffic_note}
+      />
 
       {showActions && (
         <XStack gap="$3">

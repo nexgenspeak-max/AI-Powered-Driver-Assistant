@@ -20,6 +20,7 @@ import { SearchInput } from "../../src/components/SearchInput";
 import { driversService } from "../../src/services/api/drivers";
 import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
 import { PENDING_STATUSES } from "../../src/constants/status";
+import { formatCurrency } from "../../src/utils/format";
 
 // "Chưa xác nhận" (pending/notified/calling) → "Đang chạy" (confirmed →
 // arrived_pickup → picked_up) → "Đã hoàn thành" (completed). Accepting a
@@ -135,13 +136,20 @@ export default function DashboardScreen() {
       borderBottomColor="$border"
     >
       <XStack alignItems="center" justifyContent="space-between" gap="$3">
-        <YStack flex={1}>
+        <YStack flex={1} gap={2}>
           <AppText variant="caption" color="$textSecondary">
             Xin chào
           </AppText>
           <AppText variant="h1" numberOfLines={1}>
             {driver.name}
           </AppText>
+          {context?.today_earnings ? (
+            <AppText variant="label" color="$textSecondary" numberOfLines={1}>
+              Hôm nay {formatCurrency(context.today_earnings.total_earnings, context.today_earnings.currency)}
+              {" · "}
+              {context.today_earnings.trip_count} chuyến xong
+            </AppText>
+          ) : null}
         </YStack>
         <XStack alignItems="center" gap="$2">
           <AppText
