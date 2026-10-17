@@ -1,0 +1,44 @@
+name: Build driver app (EAS)
+
+# Cloud builds of the Czen driver app with Expo Application Services.
+# One-time setup: `npx eas init` in src/frontend/driver-app (writes the EAS
+# projectId into app.json), then add secrets.EXPO_TOKEN
+# (https://expo.dev/accounts/<you>/settings/access-tokens).
+# Runs on every version tag (v1.2.0) and on demand.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options: [ios, android, all]
+        default: all
+      profile:
+        description: EAS build profile (eas.json)
+        type: string
+        default: preview
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend/driver-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/frontend/driver-app/package-lock.json
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci --ignore-scripts && npx patch-package
+      - name: EAS build
+        run: |
+          eas build --non-interactive --no-wait \
+            --platform "${{ inputs.platform || 'all' }}" \
+            --profile "${{ inputs.profile || 'preview' }}"

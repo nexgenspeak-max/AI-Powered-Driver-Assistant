@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  voice-worker:
+    name: llm-orchestrator · pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/backend/llm-orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: src/backend/llm-orchestrator/requirements.txt
+      - run: pip install -r requirements.txt pytest pytest-asyncio
+      - run: ENV=local python -m pytest tests -q --ignore=tests/smoke_test.py -p no:cacheprovider
+
+  backend-services:
+    name: ${{ matrix.service }} · tsc
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [identity-service, external-api-service, external-channel-service, call-records-service, ops-service]
+    defaults:
+      run:
+        working-directory: src/backend/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/backend/${{ matrix.service }}/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit -p tsconfig.json
+      - name: Route-order selfcheck
+        if: matrix.service == 'external-api-service'
+        run: npm run verify:route-order
+
+  driver-app:
+    name: driver-app · typecheck + navigation math
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend/driver-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/frontend/driver-app/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npx patch-package
+      - run: npx tsc --noEmit
+      - name: Navigation math selfcheck
+        run: |
+          npm install --no-save esbuild@0.23.1
+          npm run verify:navigation

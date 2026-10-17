@@ -1,0 +1,50 @@
+name: Deploy backend (AWS)
+
+# Manual, environment-gated deploy of the Lambda services (+ optionally the
+# voice worker on ECS) with the existing infra/deploy-all.sh. Needs, per
+# GitHub environment ("dev" / "prod"):
+#   secrets.AWS_DEPLOY_ROLE_ARN  — OIDC role (see claude/docs/deploy/00_PLAN.md)
+#   secrets.BACKEND_ENV_BUNDLE   — base64 tar.gz of src/backend/*/envs/.env.<env>
+#                                  (bash infra/setup-env.sh <env> --from-local, then
+#                                   tar czf - src/backend/*/envs/.env.<env> | base64)
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+      skip:
+        description: Comma-separated services to skip (e.g. llm-orchestrator)
+        type: string
+        default: llm-orchestrator
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-southeast-1
+      - name: Restore env files
+        run: echo "${{ secrets.BACKEND_ENV_BUNDLE }}" | base64 -d | tar xzf -
+      - name: Deploy
+        run: |
+          if [ -n "${{ inputs.skip }}" ]; then
+            bash infra/deploy-all.sh "${{ inputs.target }}" --skip "${{ inputs.skip }}"
+          else
+            bash infra/deploy-all.sh "${{ inputs.target }}"
+          fi
+      - name: Status
+        run: bash infra/status.sh "${{ inputs.target }}"

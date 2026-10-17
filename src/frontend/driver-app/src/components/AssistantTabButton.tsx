@@ -31,12 +31,18 @@ export {
   ORB_WRAP_WIDTH,
 } from './assistantTabButtonShared'
 
+// Softer, tighter drop than before (0.45/16) — the orb should sit on the bar
+// like a button, not float in a purple haze.
 const orbShadow = {
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.45,
-  shadowRadius: 16,
-  elevation: 12,
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.32,
+  shadowRadius: 10,
+  elevation: 10,
 }
+
+// Idle fill: deep-to-bright violet on the light diagonal, so the white mark
+// has contrast at the top-left highlight AND the bottom-right shade.
+const IDLE_GRADIENT: [string, string, string] = ['#5B21B6', '#7C3AED', '#9F67FA']
 
 export function AssistantTabButton({
   centerX,
@@ -105,28 +111,30 @@ export function AssistantTabButton({
         ]}
       >
         <View style={styles.orbStack}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.bloom,
-              bloomStyle,
-              {
-                shadowColor: theme.primary.val,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.65,
-                shadowRadius: 20,
-              },
-            ]}
-          />
+          {voice.status === 'connected' || voice.status === 'connecting' ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.bloom,
+                bloomStyle,
+                {
+                  shadowColor: theme.primary.val,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 18,
+                },
+              ]}
+            />
+          ) : null}
 
           <Animated.View pointerEvents="none" style={[styles.liveRing, ringStyle, { borderColor: theme.secondary.val }]} />
 
           <Animated.View style={[styles.orb, orbStyle, orbShadow, { shadowColor: theme.gradientStart.val }]}>
             {voice.status === 'idle' || voice.status === 'error' ? (
               <LinearGradient
-                colors={['#7C3AED', '#8B5CF6', '#A855F7']}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0.1, y: 0 }}
+                colors={IDLE_GRADIENT}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0.15, y: 0.05 }}
                 end={{ x: 0.9, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
@@ -153,22 +161,18 @@ export function AssistantTabButton({
               </>
             )}
 
+            {/* One restrained top-left highlight — the old 50% white wash +
+                bottom shade made the orb read as a glossy toy ball. */}
             <LinearGradient
-              colors={['rgba(255,255,255,0.5)', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0)']}
-              locations={[0, 0.28, 0.62]}
-              start={{ x: 0.22, y: 0 }}
-              end={{ x: 0.72, y: 0.75 }}
+              colors={['rgba(255,255,255,0.28)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
+              locations={[0, 0.35, 0.7]}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.7, y: 0.8 }}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             />
-            <LinearGradient
-              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.18)']}
-              locations={[0.55, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
+            {/* Hairline inner ring: crisp edge against both the light and the dark bar. */}
+            <View pointerEvents="none" style={styles.innerRing} />
             <AssistantOrbCenter status={voice.status} iconColor={theme.textInverse.val} reduceMotion={reduceMotion} />
             {connectedMuted ? (
               <View style={[styles.muteDot, { backgroundColor: theme.danger.val, borderColor: theme.textInverse.val }]} />
@@ -225,8 +229,18 @@ const styles = StyleSheet.create({
     height: ORB_SIZE,
     borderRadius: ORB_SIZE / 2,
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.42)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  innerRing: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: ORB_SIZE / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   spinLayer: {
     position: 'absolute',

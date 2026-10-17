@@ -1,6 +1,6 @@
 /**
- * Mic (idle / connecting / error) ↔ voice wave bars (connected).
- * Always mic affordance — never refresh/reconnect glyph; orb stays brand purple.
+ * Czen brand mark (idle / connecting / error) ↔ live voice wave bars (connected).
+ * Never a refresh/reconnect glyph; the orb stays brand purple in every state.
  */
 import { useEffect } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
@@ -13,9 +13,9 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated'
-import { MaterialIcons } from '@expo/vector-icons'
 import { useVoiceSessionStore, type VoiceSessionStatus } from '../features/home/stores/voiceSessionStore'
 import { useAppForeground } from '../hooks/useAppForeground'
+import { CzenMark } from './CzenMark'
 
 const BAR_WIDTH = 3.5
 const BAR_GAP = 3.5
@@ -125,7 +125,7 @@ function PulsingMic({ color }: { color: string }) {
 
   return (
     <Animated.View style={style}>
-      <MaterialIcons name="mic" size={MIC_SIZE} color={color} />
+      <CzenMark size={MIC_SIZE} color={color} />
     </Animated.View>
   )
 }
@@ -133,7 +133,7 @@ function PulsingMic({ color }: { color: string }) {
 function PulsingMicWeb({ color }: { color: string }) {
   return (
     <View style={{ animation: 'assistantMicPulse 0.96s ease-in-out infinite' } as object}>
-      <MaterialIcons name="mic" size={MIC_SIZE} color={color} />
+      <CzenMark size={MIC_SIZE} color={color} />
     </View>
   )
 }
@@ -221,7 +221,7 @@ export function AssistantOrbCenter({
           <PulsingMic color={iconColor} />
         )
       ) : (
-        <MaterialIcons name="mic" size={MIC_SIZE} color={iconColor} />
+        <CzenMark size={MIC_SIZE} color={iconColor} />
       )}
     </View>
   )
