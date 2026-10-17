@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { TOP_OVERLAY_CLEARANCE } from '../../../constants'
+import { formatKm, formatMinutes } from '../../../utils/format'
 import type { RouteStep } from '../../../types'
 
 // Goong's own maneuver vocabulary is short ("left"/"right"/"straight"/
@@ -53,7 +54,7 @@ function formatNextAction(maneuver: string, meters: number | null): string {
 }
 
 function formatRemaining(km: number, min: number): string {
-  return `${km} km · ${min} phút`
+  return `${formatKm(km)} · ${formatMinutes(min)}`
 }
 
 function IconButton({

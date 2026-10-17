@@ -172,6 +172,20 @@ export function DriverMap() {
     setCameraStop(stop)
   }
 
+  // The first real GPS fix wins over any earlier fit-to-trips: a driver with
+  // a long schedule (stops across several provinces) opened to a map of the
+  // whole country instead of the streets around them.
+  const centeredOnDriverRef = useRef(false)
+  useEffect(() => {
+    if (!isFocused || navActive || !driverPoint || centeredOnDriverRef.current) return
+    centeredOnDriverRef.current = true
+    applyCamera(
+      centerStop(driverPoint, { zoom: DRIVER_INITIAL_ZOOM, duration: 600 }),
+      `first-fix:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverPoint, isFocused])
+
   // One-shot "my location": keyed on the tick, not the coordinates, so each
   // tap re-centers even when the driver hasn't moved since the last one.
   useEffect(() => {
@@ -221,11 +235,17 @@ export function DriverMap() {
     if (tripsChanged && allPoints.length > 0) {
       const isFirst = fittedTripIdsRef.current == null
       fittedTripIdsRef.current = tripIdsKey
-      if (isFirst && driverPoint) {
-        applyCamera(
-          centerStop(driverPoint, { zoom: DRIVER_INITIAL_ZOOM, duration: 0 }),
-          `init:${tripIdsKey}:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
-        )
+      if (driverPoint) {
+        // With a GPS fix the streets around the driver are the view that
+        // matters. Fitting every stop on each schedule change zoomed a
+        // driver with cross-province trips out to a map of the whole
+        // country every time the list refreshed.
+        if (isFirst) {
+          applyCamera(
+            centerStop(driverPoint, { zoom: DRIVER_INITIAL_ZOOM, duration: 0 }),
+            `init:${tripIdsKey}:${driverPoint[0].toFixed(5)},${driverPoint[1].toFixed(5)}`,
+          )
+        }
       } else {
         const stop = fitStops(allPoints, isFirst ? 0 : 500)
         if (stop) applyCamera(stop, `fit:${tripIdsKey}`)
