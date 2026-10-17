@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { XStack, YStack } from "tamagui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Screen } from "../../src/components/Screen";
 import { AppText } from "../../src/components/AppText";
@@ -10,6 +9,7 @@ import { Toggle } from "../../src/components/Toggle";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { useDriverContext } from "../../src/features/dashboard/hooks/useDriverContext";
 import { useProximityTracking } from "../../src/features/dashboard/hooks/useProximityTracking";
+import { useOnlineToggle } from "../../src/features/dashboard/hooks/useOnlineToggle";
 import { ActiveTripCard } from "../../src/features/dashboard/components/ActiveTripCard";
 import { OptimizedRouteCard } from "../../src/features/dashboard/components/OptimizedRouteCard";
 import { TripCard } from "../../src/features/dashboard/components/TripCard";
@@ -17,7 +17,6 @@ import { EmptyTripsState } from "../../src/features/dashboard/components/EmptyTr
 import { EmptyState } from "../../src/components/EmptyState";
 import { GlassButton } from "../../src/components/GlassButton";
 import { SearchInput } from "../../src/components/SearchInput";
-import { driversService } from "../../src/services/api/drivers";
 import { useCurrentUser } from "../../src/features/auth/hooks/useCurrentUser";
 import { PENDING_STATUSES } from "../../src/constants/status";
 import { formatCurrency } from "../../src/utils/format";
@@ -36,7 +35,6 @@ export default function DashboardScreen() {
   // Profile is fetched (GET /auth/me), not persisted — see authStore.ts and
   // useCurrentUser.ts for why.
   const { data: driver } = useCurrentUser();
-  const qc = useQueryClient();
   const insets = useSafeAreaInsets();
   const [tripStatusTab, setTripStatusTab] = useState<TripStatusTab>("active");
   const [tripQuery, setTripQuery] = useState("");
@@ -58,35 +56,9 @@ export default function DashboardScreen() {
   };
   const showTripSkeleton = isLoading && !context;
 
-  const { mutate: toggleOnline } = useMutation({
-    mutationFn: (online: boolean) =>
-      driversService.update(driver!.phone, {
-        status: online ? "online" : "offline",
-      }),
-    // Flips the switch immediately instead of waiting on the PATCH round trip
-    // — without this the toggle (bound to ['me']) only moves once the response
-    // comes back, which reads as laggy. Rolled back on failure.
-    onMutate: async (online) => {
-      await qc.cancelQueries({ queryKey: ["me"] });
-      const previous = qc.getQueryData(["me"]);
-      qc.setQueryData(["me"], (old: typeof driver) =>
-        old ? { ...old, status: online ? "online" : "offline" } : old,
-      );
-      return { previous };
-    },
-    onError: (_err, _online, ctx) => {
-      if (ctx?.previous) qc.setQueryData(["me"], ctx.previous);
-    },
-    onSuccess: (d) => {
-      qc.setQueryData(["me"], d);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["driverContext"] });
-    },
-  });
+  const { isOnline, setOnline: toggleOnline } = useOnlineToggle();
 
   const active = context?.active_trips ?? [];
-  const isOnline = driver?.status === "online";
   // Called unconditionally, above the `!driver` early return below (Rules of
   // Hooks). Tracks while the driver is online, regardless of trip status.
   useProximityTracking(isOnline);

@@ -11,7 +11,7 @@ import { ThemeToggle } from '../../../components/ThemeToggle'
 import { authGlassTheme } from '../../../theme'
 import { layoutBackground } from '../../../theme/layoutAssets'
 import { useThemeStore } from '../../../stores/themeStore'
-import { LandingHero } from './LandingHero'
+import { BrandHero } from './BrandHero'
 
 export function LandingScreen() {
   const isLight = useThemeName() === 'light'
@@ -56,17 +56,17 @@ export function LandingScreen() {
           </XStack>
 
           <YStack alignItems="center" gap="$6" flex={1} justifyContent="center">
-            <LandingHero />
+            <BrandHero />
 
-            <YStack alignItems="center" gap="$3" paddingHorizontal="$2">
+            <YStack alignItems="center" gap="$2" paddingHorizontal="$2">
               <AppText variant="display" color={titleColor} textAlign="center">
-                Czen Driver
+                Czen
               </AppText>
-              <AppText variant="h1" color="$primary" textAlign="center">
-                Trợ lý AI kết nối cuộc gọi
+              <AppText variant="h2" color="$primary" textAlign="center">
+                Trợ lý giọng nói cho tài xế
               </AppText>
               <AppText variant="body" color="$textSecondary" textAlign="center">
-                Nói với trợ lý để gọi khách và xử lý chuyến — an toàn khi đang lái, không cần nhìn màn hình.
+                Nhận chuyến, gọi khách, xem thu nhập — chỉ cần nói, mắt vẫn trên đường.
               </AppText>
             </YStack>
           </YStack>

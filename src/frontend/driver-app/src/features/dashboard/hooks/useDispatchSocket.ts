@@ -69,7 +69,7 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
           const msg = JSON.parse(e.data as string)
           if (msg.event === 'trip_offer') {
             invalidateDriverQueries(qc)
-            // Surfaces the floating accept/reject banner (TripOfferBanner.tsx)
+            // Surfaces the floating accept/reject banner (TripOfferSheet.tsx)
             // immediately, regardless of which tab the driver is currently on
             // — the dashboard's own TripCard list is still the fallback
             // (visible once they open Dashboard), this just makes it
@@ -79,7 +79,7 @@ export function useDispatchSocket(isOnline: boolean, driverPhone: string | undef
           // Pushed by trip-service's PATCH /trips/:id the instant a trip
           // (this driver's, via the app button OR voice-agent's
           // confirm_trip) becomes confirmed — fires the same fresh-GPS push
-          // TripCard/TripOfferBanner already do on tap, so a
+          // TripCard/TripOfferSheet already do on tap, so a
           // voice-confirmed trip gets the same near-zero-latency treatment.
           if (msg.event === 'trip_confirmed') {
             pushImmediateLocation()

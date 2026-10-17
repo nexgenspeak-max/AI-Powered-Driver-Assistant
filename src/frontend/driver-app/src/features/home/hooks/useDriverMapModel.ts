@@ -132,6 +132,8 @@ export function useDriverMapModel() {
 
   const isOnline = context?.driver.status === 'online'
   const activeTripCount = trips.length
+  const hasContext = !!context
+  const todayEarnings = context?.today_earnings ?? null
 
   const [navActive, setNavActive] = useState(false)
   const navOrigin = useMemo(() => (live ? { lat: live.lat, lng: live.lng } : null), [live?.lat, live?.lng])
@@ -194,6 +196,8 @@ export function useDriverMapModel() {
     recenter,
     isOnline,
     activeTripCount,
+    hasContext,
+    todayEarnings,
     navActive,
     setNavActive,
     nav,

@@ -29,7 +29,7 @@ export {
 } from './assistantTabButtonShared'
 
 const STYLE_ID = 'assistant-siri-orb-keyframes'
-const IDLE_GRADIENT = 'linear-gradient(145deg, #7C3AED 0%, #8B5CF6 48%, #A855F7 100%)'
+const IDLE_GRADIENT = 'linear-gradient(145deg, #5B21B6 0%, #7C3AED 55%, #9F67FA 100%)'
 
 function ensureOrbKeyframes() {
   if (typeof document === 'undefined') return

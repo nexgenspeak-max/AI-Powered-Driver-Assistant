@@ -1,4 +1,5 @@
 import { useDriverMapModel } from '../hooks/useDriverMapModel'
+import { GoOnlineCard } from './GoOnlineCard'
 import { MapStatusPill } from './MapStatusPill'
 import { NavigationHud } from './NavigationHud'
 import { NextStopCard } from './NextStopCard'
@@ -19,6 +20,8 @@ export function DriverMapOverlays({ model }: { model: ReturnType<typeof useDrive
     recenter,
     isOnline,
     activeTripCount,
+    hasContext,
+    todayEarnings,
   } = model
 
   if (navActive) {
@@ -47,6 +50,8 @@ export function DriverMapOverlays({ model }: { model: ReturnType<typeof useDrive
           totalStops={optimizedRoute?.stops.length ?? 1}
           onNavigate={startNavigation}
         />
+      ) : hasContext && !isOnline ? (
+        <GoOnlineCard today={todayEarnings} />
       ) : null}
     </>
   )

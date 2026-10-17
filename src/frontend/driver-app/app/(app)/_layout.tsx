@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { NavigationBar } from '../../src/components/NavigationBar'
 import { DriverTabBarIcon, type DriverTabRoute } from '../../src/components/tabBarIcons'
-import { TripOfferBanner } from '../../src/features/dashboard/components/TripOfferBanner'
+import { TripOfferSheet } from '../../src/features/dashboard/components/TripOfferSheet'
 import { useDispatchSocket } from '../../src/features/dashboard/hooks/useDispatchSocket'
 import { usePushLocationOnNewTrip } from '../../src/features/dashboard/hooks/usePushLocationOnNewTrip'
 import { useAutoConnectOnNudge } from '../../src/features/home/hooks/useAutoConnectOnNudge'
@@ -119,7 +119,7 @@ export default function AppLayout() {
         <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
         <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
       </Tabs>
-      <TripOfferBanner />
+      <TripOfferSheet />
       <AssistantChatOverlay />
       <ChatVoiceDock />
     </View>

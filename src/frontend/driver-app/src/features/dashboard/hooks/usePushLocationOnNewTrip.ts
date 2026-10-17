@@ -3,7 +3,7 @@ import { useDriverContext } from './useDriverContext'
 import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
 
 // Covers trip confirmations that DON'T go through TripCard.tsx/
-// TripOfferBanner.tsx's own pushImmediateLocation() call (e.g. voice-agent's
+// TripOfferSheet.tsx's own pushImmediateLocation() call (e.g. voice-agent's
 // confirm_trip tool, which updates the trip status straight against
 // trip-service and has no access to the phone's GPS to push a fresh fix
 // itself) — those two call sites already fire on tap for near-zero latency;

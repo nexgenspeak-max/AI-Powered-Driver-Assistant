@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react'
-import { TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { YStack } from 'tamagui'
 import { Screen } from '../../src/components/Screen'
 import { AppText } from '../../src/components/AppText'
 import { Skeleton } from '../../src/components/Skeleton'
 import { SearchInput } from '../../src/components/SearchInput'
+import { EmptyState } from '../../src/components/EmptyState'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
+import { useOnlineToggle } from '../../src/features/dashboard/hooks/useOnlineToggle'
 import { useEarningsSummary } from '../../src/features/earnings/hooks/useEarningsSummary'
-import {
-  EarningsPeriodTabs,
-  type EarningsPeriod,
-} from '../../src/features/earnings/components/EarningsPeriodTabs'
+import { EarningsHero, type EarningsPeriod } from '../../src/features/earnings/components/EarningsHero'
+import { WeeklyEarningsChart } from '../../src/features/earnings/components/WeeklyEarningsChart'
 import {
   CompletedTripEarningsList,
   filterCompletedTripsForPeriod,
@@ -19,18 +18,15 @@ import {
 } from '../../src/features/earnings/components/CompletedTripEarningsList'
 
 /**
- * Sticky chrome (title, period, search); only trip detail list scrolls.
+ * Thu nhập — wallet layout: sticky title + hero (figure, period, stats);
+ * scroll area holds the 7-day chart and the day-grouped history.
  */
 export default function EarningsScreen() {
   const insets = useSafeAreaInsets()
   const [period, setPeriod] = useState<EarningsPeriod>('today')
   const [query, setQuery] = useState('')
-  const {
-    data: context,
-    isLoading: contextLoading,
-    isError: contextError,
-    refetch: refetchContext,
-  } = useDriverContext()
+  const { data: context, isLoading: contextLoading, isError: contextError, refetch: refetchContext } = useDriverContext()
+  const { isOnline, setOnline, ready } = useOnlineToggle()
 
   const needSummary = period === 'week' || period === 'month'
   const {
@@ -38,25 +34,20 @@ export default function EarningsScreen() {
     isLoading: summaryLoading,
     isError: summaryError,
     refetch: refetchSummary,
-  } = useEarningsSummary(period === 'month' ? 'month' : 'week', {
-    enabled: needSummary,
-  })
+  } = useEarningsSummary(period === 'month' ? 'month' : 'week', { enabled: needSummary })
 
-  const periodTrips = useMemo(
-    () => filterCompletedTripsForPeriod(context?.completed_trips ?? [], period),
-    [context?.completed_trips, period],
-  )
-
-  const visibleTrips = useMemo(
-    () => filterTripsByQuery(periodTrips, query),
-    [periodTrips, query],
-  )
+  const completed = context?.completed_trips ?? []
+  const periodTrips = useMemo(() => filterCompletedTripsForPeriod(completed, period), [completed, period])
+  const visibleTrips = useMemo(() => filterTripsByQuery(periodTrips, query), [periodTrips, query])
+  const weekTrips = useMemo(() => filterCompletedTripsForPeriod(completed, 'week'), [completed])
 
   const totals =
     period === 'today' && context
       ? {
           totalEarnings: context.today_earnings.total_earnings,
           tripCount: context.today_earnings.trip_count,
+          hoursOnline: context.today_earnings.hours_online,
+          bonusEarnings: context.today_earnings.bonus_earnings,
           currency: context.today_earnings.currency,
           isLoading: false,
           isError: false as boolean,
@@ -64,28 +55,23 @@ export default function EarningsScreen() {
       : {
           totalEarnings: summary?.total_earnings,
           tripCount: summary?.trip_count,
+          hoursOnline: undefined,
+          bonusEarnings: undefined,
           currency: summary?.currency ?? 'VND',
           isLoading: summaryLoading,
           isError: summaryError,
         }
 
   const q = query.trim()
-  const shownCount = periodTrips.length
   const reportedCount = totals.tripCount
-  const listTruncated =
-    !q && reportedCount != null && reportedCount > shownCount && shownCount > 0
-
+  const listTruncated = !q && reportedCount != null && reportedCount > periodTrips.length && periodTrips.length > 0
   const listCaption = q
     ? visibleTrips.length > 0
       ? `${visibleTrips.length}/${periodTrips.length} chuyến khớp “${q}”`
       : undefined
     : listTruncated
-      ? `Đang hiển thị ${shownCount}/${reportedCount} chuyến gần đây`
+      ? `${periodTrips.length}/${reportedCount} chuyến gần đây`
       : undefined
-
-  const emptyMessage = q
-    ? `Không tìm thấy chuyến khớp “${q}”.`
-    : 'Chưa có chuyến hoàn thành trong khoảng thời gian này.'
 
   const header = (
     <YStack
@@ -97,38 +83,33 @@ export default function EarningsScreen() {
       borderBottomWidth={1}
       borderBottomColor="$border"
     >
-      <YStack gap="$2">
-        <AppText variant="h1">Thu nhập</AppText>
-        <AppText variant="body" color="$textSecondary">
-          Tổng theo kỳ và chi tiết từng chuyến đã hoàn thành.
-        </AppText>
-      </YStack>
-
+      <AppText variant="h1">Thu nhập</AppText>
       {contextLoading && !context ? (
-        <Skeleton height={120} radius={24} />
+        <Skeleton height={168} radius={24} />
       ) : contextError && !context ? (
-        <ErrorRetry message="Không thể tải dữ liệu thu nhập." onRetry={refetchContext} />
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Không thể tải thu nhập"
+          message="Kiểm tra kết nối rồi thử lại."
+          actionLabel="Thử lại"
+          onAction={() => refetchContext()}
+        />
       ) : (
-        <>
-          <EarningsPeriodTabs
-            period={period}
-            onPeriodChange={(next) => {
-              setPeriod(next)
-              setQuery('')
-            }}
-            totalEarnings={totals.totalEarnings}
-            tripCount={totals.tripCount}
-            currency={totals.currency}
-            isLoading={totals.isLoading}
-            isError={totals.isError}
-            onRetry={refetchSummary}
-          />
-          <SearchInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Tìm theo tên khách hoặc địa chỉ..."
-          />
-        </>
+        <EarningsHero
+          period={period}
+          onPeriodChange={next => {
+            setPeriod(next)
+            setQuery('')
+          }}
+          totalEarnings={totals.totalEarnings}
+          tripCount={totals.tripCount}
+          hoursOnline={totals.hoursOnline}
+          bonusEarnings={totals.bonusEarnings}
+          currency={totals.currency}
+          isLoading={totals.isLoading}
+          isError={totals.isError}
+          onRetry={refetchSummary}
+        />
       )}
     </YStack>
   )
@@ -136,28 +117,29 @@ export default function EarningsScreen() {
   return (
     <Screen scroll header={header}>
       {context ? (
-        <CompletedTripEarningsList
-          trips={visibleTrips}
-          truncationNote={listCaption}
-          emptyMessage={emptyMessage}
-        />
+        <>
+          <WeeklyEarningsChart trips={weekTrips} currency={context.today_earnings.currency} />
+
+          {completed.length === 0 ? (
+            <EmptyState
+              icon="wallet-outline"
+              title="Chưa có thu nhập"
+              message={isOnline ? 'Hoàn thành chuyến đầu tiên để thấy thu nhập ở đây.' : 'Bật nhận chuyến để bắt đầu kiếm tiền hôm nay.'}
+              actionLabel={!isOnline && ready ? 'Bật nhận chuyến' : undefined}
+              onAction={!isOnline && ready ? () => setOnline(true) : undefined}
+            />
+          ) : (
+            <>
+              <SearchInput value={query} onChangeText={setQuery} placeholder="Tìm theo tên khách hoặc địa chỉ..." />
+              <CompletedTripEarningsList
+                trips={visibleTrips}
+                truncationNote={listCaption}
+                emptyMessage={q ? `Không tìm thấy chuyến khớp “${q}”.` : 'Chưa có chuyến hoàn thành trong khoảng thời gian này.'}
+              />
+            </>
+          )}
+        </>
       ) : null}
     </Screen>
-  )
-}
-
-function ErrorRetry({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <TouchableOpacity
-      onPress={onRetry}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${message} Nhấn để thử lại.`}
-      style={{ minHeight: 44, justifyContent: 'center' }}
-    >
-      <AppText variant="body" color="$textSecondary" textAlign="center" paddingVertical="$4">
-        {message} Nhấn để thử lại.
-      </AppText>
-    </TouchableOpacity>
   )
 }
