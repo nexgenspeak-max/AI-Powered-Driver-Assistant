@@ -422,7 +422,7 @@ Tính khả dụng (NFR-01) được thiết kế ở hai mức. Ở mức kiế
 
 ![Hình 4.14](thesis_screenshots/H4_ux_usability.png)
 
-**Hình 4.14.** Giao diện trợ lý trên ứng dụng tài xế: (a) trạng thái kết nối của trợ lý; (b) lời thoại hiển thị đồng bộ; (c) cài đặt ngôn ngữ và chế độ gọi khách mặc định; (d) bật chế độ rảnh tay bằng từ khóa đánh thức
+**Hình 4.14.** Giao diện trợ lý trên ứng dụng tài xế: (a) trạng thái kết nối của trợ lý; (b) lời thoại hiển thị đồng bộ; (c) cài đặt ngôn ngữ và chế độ gọi khách mặc định; (d) bật chế độ rảnh tay bằng từ khóa đánh thức và chọn bán kính gọi nhắc khách khi gần điểm đón
 
 ## 4.9. Đối chiếu yêu cầu với thiết kế
 
