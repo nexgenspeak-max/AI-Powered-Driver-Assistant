@@ -12,4 +12,8 @@ assert.equal(
   arrivalBlockedMessage('dropoff', 356, 200),
   'Bạn còn cách điểm trả khoảng 360 m. Khi đến gần (trong khoảng 200 m) mới hoàn thành chuyến được.',
 );
+assert.equal(
+  arrivalBlockedMessage('pickup', 8200, 200, 'picked_up'),
+  'Bạn còn cách điểm đón khoảng 8,2 km. Khi đến gần (trong khoảng 200 m) mới xác nhận đã đón khách được, bạn vẫn có thể gọi khách ngay.',
+);
 process.stdout.write('arrival geofence selfcheck: OK (200 m default, distance in the message)\n');

@@ -118,6 +118,19 @@ export async function updateStatus(
   return (result.Attributes as Trip) ?? null;
 }
 
+/** Persist geocoded pickup/dropoff coords without touching status/updated_at. */
+export async function setCoords(tripId: string, coords: Record<string, number>): Promise<void> {
+  const keys = Object.keys(coords);
+  if (keys.length === 0) return;
+  await docClient.send(new UpdateCommand({
+    TableName: config.dynamodbTable,
+    Key: { trip_id: tripId },
+    UpdateExpression: 'SET ' + keys.map(k => `#${k} = :${k}`).join(', '),
+    ExpressionAttributeNames: Object.fromEntries(keys.map(k => [`#${k}`, k])),
+    ExpressionAttributeValues: Object.fromEntries(keys.map(k => [`:${k}`, coords[k]])),
+  }));
+}
+
 export async function listRecent(limit = 50): Promise<Trip[]> {
   const result = await docClient.send(new ScanCommand({ TableName: config.dynamodbTable, Limit: limit }));
   const items = (result.Items as Trip[]) ?? [];
