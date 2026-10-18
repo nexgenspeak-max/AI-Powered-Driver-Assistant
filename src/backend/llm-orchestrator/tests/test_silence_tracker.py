@@ -106,3 +106,30 @@ def test_no_check_in_while_assistant_is_speaking(monkeypatch):
         await tracker.stop()
 
     asyncio.run(_run())
+
+
+def test_typed_chat_gets_the_longer_typing_window():
+    """Muted-mic typing: no check-in at the 15 s voice threshold."""
+    async def _run() -> None:
+        session = MagicMock()
+        session.say = AsyncMock()
+        tracker = SilenceTracker(
+            session=session,
+            ctx=MagicMock(),
+            silence_threshold_seconds=0.05,
+            typing_threshold_seconds=0.4,
+            max_consecutive_silences=2,
+            check_in_spoken_message="Bạn còn đó không?",
+        )
+        await tracker.start()
+        tracker.reset_silence_timer(source="chat_text")
+        assert tracker.effective_threshold_seconds == 0.4
+        await asyncio.sleep(0.15)
+        assert session.say.await_count == 0
+        tracker.reset_silence_timer(source="user_input_transcribed:final=True:'alo'")
+        assert tracker.effective_threshold_seconds == 0.05
+        await asyncio.sleep(0.12)
+        assert session.say.await_count == 1
+        await tracker.stop()
+
+    asyncio.run(_run())

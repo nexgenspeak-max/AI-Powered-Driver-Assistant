@@ -35,10 +35,15 @@ class SilenceTracker:
         on_timeout: Optional[Callable[[], Awaitable[None]]] = None,
         goodbye_message: Optional[str] = None,
         check_in_spoken_message: Optional[str] = None,
+        typing_threshold_seconds: float = 60.0,
     ) -> None:
         self.session = session
         self.ctx = ctx
         self.silence_threshold_seconds = silence_threshold_seconds
+        # A driver who muted the mic and types needs longer than a speaker
+        # between turns; 15 s asked "Bạn còn đó không?" mid-typing.
+        self.typing_threshold_seconds = max(typing_threshold_seconds, silence_threshold_seconds)
+        self._typing = False
         self.silence_message = silence_message
         self.max_consecutive_silences = max_consecutive_silences
         self.end_session_on_timeout = end_session_on_timeout
@@ -97,6 +102,10 @@ class SilenceTracker:
         # before it ever reached the threshold. Unconditional now so every
         # reset is visible; remove the `source` plumbing once confirmed.
         logger.info("SilenceTracker reset_silence_timer | source=%s", source)
+        if source == "chat_text":
+            self._typing = True
+        elif source.startswith("user_input_transcribed"):
+            self._typing = False
         self._last_speech_time = time.time()
         if self._consecutive_silence_count > 0:
             logger.debug(
@@ -127,6 +136,10 @@ class SilenceTracker:
         logger.info("SilenceTracker resumed")
 
     # ── Properties ───────────────────────────────────────────────────────────
+
+    @property
+    def effective_threshold_seconds(self) -> float:
+        return self.typing_threshold_seconds if self._typing else self.silence_threshold_seconds
 
     @property
     def is_active(self) -> bool:
@@ -164,8 +177,8 @@ class SilenceTracker:
     # once the cause is confirmed.
     async def _check_silence(self, seq: int = 0) -> None:
         try:
-            logger.info("SilenceTracker _check_silence #%d | sleeping %.0fs", seq, self.silence_threshold_seconds)
-            await asyncio.sleep(self.silence_threshold_seconds)
+            logger.info("SilenceTracker _check_silence #%d | sleeping %.0fs", seq, self.effective_threshold_seconds)
+            await asyncio.sleep(self.effective_threshold_seconds)
             logger.info("SilenceTracker _check_silence #%d | woke up", seq)
 
             if not (self._is_active and not self._is_paused and self._last_speech_time):
@@ -192,7 +205,7 @@ class SilenceTracker:
             # reschedule and killing the whole silence-detection loop after
             # this task. Confirmed in production logs: a task that slept
             # exactly 60s measured "60.0s" here and still took this branch.
-            if silence_duration < self.silence_threshold_seconds - 1.0:
+            if silence_duration < self.effective_threshold_seconds - 1.0:
                 logger.info(
                     "SilenceTracker _check_silence #%d | woke early, only %.1fs since last speech — returning",
                     seq,
