@@ -72,3 +72,15 @@ def test_session_listens_on_the_call_control_topic():
     src = inspect.getsource(sess_mod)
     assert "CALL_CONTROL_TOPIC" in src and "cancel_active_call" in src
     assert call_cancel.CALL_CONTROL_TOPIC == "call_control"
+
+
+@pytest.mark.asyncio
+async def test_unanswered_teardown_skips_a_call_the_driver_already_cancelled():
+    from app.voicebot.processors import sip_call_watch
+
+    userdata = {"customer_call_active": False, "bridge_call_active": False, "customer_call": {"mode": "agent"}}
+    with patch.object(sip_call_watch, "disconnect_sip_participant", new=AsyncMock()) as hang, \
+         patch("app.voicebot.processors.handback.handback_to_driver", new=AsyncMock()) as hb:
+        await sip_call_watch.teardown_unanswered_call(MagicMock(), userdata)
+    hang.assert_not_awaited()
+    hb.assert_not_awaited()

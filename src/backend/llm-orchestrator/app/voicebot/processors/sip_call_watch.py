@@ -520,6 +520,13 @@ async def teardown_unanswered_call(session: AgentSession, userdata: dict) -> Non
         return
     if _pickup_confirmed(userdata):
         return
+    if not userdata.get("isolated_call") and not (
+        userdata.get("customer_call_active") or userdata.get("bridge_call_active")
+    ):
+        # Already over (e.g. the driver pressed Huỷ cuộc gọi): a second
+        # handback said "Khách chưa bắt máy" right after "Mình đã dừng cuộc gọi".
+        logger.info("teardown_unanswered_call | call already ended — skipped")
+        return
 
     cancel_no_answer_watch(userdata)
 
