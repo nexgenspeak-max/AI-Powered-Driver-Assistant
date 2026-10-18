@@ -21,22 +21,22 @@ import { useVoiceSessionStore } from "../stores/voiceSessionStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { getAssistantReply } from "../../../services/api/assistant";
 import { useVoiceLangStore } from "../../../services/voiceLang";
-import { CHAT_ORB_CLEARANCE } from "./ChatVoiceDock";
+import { ComposerVoiceButton } from "./ComposerVoiceButton";
 
 const STATUS_CAPTION = {
   vn: {
-    idle: "Chạm nút Trợ lý bên dưới để kết nối",
+    idle: "Chạm nút Czen cạnh ô nhập để kết nối",
     connecting: "Đang kết nối với Czen…",
-    connected: "Đã kết nối với Czen — chạm nút Trợ lý để ngắt",
-    error: "Kết nối lỗi — chạm nút Trợ lý để thử lại",
+    connected: "Đã kết nối — chạm sóng âm để kết thúc",
+    error: "Kết nối lỗi — chạm nút Czen để thử lại",
     inCall: "Đang trong cuộc gọi — không thể tắt",
     micOff: "Mic đang tắt — phiên vẫn kết nối",
   },
   en: {
-    idle: "Tap the Assistant button below to connect",
+    idle: "Tap the Czen button next to the input to connect",
     connecting: "Connecting to Czen…",
-    connected: "Connected to Czen — tap the Assistant button to disconnect",
-    error: "Connection failed — tap the Assistant button to try again",
+    connected: "Connected to Czen — tap the waveform to end",
+    error: "Connection failed — tap the Czen button to try again",
     inCall: "In a call — can't disconnect",
     micOff: "Mic is off — the session is still connected",
   },
@@ -231,7 +231,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                 <AppText variant="body" color="$textSecondary" textAlign="center">
                   {voice.status === "connected"
                     ? "Czen đang nghe. Hỏi về chuyến, khách hay thu nhập."
-                    : "Chạm nút Trợ lý bên dưới rồi nói, hoặc chọn một gợi ý."}
+                    : "Chạm nút Czen cạnh ô nhập rồi nói, hoặc chọn một gợi ý."}
                 </AppText>
               </YStack>
               <XStack flexWrap="wrap" justifyContent="center" gap="$2">
@@ -324,15 +324,16 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
           alignItems="center"
           gap="$2"
           marginHorizontal="$5"
-          marginBottom={insets.bottom + CHAT_ORB_CLEARANCE}
-          paddingHorizontal="$2"
-          height={48}
+          marginBottom={insets.bottom + 12}
+          paddingLeft="$2"
+          paddingRight={6}
+          height={56}
           borderRadius="$pill"
           backgroundColor="$surfaceElevated"
           borderWidth={StyleSheet.hairlineWidth}
           borderColor="$border"
         >
-          <GlassSheen borderRadius={24} />
+          <GlassSheen borderRadius={28} />
           <TouchableOpacity
             onPress={() => {
               if (voice.status !== "connected") return;
@@ -384,23 +385,31 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
             selectionColor={isLight ? theme.primary.val : theme.secondary.val}
             style={{ flex: 1, color: theme.textPrimary.val, paddingLeft: 8, fontSize: 15 }}
           />
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={voice.status === "connecting"}
-            accessibilityRole="button"
-            accessibilityLabel="Gửi tin nhắn"
-            accessibilityState={{ disabled: voice.status === "connecting" }}
-            hitSlop={8}
-            style={{
-              width: 44,
-              height: 44,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: voice.status === "connecting" ? 0.35 : 1,
-            }}
-          >
-            <Icon name="send" size={18} color={theme.textPrimary.val} />
-          </TouchableOpacity>
+          {msg.trim() ? (
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={voice.status === "connecting"}
+              accessibilityRole="button"
+              accessibilityLabel="Gửi tin nhắn"
+              accessibilityState={{ disabled: voice.status === "connecting" }}
+              hitSlop={6}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: theme.primary.val,
+                opacity: voice.status === "connecting" ? 0.5 : 1,
+              }}
+            >
+              <Icon name="send" size={18} color={theme.textInverse.val} strokeWidth={2.1} />
+            </TouchableOpacity>
+          ) : (
+            // Empty composer → the voice control lives here (connect / live
+            // waveform / end) instead of a second floating orb under the bar.
+            <ComposerVoiceButton />
+          )}
         </XStack>
       </KeyboardSafeView>
     </Theme>

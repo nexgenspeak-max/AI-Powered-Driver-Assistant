@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 6, 20, 0.55)',
     justifyContent: 'flex-end',
-    // Above AssistantChatOverlay (100) and ChatVoiceDock (110).
+    // Above AssistantChatOverlay (100) and the tab bar orb.
     zIndex: 120,
     elevation: 120,
   },

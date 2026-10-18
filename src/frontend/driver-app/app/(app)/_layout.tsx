@@ -12,7 +12,6 @@ import { preloadCzenFillers } from '../../src/features/home/lib/czenFillerAudio'
 import { useReturnHomeOnVoiceEnd } from '../../src/features/home/hooks/useReturnHomeOnVoiceEnd'
 import { useCurrentUser } from '../../src/features/auth/hooks/useCurrentUser'
 import { AssistantChatPanel } from '../../src/features/home/components/AssistantChatPanel'
-import { ChatVoiceDock } from '../../src/features/home/components/ChatVoiceDock'
 import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
 import { useEffect } from 'react'
 
@@ -59,7 +58,8 @@ export default function AppLayout() {
       <Tabs
         // React Navigation invokes `tabBar` as a render function (not
         // createElement) — do not put hooks inside that callback/component.
-        // Hide the full bar while chat is open; ChatVoiceDock keeps the orb.
+        // Hide the full bar while chat is open; the composer's own voice
+        // button (ComposerVoiceButton) takes over connect / end.
         tabBar={(props: BottomTabBarProps) =>
           panelOpen ? null : <NavigationBar {...props} />
         }
@@ -120,7 +120,6 @@ export default function AppLayout() {
         <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
       </Tabs>
       <AssistantChatOverlay />
-      <ChatVoiceDock />
       {/* Last and highest: a new offer auto-opens the voice panel (the
           agent reads it aloud), and the panel must never hide the sheet the
           driver taps to accept. */}
