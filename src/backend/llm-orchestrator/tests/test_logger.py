@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import time
 
-from app.services.logger import LineFormatter, bind, clear, current_conv, current_room, get_logger
+from app.services.logger import ContextStampFormatter, LineFormatter, bind, clear, current_conv, current_room, get_logger
 from app.services.logger.format import format_line, split_logger_name
 
 
@@ -137,3 +138,21 @@ def test_format_line_benchmark_under_1ms_per_line():
     print(f"\nlogger bench: {n} lines in {elapsed:.3f}s ({per_line_us:.1f} µs/line)")
     assert elapsed < 1.0, f"format_line too slow: {elapsed:.3f}s for {n} lines"
     assert per_line_us < 1000
+
+
+def test_job_process_line_is_prefixed_once():
+    """LiveKit's LogQueueHandler formats in the job process, then the main
+    process formats the shipped record again; agent lines used to carry two
+    prefixes. The job side now stamps context and returns the bare message."""
+    bind(room="driver-0901-abc", conv="job-1")
+    try:
+        record = logging.LogRecord("llm-orchestrator.turn_metrics", logging.INFO, __file__, 1, "turn latency %s", ("1.2s",), None)
+        msg = ContextStampFormatter().format(record)  # same order as LogQueueHandler.emit
+        shipped = copy.copy(record)
+        shipped.msg, shipped.args = msg, None
+    finally:
+        clear()
+    line = LineFormatter().format(shipped)  # main process: no contextvars bound
+    assert line.count("INFO") == 1
+    assert "room=driver-0901-abc" in line and "conv=job-1" in line
+    assert line.endswith("turn latency 1.2s")

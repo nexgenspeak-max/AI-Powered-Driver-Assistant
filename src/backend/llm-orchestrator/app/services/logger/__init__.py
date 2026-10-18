@@ -11,7 +11,7 @@ Callers:
 `bind` is task-local (contextvars) so concurrent rooms do not mix.
 """
 
-from app.services.logger.adapter import Logger, LineFormatter
+from app.services.logger.adapter import ContextStampFormatter, Logger, LineFormatter
 from app.services.logger.context import bind, clear, current_conv, current_room
 
 
@@ -20,6 +20,7 @@ def get_logger(fn: str, *, service: str = "llm-orchestrator") -> Logger:
 
 
 __all__ = [
+    "ContextStampFormatter",
     "Logger",
     "LineFormatter",
     "bind",

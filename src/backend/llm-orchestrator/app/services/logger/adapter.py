@@ -37,6 +37,28 @@ class LineFormatter(logging.Formatter):
         )
 
 
+class ContextStampFormatter(logging.Formatter):
+    """For LiveKit's job-process LogQueueHandler, which formats a record and
+    ships the result to the main process to be formatted again. Rendering the
+    full line here printed every agent line twice ("… room=driver-… — <ts> INFO
+    … room=- …"). Stamp room/conv from this process's contextvars onto the
+    record instead and return only the message, so the main process's
+    LineFormatter renders one line with the job's context."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        if not getattr(record, "room", None):
+            record.room = current_room()
+        if not getattr(record, "conv", None):
+            record.conv = current_conv()
+        msg = record.getMessage()
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            msg = f"{msg}\n{record.exc_text}"
+            record.exc_text = None
+        return msg
+
+
 class Logger:
     """Callers pass a message + facts. Line shape is not their job."""
 

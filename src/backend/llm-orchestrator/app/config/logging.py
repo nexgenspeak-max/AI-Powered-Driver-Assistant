@@ -2,7 +2,7 @@ import logging
 import logging.handlers
 import os
 
-from app.services.logger import LineFormatter
+from app.services.logger import ContextStampFormatter, LineFormatter
 
 _LOG_FILE = os.getenv("LOG_FILE", "logs/agent.log")
 _LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -22,7 +22,12 @@ def setup_logging() -> None:
     # every line carries service/fn/room/conv.
     if root.handlers:
         for handler in root.handlers:
-            handler.setFormatter(fmt)
+            # Job processes forward records to the main process, which formats
+            # them; a full line here would be wrapped in a second prefix.
+            if type(handler).__name__ == "LogQueueHandler":
+                handler.setFormatter(ContextStampFormatter())
+            else:
+                handler.setFormatter(fmt)
         _quiet_third_party()
         return
 
