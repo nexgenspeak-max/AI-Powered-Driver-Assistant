@@ -147,3 +147,49 @@ async def test_no_to_a_gated_call_declines_without_dialling():
     dial.assert_not_awaited()
     assert context_store.get_pending_driver_action(userdata) is None
     assert "không làm nữa" in session.say.await_args.args[0].lower()
+
+
+import pytest as _pytest
+
+from app.voicebot.processors import call_intent as _ci
+
+
+@_pytest.mark.parametrize("text", [
+    "Hay là gọi khách nhỉ?",
+    "hay là mình gọi khách",
+    "Có nên gọi khách không?",
+    "Chắc là gọi khách đi nhỉ",
+    "Không biết có nên gọi không",
+])
+def test_vietnamese_hedges_force_a_confirmation(text):
+    assert _ci.is_hedged(text, "vn")
+    assert _ci.should_confirm({"intent_clarity": "explicit"}, text, "vn")
+
+
+@_pytest.mark.parametrize("text", [
+    "Gọi cho khách giúp tôi.",
+    "Gọi khách đi",
+    "Báo khách tôi đến rồi",
+    "Có",
+    "Gọi khách được không?",
+])
+def test_clear_requests_are_not_hedges(text):
+    assert not _ci.is_hedged(text, "vn")
+    assert not _ci.should_confirm({"intent_clarity": "explicit"}, text, "vn")
+
+
+def test_english_hedges():
+    assert _ci.is_hedged("Maybe call the customer?", "en")
+    assert _ci.is_hedged("Should I call her?", "en")
+    assert not _ci.is_hedged("Call the customer", "en")
+
+
+def test_faq_advice_about_calling_does_not_arm_a_call():
+    from app.voicebot.processors import context_store, pending_action
+
+    userdata = {"driver_phone": "0900000001"}
+    pending_action.infer_from_bot_line(
+        "Tài xế nên chờ thêm một chút, gọi khách qua AI để nhắc nhở, hoặc báo khách vắng mặt.",
+        userdata,
+    )
+    assert context_store.get_pending_driver_action(userdata) is None

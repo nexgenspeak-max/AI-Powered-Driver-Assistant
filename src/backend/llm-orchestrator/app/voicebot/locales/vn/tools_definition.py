@@ -243,7 +243,7 @@ raw_schema = {
                         "Tài xế có thật sự muốn GỌI khách không. 'explicit' CHỈ khi lượt vừa rồi tài xế "
                         "nói rõ muốn gọi/nhắn/báo khách (vd 'gọi khách đi', 'báo khách ra đón') hoặc vừa "
                         "đồng ý câu hỏi gọi của bạn. 'ambiguous' cho mọi trường hợp khác: câu mơ hồ "
-                        "('cần lắm', 'ngay lúc này', 'không biết'), 'ok' cho chuyện khác, hoặc bạn tự đoán. "
+                        "('cần lắm', 'ngay lúc này', 'không biết'), câu đang phân vân ('hay là gọi khách nhỉ?', 'có nên gọi không?'), 'ok' cho chuyện khác, hoặc bạn tự đoán. "
                         "Không chắc → 'ambiguous' (hệ thống sẽ hỏi lại, không gọi)."
                     ),
                 },

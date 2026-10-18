@@ -49,7 +49,7 @@ async def start_agent_call_to_contact(
     contact_name: str,
     custom_message: str = "",
     lang: str = "vn",
-) -> tuple[Agent, str] | str:
+) -> tuple[Agent, str | None] | str:
     """Dial a personal contact via SIP and hand off to CustomerCallAgent, which
     optionally opens with `custom_message` instead of its generic greeting."""
     driver_phone = context.userdata.get("driver_phone", "")
@@ -128,7 +128,9 @@ async def start_agent_call_to_contact(
     # above. This used to hand the LLM free text ("you can listen live") to
     # paraphrase into its own words, which is exactly the kind of off-script
     # ad-lib line the driver should never hear.
-    return agent, ""
+    # None, not "": an empty string still counts as tool output, so LiveKit
+    # asked the old agent for a reply and it said the call had failed.
+    return agent, None
 
 
 async def start_background_call_to_contact(

@@ -235,7 +235,7 @@ async def start_in_room_agent_call(
     *,
     lang: str,
     custom_message: str = "",
-) -> tuple[Agent, str] | str:
+) -> tuple[Agent, str | None] | str:
     """Dial customer via SIP and hand off to CustomerCallAgent.
 
     `custom_message` — when set, CustomerCallAgent delivers this EXACT line
@@ -266,7 +266,9 @@ async def start_in_room_agent_call(
     # scripted line ("Đang gọi X, xin đợi trong giây lát") before the dial
     # above; same principle as bridge mode (see _pre_dial_announcement's
     # docstring): nothing left for the AI to improvise once the call connects.
-    return agent, ""
+    # None, not "": an empty string still counts as tool output, so LiveKit
+    # asked the old agent for a reply and it said the call had failed.
+    return agent, None
 
 
 async def start_in_room_bridge_call(

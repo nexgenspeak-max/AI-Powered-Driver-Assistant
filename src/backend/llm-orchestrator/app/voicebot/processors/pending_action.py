@@ -60,6 +60,19 @@ _CALL_BOT_VN = (
     "i'll message",
     "call the customer",
 )
+# First-person promises to call/message. Only these (or a question that
+# offers a call) arm a pending call: FAQ advice such as "gọi khách qua AI để
+# nhắc nhở" matched _CALL_BOT_VN and a later "ok" would have dialled.
+_CALL_PROMISE_VN = (
+    "mình gọi",
+    "em gọi",
+    "mình nhắn",
+    "em nhắn",
+    "để mình gọi",
+    "i'll call",
+    "i'll message",
+    "let me call",
+)
 _CONFIRM_VN = ("ok", "okay", "vâng", "dạ", "đúng rồi", "đúng", "ừ", "uh", "được", "yes", "yeah")
 _EXECUTE_NUDGE_VN = (
     "gọi đi",
@@ -205,6 +218,8 @@ def infer_from_bot_line(text: str, userdata: dict, *, lang: str = "vn") -> None:
             # this question describes (with its trip_index) — keep it.
             return
         is_question = "?" in text
+        if not is_question and not any(p in t for p in _CALL_PROMISE_VN):
+            return  # a statement about calling, not an offer or a promise
         if is_question and " hay " in f" {t} ":
             # A menu ("xem chuyến hay gọi khách?") is not a promise to call.
             return

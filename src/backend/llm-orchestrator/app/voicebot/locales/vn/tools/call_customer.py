@@ -22,7 +22,10 @@ def _call_customer_actions(trip_count: int) -> list[str]:
 async def _speak_or_handoff(context: RunContext, result):
     """Errors are spoken + StopResponse; agent/bridge handoff tuples pass through."""
     if isinstance(result, tuple):
-        return result
+        agent, msg = result
+        # A bare handoff must carry None: "" still asks the old agent for a
+        # reply, which announced the call had failed right as it rang.
+        return (agent, msg if isinstance(msg, str) and msg.strip() else None)
     if isinstance(result, str) and result.strip():
         return await context_store.speak_and_stop(context.session, result)
     return result
@@ -69,7 +72,9 @@ async def call_customer(raw_arguments: dict, context: RunContext):
         )
 
     target = resolved
-    if not call_intent.is_explicit(raw_arguments):
+    if call_intent.should_confirm(
+        raw_arguments, context_store.get_last_driver_utterance(context.userdata), "vn"
+    ):
         return await call_intent.ask_before_calling(
             context, target, mode=mode, message=message, lang="vn"
         )

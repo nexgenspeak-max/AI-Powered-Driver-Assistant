@@ -11,6 +11,7 @@ that only an immediate yes executes (see pending_action.expire_stale).
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from app.voicebot.processors import context_store
@@ -23,6 +24,33 @@ EXPLICIT = "explicit"
 def is_explicit(raw_arguments: dict) -> bool:
     """Missing / unknown counts as ambiguous — the safe side for a real call."""
     return str(raw_arguments.get("intent_clarity") or "").strip().lower() == EXPLICIT
+
+
+# Thinking aloud, not asking. Live 2026-10-18: "Hay là gọi khách nhỉ?" came
+# back from the LLM as intent_clarity=explicit and the customer was dialled.
+_HEDGES_VN = re.compile(
+    r"\b(hay là|hay mình|có nên|nên gọi .*không|chắc là|không biết (có )?nên|"
+    r"để xem|hay thôi|có cần gọi)\b|\bnhỉ\b|\bnhể\b|\bta\s*\?",
+    re.IGNORECASE,
+)
+_HEDGES_EN = re.compile(
+    r"\b(maybe|should i|should we|perhaps|i wonder|might as well|not sure)\b",
+    re.IGNORECASE,
+)
+
+
+def is_hedged(utterance: str, lang: str = "vn") -> bool:
+    """True when the driver's own words only muse about calling."""
+    text = (utterance or "").strip()
+    if not text:
+        return False
+    pattern = _HEDGES_EN if lang == "en" else _HEDGES_VN
+    return bool(pattern.search(text))
+
+
+def should_confirm(raw_arguments: dict, utterance: str, lang: str = "vn") -> bool:
+    """Ask first unless the LLM marked it explicit AND the words aren't a hedge."""
+    return not is_explicit(raw_arguments) or is_hedged(utterance, lang)
 
 
 def _trip_index_of(userdata: dict, target: dict) -> int | None:

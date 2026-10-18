@@ -240,7 +240,7 @@ raw_schema = {
                         "Does the driver really want a CALL. 'explicit' ONLY when the driver's last turn "
                         "clearly asked to call/message/tell the rider (e.g. 'call the customer', 'tell them "
                         "I'm outside') or just agreed to your offer to call. 'ambiguous' otherwise: vague "
-                        "lines ('I need it', 'right now', 'not sure'), an 'ok' about something else, or your "
+                        "lines ('I need it', 'right now', 'not sure'), musing ('maybe call the customer?', 'should I call?'), an 'ok' about something else, or your "
                         "own guess. When unsure use 'ambiguous' (the system asks back, no call is placed)."
                     ),
                 },

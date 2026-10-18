@@ -101,7 +101,9 @@ async def test_call_customer_agent_handoff_tuple():
             {"mode": "agent", "trip_index": 1, "intent_clarity": "explicit"}, context
         )
 
-    assert result == (fake_agent, "")
+    # None, not "": LiveKit treats "" as output and asks the old agent for a
+    # reply, which then claimed the call had failed.
+    assert result == (fake_agent, None)
     context.session.say.assert_not_called()
 
 
