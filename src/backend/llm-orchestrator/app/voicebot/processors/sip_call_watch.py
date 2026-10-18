@@ -525,6 +525,24 @@ async def teardown_unanswered_call(session: AgentSession, userdata: dict) -> Non
     logger.warning("teardown_unanswered_call | no active call flags — skipped")
 
 
+def _keep_job_alive_until(task: "asyncio.Future") -> None:
+    """Have the job's shutdown wait for `task` (no-op outside a LiveKit job)."""
+    try:
+        from livekit.agents import get_job_context
+
+        ctx = get_job_context()
+    except Exception:
+        return
+
+    async def _await_task(_reason: str = "") -> None:
+        try:
+            await task
+        except Exception:
+            logger.warning("pending redial failed during shutdown", exc_info=True)
+
+    ctx.add_shutdown_callback(_await_task)
+
+
 async def _background_no_answer(session: AgentSession, userdata: dict, lang: str) -> None:
     """Background call not answered: redial (up to MAX_REDIALS, REDIAL_DELAY_SECONDS
     apart) or, once redials are used up, tell the driver it failed (AVDA-120)."""
@@ -547,7 +565,16 @@ async def _background_no_answer(session: AgentSession, userdata: dict, lang: str
     try:
         await notify_driver_of_background_call_result(userdata, retry.redial_notice(lang, name, attempt))
         await disconnect_sip_participant(userdata)
-        dialled = await retry.redial_after_delay(call_meta, attempt)
+        # The redial waits REDIAL_DELAY_SECONDS inside this job, but the job
+        # can be shut down long before that: once the SIP leg is gone the
+        # room empties, LiveKit closes it ~20 s later, and the process exits
+        # (live 2026-10-18: redial 2/2 was silently lost 2 s after the room
+        # closed). Run it as its own task, shielded from this coroutine's
+        # cancellation, and make job shutdown wait for it (see
+        # shutdown_process_timeout in app/main.py).
+        redial_task = asyncio.ensure_future(retry.redial_after_delay(call_meta, attempt))
+        _keep_job_alive_until(redial_task)
+        dialled = await asyncio.shield(redial_task)
     finally:
         userdata["_redial_pending"] = False
     summary = retry.redial_notice(lang, name, attempt) if dialled else retry.redial_failed_notice(lang, name)

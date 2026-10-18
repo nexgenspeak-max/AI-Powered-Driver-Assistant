@@ -98,3 +98,36 @@ async def test_answer_on_redial_continues_normally():
         await watch.teardown_unanswered_call(MagicMock(), ud)
     complete.assert_not_awaited()
     hangup.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_redial_survives_the_job_coroutine_being_cancelled():
+    """Live 2026-10-18: the room closed mid-delay and redial 2/2 was lost."""
+    import asyncio
+
+    ud = _userdata(1)
+    dialled = asyncio.Event()
+
+    async def slow_redial(meta, attempt):
+        await asyncio.sleep(0.05)
+        dialled.set()
+        return True
+
+    with patch(f"{W}.notify_driver_of_background_call_result", new_callable=AsyncMock), \
+         patch(f"{W}.disconnect_sip_participant", new_callable=AsyncMock), \
+         patch.object(retry, "redial_after_delay", side_effect=slow_redial), \
+         patch(f"{W}.complete_isolated_call", new_callable=AsyncMock):
+        caller = asyncio.ensure_future(watch._background_no_answer(MagicMock(), ud, "vn"))
+        await asyncio.sleep(0.01)
+        caller.cancel()  # job shutdown cancels the agent coroutine
+        await asyncio.wait_for(dialled.wait(), timeout=1.0)
+    assert dialled.is_set()
+    assert ud["_redial_pending"] is False
+
+
+def test_worker_waits_long_enough_for_a_pending_redial():
+    import inspect, app.main as main_mod
+
+    src = inspect.getsource(main_mod)
+    assert "shutdown_process_timeout=90.0" in src
+    assert retry.REDIAL_DELAY_SECONDS < 90.0

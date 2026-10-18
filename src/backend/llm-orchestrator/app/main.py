@@ -35,6 +35,10 @@ if __name__ == "__main__":
             api_secret=s.livekit_api_secret,
             agent_name=s.agent_name,
             initialize_process_timeout=60.0,
+            # Job shutdown waits for pending no-answer redials (60 s delay +
+            # dial) registered as shutdown callbacks — the 10 s default
+            # killed them (sip_call_watch._keep_job_alive_until).
+            shutdown_process_timeout=90.0,
             # `dev` defaults num_idle_processes to 0, so the first job waits
             # ~1.5s to spawn a process ("no warmed process available").
             num_idle_processes=1,
