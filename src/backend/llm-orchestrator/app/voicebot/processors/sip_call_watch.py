@@ -374,9 +374,9 @@ def _disconnect_summary(lang: str, mode: str, *, answered: bool) -> str:
                 else "Không gọi được cho khách — khách không bắt máy hoặc đã từ chối cuộc gọi."
             )
         return (
-            "Could not reach the customer before the conversation began."
+            "The customer didn't pick up. You can wait a little or ask me to call again."
             if lang == "en"
-            else "Không kết nối được với khách trước khi cuộc trò chuyện bắt đầu."
+            else "Khách chưa bắt máy. Bạn chờ thêm chút hoặc nhờ mình gọi lại nhé."
         )
 
     if mode == "bridge":
