@@ -20,6 +20,7 @@ export interface LiveCoords {
 // call (default 1 km) is evaluated on each push, so the old flat 10 minutes
 // let a moving driver skip right past the radius.
 const WALL_CLOCK_TICK_MS = 15 * 1000
+const STALE_FIX_MS = 10 * 1000
 
 // lastPushedAtRef starts at 0, so the very first push below (as soon as
 // `enabled` is true and a fix has landed — i.e. right as the app opens with
@@ -104,7 +105,30 @@ export function useLiveDriverLocation(enabled: boolean, stops: LatLng[] = []): L
       // wall-clock cadence regardless of movement, using whatever fix is
       // already in coordsRef, so a stationary driver's location keeps
       // getting refreshed instead of quietly going stale.
-      intervalId = setInterval(pushIfDue, WALL_CLOCK_TICK_MS)
+      //
+      // The watch stream itself can also stall: iOS pauses a watch that
+      // started while the device was stationary and does not always resume
+      // it once moving (simulator 2026-10-18: the background task saw the
+      // driver close from 1346 m to 1131 m while the foreground stream sat
+      // on the starting fix, so the map marker and the pickup check froze).
+      // Each tick, a fix older than STALE_FIX_MS is refreshed directly.
+      intervalId = setInterval(() => {
+        const last = coordsRef.current
+        if (!last || Date.now() - last.updatedAt > STALE_FIX_MS) {
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+            .then(loc => {
+              if (cancelled) return
+              const { latitude: lat, longitude: lng, heading } = loc.coords
+              const next = { lat, lng, updatedAt: loc.timestamp, heading: heading != null && heading >= 0 ? heading : null }
+              setCoords(next)
+              coordsRef.current = next
+              pushIfDue()
+            })
+            .catch(() => pushIfDue())
+          return
+        }
+        pushIfDue()
+      }, WALL_CLOCK_TICK_MS)
     })()
 
     return () => {
