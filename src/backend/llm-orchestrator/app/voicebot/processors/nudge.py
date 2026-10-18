@@ -124,10 +124,12 @@ async def build_nudge_message(
             or payload.get("customer_name")
             or ("khách" if lang != "en" else "the customer")
         )
+        # short_address marks a cut with "..."; the sentence adds its own
+        # period, so the bubble read "Quán Thánh.... Bạn nhận…".
         pickup = short_address(
             (trip or {}).get("pickup_address") or payload.get("pickup_address") or "",
             40,
-        )
+        ).rstrip(".…").rstrip()
         pickup_bit = f" at {pickup}" if pickup and lang == "en" else (f" ở {pickup}" if pickup else "")
         if lang == "en":
             return (

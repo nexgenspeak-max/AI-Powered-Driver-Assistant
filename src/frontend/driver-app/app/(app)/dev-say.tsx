@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { LogBox } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useVoiceSessionStore } from '../../src/features/home/stores/voiceSessionStore'
 import { useAssistantChatStore } from '../../src/features/home/stores/assistantChatStore'
@@ -12,9 +13,13 @@ import { useAssistantChatStore } from '../../src/features/home/stores/assistantC
  * never seen; it navigates back to the previous tab right away.
  */
 export default function DevSayScreen() {
-  const { text } = useLocalSearchParams<{ text?: string }>()
+  const { text, logbox, clear } = useLocalSearchParams<{ text?: string; logbox?: string; clear?: string }>()
 
   useEffect(() => {
+    // Screen recordings: hide the dev warning toast (logbox=off).
+    if (__DEV__ && logbox === 'off') LogBox.ignoreAllLogs(true)
+    // Fresh chat for a new take (clear=1).
+    if (__DEV__ && clear === '1') useAssistantChatStore.setState({ chats: [] })
     const line = (Array.isArray(text) ? text[0] : text)?.trim()
     if (__DEV__ && line) {
       const voice = useVoiceSessionStore.getState()
@@ -28,7 +33,7 @@ export default function DevSayScreen() {
     }
     if (router.canGoBack()) router.back()
     else router.replace('/(app)')
-  }, [text])
+  }, [text, logbox, clear])
 
   return null
 }

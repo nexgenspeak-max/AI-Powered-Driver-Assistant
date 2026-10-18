@@ -97,3 +97,24 @@ async def test_schedule_updated_silent_refresh_only():
     fetch.assert_awaited_once_with("0900000001")
     assert text == ""
     assert len(context_store.get_schedule_trips(userdata)) == 4
+
+
+async def test_new_trip_offer_long_address_has_no_double_period():
+    userdata = {"driver_phone": "0900000001"}
+    with patch(
+        "app.voicebot.processors.nudge.backend_api.get_driver_context",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("down"),
+    ):
+        text = await build_nudge_message(
+            "new_trip_offer",
+            {
+                "related_trip_id": "tx",
+                "customer_name": "Nguyễn Thu Hà",
+                "pickup_address": "Đền Quán Thánh, 190 Quán Thánh, Ba Đình, Hà Nội",
+            },
+            lang="vi",
+            userdata=userdata,
+        )
+    assert "Quán Thánh" in text
+    assert ".." not in text and "…." not in text
