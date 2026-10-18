@@ -284,9 +284,26 @@ async def handle_driver_utterance(session: Any, message: Any, *, lang: str) -> N
         await _execute_pending_action(session, userdata, lang=lang)
 
 
+def _note_typed_activity(userdata: Any) -> None:
+    """A typed line is driver activity, same as speech.
+
+    The silence tracker only heard voice events, so a driver who muted the
+    mic and typed got "Bạn còn đó không?" and then a closed session
+    mid-conversation (live 2026-10-18, ~40 s after the first typed question).
+    """
+    tracker = userdata.get("_silence_tracker") if isinstance(userdata, dict) else None
+    if tracker is None:
+        return
+    try:
+        tracker.reset_silence_timer(source="chat_text")
+    except Exception:
+        logger.debug("silence reset on chat text failed", exc_info=True)
+
+
 async def driver_text_input_cb(sess: Any, ev: Any) -> None:
     """lk.chat turn — pending_action then single LLM+tools path (RoomIO skips voice hook)."""
     mark_user_stopped(sess)
+    _note_typed_activity(getattr(sess, "userdata", None))
     lang = "vn"
     agent = getattr(sess, "current_agent", None)
     if agent is not None:

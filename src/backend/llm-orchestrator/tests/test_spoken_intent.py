@@ -477,3 +477,22 @@ def test_preemptive_cancel_skipped_for_customer_mode():
     session.on = _on
     attach_spoken_intent_preemptive_cancel(session, lang="vn", mode="customer")
     assert "user_input_transcribed" not in handlers
+
+
+async def test_typed_chat_resets_the_silence_tracker():
+    """Muted-mic typing must count as activity, or the session closes mid-chat."""
+    tracker = MagicMock()
+    sess = MagicMock()
+    sess.userdata = {"driver_phone": "0900111000", "_silence_tracker": tracker}
+    sess._claim_user_turn = MagicMock()
+    sess._claim_user_turn.return_value.__aenter__ = AsyncMock(return_value=None)
+    sess._claim_user_turn.return_value.__aexit__ = AsyncMock(return_value=None)
+    sess.interrupt = AsyncMock()
+    agent = MagicMock()
+    agent._spoken_intent_lang = "vn"
+    sess.current_agent = agent
+
+    from app.voicebot.processors.spoken_intent import driver_text_input_cb
+
+    await driver_text_input_cb(sess, SimpleNamespace(text="Anh khỏe không"))
+    tracker.reset_silence_timer.assert_called_once_with(source="chat_text")
