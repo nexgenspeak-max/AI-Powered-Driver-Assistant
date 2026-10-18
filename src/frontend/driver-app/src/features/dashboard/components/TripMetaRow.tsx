@@ -21,8 +21,10 @@ export function TripMetaRow({
   const theme = useTheme()
   const congestion = trafficNote && !/thông thoáng/i.test(trafficNote) ? trafficNote : null
   const items: { icon: IconName; text: string; tone?: 'warning' }[] = []
-  const km = formatKm(distanceKm)
-  const min = formatMinutes(etaMinutes)
+  // 0 means "no route figure" (e.g. an un-geocodable or cross-country leg),
+  // not a 0 km trip — showing "0,0 km · 0 phút" read as a bug.
+  const km = distanceKm && distanceKm > 0 ? formatKm(distanceKm) : ''
+  const min = etaMinutes && etaMinutes > 0 ? formatMinutes(etaMinutes) : ''
   if (km) items.push({ icon: 'distance', text: km })
   if (min) items.push({ icon: 'clock', text: min })
   if (pickupTime) items.push({ icon: 'calendar', text: formatTime(pickupTime) })

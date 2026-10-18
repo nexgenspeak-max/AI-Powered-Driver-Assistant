@@ -46,6 +46,13 @@ export function SearchInput({ value, onChangeText, placeholder }: Props) {
           placeholder={placeholder}
           placeholderTextColor={theme.textMuted.val}
           selectionColor={isLight ? theme.primary.val : theme.secondary.val}
+          // Names and addresses, not prose: iOS autocorrect turned "Khach"
+          // into "Leach" and the search found nothing.
+          autoCorrect={false}
+          spellCheck={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          clearButtonMode="never"
           style={{
             flex: 1,
             height: HEIGHT,

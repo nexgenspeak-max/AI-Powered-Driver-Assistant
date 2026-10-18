@@ -143,3 +143,16 @@ console.log('navigation selfcheck: OK (step advance + overshoot, remaining-from-
   assert.ok(Math.abs(atOrigin.distanceKm - 4) < 0.05, `origin distance ${atOrigin.distanceKm}`)
   console.log('live leg selfcheck: OK (server figures without GPS, shrinks as the driver closes in)')
 }
+
+// ── Accent-insensitive search (utils/search.ts) ────────────────────────
+{
+  const b = await esbuild.build({ entryPoints: [path.join(appRoot, 'src', 'utils', 'search.ts')], bundle: true, platform: 'node', format: 'esm', write: false, logLevel: 'silent' })
+  const { matchesQuery, foldVi } = await import(`data:text/javascript;base64,${Buffer.from(b.outputFiles[0].text).toString('base64')}`)
+  assert.equal(foldVi('Đặng Mỹ Linh'), 'dang my linh')
+  assert.ok(matchesQuery('nguyen van', ['Nguyễn Văn Nam', '0901']))
+  assert.ok(matchesQuery('dang linh', ['Đặng Mỹ Linh']))
+  assert.ok(matchesQuery('0903', ['Đặng Mỹ Linh', '0903111007']))
+  assert.ok(matchesQuery('', ['x']))
+  assert.ok(!matchesQuery('lan', ['Đặng Mỹ Linh']))
+  console.log('search selfcheck: OK (accent-insensitive, every word, phone digits)')
+}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { matchesQuery } from "../../src/utils/search";
 import { Pressable } from "react-native";
 import { XStack, YStack, useTheme } from "tamagui";
 import { Icon } from "../../src/components/icons";
@@ -87,12 +88,8 @@ export default function DashboardScreen() {
     customer_name: string;
     customer_phone: string;
   }) => {
-    const q = tripQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      t.customer_name?.toLowerCase().includes(q) ||
-      t.customer_phone?.toLowerCase().includes(q)
-    );
+    // Accent-insensitive ("nguyen" finds "Nguyễn"); phone digits too.
+    return matchesQuery(tripQuery, [t.customer_name, t.customer_phone]);
   };
   const completed = context?.completed_trips ?? [];
   const filteredActive = active.filter(matchesTripQuery);

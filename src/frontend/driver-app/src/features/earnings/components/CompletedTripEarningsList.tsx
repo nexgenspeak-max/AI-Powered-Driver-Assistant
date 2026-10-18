@@ -2,6 +2,7 @@ import { XStack, YStack, View, useTheme } from 'tamagui'
 import { Icon } from '../../../components/icons'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
+import { matchesQuery } from '../../../utils/search'
 import { formatCurrency, formatKm, formatTime } from '../../../utils/format'
 import type { Trip } from '../../../types'
 
@@ -144,10 +145,6 @@ export function filterCompletedTripsForPeriod(
 
 /** Case-insensitive match on customer name or pickup/dropoff address. */
 export function filterTripsByQuery(trips: EarningsTrip[], query: string): EarningsTrip[] {
-  const q = query.trim().toLowerCase()
-  if (!q) return trips
-  return trips.filter(t => {
-    const haystack = [t.customer_name, t.pickup_address, t.dropoff_address].filter(Boolean).join(' ').toLowerCase()
-    return haystack.includes(q)
-  })
+  if (!query.trim()) return trips
+  return trips.filter(t => matchesQuery(query, [t.customer_name, t.pickup_address, t.dropoff_address]))
 }

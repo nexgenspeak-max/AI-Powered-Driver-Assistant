@@ -27,10 +27,12 @@ function arrivalErrorMessage(err: unknown): string {
 
 const NEXT_ACTION: Record<
   string,
-  { label: string; variant: "outline" | "success" }
+  { label: string; variant: "primary" | "outline" | "success" }
 > = {
-  confirmed: { label: "Đã đến điểm đón", variant: "outline" },
-  arrived_pickup: { label: "Đã đón khách", variant: "outline" },
+  // The next step is the card's one primary action (filled), so it never
+  // looks like the two secondary outline buttons under it (Gọi khách / Huỷ).
+  confirmed: { label: "Đã đến điểm đón", variant: "primary" },
+  arrived_pickup: { label: "Đã đón khách", variant: "primary" },
   picked_up: { label: "Hoàn thành chuyến", variant: "success" },
   // Card briefly still renders with this status in the window between
   // "Hoàn thành chuyến" succeeding and the invalidated driverContext refetch
