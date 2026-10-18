@@ -118,6 +118,14 @@ export type AdminContentMessages = {
     close: string
     live: (time: string) => string
   }
+  map: {
+    drivers: string
+    waiting: string
+    noDrivers: string
+    noWaiting: string
+    seen: (time: string) => string
+    noKey: string
+  }
   transcript: {
     title: string
     summary: string
@@ -308,6 +316,14 @@ const CONTENT_EN: AdminContentMessages = {
     close: 'Close',
     live: time => `Live · updated ${time}`,
   },
+  map: {
+    drivers: 'Drivers on the map',
+    waiting: 'Pickups waiting for a driver',
+    noDrivers: 'No driver has sent a location in the last 20 minutes.',
+    noWaiting: 'Every pickup has a driver.',
+    seen: time => `seen ${time}`,
+    noKey: 'Set VITE_GOONG_MAPS_KEY in .env.local to show the map.',
+  },
   transcript: {
     title: 'Call transcript',
     summary: 'Summary',
@@ -434,6 +450,14 @@ const CONTENT_VI: AdminContentMessages = {
     close: 'Đóng',
     live: time => `Trực tiếp · cập nhật ${time}`,
   },
+  map: {
+    drivers: 'Tài xế trên bản đồ',
+    waiting: 'Điểm đón đang chờ tài xế',
+    noDrivers: 'Chưa tài xế nào gửi vị trí trong 20 phút qua.',
+    noWaiting: 'Mọi điểm đón đều đã có tài xế.',
+    seen: time => `cập nhật ${time}`,
+    noKey: 'Đặt VITE_GOONG_MAPS_KEY trong .env.local để hiện bản đồ.',
+  },
   transcript: {
     title: 'Bản ghi cuộc gọi',
     summary: 'Tóm tắt',
@@ -455,6 +479,10 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       tripBoard: {
         label: 'Trip Board',
         description: 'Monitor live trips, filter by status, and dispatch drivers.',
+      },
+      liveMap: {
+        label: 'Live map',
+        description: 'Where drivers are right now and which pickups are still waiting for one.',
       },
       createTrip: {
         label: 'New Trip',
@@ -513,6 +541,10 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       tripBoard: {
         label: 'Bảng chuyến',
         description: 'Theo dõi chuyến đi, lọc trạng thái và điều phối tài xế.',
+      },
+      liveMap: {
+        label: 'Bản đồ trực tiếp',
+        description: 'Vị trí tài xế lúc này và các điểm đón đang chờ tài xế.',
       },
       createTrip: {
         label: 'Tạo chuyến',

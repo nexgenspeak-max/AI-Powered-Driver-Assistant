@@ -31,6 +31,10 @@ export interface Trip {
   created_at: string
   updated_at: string
   estimated_fare?: number
+  pickup_lat?: number
+  pickup_lng?: number
+  dropoff_lat?: number
+  dropoff_lng?: number
   has_bulky_goods?: boolean
   with_children?: boolean
   note?: string

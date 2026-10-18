@@ -1,5 +1,6 @@
 import type { SvgIconComponent } from '@mui/icons-material'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined'
 import LocalTaxiOutlinedIcon from '@mui/icons-material/LocalTaxiOutlined'
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined'
@@ -10,6 +11,7 @@ export type AdminNavGroupId = 'operations' | 'people' | 'system'
 
 export type AdminNavMessageKey =
   | 'tripBoard'
+  | 'liveMap'
   | 'createTrip'
   | 'drivers'
   | 'customers'
@@ -38,6 +40,13 @@ export const ADMIN_NAV_ITEMS: ReadonlyArray<AdminNavItem> = [
     group: 'operations',
     Icon: DashboardOutlinedIcon,
     keywords: ['trip', 'board', 'dispatch', 'status', 'chuyến', 'bảng', 'điều phối'],
+  },
+  {
+    route: ROUTES.LIVE_MAP,
+    messageKey: 'liveMap',
+    group: 'operations',
+    Icon: MapOutlinedIcon,
+    keywords: ['map', 'live', 'location', 'gps', 'bản đồ', 'vị trí', 'trực tiếp'],
   },
   {
     route: ROUTES.CREATE_TRIP,

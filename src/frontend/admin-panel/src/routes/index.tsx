@@ -10,6 +10,7 @@ const DriversPage    = lazy(() => import('../pages/DriversPage'))
 const CallLogsPage   = lazy(() => import('../pages/CallLogsPage'))
 const LoginPage      = lazy(() => import('../pages/LoginPage'))
 const CustomerPage   = lazy(() => import('../pages/CustomerPage'))
+const LiveMapPage    = lazy(() => import('../pages/LiveMapPage'))
 function PageLoader() {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -38,6 +39,7 @@ export function AppRoutes() {
         <Route path={ROUTES.DRIVERS}     element={<ProtectedRoute><DriversPage /></ProtectedRoute>} />
         <Route path={ROUTES.CALL_LOGS}   element={<ProtectedRoute><CallLogsPage /></ProtectedRoute>} />
         <Route path={ROUTES.CUSTOMERS}   element={<ProtectedRoute><CustomerPage /></ProtectedRoute>} />
+        <Route path={ROUTES.LIVE_MAP}    element={<ProtectedRoute><LiveMapPage /></ProtectedRoute>} />
       </Routes>
     </Suspense>
   )
