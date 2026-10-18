@@ -1,6 +1,6 @@
 # Chương 4. Thiết kế hệ thống
 
-Chương này trình bày quyết định kiến trúc và thiết kế hệ thống dựa trên các yêu cầu ở Chương 3. Chương bắt đầu từ các động lực kiến trúc, lập luận lựa chọn kiến trúc microservices so với các phương án thay thế, sau đó mô tả kiến trúc tổng thể trên AWS và bốn mô hình luồng hành vi theo bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống), phân chia hệ thống thành các dịch vụ, luồng hoạt động chính của từng dịch vụ dưới dạng sequence diagram, thiết kế Dịch vụ Liên lạc hội thoại thời gian thực và các cơ chế bảo đảm yêu cầu phi chức năng. Chi tiết hiện thực trình bày ở Chương 5.
+Chương này trình bày quyết định kiến trúc và thiết kế hệ thống dựa trên các yêu cầu ở Chương 3. Chương bắt đầu từ các động lực kiến trúc và lập luận vì sao chọn kiến trúc microservices thay vì các phương án khác. Sau đó chương mô tả kiến trúc tổng thể trên AWS cùng bốn mô hình luồng hành vi theo bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống), cách chia hệ thống thành các dịch vụ, luồng hoạt động chính của từng dịch vụ dưới dạng sequence diagram, thiết kế Dịch vụ Liên lạc hội thoại thời gian thực và các cơ chế bảo đảm yêu cầu phi chức năng. Chi tiết hiện thực trình bày ở Chương 5.
 
 ## 4.1. Động lực kiến trúc
 
@@ -15,7 +15,7 @@ Chương này trình bày quyết định kiến trúc và thiết kế hệ th�
 | Yêu cầu phi chức năng | NFR-02 | P95 độ trễ phản hồi ≤ 2 giây | Tác nhân chạy dài hạn, duy trì kết nối âm thanh; tải trước ngữ cảnh (giảm chi phí tính toán phụ trội, đưa vào xử lý đồng thời) |
 | Yêu cầu phi chức năng | NFR-03 | Mở rộng theo số phiên đồng thời | Tác nhân và API mở rộng độc lập (tăng tài nguyên, duy trì nhiều bản sao tính toán) |
 | Yêu cầu phi chức năng | NFR-04 | Phiên không bị kết thúc khi thành phần phụ trợ hoặc nhà cung cấp AI lỗi | Cô lập lỗi giữa các dịch vụ; dự phòng nhà cung cấp (dự phòng thay thế, suy giảm có kiểm soát) |
-| Yêu cầu phi chức năng | NFR-05 | Định danh tập trung, bảo vệ bí mật và dữ liệu cá nhân | Một dịch vụ định danh riêng; quyền truy cập riêng từng dịch vụ (xác thực tác nhân, giới hạn truy cập) |
+| Yêu cầu phi chức năng | NFR-05 | Định danh tập trung, bảo vệ bí mật và dữ liệu cá nhân | Một dịch vụ định danh riêng; quyền truy cập riêng từng dịch vụ (xác thực đối tượng truy cập, giới hạn truy cập) |
 | Yêu cầu phi chức năng | NFR-01 | Thao tác rủi ro được xác nhận; tập công cụ phù hợp từng loại phiên | Phân loại phiên và trạng thái phiên trong tác nhân (duy trì mô hình tác vụ, mô hình hệ thống) |
 | Ràng buộc | CON-01 đến CON-04 | Tác nhân chỉ gọi API; mỗi dịch vụ sở hữu dữ liệu; JWT chỉ do Dịch vụ Định danh phát hành; nhật ký gắn mã phòng | Ranh giới dịch vụ bắt buộc |
 | Ràng buộc môi trường | Bối cảnh dự án | STT, LLM, TTS và truyền thông thời gian thực là dịch vụ bên ngoài (LiveKit Cloud, Twilio, OpenAI, Google); nhóm phát triển nhỏ; chi phí vận hành thấp | Ưu tiên dịch vụ đám mây được quản lý, tính phí theo mức sử dụng |
@@ -24,12 +24,12 @@ Chương này trình bày quyết định kiến trúc và thiết kế hệ th�
 
 ### 4.2.1. Lựa chọn kiểu kiến trúc (ADR-01)
 
-**Bối cảnh.** Hệ thống gồm hai loại tải có đặc điểm khác nhau. Dịch vụ Liên lạc hội thoại thời gian thực là tác vụ chạy dài hạn, giữ kết nối âm thanh liên tục trong suốt phiên, sử dụng các thư viện AI và âm thanh trong hệ sinh thái Python. Các API nghiệp vụ (chuyến đi, định danh, tin nhắn, nhật ký cuộc gọi) là giao dịch ngắn, phi trạng thái, được gọi bởi nhiều bên (ứng dụng tài xế, trang quản trị và tác nhân).
+**Bối cảnh.** Hệ thống gồm hai loại tải có đặc điểm khác nhau. Dịch vụ Liên lạc hội thoại thời gian thực là tác vụ chạy dài hạn, giữ kết nối âm thanh liên tục trong suốt phiên, sử dụng các thư viện AI và âm thanh trong hệ sinh thái Python. Các API nghiệp vụ (chuyến đi, định danh, tin nhắn, nhật ký cuộc gọi) xử lý nhanh, không cần nhớ trạng thái giữa các lần gọi, và được gọi bởi nhiều bên (ứng dụng tài xế, trang quản trị và tác nhân).
 
 **Các phương án.** Bốn phương án được xem xét:
 
 - **(A) Nguyên khối:** một tiến trình gồm cả API nghiệp vụ và tác nhân.
-- **(B) Nguyên khối phân mô-đun:** một đơn vị triển khai, bên trong chia mô-đun.
+- **(B) Nguyên khối phân mô-đun (modular monolith):** vẫn triển khai thành một khối duy nhất, nhưng mã nguồn bên trong được chia thành các mô-đun tách biệt.
 - **(C) Microservices:** tác nhân và từng năng lực nghiệp vụ là dịch vụ triển khai độc lập.
 - **(D) Thuần serverless:** mọi thành phần, kể cả tác nhân, chạy trên FaaS.
 
@@ -51,7 +51,7 @@ Bảng 4.2 đánh giá bốn phương án theo các yêu cầu phi chức năng.
 
 - **Độ phức tạp vận hành:** hạ tầng dạng mã cho từng dịch vụ (AWS SAM, AWS CloudFormation) và kịch bản triển khai tự động.
 - **Độ trễ mạng:** tải trước ngữ cảnh phiên và dùng lại kết nối HTTP để giảm số lần gọi mạng trên luồng hội thoại.
-- **Nhất quán dữ liệu:** chỉ một dịch vụ là nguồn dữ liệu chuẩn cho chuyến đi; tác nhân không lưu dữ liệu nghiệp vụ.
+- **Nhất quán dữ liệu:** chỉ một dịch vụ giữ bản chính thức của dữ liệu chuyến đi; tác nhân không lưu dữ liệu nghiệp vụ.
 - **Khó giám sát xuyên dịch vụ:** mọi dòng nhật ký gắn mã phòng hội thoại để theo dõi một yêu cầu qua các dịch vụ.
 
 ### 4.2.2. Lựa chọn luồng xử lý lượt hội thoại (ADR-02)
@@ -65,7 +65,7 @@ Bảng 4.2 đánh giá bốn phương án theo các yêu cầu phi chức năng.
 | Phương án | Ưu điểm | Nhược điểm | Kết luận |
 |---|---|---|---|
 | Mọi câu qua LLM, không có câu đệm | Một luồng xử lý duy nhất | Người dùng cảm nhận khoảng lặng khi thời gian sinh token đầu cao | Không chọn |
-| Nhánh rút gọn theo ý định kết hợp LLM | Độ trễ thấp với câu quen thuộc (số liệu đợt đo 05–06/09/2026 ở Chương 6) | Dễ chọn sai công cụ với phát ngôn không rõ ý định; khó bảo trì tập mẫu | Không chọn; đã tắt trong mã nguồn |
+| Nhánh rút gọn theo ý định kết hợp LLM | Độ trễ thấp với câu quen thuộc (số liệu đợt đo 05–06/09/2026 ở Chương 6) | Dễ chọn sai công cụ với phát ngôn không rõ ý định; khó bảo trì danh sách mẫu câu | Không chọn; đã tắt trong mã nguồn |
 | Mọi câu qua LLM kèm gọi công cụ; câu đệm sau khoảng 2 giây; tải trước ngữ cảnh | Một luồng thống nhất; không tạo phản hồi nghiệp vụ trước khi có kết quả thật; câu đệm báo hiệu hệ thống đang xử lý | Độ trễ thực của lượt vẫn phụ thuộc thời gian sinh token đầu | **Chọn** |
 
 ## 4.3. Kiến trúc tổng thể trên AWS
@@ -89,11 +89,11 @@ Mỗi lớp dưới đây nêu vai trò, thành phần và dịch vụ AWS đư�
 - **Lớp dữ liệu (Data Layer)** — nơi lưu dữ liệu. Mỗi dịch vụ có bảng riêng trên Amazon DynamoDB, cơ sở dữ liệu NoSQL do AWS quản lý; dịch vụ khác muốn đọc phải gọi API của dịch vụ sở hữu, không đọc thẳng bảng. Danh sách bảng của từng dịch vụ ở Bảng 4.5. Riêng bộ nhớ đệm Redis (dịch vụ bên ngoài, tùy chọn) lưu trạng thái phiên ngắn hạn của Dịch vụ Chuyến đi và Điều phối để các lần chạy Lambda dùng chung; khi không cấu hình, dịch vụ dùng bộ nhớ trong tiến trình.
 - **Các mối quan tâm xuyên suốt (Cross-cutting Concerns)** — các chức năng dùng chung cho mọi lớp: ghi nhật ký tập trung (Amazon CloudWatch Logs); phân quyền truy cập tài nguyên AWS cho từng dịch vụ (AWS IAM) và xác thực người dùng bằng JWT; hẹn giờ chạy báo cáo ngày (Amazon EventBridge Scheduler); mô tả hạ tầng bằng mã để triển khai tự động (AWS CloudFormation, AWS SAM).
 
-Các **hệ thống bên ngoài** không chạy trên AWS: LiveKit Cloud, Twilio (kết nối mạng điện thoại công cộng và gửi SMS) và các nhà cung cấp mô hình AI nằm trong cột Real-time Communication & Conversational AI; dịch vụ bản đồ và bộ nhớ đệm Redis nằm ở cột External Services bên phải, ngoài khung AWS Cloud, ngang hàng với Dịch vụ Chuyến đi và Điều phối là dịch vụ backend duy nhất gọi tới chúng; ứng dụng tài xế cũng tải bản đồ nền trực tiếp từ dịch vụ bản đồ (luồng ㉕). Trong cùng cột đó, Amazon ECS chạy tác vụ Fargate của tác nhân, còn Amazon ECR lưu image container mà ECS kéo về khi khởi chạy tác vụ. Amazon S3 lưu các trang web tĩnh (trang quản trị, trang giám sát) nên được đặt ở cột Data Layer.
+Các **hệ thống bên ngoài** không chạy trên AWS: LiveKit Cloud, Twilio (kết nối mạng điện thoại công cộng và gửi SMS) và các nhà cung cấp mô hình AI nằm trong cột Real-time Communication & Conversational AI; dịch vụ bản đồ và bộ nhớ đệm Redis nằm ở cột External Services bên phải, ngoài khung AWS Cloud, đặt ngang hàng với Dịch vụ Chuyến đi và Điều phối vì đây là dịch vụ backend duy nhất gọi tới chúng; ứng dụng tài xế cũng tải bản đồ nền trực tiếp từ dịch vụ bản đồ (luồng ㉕). Trong cột Real-time Communication & Conversational AI, Amazon ECS chạy tác vụ Fargate của tác nhân, còn Amazon ECR lưu image container mà ECS kéo về khi khởi chạy tác vụ. Amazon S3 lưu các trang web tĩnh (trang quản trị, trang giám sát) nên được đặt ở cột Data Layer.
 
-**Giao thức kết nối.** Giao thức và mục đích của từng luồng giữa người dùng và hệ thống (HTTPS kèm JWT, WebRTC, WSS, SIP/PSTN) có ở Bảng 4.4. **Bên trong hệ thống**, các dịch vụ không gọi trực tiếp hàm Lambda của nhau. Mỗi dịch vụ có một API Gateway riêng; khi cần dữ liệu hoặc thao tác của dịch vụ khác, dịch vụ gọi bằng HTTPS tới địa chỉ API Gateway của dịch vụ đích (kịch bản `infra/deploy-all.sh` ghi địa chỉ này vào cấu hình của dịch vụ gọi) và gửi kèm JWT dịch vụ ngắn hạn (`services/serviceToken.ts`). Vì vậy lời gọi giữa các dịch vụ đi qua cùng cửa vào và cùng bước xác thực như lời gọi từ người dùng (luồng ⑫, ⑮, ⑳). Tác nhân hội thoại cũng gọi dịch vụ nghiệp vụ theo cách này (luồng ⑧, ⑭); các lời gọi khác giữa dịch vụ gồm đọc tài khoản và cài đặt từ Dịch vụ Định danh (㉖) và thăm dò tình trạng các dịch vụ (㉗). Mỗi dịch vụ đọc, ghi bảng DynamoDB của chính mình qua AWS SDK (HTTPS); Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ qua HTTPS và Redis qua kết nối TLS.
+**Giao thức kết nối.** Giao thức và mục đích của từng luồng giữa người dùng và hệ thống (HTTPS kèm JWT, WebRTC, WSS, SIP/PSTN) có ở Bảng 4.4. **Bên trong hệ thống**, các dịch vụ không gọi trực tiếp hàm Lambda của nhau. Mỗi dịch vụ có một API Gateway riêng; khi cần dữ liệu hoặc thao tác của dịch vụ khác, dịch vụ gọi bằng HTTPS tới địa chỉ API Gateway của dịch vụ đích (kịch bản `infra/deploy-all.sh` ghi địa chỉ này vào cấu hình của dịch vụ gọi) và gửi kèm JWT dịch vụ, tức token xác thực do chính dịch vụ gọi tạo ra và chỉ có hiệu lực trong thời gian ngắn (`services/serviceToken.ts`). Vì vậy lời gọi giữa các dịch vụ đi qua cùng cửa vào và cùng bước xác thực như lời gọi từ người dùng (luồng ⑫, ⑮, ⑳). Tác nhân hội thoại cũng gọi dịch vụ nghiệp vụ theo cách này (luồng ⑧, ⑭); các lời gọi khác giữa dịch vụ gồm đọc tài khoản và cài đặt từ Dịch vụ Định danh (㉖) và thăm dò tình trạng các dịch vụ (㉗). Mỗi dịch vụ đọc, ghi bảng DynamoDB của chính mình qua AWS SDK (HTTPS); Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ qua HTTPS và Redis qua kết nối TLS.
 
-Toàn bộ tài nguyên AWS nằm trong vùng ap-southeast-1 (Singapore). Lambda, API Gateway và DynamoDB là dịch vụ cấp vùng, không cần đặt trong mạng riêng ảo (VPC). Dịch vụ Liên lạc hội thoại thời gian thực chạy trong subnet công khai của một VPC; nhóm bảo mật (security group) chỉ cho phép kết nối chiều ra, vì tác nhân chủ động kết nối tới LiveKit Cloud, các API nghiệp vụ và nhà cung cấp AI, không nhận kết nối từ ngoài vào. API Gateway không tự kiểm tra đăng nhập (không dùng authorizer); JWT được xác minh trong mã của từng dịch vụ bằng khóa bí mật dùng chung với Dịch vụ Định danh.
+Toàn bộ tài nguyên AWS nằm trong vùng ap-southeast-1 (Singapore). Lambda, API Gateway và DynamoDB là dịch vụ cấp vùng, không cần đặt trong mạng riêng ảo (VPC). Dịch vụ Liên lạc hội thoại thời gian thực chạy trong subnet công khai của một VPC; nhóm bảo mật (security group) chỉ cho phép kết nối chiều ra, vì tác nhân chủ động kết nối tới LiveKit Cloud, các API nghiệp vụ và nhà cung cấp AI, không nhận kết nối từ ngoài vào. API Gateway không tự kiểm tra đăng nhập (không dùng tính năng authorizer của API Gateway); JWT được xác minh trong mã của từng dịch vụ bằng khóa bí mật dùng chung với Dịch vụ Định danh.
 
 Bảng `ws-connections` cần thiết vì API Gateway WebSocket cấp cho mỗi ứng dụng đang kết nối một mã kết nối (connectionId), trong khi hàm Lambda không nhớ gì giữa các lần gọi. Khi ứng dụng kết nối, hàm Lambda lưu cặp mã kết nối và định danh người dùng (ví dụ `driver#<số điện thoại>`); khi cần đẩy thông báo, Dịch vụ Chuyến đi và Điều phối tra bảng này để biết gửi tới kết nối nào; khi ứng dụng ngắt kết nối, bản ghi bị xóa. Bảng này không chứa nội dung hội thoại; lời thoại giữa người dùng và trợ lý được lưu ở bảng `call-records` của Dịch vụ Nhật ký cuộc gọi.
 
@@ -195,7 +195,7 @@ Mục này mô tả luồng hoạt động chính của từng dịch vụ bằn
 | Bước | Từ → Đến | Thông điệp | Ghi chú |
 |---|---|---|---|
 | 1 ① | Ứng dụng tài xế → Cổng API REST | POST /api/v1/auth/login, thân gồm role = driver, phone, password | Thiếu trường bắt buộc: 400 |
-| 2 ① | Cổng API REST → Dịch vụ Định danh | Chuyển tiếp yêu cầu | Định tuyến ANY /{proxy+}; cổng không kiểm tra đăng nhập |
+| 2 ① | Cổng API REST → Dịch vụ Định danh | Chuyển tiếp yêu cầu | Mọi đường dẫn được chuyển nguyên cho dịch vụ (cấu hình ANY /{proxy+}); cổng không kiểm tra đăng nhập |
 | 3 ② | Dịch vụ Định danh → DynamoDB accounts | Tìm tài khoản theo số điện thoại và vai trò | Cùng số điện thoại có thể có tài khoản tài xế và khách riêng |
 | 4 | DynamoDB accounts → Dịch vụ Định danh | Bản ghi tài khoản | Không tìm thấy: trả 401 như sai mật khẩu, không tiết lộ tài khoản có tồn tại |
 | 5 | Dịch vụ Định danh | So khớp mật khẩu với giá trị băm bcrypt | Sai thông tin: 401; tài khoản bị khóa: 403 |
@@ -245,7 +245,7 @@ Các dịch vụ khác xác minh access token bằng khóa bí mật dùng chung
 | 1 ⑤⑥ | Ứng dụng tài xế → Dịch vụ Liên lạc hội thoại thời gian thực | Luồng âm thanh phát ngôn của tài xế | Truyền liên tục; tác nhân phát hiện tiếng nói và cho phép ngắt lời |
 | 2 ⑦ | Dịch vụ Liên lạc hội thoại thời gian thực → Nhà cung cấp STT | Nhận dạng giọng nói; phát hiện kết thúc phát ngôn | Nhà cung cấp chính lỗi hoặc quá 5 giây: chuyển sang nhà cung cấp dự phòng |
 | 3 | Dịch vụ Liên lạc hội thoại thời gian thực | Bắt đầu đếm thời gian cho câu đệm | Mốc 2 giây (bước 5) |
-| 4 ⑦ | Dịch vụ Liên lạc hội thoại thời gian thực → Nhà cung cấp LLM | Gửi lịch sử hội thoại, lời nhắc hệ thống và lược đồ công cụ của loại phiên | Cơ chế dự phòng như bước 2 |
+| 4 ⑦ | Dịch vụ Liên lạc hội thoại thời gian thực → Nhà cung cấp LLM | Gửi lịch sử hội thoại, lời nhắc hệ thống (system prompt: đoạn chỉ dẫn cố định về vai trò và quy tắc của trợ lý) và danh sách công cụ được phép trong loại phiên này | Cơ chế dự phòng như bước 2 |
 | 5 | Dịch vụ Liên lạc hội thoại thời gian thực → Ứng dụng tài xế | Tùy chọn: sau 2 giây chưa có âm thanh trả lời thì phát câu đệm một lần | Hủy nếu câu trả lời thật đã bắt đầu |
 | 6 | Nhà cung cấp LLM → Dịch vụ Liên lạc hội thoại thời gian thực | Yêu cầu gọi công cụ update_trip_status với tham số trạng thái | Câu hỏi không cần dữ liệu: mô hình trả lời thẳng, bỏ qua bước 7–9 |
 | 7 ⑧ | Dịch vụ Liên lạc hội thoại thời gian thực → Dịch vụ Chuyến đi và Điều phối | PATCH /api/v1/trips/{tripId}, thân status (kèm enforce_arrival với các trạng thái cần có mặt tại chỗ); thời gian chờ 8 giây | API lỗi: tác nhân thông báo không cập nhật được, phiên tiếp tục |
@@ -267,7 +267,7 @@ Các dịch vụ khác xác minh access token bằng khóa bí mật dùng chung
 | 1 ⑰ | Trang quản trị điều hành → Dịch vụ Chuyến đi và Điều phối | POST /api/v1/trips/{tripId}/dispatch | Trạng thái chuyến không hợp lệ: 409; thiếu số tài xế: 400 |
 | 2 ④ | Dịch vụ Chuyến đi và Điều phối → LiveKit Cloud | Tạo phòng driver-{số}-{thời điểm} với metadata chuyến và sip_identity | Mốc thời điểm tránh trùng với phòng đang mở trong ứng dụng |
 | 3 ④ | Dịch vụ Chuyến đi và Điều phối → LiveKit Cloud | Phân công tác nhân cho phòng | Lỗi phân công không làm dừng luồng |
-| 4 ④ | Dịch vụ Chuyến đi và Điều phối → LiveKit Cloud | Tạo người tham gia SIP | Chỉ khi đã cấu hình SIP trunk |
+| 4 ④ | Dịch vụ Chuyến đi và Điều phối → LiveKit Cloud | Tạo người tham gia SIP (đại diện cho cuộc gọi điện thoại bên trong phòng) | Chỉ khi đã cấu hình SIP trunk |
 | 5 ⑪ | LiveKit Cloud → Twilio | SIP INVITE tới điện thoại tài xế | Chỉ khi đã cấu hình SIP trunk |
 | 6 ⑩ | Dịch vụ Chuyến đi và Điều phối → Ứng dụng tài xế (WebSocket) | Trạng thái calling, thông báo đẩy | Ứng dụng hiển thị chuyến đang chờ tài xế trả lời |
 | 7 | Dịch vụ Liên lạc hội thoại thời gian thực → điện thoại tài xế (qua Twilio) | Sau khi tài xế nhấc máy: đọc điểm đón, hỏi có nhận chuyến không | Phiên chỉ có confirm_trip, reject_trip |
@@ -295,7 +295,7 @@ Khi tài xế đang có phiên trợ lý mở trong ứng dụng, chuyến mới
 | 7 ⑧ | Dịch vụ Liên lạc hội thoại thời gian thực → Dịch vụ Chuyến đi và Điều phối | POST /api/v1/sms/send | Lỗi gửi: tác nhân thông báo thất bại (Bảng 5.3) |
 | 8 ⑫ | Dịch vụ Chuyến đi và Điều phối → Dịch vụ Liên lạc bằng tin nhắn | POST /api/v1/sms/send | Số khách lấy từ chuyến theo trip_id; thêm nhãn người gửi vào nội dung |
 | 9 ⑫ | Dịch vụ Liên lạc bằng tin nhắn → Twilio | Gửi SMS | Dùng tên người gửi TWILIO_SMS_FROM nếu có; lỗi trả kèm mã Twilio (ví dụ 21612) |
-| 10 ⑬ | Twilio → Dịch vụ Liên lạc bằng tin nhắn | Webhook trạng thái | Chỉ đăng ký khi dịch vụ có địa chỉ HTTPS công khai; nhật ký không chứa số điện thoại |
+| 10 ⑬ | Twilio → Dịch vụ Liên lạc bằng tin nhắn | Webhook trạng thái (Twilio gọi ngược vào địa chỉ của dịch vụ để báo trạng thái gửi) | Chỉ đăng ký khi dịch vụ có địa chỉ HTTPS công khai; nhật ký không chứa số điện thoại |
 | 11 ㉒ | Dịch vụ Liên lạc bằng tin nhắn → DynamoDB channel-events | Lưu sự kiện webhook và kết quả gửi SMS | Lỗi lưu chỉ ghi nhật ký, không làm hỏng webhook |
 
 ### 4.5.6. S6 — Ghi nhật ký và tóm tắt cuộc gọi (Dịch vụ Nhật ký cuộc gọi)
@@ -328,22 +328,22 @@ Khi tài xế đang có phiên trợ lý mở trong ứng dụng, chuyến mới
 | Bước | Từ → Đến | Thông điệp | Ghi chú |
 |---|---|---|---|
 | 1 ⑲ | EventBridge Scheduler → Dịch vụ Giám sát vận hành | Sự kiện theo lịch lúc 00:15 giờ Việt Nam (source = ops.schedule) | Người vận hành cũng có thể gọi POST /api/v1/reports/daily/{date}/rebuild |
-| 2 ⑳ | Dịch vụ Giám sát vận hành → Dịch vụ Nhật ký cuộc gọi | GET /api/v1/records?date={ngày}&limit=500, lặp theo con trỏ phân trang | Dùng chỉ mục record_date-started_at-index |
+| 2 ⑳ | Dịch vụ Giám sát vận hành → Dịch vụ Nhật ký cuộc gọi | GET /api/v1/records?date={ngày}&limit=500, lấy lần lượt từng trang 500 bản ghi cho tới hết | Dùng chỉ mục record_date-started_at-index |
 | 3 | Dịch vụ Nhật ký cuộc gọi → Dịch vụ Giám sát vận hành | Bản ghi: lời thoại, loại phiên, chỉ số phiên | Bản ghi cũ thiếu loại phiên: suy ra từ tiền tố tên phòng |
-| 4 | Dịch vụ Giám sát vận hành | Tổng hợp: số phiên, số tài xế, độ trễ trung bình/P50/P95, tỷ lệ công cụ thành công, tỷ lệ API lỗi, lỗi theo loại | Phiên không có chỉ số chỉ tính vào phần hoạt động |
+| 4 | Dịch vụ Giám sát vận hành | Tổng hợp: số phiên, số tài xế, độ trễ trung bình/P50/P95, tỷ lệ công cụ thành công, tỷ lệ API lỗi, lỗi theo loại | Bản ghi cũ không có chỉ số phiên chỉ được tính vào nhóm hoạt động (số phiên, số tài xế, số lượt, thời lượng), không tính vào độ trễ và tỷ lệ công cụ |
 | 5 ㉘ | Dịch vụ Giám sát vận hành → Mô hình chấm (LLM) | Chấm riêng từng cặp (câu tài xế, câu trả lời) trong một mẫu cố định theo ngày, kèm tên các công cụ đã trả dữ liệu trong phiên | Chỉ khi có khóa API; không có thì ghi chú trong báo cáo |
-| 6 | Mô hình chấm → Dịch vụ Giám sát vận hành | Kết quả: correct, incorrect hoặc unclear | Mẫu chấm cố định theo ngày nên lập lại cho cùng kết quả |
+| 6 | Mô hình chấm → Dịch vụ Giám sát vận hành | Kết quả: correct, incorrect hoặc unclear | Mẫu được chọn cố định theo ngày, nên khi lập lại báo cáo, mô hình chấm lại đúng các cặp câu đó |
 | 7 ㉑ | Dịch vụ Giám sát vận hành → DynamoDB daily-reports | Lưu báo cáo theo khóa report_date | Lập lại thì ghi đè |
 | 8 | Trang giám sát hệ thống → Dịch vụ Giám sát vận hành | GET /api/v1/reports/daily?date= hoặc ?from=&to= | Chỉ tài khoản quản trị hệ thống |
 | 9 | Dịch vụ Giám sát vận hành → Trang giám sát hệ thống | Báo cáo ngày và xu hướng 7 ngày | Hình 5.6 |
 
 ## 4.6. Thiết kế Dịch vụ Liên lạc hội thoại thời gian thực
 
-Dịch vụ Liên lạc hội thoại thời gian thực là thành phần hiện thực chức năng liên lạc hội thoại thời gian thực. Mục này trình bày ba khía cạnh thiết kế của tác nhân: chuỗi xử lý một lượt hội thoại, trạng thái phiên và phân loại phiên.
+Dịch vụ Liên lạc hội thoại thời gian thực là dịch vụ chạy tác nhân hội thoại. Mục này trình bày ba khía cạnh thiết kế của tác nhân: chuỗi xử lý một lượt hội thoại, trạng thái phiên và phân loại phiên.
 
 ### 4.6.1. Chuỗi xử lý và câu đệm
 
-Mỗi phát ngôn của tài xế đi qua cùng một chuỗi xử lý: STT, LLM kèm gọi công cụ và TTS (Hình 4.13). Khi phản hồi chưa bắt đầu phát sau 2 giây kể từ lúc tài xế kết thúc phát ngôn, tác nhân phát một câu đệm ngắn như "Đợi mình một chút". Câu đệm không chứa dữ liệu nghiệp vụ và bị hủy nếu câu trả lời thật đã bắt đầu. Tác nhân tải trước ngữ cảnh phiên và khởi động trước các thành phần (gói ngôn ngữ, mô hình phát hiện giọng nói) khi tiến trình khởi động để giảm độ trễ của lượt đầu tiên.
+Mỗi phát ngôn của tài xế đi qua cùng một chuỗi xử lý: STT, LLM kèm gọi công cụ và TTS (Hình 4.13). Khi phản hồi chưa bắt đầu phát sau 2 giây kể từ lúc tài xế kết thúc phát ngôn, tác nhân phát một câu đệm ngắn như "Đợi mình một chút". Câu đệm không chứa dữ liệu nghiệp vụ và bị hủy nếu câu trả lời thật đã bắt đầu. Để lượt đầu tiên không bị chậm, tác nhân tải trước ngữ cảnh phiên, và nạp sẵn các thành phần (gói ngôn ngữ, mô hình phát hiện giọng nói) ngay khi tiến trình khởi động.
 
 ![Hình 4.13](../diagrams/H4_2_turn_pipeline.png)
 
@@ -391,9 +391,9 @@ Bảng 4.15 tổng hợp các cơ chế thiết kế đáp ứng NFR-04, NFR-05,
 | Cô lập dịch vụ phụ trợ | Lỗi ghi bản ghi cuộc gọi, lỗi gửi tin nhắn hoặc lỗi phân công tác nhân không làm dừng luồng hội thoại chính | Suy giảm có kiểm soát; xử lý ngoại lệ | NFR-04 |
 | Tự khôi phục bản sao tác nhân | ECS duy trì số bản sao mong muốn, tự thay thế tác vụ bị dừng; phòng còn nhưng mất tác nhân thì được phân công lại khi tài xế kết nối | Nhịp tim; dự phòng thay thế | NFR-04 |
 | Xử lý im lặng | Sau khoảng 15 giây im lặng, tác nhân hỏi tài xế còn đó không; tối đa hai lần rồi kết thúc lịch sự để giải phóng phiên | Giám sát (theo dõi hoạt động của phiên) | FR-L02, NFR-04 |
-| Định danh tập trung | Chỉ Dịch vụ Định danh phát hành JWT; các dịch vụ xác minh bằng khóa bí mật dùng chung; tác nhân dùng token dịch vụ riêng | Nhận diện, xác thực, phân quyền tác nhân | NFR-05, CON-03 |
+| Định danh tập trung | Chỉ Dịch vụ Định danh phát hành JWT; các dịch vụ xác minh bằng khóa bí mật dùng chung; tác nhân dùng token dịch vụ riêng | Nhận diện, xác thực, phân quyền đối tượng truy cập | NFR-05, CON-03 |
 | Bảo vệ bí mật | Tham số bí mật trong hạ tầng dạng mã được đánh dấu ẩn, không ghi vào mã nguồn; vai trò IAM riêng từng dịch vụ | Giới hạn truy cập; giới hạn phơi lộ | NFR-05 |
-| Nhật ký gắn mã phòng | Mọi dòng nhật ký gắn mã phòng và mã hội thoại để theo dõi một yêu cầu xuyên qua các dịch vụ; mức độ che dữ liệu cá nhân trong nhật ký được kiểm tra ở Chương 6 | Kiểm toán; giới hạn phơi lộ | CON-04, NFR-05 |
+| Nhật ký gắn mã phòng | Mọi dòng nhật ký gắn mã phòng và mã hội thoại để theo dõi một yêu cầu xuyên qua các dịch vụ; mức độ che dữ liệu cá nhân trong nhật ký được kiểm tra ở Chương 6 | Lưu vết để kiểm tra lại; giới hạn phơi lộ | CON-04, NFR-05 |
 | Chỉ số phiên và báo cáo ngày | Tác nhân gửi chỉ số chất lượng của phiên kèm bản ghi hội thoại; Dịch vụ Giám sát vận hành tổng hợp theo ngày để phát hiện suy giảm độ trễ, lỗi và tỷ lệ trả lời đúng | Giám sát | NFR-04, FR-O01 |
 
 ## 4.8. Thiết kế cho tính khả dụng
@@ -474,4 +474,4 @@ Phân tích cho thấy rủi ro lớn nhất của kiến trúc (R-1) không n�
 
 ## Kết luận chương
 
-Chương 4 đã lập luận lựa chọn kiến trúc microservices từ các yêu cầu phi chức năng và chiến thuật kiến trúc tương ứng, trình bày kiến trúc tổng thể trên AWS và bốn mô hình luồng hành vi theo bốn nhóm người sử dụng, phân chia hệ thống thành các dịch vụ theo năng lực nghiệp vụ, mô tả luồng hoạt động chính của từng dịch vụ bằng bảy sequence diagram, thiết kế Dịch vụ Liên lạc hội thoại thời gian thực, các cơ chế bảo đảm khả năng phục hồi, bảo mật, khả năng quan sát và thiết kế cho tính khả dụng theo 10 nguyên tắc của Nielsen, và đánh giá kiến trúc theo ATAM rút gọn để xác định các điểm đánh đổi và rủi ro. Chương 5 trình bày hiện thực các thiết kế này.
+Chương 4 đã lập luận việc chọn kiến trúc microservices từ các yêu cầu phi chức năng và chiến thuật kiến trúc tương ứng. Kiến trúc được trình bày bằng một mô hình tổng thể trên AWS và bốn mô hình luồng hành vi theo bốn nhóm người sử dụng; hệ thống được chia thành các dịch vụ theo năng lực nghiệp vụ, và luồng hoạt động chính được mô tả bằng bảy sequence diagram. Chương cũng trình bày thiết kế của Dịch vụ Liên lạc hội thoại thời gian thực, các cơ chế bảo đảm khả năng phục hồi, bảo mật và khả năng quan sát, thiết kế cho tính khả dụng theo 10 nguyên tắc của Nielsen, và đánh giá kiến trúc theo ATAM rút gọn để xác định các điểm đánh đổi và rủi ro. Chương 5 trình bày hiện thực các thiết kế này.

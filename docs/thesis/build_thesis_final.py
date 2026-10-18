@@ -83,7 +83,7 @@ CONCLUSION_PARAS = [
 
 APPENDIX_A_INTRO = (
     "Bảng A.1 liệt kê 45 công cụ (function tool) của gói ngôn ngữ tiếng Việt: 39 công cụ cho phiên tài xế "
-    "trong ứng dụng (trong đó confirm_trip và reject_trip cũng là tập công cụ của phiên mời nhận chuyến) và "
+    "trong ứng dụng (confirm_trip và reject_trip trong số đó cũng là hai công cụ duy nhất của phiên mời nhận chuyến) và "
     "7 công cụ cho phiên của ứng dụng khách hàng (answer_app_faq dùng chung; phiên này có trong mã nguồn nhưng ngoài phạm vi luận văn, mục 3.5). Gói tiếng Anh có cùng 39 công cụ cho tài xế. "
     "Mô tả rút gọn từ lược đồ công cụ trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
 )
@@ -140,7 +140,7 @@ APPENDIX_B_INTRO = (
     "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh), "
     "minh họa một đường STT → LLM kèm công cụ → TTS cho câu quen thuộc, xử lý im lặng và kết "
     "thúc phiên lịch sự. Nhãn thời gian là độ trễ cảm nhận (user_stop_to_agent_speak); khi "
-    "phản hồi chậm khoảng từ hai giây, hệ thống có thể xen câu giữ chỗ ngắn trước câu trả lời thật."
+    "phản hồi chậm hơn khoảng hai giây, hệ thống có thể phát một câu đệm ngắn trước câu trả lời thật."
 )
 
 APPENDIX_B_DIALOGUES = [
@@ -732,8 +732,8 @@ def soft_breaks(text: str, width_cm: float) -> str:
 
 ABSTRACT_PARAS = [
     "Tài xế xe công nghệ thường phải thao tác trên điện thoại trong lúc lái để xem chuyến, cập nhật trạng thái và liên lạc với khách hàng. Luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các nghiệp vụ này mà không cần dùng tay, theo phương pháp nghiên cứu khoa học thiết kế.",
-    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống); năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được đặc tả theo ISO/IEC 25010 dưới dạng kịch bản thuộc tính chất lượng, kèm 19 tiêu chí chấp nhận dạng Given – When – Then. Từ các chiến thuật kiến trúc đáp ứng những yêu cầu này, luận văn lập luận lựa chọn kiến trúc microservices trên AWS: Dịch vụ Liên lạc hội thoại thời gian thực xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm, tách khỏi các dịch vụ nghiệp vụ. Nguyên mẫu hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
-    "Kết quả đánh giá: 200/200 lượt tiêm lỗi ở mức thành phần không làm hỏng luồng hội thoại; trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40, với bộ nhớ khoảng 225 MB mỗi phiên là giới hạn; P95 độ trễ phản hồi của luồng qua mô hình ngôn ngữ là 3,75 giây, chưa đạt ngưỡng 2 giây, với thời gian sinh token đầu là thành phần chi phối; tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu; khoảng 88% lượt chọn đúng công cụ. Đánh giá cũng phát hiện hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật); cả hai đã được sửa và đạt khi kiểm tra lại. Thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3% trên dữ liệu mô phỏng. Các phép đo còn thiếu được nêu rõ cùng cỡ mẫu và giới hạn.",
+    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống); năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được đặc tả theo ISO/IEC 25010 dưới dạng kịch bản thuộc tính chất lượng, kèm 19 tiêu chí chấp nhận dạng Given – When – Then. Từ các chiến thuật kiến trúc đáp ứng những yêu cầu này, luận văn lập luận lựa chọn kiến trúc microservices trên AWS: Dịch vụ Liên lạc hội thoại thời gian thực xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm (câu ngắn báo hệ thống đang xử lý khi câu trả lời chưa sẵn sàng), tách khỏi các dịch vụ nghiệp vụ. Nguyên mẫu hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
+    "Kết quả đánh giá: 200/200 lượt tiêm lỗi (cố ý làm một thành phần bị lỗi) ở mức thành phần không làm hỏng luồng hội thoại; trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40, với bộ nhớ khoảng 225 MB mỗi phiên là giới hạn; P95 độ trễ phản hồi của luồng qua mô hình ngôn ngữ là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian mô hình ngôn ngữ bắt đầu sinh câu trả lời; tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu; khoảng 88% lượt chọn đúng công cụ. Đánh giá cũng phát hiện hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật); cả hai đã được sửa và đạt khi kiểm tra lại. Thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3% trên dữ liệu mô phỏng. Các phép đo còn thiếu được nêu rõ cùng cỡ mẫu và giới hạn.",
     "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, chiến thuật kiến trúc, ISO/IEC 25010, gọi công cụ, nghiên cứu khoa học thiết kế.",
 ]
 

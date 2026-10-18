@@ -45,7 +45,7 @@ Bảng 6.2 mô tả môi trường dùng để đo độ trễ, tỷ lệ lỗi 
 | Dữ liệu | Tài khoản và chuyến thử nghiệm nội bộ | Che thông tin cá nhân trên nhật ký và ảnh |
 | Kiểm thử tự động | pytest trong thư mục kiểm thử của tác nhân | Bổ trợ trường hợp kiểm thử khách hàng |
 
-Số liệu độ trễ được trích từ nhật ký `turn_metrics` của tác nhân trong hai ngày 2026-09-05 và 2026-09-06 (n = 341 lượt), kênh WebRTC trong ứng dụng. Mô hình gpt-5.6-luna là mô hình họ GPT truy cập qua giao diện tương thích OpenAI (bí danh nội bộ của dự án); kết luận về thời gian sinh token đầu gắn với mô hình này. Kịch bản do tác giả đọc; script trích xuất `extract_ch6_metrics.py` đi kèm để tái lập.
+Số liệu độ trễ được trích từ nhật ký `turn_metrics` của tác nhân trong hai ngày 2026-09-05 và 2026-09-06 (n = 341 lượt), kênh WebRTC trong ứng dụng. gpt-5.6-luna là tên mô hình họ GPT ghi trong cấu hình của dự án, truy cập qua giao diện tương thích OpenAI; kết luận về thời gian sinh token đầu gắn với mô hình này. Kịch bản do tác giả đọc; script trích xuất `extract_ch6_metrics.py` đi kèm để tái lập.
 
 ### 6.2.2. Môi trường mô phỏng thử tải và tiêm lỗi
 
@@ -100,8 +100,8 @@ Số liệu độ trễ hiện có thuộc đợt đo ngày 05–06/09/2026, khi
 | Nhánh xử lý | n | P50 | P90 | P95 | Tỷ lệ lượt ≥ 2 giây | Đạt P95 ≤ 2 giây |
 |---|---|---|---|---|---|---|
 | Nhánh rút gọn theo ý định (không qua LLM) | 167 | 0,21 | 1,48 | 2,00 | 5,4% | Đạt (sát ngưỡng) |
-| Luồng đầy đủ qua LLM | 174 | 1,54 | 2,78 | 3,75 | 30,5% | Chưa đạt |
-| Toàn bộ lượt | 341 | 0,50 | 2,29 | 2,87 | 18,2% | Chưa đạt |
+| Luồng đầy đủ qua LLM | 174 | 1,54 | 2,78 | 3,75 | 30,5% | Không đạt |
+| Toàn bộ lượt | 341 | 0,50 | 2,29 | 2,87 | 18,2% | Không đạt |
 
 Nhánh xử lý được gán theo việc mô-đun nhận dạng ý định có kích hoạt trong lượt hay không (cách gán xấp xỉ, xem mục 6.13). Nhóm UC03 và UC07 không đủ mẫu để tách riêng.
 
@@ -117,7 +117,7 @@ Nhánh xử lý được gán theo việc mô-đun nhận dạng ý định có 
 
 **Hình 6.1.** P50 và P95 độ trễ phản hồi theo nhánh xử lý, đợt đo 05–06/09/2026 (n = 341 lượt)
 
-Kết quả cho thấy: nhánh rút gọn đạt ngưỡng sát biên (P95 = 2,00 giây); luồng đầy đủ qua LLM chưa đạt (P95 = 3,75 giây), với thời gian sinh token đầu (P95 ≈ 2,5 giây) là nguyên nhân chính. Trong thiết kế hiện hành, mọi lượt đều đi qua LLM, vì vậy câu đệm sau 2 giây được dùng để báo hiệu hệ thống đang xử lý, còn tải trước ngữ cảnh rút ngắn thời gian thực thi công cụ.
+Kết quả cho thấy: nhánh rút gọn đạt ngưỡng sát biên (P95 = 2,00 giây); luồng đầy đủ qua LLM không đạt (P95 = 3,75 giây), với thời gian sinh token đầu (P95 ≈ 2,5 giây) là nguyên nhân chính. Trong thiết kế hiện hành, mọi lượt đều đi qua LLM, vì vậy câu đệm sau 2 giây được dùng để báo hiệu hệ thống đang xử lý, còn tải trước ngữ cảnh rút ngắn thời gian thực thi công cụ.
 
 **Bảng 6.6.** Độ trễ phản hồi trên thiết kế hiện hành (nhật ký ngày 11/10/2026)
 
@@ -137,13 +137,13 @@ Bốn lượt trên là toàn bộ lượt có ghi độ trễ trong nhật ký 
 | B — Nhiễu mô phỏng khoang xe | 22 câu / 192 từ | 3 / 5 / 6 | 7,3% |
 | Chênh lệch B − A | Cùng bộ câu | +2 / 0 / +6 | +4,2 điểm phần trăm |
 
-**Thiết lập.** Cùng một bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, hai địa chỉ có số nhà, mốc giờ) được đọc một lượt ở mỗi điều kiện, cùng thiết bị và micro. Ở điều kiện B, tiếng ồn nền mô phỏng khoang xe được phát từ một thiết bị khác để tránh bộ khử tiếng vọng của điện thoại loại bỏ tín hiệu. Văn bản nhận dạng lấy từ sự kiện `stt_final` trong nhật ký, chuẩn hóa chữ số và dấu câu trước khi so sánh bằng script `compute_wer.py`.
+**Thiết lập.** Cùng một bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, hai địa chỉ có số nhà, mốc giờ) được đọc một lượt ở mỗi điều kiện, cùng thiết bị và micro. Ở điều kiện B, tiếng ồn nền mô phỏng khoang xe được phát từ một thiết bị khác, vì nếu phát từ chính điện thoại thì bộ khử tiếng vọng (echo cancellation) của điện thoại sẽ lọc mất tiếng ồn. Văn bản nhận dạng lấy từ sự kiện `stt_final` trong nhật ký, chuẩn hóa chữ số và dấu câu trước khi so sánh bằng script `compute_wer.py`.
 
 ![Biểu đồ WER điều kiện A và B](thesis_screenshots/H6_2_wer.png)
 
 **Hình 6.2.** Tỷ lệ lỗi từ ở điều kiện yên tĩnh và điều kiện nhiễu mô phỏng khoang xe
 
-Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện nhiễu xuất hiện các lỗi thay từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ và mất các hư từ ngắn. Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm, phù hợp với giới hạn không huấn luyện lại mô hình nhận dạng nêu ở Chương 1.
+Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện nhiễu xuất hiện các lỗi thay từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ và mất các từ phụ ngắn (hư từ). Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm, phù hợp với giới hạn không huấn luyện lại mô hình nhận dạng nêu ở Chương 1.
 
 ## 6.6. Kết quả tính đúng chức năng (RQ4)
 
@@ -160,7 +160,7 @@ Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%
 
 Với cỡ mẫu khoảng 39 lượt, khoảng tin cậy 95% theo phương pháp Wilson của tỷ lệ chọn đúng công cụ (khoảng 34/39 lượt) là 73%–94%, của tỷ lệ hoàn thành ngay lần đầu (khoảng 30/39 lượt) là 62%–87%. Khoảng tin cậy rộng cho thấy cần mẫu lớn hơn trước khi so sánh giữa các nhóm nghiệp vụ.
 
-Lỗi E-INTENT ở UC04 phát sinh từ nhánh rút gọn theo ý định; nhánh này đã bị loại bỏ và kiểm thử `test_spoken_intent` xác nhận câu hỏi cách gọi khách không còn kích hoạt công cụ gọi. Số liệu theo từng trường hợp sử dụng UC03, UC05, UC06 cần đợt đánh giá có gắn nhãn, kịch bản mù và ít nhất hai người đánh giá.
+Lỗi E-INTENT ở UC04 phát sinh từ nhánh rút gọn theo ý định; nhánh này đã bị loại bỏ và kiểm thử `test_spoken_intent` xác nhận câu hỏi cách gọi khách không còn kích hoạt công cụ gọi. Số liệu theo từng trường hợp sử dụng UC03, UC05, UC06 cần một đợt đánh giá có gắn nhãn sẵn, người chấm không được biết trước kết quả mong đợi, và ít nhất hai người chấm.
 
 **Bảng 6.9.** Phân loại lỗi quan sát (n ≈ 39 lượt)
 
@@ -199,12 +199,12 @@ Kết luận cho AC-14: ở lần đánh giá ngày 11/10/2026, phần định l
 | SC-03 | Như trên | 100 | 9.200 | 203 | 703 / 796 | 259 / 392 | 0% |
 | SC-03 | Như trên | 200 | 9.764 | 212 | 1.351 / 1.577 | 627 / 1.053 | 7,95% |
 
-Mỗi mức tải SC-03 chạy một lần sau khi môi trường thí nghiệm ổn định. Hai lần chạy đầu tiên bị loại vì lỗi của môi trường chứ không phải của hệ thống: bộ giả lập cơ sở dữ liệu ban đầu đóng kết nối sau mỗi yêu cầu, làm cạn cổng tạm của máy (khoảng 16.300 kết nối ở trạng thái chờ đóng) và sinh lỗi 500 giả. Sau khi chuyển bộ giả lập sang máy chủ giữ kết nối, lần chạy kiểm tra 50 người dùng ảo trong 30 giây đạt 100% yêu cầu thành công.
+Mỗi mức tải SC-03 chạy một lần sau khi môi trường thí nghiệm ổn định. Hai lần chạy đầu tiên bị loại vì lỗi của môi trường chứ không phải của hệ thống: bộ giả lập cơ sở dữ liệu ban đầu đóng kết nối sau mỗi yêu cầu, làm cạn số cổng mạng tạm thời (ephemeral port) của máy (khoảng 16.300 kết nối ở trạng thái chờ đóng) và sinh lỗi 500 giả. Sau khi chuyển bộ giả lập sang máy chủ giữ kết nối, lần chạy kiểm tra 50 người dùng ảo trong 30 giây đạt 100% yêu cầu thành công.
 
 **Diễn giải.** Thông lượng dừng ở khoảng 200 yêu cầu/giây và độ trễ tăng gần tuyến tính theo số người dùng ảo, dấu hiệu của một thành phần bị bão hòa. Đo CPU dưới tải 100 người dùng ảo cho thấy thành phần bão hòa là bộ giả lập cơ sở dữ liệu (106–113% CPU, tức trọn một nhân), trong khi tiến trình Dịch vụ Chuyến đi và Điều phối chỉ dùng 19–28% một nhân. Vì vậy SC-03 cho hai kết luận có giới hạn:
 
 1. Trong toàn bộ phép thử, dịch vụ không phải là nút thắt và không có yêu cầu lỗi cho tới 100 người dùng ảo đồng thời (khoảng 200 yêu cầu/giây). Lỗi ở mức 200 người dùng ảo xảy ra khi bộ giả lập đã bão hòa.
-2. SC-03 **không** đo được giới hạn tải của dịch vụ, cũng không đo khả năng tự mở rộng của Lambda và DynamoDB trên AWS, vì cả hai bị che bởi giới hạn của bộ giả lập trên một máy.
+2. SC-03 **không** đo được giới hạn tải của dịch vụ, cũng không đo khả năng tự mở rộng của Lambda và DynamoDB trên AWS, vì bộ giả lập trên một máy đã quá tải trước khi chạm tới các giới hạn đó.
 
 SC-01 và SC-02 kiểm chứng trực tiếp ngưỡng của NFR-03 ở mức phiên hội thoại (Bảng 6.12). Mỗi mức tải chạy 90 giây; SC-01 dùng một bản sao tác nhân với 1, 5, 10, 20 phiên và thêm mức 40 phiên để tìm giới hạn; SC-02 dùng 2 và 4 bản sao với 20 và 40 phiên.
 
@@ -233,7 +233,7 @@ Các kết quả này kiểm chứng tính chất mở rộng của kiến trúc
 
 ## 6.9. Kết quả khả năng phục hồi — NFR-04 (RQ1)
 
-Bảng 6.13 tổng hợp kết quả tiêm lỗi ở mức thành phần và ở mức bản sao tác nhân (mục 6.2.2). Mỗi kiểu lỗi được lặp 20 lần (RS-05: 30 lần; RS-03: 10 lần). Một lượt "đạt" khi không có ngoại lệ thoát ra ngoài công cụ và câu cuối cùng tác nhân nói là câu báo thao tác không thực hiện được; với RS-01, lượt đạt khi việc ghi bản ghi thất bại mà không ném ngoại lệ ra luồng hội thoại; với RS-05, lượt đạt khi tác nhân vẫn nhận được câu trả lời từ nhà cung cấp dự phòng.
+Bảng 6.13 tổng hợp kết quả tiêm lỗi ở mức thành phần và ở mức bản sao tác nhân (mục 6.2.2). Mỗi kiểu lỗi được lặp 20 lần (RS-05: 30 lần; RS-03: 10 lần). Một lượt "đạt" khi lỗi không lọt ra khỏi công cụ dưới dạng ngoại lệ (exception, loại lỗi làm dừng đoạn mã đang chạy) và câu cuối cùng tác nhân nói là câu báo thao tác không thực hiện được; với RS-01, lượt đạt khi việc ghi bản ghi thất bại mà không ném ngoại lệ ra luồng hội thoại; với RS-05, lượt đạt khi tác nhân vẫn nhận được câu trả lời từ nhà cung cấp dự phòng.
 
 **Bảng 6.13.** Kết quả tiêm lỗi (RS-01, RS-02, RS-04, RS-05 ngày 11/10/2026; RS-03 ngày 13/10/2026)
 
@@ -260,7 +260,7 @@ Kết quả cho thấy cô lập lỗi hoạt động đúng thiết kế: trong
 
 Kết quả mức thành phần khớp với một lỗi thật quan sát được trong nhật ký phát triển: ngày 06/09/2026, trong khoảng 235 lời gọi HTTP của tác nhân có một lời gọi gửi SMS trả mã 503 (Bảng 5.3). Tác nhân thông báo "Không thể gửi tin nhắn lúc này", phiên không bị ngắt và tài xế tiếp tục thực hiện thêm các nghiệp vụ khác trong cùng phiên.
 
-RS-03 chạy trên máy chủ LiveKit cục bộ với hai bản sao tác nhân (mục 6.2.2). Mỗi lượt thử mở một phiên, chờ tác nhân trả lời, dừng đột ngột bản sao đang phục vụ phiên đó, rồi mở ngay một phiên mới; bản sao bị dừng được khởi động lại sau mỗi lượt, mô phỏng ECS thay tác vụ. Kết quả có hai mặt. Phiên mới luôn được bản sao còn lại phục vụ, trong vòng dưới 1 giây (10/10 lượt; độ phân giải nhật ký 1 giây), và bản sao khởi động lại đăng ký với LiveKit sau trung vị 4,1 giây (13 lần; chưa gồm thời gian khởi động container trên Fargate). Ngược lại, phiên đang chạy trên bản sao bị dừng bị mất: máy chủ LiveKit không tự giao lại phiên đó cho bản sao còn lại (0/10). Mã nguồn có đường khôi phục ở tầng ứng dụng: khi tài xế mở lại trợ lý, API cấp token phát hiện phòng không còn tác nhân và phân công lại (`routes/voice.ts`, sequence S2 bước 4), nhưng đường này chưa được đo đầu cuối. Một lượt bổ sung cho thấy khi không còn bản sao nào lúc phiên mới được mở, phiên đó không được phục vụ kể cả sau khi một bản sao mới đăng ký. Vì vậy cấu hình triển khai cần giữ tối thiểu hai bản sao tác nhân, và ứng dụng nên tự xin token lại khi tác nhân không vào phòng sau vài giây. Với RS-03, AC-17 chỉ **đạt một phần**: phiên mới đạt, phiên đang chạy trên bản sao bị dừng thì không.
+RS-03 chạy trên máy chủ LiveKit cục bộ với hai bản sao tác nhân (mục 6.2.2). Mỗi lượt thử mở một phiên, chờ tác nhân trả lời, dừng đột ngột bản sao đang phục vụ phiên đó, rồi mở ngay một phiên mới; bản sao bị dừng được khởi động lại sau mỗi lượt, mô phỏng ECS thay tác vụ. Kết quả có hai mặt. Phiên mới luôn được bản sao còn lại phục vụ, trong vòng dưới 1 giây (10/10 lượt; nhật ký chỉ ghi thời gian chính xác tới giây), và bản sao khởi động lại đăng ký với LiveKit sau trung vị 4,1 giây (13 lần; chưa gồm thời gian khởi động container trên Fargate). Ngược lại, phiên đang chạy trên bản sao bị dừng bị mất: máy chủ LiveKit không tự giao lại phiên đó cho bản sao còn lại (0/10). Mã nguồn có đường khôi phục ở tầng ứng dụng: khi tài xế mở lại trợ lý, API cấp token phát hiện phòng không còn tác nhân và phân công lại (`routes/voice.ts`, sequence S2 bước 4), nhưng đường này chưa được đo đầu cuối. Một lượt bổ sung cho thấy khi không còn bản sao nào lúc phiên mới được mở, phiên đó không được phục vụ kể cả sau khi một bản sao mới đăng ký. Vì vậy cấu hình triển khai cần giữ tối thiểu hai bản sao tác nhân, và ứng dụng nên tự xin token lại khi tác nhân không vào phòng sau vài giây. Với RS-03, AC-17 chỉ **đạt một phần**: phiên mới đạt, phiên đang chạy trên bản sao bị dừng thì không.
 
 ## 6.10. Kết quả bảo mật — NFR-05
 
@@ -292,9 +292,17 @@ Kết luận cho AC-18: ở lần đánh giá ngày 11/10/2026, danh mục chỉ
 | Gửi SMS cho khách (FR-C03, FR-K03, AC-11) | Câu "nhắn cho khách 15 phút nữa tôi đến đón" gửi đúng nội dung tới khách của chuyến; số dạng 09… được chuẩn hóa thành +84…; tin xác nhận chuyến chứa điểm đón và giờ đón; khi gửi thất bại trợ lý báo lỗi, không báo đã gửi; mã lỗi Twilio được chuyển lên; đăng ký báo cáo giao tin | test_send_sms_flow (4 ca); npm run verify:sms ở Dịch vụ Chuyến đi và Điều phối (12 ca) và Dịch vụ Liên lạc bằng tin nhắn (8 ca); Twilio được giả lập | Đạt ở mức kiểm thử |
 | Truy vấn bản ghi theo ngày | Quy đổi ngày giờ Việt Nam, biên ngày theo UTC | `call-records-service` selfcheck (npm run verify:records) | Đạt |
 
-Bộ kiểm thử tự động của tác nhân tại ngày 2026-09-06: 451/452 ca đạt (ca còn lại kiểm tra độ dài lời nhắc hệ thống); tại ngày 2026-09-27, sau khi bổ sung chỉ số phiên và dự phòng nhà cung cấp: 476/476 ca đạt; tại ngày 2026-10-18, sau khi bổ sung lớp chặn ý định gọi khách, quy tắc có mặt tại chỗ 200 m và xử lý gọi lại khi khách không nghe máy: 583/583 ca đạt; cuối cùng ngày, sau các lỗi phát hiện khi quay video hướng dẫn trên simulator (lời đọc chuyến mới rơi vào phòng trống, phiên bị đóng khi tài xế gõ chữ, câu phân vân vẫn quay số, câu hỏi hướng dẫn không có chỉ mục, câu trả lời về quãng đường, cước và hành lý thiếu dữ liệu): 613/613 ca đạt; sau khi bổ sung huỷ cuộc gọi từ ứng dụng và không gọi lại chuyến đã kết thúc: 633/633 ca đạt. Lớp chặn gọi khách còn được kiểm bằng bài đánh giá với mô hình thật (`app/voicebot/testing/call_intent_eval.py`, gpt-5.6-luna, 7 tình huống x 3 lần): 20/21 lượt đúng; mọi câu mơ hồ ("cần lắm… ngay lúc này", "không biết", "Ok." sau một chủ đề khác) không tạo cuộc gọi, và lượt sai duy nhất là mô hình hỏi lại một yêu cầu đã rõ ràng. Kết quả đạt trường hợp kiểm thử chứng minh luồng khách hàng hoạt động trong phạm vi đã thiết kế, không suy ra mức hài lòng của khách hàng thật.
+Số ca kiểm thử tự động của tác nhân tăng dần theo các lần sửa, và ở mỗi mốc đều đạt toàn bộ (trừ mốc đầu):
 
-**Chất lượng sắp xếp thứ tự ghé điểm dừng (FR-T07).** Thí nghiệm đánh giá heuristic láng giềng gần nhất kết hợp 2-opt của Dịch vụ Chuyến đi và Điều phối (mục 5.4.4) bằng cách so với lời giải tối ưu tìm bằng vét cạn có cùng ràng buộc đón trước trả. Mỗi bộ dữ liệu gồm vị trí tài xế và 2 đến 4 chuyến (4 đến 8 điểm dừng), sinh ngẫu nhiên với hạt giống cố định trong khung 15 km x 15 km quanh trung tâm TP.HCM; chi phí là khoảng cách đường chim bay nhân hệ số đường vòng 1,3, nên thí nghiệm không gọi API bản đồ. Mỗi cỡ bài toán chạy 200 bộ dữ liệu (tổng 600). Đường cơ sở là thứ tự "theo danh sách": đón rồi trả lần lượt từng chuyến theo thứ tự tạo (`experiments/route_opt_quality.js`, kết quả ở `results_route_opt.txt`).
+- Ngày 06/09/2026: 451/452 ca đạt (ca còn lại kiểm tra độ dài lời nhắc hệ thống).
+- Ngày 27/09/2026, sau khi bổ sung chỉ số phiên và dự phòng nhà cung cấp: 476/476 ca đạt.
+- Ngày 18/10/2026, sau khi bổ sung lớp chặn ý định gọi khách, quy tắc có mặt tại chỗ 200 m và việc gọi lại khi khách không nghe máy: 583/583 ca đạt.
+- Cuối ngày 18/10/2026, sau khi sửa các lỗi phát hiện khi quay video hướng dẫn trên trình giả lập (lời đọc chuyến mới rơi vào phòng trống, phiên bị đóng khi tài xế gõ chữ, câu phân vân vẫn quay số, câu hỏi hướng dẫn không có chỉ mục, câu trả lời về quãng đường, cước và hành lý thiếu dữ liệu): 613/613 ca đạt.
+- Sau khi bổ sung việc hủy cuộc gọi từ ứng dụng và không gọi lại chuyến đã kết thúc: 633/633 ca đạt.
+
+Lớp chặn gọi khách còn được kiểm bằng một bài đánh giá với mô hình thật (`app/voicebot/testing/call_intent_eval.py`, gpt-5.6-luna, 7 tình huống, mỗi tình huống 3 lần): 20/21 lượt đúng. Mọi câu mơ hồ ("cần lắm… ngay lúc này", "không biết", "Ok." sau một chủ đề khác) đều không tạo cuộc gọi; lượt sai duy nhất là mô hình hỏi lại một yêu cầu đã rõ ràng. Việc đạt các ca kiểm thử chứng minh luồng khách hàng hoạt động trong phạm vi đã thiết kế, nhưng không cho biết mức hài lòng của khách hàng thật.
+
+**Chất lượng sắp xếp thứ tự ghé điểm dừng (FR-T07).** Thí nghiệm đánh giá heuristic láng giềng gần nhất kết hợp 2-opt của Dịch vụ Chuyến đi và Điều phối (mục 5.4.4) bằng cách so với lời giải tối ưu tìm bằng vét cạn (thử mọi thứ tự có thể) với cùng ràng buộc đón trước trả. Mỗi bộ dữ liệu gồm vị trí tài xế và 2 đến 4 chuyến (4 đến 8 điểm dừng), sinh ngẫu nhiên với seed cố định (chạy lại cho đúng bộ dữ liệu cũ) trong khung 15 km x 15 km quanh trung tâm TP.HCM; chi phí là khoảng cách đường chim bay nhân hệ số đường vòng 1,3, nên thí nghiệm không gọi API bản đồ. Mỗi cỡ bài toán chạy 200 bộ dữ liệu (tổng 600). Đường cơ sở là thứ tự "theo danh sách": đón rồi trả lần lượt từng chuyến theo thứ tự tạo (`experiments/route_opt_quality.js`, kết quả ở `results_route_opt.txt`).
 
 **Bảng 6.16.** Chất lượng sắp xếp thứ tự ghé so với lời giải tối ưu (thí nghiệm ngày 13/10/2026, 200 bộ dữ liệu mỗi dòng)
 
@@ -304,7 +312,7 @@ Bộ kiểm thử tự động của tác nhân tại ngày 2026-09-06: 451/452 
 | 3 (6) | 108/200 (54,0%) | 3,7% | 37,6% | 41,3% | 0,004 ms |
 | 4 (8) | 80/200 (40,0%) | 6,3% | 49,5% | 62,2% | 0,007 ms |
 
-Không bộ dữ liệu nào vi phạm ràng buộc đón trước trả. Heuristic cho quãng đường trung bình chỉ dài hơn tối ưu 1,2–6,3%, trong khi đi theo thứ tự danh sách dài hơn 22,9–62,2%; lợi ích tăng theo số điểm dừng. Ở một số ít trường hợp, heuristic kém tối ưu tới khoảng 50% do bị kẹt ở cực tiểu địa phương của 2-opt. Với tối đa 8 điểm dừng, vét cạn chỉ cần vài mili-giây, nên một cải tiến khả thi là dùng vét cạn khi số điểm dừng nhỏ và giữ heuristic cho trường hợp lớn hơn. Kết quả dùng khoảng cách mô phỏng; độ chính xác thời gian đến dự kiến của nhà cung cấp bản đồ trên đường thật chưa được đo.
+Không bộ dữ liệu nào vi phạm ràng buộc đón trước trả. Heuristic cho quãng đường trung bình chỉ dài hơn tối ưu 1,2–6,3%, trong khi đi theo thứ tự danh sách dài hơn 22,9–62,2%; lợi ích tăng theo số điểm dừng. Ở một số ít trường hợp, heuristic dài hơn tối ưu tới khoảng 50%, do bị kẹt ở một thứ tự mà 2-opt không cải thiện thêm được dù chưa phải tối ưu (cực tiểu địa phương). Với tối đa 8 điểm dừng, vét cạn chỉ cần vài mili-giây, nên một cải tiến khả thi là dùng vét cạn khi số điểm dừng nhỏ và giữ heuristic cho trường hợp lớn hơn. Kết quả dùng khoảng cách mô phỏng; độ chính xác thời gian đến dự kiến của nhà cung cấp bản đồ trên đường thật chưa được đo.
 
 ## 6.12. Tổng hợp và thảo luận theo câu hỏi nghiên cứu
 
@@ -343,17 +351,16 @@ Các hạn chế của phép đánh giá được phân tích theo bốn loại 
 **Độ tin cậy bên ngoài (external validity)** – kết quả có khái quát được sang điều kiện khác hay không.
 
 - Thử tải và tiêm lỗi chạy trên một máy, nhà cung cấp AI được giả lập, không có độ trễ mạng thật giữa các vùng. Kết quả chứng minh tính chất của kiến trúc (mở rộng theo chiều ngang, cô lập lỗi), không phải năng lực tải của hệ thống trên AWS.
-- Các dịch vụ và tác nhân chạy trên máy phát triển, chỉ dữ liệu nằm trên DynamoDB của AWS (mục 5.6.1); hành vi khởi động lạnh của Lambda, giới hạn của API Gateway và việc tăng số bản sao tác nhân trên Fargate chưa được quan sát. SC-01, SC-02 và RS-03 dùng máy chủ LiveKit cục bộ thay cho LiveKit Cloud và nhà cung cấp AI giả lập, nên không phản ánh độ trễ mạng tới LiveKit Cloud hay giới hạn tốc độ của nhà cung cấp AI thật khi nhiều phiên cùng gọi.
+- Các dịch vụ và tác nhân chạy trên máy phát triển, chỉ dữ liệu nằm trên DynamoDB của AWS (mục 5.6.1); hành vi khởi động nguội của Lambda, giới hạn của API Gateway và việc tăng số bản sao tác nhân trên Fargate chưa được quan sát. SC-01, SC-02 và RS-03 dùng máy chủ LiveKit cục bộ thay cho LiveKit Cloud và nhà cung cấp AI giả lập, nên không phản ánh độ trễ mạng tới LiveKit Cloud hay giới hạn tốc độ của nhà cung cấp AI thật khi nhiều phiên cùng gọi.
 - Kết quả gắn với cấu hình STT, LLM, TTS tại thời điểm đo (Phụ lục D); đổi nhà cung cấp có thể làm thay đổi độ trễ và độ chính xác.
 - Người đọc kịch bản biết trước câu nói nên phát âm trôi chảy hơn tài xế thật; nhiễu mô phỏng không đại diện cho mọi khoang xe.
+- SMS mới được kiểm chứng đầy đủ với Twilio giả lập; giao tin thật tới thuê bao Việt Nam chưa thực hiện được. Từ ngày 25/08/2025, nhà mạng Việt Nam chỉ nhận SMS quốc tế gửi từ tên người gửi (alphanumeric Sender ID) và mẫu tin đã đăng ký; tin gửi từ số điện thoại hoặc từ tên chưa đăng ký bị chặn (Twilio, n.d.). Phép thử gửi thật ngày 12/10/2026 từ số Twilio của Hoa Kỳ tới một thuê bao Việt Nam đã xác minh bị Twilio từ chối với mã lỗi 21612 (không có tuyến gửi giữa số gửi và số nhận). Phép thử này xác nhận phần mã hoạt động đúng tới ranh giới nhà cung cấp: yêu cầu tới được Twilio, dịch vụ ghi đúng mã lỗi và trợ lý báo cho tài xế là không gửi được thay vì báo đã gửi. Trở ngại nằm ở thủ tục đăng ký với nhà mạng (khoảng năm tuần, cần hồ sơ doanh nghiệp), không nằm ở thiết kế; vì vậy AC-11 chỉ được đánh giá ở mức kiểm thử.
 
 **Độ tin cậy cấu trúc (construct validity)** – chỉ số có đo đúng khái niệm cần đo hay không.
 
 - Độ trễ phản hồi đo trải nghiệm hội thoại, không đo an toàn giao thông thực địa. Tài liệu ở mục 2.9.1 cho thấy tương tác giọng nói vẫn gây tải nhận thức, nên kết quả không được diễn giải thành kết luận về an toàn lái xe.
 - Danh mục kiểm tra hành vi khi lái (Bảng 6.10) đo việc thiết kế tuân thủ các nguyên tắc, không thay thế nghiên cứu người dùng đo mức độ hài lòng và tải nhận thức.
 - Tỷ lệ hoàn thành nghiệp vụ được định nghĩa theo trạng thái dữ liệu phía backend (mục 6.3) để tránh tính câu trả lời trôi chảy nhưng sai nghiệp vụ là thành công.
-
-- SMS mới được kiểm chứng đầy đủ với Twilio giả lập; giao tin thật tới thuê bao Việt Nam chưa thực hiện được. Từ ngày 25/08/2025, nhà mạng Việt Nam chỉ nhận SMS quốc tế gửi từ tên người gửi (alphanumeric Sender ID) và mẫu tin đã đăng ký; tin gửi từ số điện thoại hoặc từ tên chưa đăng ký bị chặn (Twilio, n.d.). Phép thử gửi thật ngày 12/10/2026 từ số Twilio của Hoa Kỳ tới một thuê bao Việt Nam đã xác minh bị Twilio từ chối với mã lỗi 21612 (không có tuyến gửi giữa số gửi và số nhận). Phép thử này xác nhận phần mã hoạt động đúng tới ranh giới nhà cung cấp: yêu cầu tới được Twilio, dịch vụ ghi đúng mã lỗi và trợ lý báo cho tài xế là không gửi được thay vì báo đã gửi. Trở ngại nằm ở thủ tục đăng ký với nhà mạng (khoảng năm tuần, cần hồ sơ doanh nghiệp), không nằm ở thiết kế; vì vậy AC-11 chỉ được đánh giá ở mức kiểm thử.
 - Các địa chỉ nhận thông báo từ Twilio của Dịch vụ Liên lạc bằng tin nhắn (`/api/v1/sms/status`, `/api/v1/calls/inbound/*`, `/api/v1/calls/outbound/status`) chưa kiểm tra chữ ký `X-Twilio-Signature`. Ai biết địa chỉ công khai của dịch vụ có thể gửi sự kiện giả vào bảng `channel-events`, làm sai trạng thái giao tin hoặc trạng thái cuộc gọi hiển thị cho điều phối viên. Các tiêu chí bảo mật ở Bảng 6.14 không đo được rủi ro này vì phép thử dùng Twilio giả lập. Cách khắc phục là xác thực chữ ký bằng `twilio.validateRequest` với đúng URL công khai đã cấu hình trên Twilio, và thử với Twilio thật trước khi bật vì sai URL sẽ chặn mọi thông báo hợp lệ.
 
 **Độ tin cậy của kết luận (conclusion validity)** – kết luận thống kê có đủ căn cứ hay không.
