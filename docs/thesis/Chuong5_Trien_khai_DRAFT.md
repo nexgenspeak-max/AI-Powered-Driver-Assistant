@@ -56,6 +56,8 @@ Với phiên tài xế trong ứng dụng, tác nhân đăng ký phiên với D�
 
 Mọi phát ngôn của tài xế được đưa qua mô hình ngôn ngữ kèm lược đồ công cụ của loại phiên. Mô-đun nhận dạng ý định (`processors/intent_classify.py`, `processors/spoken_intent.py`) chỉ gán nhãn cho phát ngôn để loại bỏ mảnh nhận dạng thừa ở cuối câu và nhận biết câu xác nhận cho hành động đang chờ; mô-đun này không gọi công cụ và không quyết định câu trả lời. Nhánh gọi thẳng công cụ theo ý định từng được dùng trong đợt đo 05–06/09/2026 (Chương 6) đã bị loại khỏi mã nguồn.
 
+Gọi khách là thao tác ra bên ngoài và không hoàn tác được, nên có thêm một lớp chặn riêng. Công cụ `call_customer` có tham số bắt buộc `intent_clarity` nhận giá trị `explicit` hoặc `ambiguous`. Mô hình chỉ điền `explicit` khi ở lượt vừa rồi tài xế nói rõ muốn gọi, nhắn hoặc báo khách, hoặc vừa đồng ý câu hỏi gọi của trợ lý. Mọi trường hợp khác, kể cả khi thiếu tham số, tác nhân không quay số mà hỏi lại "Bạn muốn mình gọi cho {tên khách} không?" và ghi một hành động chờ (`processors/call_intent.py`). Hành động chờ chỉ chạy khi lượt kế tiếp là câu đồng ý; nó bị hủy khi tài xế nói sang chuyện khác hoặc sau 30 giây. Lớp chặn được bổ sung sau một phiên thử ngày 18/10/2026: câu hỏi gợi ý của trợ lý ("xem chuyến đang chạy hay cần gọi khách…?") bị bộ nhận dạng coi là lời hứa gọi, và câu "Ok." của tài xế cho một chủ đề khác đã khởi động cuộc gọi. Ngoài ra, các dòng nhận dạng không phải tiếng nói như "Nhạc chuông" (âm báo chờ của cuộc gọi đi) bị bỏ qua để tác nhân không trả lời chúng (`processors/stt_noise.py`).
+
 Câu đệm được hiện thực trong `processors/turn_filler.py` với ngưỡng `FILLER_DELAY_S = 2.0` giây tính từ lúc tài xế kết thúc phát ngôn; câu đệm phát tối đa một lần mỗi lượt và bị hủy nếu câu trả lời thật đã bắt đầu. Hành động chờ xác nhận (`processors/pending_action.py`) lưu thao tác tác nhân vừa đề xuất; khi tài xế xác nhận ("được", "gọi đi"), tác nhân thực thi thao tác đó.
 
 ### 5.3.3. Gọi API nghiệp vụ
@@ -107,6 +109,10 @@ Dịch vụ là nguồn dữ liệu chuẩn cho chuyến đi và là điểm kh�
 | Thu nhập, trạng thái | `GET /api/v1/drivers/me/earnings/today`, `/earnings/summary`; `PATCH /api/v1/drivers/me/status` | Thu nhập, bật/tắt nhận chuyến |
 | Nhắc việc | `POST /api/v1/reminders` | Tạo nhắc việc |
 
+Các trạng thái đòi tài xế có mặt tại chỗ (`arrived_pickup`, `picked_up`, `completed`) chỉ được ghi khi tài xế cách điểm đón, hoặc điểm trả với `completed`, không quá 200 m (`ARRIVAL_RADIUS_METERS`), đủ để trừ sai số GPS và sai số tra địa chỉ. Ngoài bán kính, API trả 409 kèm khoảng cách còn lại, ví dụ "Bạn còn cách điểm đón khoảng 1,4 km…", còn việc gọi khách vẫn được phép ở mọi khoảng cách. Khi tác nhân cập nhật trạng thái thay tài xế, nó gửi `enforce_arrival` để dịch vụ áp cùng quy tắc với vị trí GPS mới nhất mà ứng dụng đã gửi; chuyến chỉ có địa chỉ dạng văn bản được tra tọa độ ngay lúc kiểm.
+
+Dịch vụ cũng nhắc khách khi tài xế sắp đến. Mỗi lần ứng dụng gửi vị trí, dịch vụ xét điểm dừng đầu tiên của lộ trình tối ưu; nếu tài xế đã bật tùy chọn và vừa vào bán kính đã chọn (500 m đến 3 km, mặc định 1 km), dịch vụ mở một cuộc gọi nền tới khách với lời nhắn có khoảng cách thật, ví dụ "Tài xế còn khoảng 1 km nữa là tới Đền Quán Thánh, anh chị ra điểm đón giúp tài xế nhé". Mỗi chuyến chỉ nhắc một lần; không ai nghe máy thì gọi lại tối đa hai lần, cách nhau 60 giây. Để mốc 1 km không bị bỏ qua, ứng dụng gửi vị trí theo khoảng cách tới điểm dừng: 10 phút một lần khi không có chuyến, 60 giây hoặc 500 m khi đang có chuyến, 15 giây hoặc 150 m khi còn dưới 3 km. Trên trình giả lập, một chuyến đi mô phỏng ở 43 km/h kích hoạt cuộc nhắc ở mốc 996 m.
+
 Cuộc gọi thoại được khởi tạo qua SIP của LiveKit Cloud (`services/telephony/livekit.ts`) với SIP trunk nối tới Twilio; tin nhắn SMS được chuyển tiếp tới Dịch vụ Liên lạc bằng tin nhắn (`services/smsService.ts`). Tại thời điểm đánh giá, tin SMS chưa giao được tới thuê bao Việt Nam vì chưa có tên người gửi đã đăng ký với nhà mạng; mã nguồn đã hỗ trợ cấu hình tên người gửi qua biến `TWILIO_SMS_FROM` (mục 6.13). Khi có chuyến mới và tài xế đang mở phiên, thông báo được gửi vào phòng hiện có (`services/driverReachService.ts`); nếu không, thông báo được lưu tạm và phát khi tài xế mở trợ lý. Thông báo đẩy tới ứng dụng dùng thư viện WebSocket khi chạy cục bộ và API Gateway WebSocket khi chạy trên AWS.
 
 ### 5.4.2. Dịch vụ Định danh
@@ -139,16 +145,16 @@ Dữ liệu vị trí và lộ trình do Dịch vụ Chuyến đi và Điều ph
 
 - **Tìm và chuẩn hóa địa chỉ:** API `GET /api/v1/places/autocomplete`, `/places/detail` và `/places/reverse` gợi ý địa chỉ khi nhập, lấy tọa độ của địa chỉ được chọn và đổi tọa độ thành địa chỉ (`services/maps/goongPlaces.ts`). Khi đã có tọa độ chính xác từ bước chọn địa chỉ, dịch vụ dùng thẳng tọa độ thay vì tìm lại theo chuỗi địa chỉ.
 - **Lộ trình và tình trạng giao thông của chuyến:** khi tạo chuyến (kể cả chuyến vãng lai, UC16), dịch vụ gọi API chỉ đường để lấy quãng đường, thời gian đến dự kiến có xét giao thông, tọa độ điểm đón, trả và đường đi mã hóa (polyline). Độ chậm so với lúc thông thoáng được đổi thành câu ngắn như "Giao thông chậm, thêm khoảng 6 phút", lưu cùng chuyến để công cụ `get_trip_traffic` đọc lại cho tài xế mà không phải gọi lại nhà cung cấp (FR-T07).
-- **Sắp xếp thứ tự ghé các điểm dừng:** `services/routeOptimizationService.ts` lấy ma trận khoảng cách đường bộ từ vị trí hiện tại của tài xế tới mọi điểm đón, trả đang chờ, rồi tìm thứ tự ghé bằng heuristic láng giềng gần nhất kết hợp cải tiến 2-opt (`utils/twoOpt.ts`). Thuật toán có ràng buộc thứ tự: điểm đón của một chuyến luôn đứng trước điểm trả của chính chuyến đó, nên bài toán là bài toán đón và trả khách (pickup and delivery) chứ không phải bài toán người du lịch thông thường. Kết quả được lưu đệm và chỉ tính lại khi trạng thái chuyến thay đổi. Kết quả được đưa vào ngữ cảnh phiên để công cụ `get_optimal_route` của trợ lý đọc thứ tự ghé cho tài xế; công cụ `suggest_next_stop` chỉ gợi ý một điểm gần nhất tiếp theo (FR-T07, UC16).
+- **Sắp xếp thứ tự ghé các điểm dừng:** `services/routeOptimizationService.ts` lấy ma trận khoảng cách đường bộ từ vị trí hiện tại của tài xế tới mọi điểm đón, trả đang chờ, rồi tìm thứ tự ghé bằng heuristic láng giềng gần nhất kết hợp cải tiến 2-opt (`utils/twoOpt.ts`). Thuật toán có ràng buộc thứ tự: điểm đón của một chuyến luôn đứng trước điểm trả của chính chuyến đó, nên bài toán là bài toán đón và trả khách (pickup and delivery) chứ không phải bài toán người du lịch thông thường. Kết quả được lưu đệm và chỉ tính lại khi trạng thái chuyến thay đổi. Goong từ chối yêu cầu ma trận lớn hơn 100 ô, nên ma trận của tài xế có nhiều điểm dừng (ví dụ 11 x 10 khi có 10 điểm) được chia thành các khối không quá 100 ô, gửi song song rồi ghép lại; thứ tự ghé dùng thời gian di chuyển khi có số liệu. Các yêu cầu tính lại đồng thời của cùng một tài xế dùng chung một lần tính, và hình dạng đường của từng chặng được lưu đệm 30 phút để tránh bị nhà cung cấp giới hạn tần suất. Kết quả được đưa vào ngữ cảnh phiên để công cụ `get_optimal_route` của trợ lý đọc thứ tự ghé cho tài xế; công cụ `suggest_next_stop` chỉ gợi ý một điểm gần nhất tiếp theo (FR-T07, UC16).
 - **Hiển thị bản đồ và chỉ đường trong ứng dụng:** ứng dụng tài xế vẽ bản đồ, vị trí xe, điểm đón, trả và đường đi (Hình 5.3); API `GET /api/v1/drivers/me/navigation` trả về chỉ dẫn từng chặng cho khung điều hướng trên màn hình (`features/home/components/NavigationHud.tsx`). Trợ lý giọng nói không đọc chỉ dẫn rẽ từng bước; phần này chỉ hiển thị trên màn hình (mục 3.5).
 
 Lỗi của dịch vụ bản đồ không làm dừng nghiệp vụ, phù hợp chiến thuật suy giảm có kiểm soát của NFR-04: nếu không lấy được ma trận khoảng cách, thứ tự ghé được tính theo khoảng cách đường chim bay với tốc độ trung bình giả định 25 km/h, và kết quả được gắn nhãn nguồn `haversine_fallback` để trợ lý nói rõ đây là ước lượng; nếu không lấy được chỉ đường, API điều hướng trả mã 502 kèm thông báo thử lại, còn chuyến vẫn được tạo với quãng đường và thời gian bằng 0. Chất lượng thứ tự ghé so với lời giải tối ưu được đánh giá ở Bảng 6.16; độ chính xác thời gian đến dự kiến trên đường thật chưa được đo.
 
 ## 5.5. Hiện thực ứng dụng tài xế
 
-Ứng dụng tài xế hiện thực các yêu cầu thiết kế ở mục 4.8. Màn hình chào giới thiệu vai trò trợ lý và hai lối vào đăng nhập, đăng ký (Hình 5.1); tài xế đăng nhập bằng số điện thoại và mật khẩu (Hình 5.2).
+Ứng dụng tài xế hiện thực các yêu cầu thiết kế ở mục 4.8 dưới thương hiệu Czen. Giao diện dùng một bộ biểu tượng SVG riêng (`src/components/icons`): 57 biểu tượng vẽ trên cùng lưới 24 đơn vị với nét bo tròn thống nhất; ở thanh điều hướng, mục đang chọn dùng biểu tượng tô đặc vẽ riêng và có nhãn chữ cho cả năm mục, theo quy ước của các ứng dụng gọi xe. Màn hình chào giới thiệu vai trò trợ lý và hai lối vào đăng nhập, đăng ký (Hình 5.1); tài xế đăng nhập bằng số điện thoại và mật khẩu (Hình 5.2).
 
-![Màn hình chào ứng dụng Czen Driver](thesis_screenshots/landing.jpg)
+![Màn hình chào ứng dụng Czen](thesis_screenshots/landing.jpg)
 
 **Hình 5.1.** Màn hình chào của ứng dụng tài xế
 
@@ -156,21 +162,21 @@ Lỗi của dịch vụ bản đồ không làm dừng nghiệp vụ, phù hợp
 
 **Hình 5.2.** Màn hình đăng nhập tài xế bằng số điện thoại và mật khẩu
 
-Sau khi đăng nhập, màn hình chính hiển thị bản đồ, trạng thái hoạt động và điểm đón, trả của chuyến (Hình 5.3). Khi mở trợ lý, ứng dụng xin token thoại, tham gia phòng hội thoại (`features/home/stores/voiceSessionStore.ts`) và hiển thị biểu tượng trợ lý thay đổi theo trạng thái phiên (Hình 5.4).
+Sau khi đăng nhập, màn hình chính hiển thị bản đồ, vị trí xe, lộ trình tối ưu và thẻ điểm dừng kế tiếp gồm tên khách, khoảng cách và thời gian còn lại cập nhật theo GPS, kèm nút chỉ đường và nút gọi (Hình 5.3). Khi có chuyến mới, ứng dụng hiện bảng mời nhận chuyến toàn màn hình với cước ước tính, vòng đếm ngược 20 giây và hai nút Từ chối, Nhận chuyến (Hình C.2); bảng này luôn nằm trên cùng, kể cả khi khung trợ lý đang mở. Khi mở trợ lý, ứng dụng xin token thoại và tham gia phòng hội thoại (`features/home/stores/voiceSessionStore.ts`). Khung trò chuyện có một thanh nhập duy nhất: nút micro bên trái để tắt, bật micro mà vẫn giữ phiên; nút bên phải là nút gửi khi có chữ, còn khi ô trống là nút Czen để kết nối, chuyển thành sóng âm khi đang nói và chạm để kết thúc phiên. Các câu gợi ý nhanh nằm ngay dưới lời chào cho tới lượt nói đầu tiên của tài xế (Hình 5.4).
 
 ![Màn hình bản đồ ứng dụng tài xế](thesis_screenshots/map.jpg)
 
 **Hình 5.3.** Màn hình bản đồ sau khi đăng nhập và bật trạng thái hoạt động
 
-![Biểu tượng trợ lý ở trạng thái đang xử lý](thesis_screenshots/trolyczen1.jpg)
+![Phiên trợ lý đang xử lý câu gợi ý](thesis_screenshots/trolyczen1.jpg)
 
-**Hình 5.4.** Phiên trợ lý giọng nói với biểu tượng trợ lý ở trạng thái đang xử lý
+**Hình 5.4.** Phiên trợ lý giọng nói: tài xế chọn câu gợi ý nhanh, trợ lý đang xử lý
 
 Bản ghi hội thoại được hiển thị đồng bộ với lời nói để tài xế đối chiếu khi dừng xe (Hình 5.5).
 
 ![Hội thoại mẫu tra cứu lịch trình](thesis_screenshots/trolyaidangketnoi.jpg)
 
-**Hình 5.5.** Hội thoại mẫu: tra cứu lịch trình và thông tin chuyến bằng giọng nói
+**Hình 5.5.** Hội thoại mẫu: tra cứu lịch trình trong ngày
 
 Trang giám sát hệ thống có thêm trang "Báo cáo ngày" (`super-admin-panel/src/pages/ReportsPage.tsx`) hiển thị các nhóm chỉ số (Hình 5.6), ví dụ câu trả lời bị chấm sai và bảng xu hướng 7 ngày (Hình 5.7). Ảnh chụp dùng dữ liệu thật của ngày 06/09/2026 trong bảng nhật ký cuộc gọi của môi trường phát triển: 15 phiên, 4 tài xế, 133 lượt nói; mô hình chấm đánh giá mẫu 30 lượt với 16 đúng và 14 sai (tỷ lệ 53,3%). Các ô độ trễ và tỷ lệ công cụ thành công để trống vì những bản ghi này được tạo trước khi tác nhân gửi kèm chỉ số phiên (mục 5.3.6); báo cáo nêu rõ điều này ở dòng "Ghi chú" thay vì ước lượng. Với bản ghi cũ chưa có trường loại phiên, dịch vụ suy ra loại phiên từ tiền tố tên phòng trong mã cuộc gọi (`driver-`, `trip-`, `customer-`, `custcall-`), cùng quy ước với tác nhân hội thoại (`app/agent/session.py`).
 
@@ -182,7 +188,7 @@ Trang giám sát hệ thống có thêm trang "Báo cáo ngày" (`super-admin-pa
 
 **Hình 5.7.** Trang báo cáo vận hành ngày: ví dụ câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 06/09/2026)
 
-Trang cài đặt trợ lý (`app/(app)/assistant-settings.tsx`) cho phép chọn ngôn ngữ và chế độ gọi khách mặc định. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk (`features/assistant-wakeword/wakeWordService.ts`); khi khớp từ khóa, ứng dụng mở phiên theo cùng luồng như khi bấm nút và không gửi đoạn âm thanh đánh thức tới mô hình ngôn ngữ. Các ảnh giao diện khác đặt ở Phụ lục C.
+Trang cài đặt trợ lý (`app/(app)/assistant-settings.tsx`) cho phép chọn ngôn ngữ, chế độ gọi khách mặc định, bật nhắc khách khi gần điểm đón và chọn bán kính nhắc. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk (`features/assistant-wakeword/wakeWordService.ts`); khi khớp từ khóa, ứng dụng mở phiên theo cùng luồng như khi bấm nút và không gửi đoạn âm thanh đánh thức tới mô hình ngôn ngữ. Các ảnh giao diện khác đặt ở Phụ lục C.
 
 ## 5.6. Triển khai trên AWS
 

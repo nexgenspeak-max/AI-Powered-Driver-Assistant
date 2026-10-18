@@ -253,8 +253,8 @@ Các dịch vụ khác xác minh access token bằng khóa bí mật dùng chung
 | 4 ⑦ | Dịch vụ Liên lạc hội thoại thời gian thực → Nhà cung cấp LLM | Gửi lịch sử hội thoại, lời nhắc hệ thống và lược đồ công cụ của loại phiên | Cơ chế dự phòng như bước 2 |
 | 5 | Dịch vụ Liên lạc hội thoại thời gian thực → Ứng dụng tài xế | Tùy chọn: sau 2 giây chưa có âm thanh trả lời thì phát câu đệm một lần | Hủy nếu câu trả lời thật đã bắt đầu |
 | 6 | Nhà cung cấp LLM → Dịch vụ Liên lạc hội thoại thời gian thực | Yêu cầu gọi công cụ update_trip_status với tham số trạng thái | Câu hỏi không cần dữ liệu: mô hình trả lời thẳng, bỏ qua bước 7–9 |
-| 7 ⑧ | Dịch vụ Liên lạc hội thoại thời gian thực → Dịch vụ Chuyến đi và Điều phối | PATCH /api/v1/trips/{tripId}, thân status; thời gian chờ 8 giây | API lỗi: tác nhân thông báo không cập nhật được, phiên tiếp tục |
-| 8 ⑨ | Dịch vụ Chuyến đi và Điều phối → DynamoDB trips | Ghi trạng thái mới | Trước khi ghi: kiểm tra trạng thái hợp lệ và tài xế cách điểm đón không quá 1 000 m (mặc định); sai: 409 |
+| 7 ⑧ | Dịch vụ Liên lạc hội thoại thời gian thực → Dịch vụ Chuyến đi và Điều phối | PATCH /api/v1/trips/{tripId}, thân status (kèm enforce_arrival với các trạng thái cần có mặt tại chỗ); thời gian chờ 8 giây | API lỗi: tác nhân thông báo không cập nhật được, phiên tiếp tục |
+| 8 ⑨ | Dịch vụ Chuyến đi và Điều phối → DynamoDB trips | Ghi trạng thái mới | Trước khi ghi: kiểm tra trạng thái hợp lệ và tài xế cách điểm cần đến (điểm đón cho đã đến, đã đón; điểm trả cho hoàn thành) không quá 200 m theo vị trí GPS mới nhất (mặc định); sai: 409 kèm khoảng cách còn lại |
 | 9 | Dịch vụ Chuyến đi và Điều phối → Dịch vụ Liên lạc hội thoại thời gian thực | 200: chuyến sau cập nhật | Tác nhân cập nhật ngữ cảnh phiên bằng dữ liệu mới |
 | 10 ⑦ | Dịch vụ Liên lạc hội thoại thời gian thực → Nhà cung cấp LLM, TTS | Sinh câu xác nhận ngắn và tổng hợp giọng nói | Chỉ xác nhận sau khi API thành công |
 | 11 ⑤ | Dịch vụ Liên lạc hội thoại thời gian thực → Ứng dụng tài xế | Phát âm thanh trả lời | Độ trễ phản hồi đo từ bước 2 đến bước này |
