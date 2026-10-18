@@ -7,6 +7,7 @@ import * as mapsService from '../services/mapsService';
 import { isTripOwner as isTripOwnerRule } from '../services/trips/access';
 import * as dispatchService from '../services/dispatchService';
 import * as driverContextService from '../services/driverContextService';
+import { enrichTrip } from '../services/earningsService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
@@ -241,7 +242,9 @@ router.get('/:tripId', async (req: Request, res: Response) => {
   try {
     const trip = await tripService.get(req.params.tripId);
     if (!trip) return res.status(404).json({ detail: 'Trip not found' });
-    return res.json(trip);
+    // Same derived estimated_fare as /drivers/me/context — the app's
+    // full-screen offer sheet fetches the trip by id and leads with the fare.
+    return res.json(enrichTrip(trip));
   } catch (err) {
     return res.status(500).json({ error: String(err) });
   }

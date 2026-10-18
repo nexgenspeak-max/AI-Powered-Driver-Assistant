@@ -119,9 +119,12 @@ export default function AppLayout() {
         <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
         <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
       </Tabs>
-      <TripOfferSheet />
       <AssistantChatOverlay />
       <ChatVoiceDock />
+      {/* Last and highest: a new offer auto-opens the voice panel (the
+          agent reads it aloud), and the panel must never hide the sheet the
+          driver taps to accept. */}
+      <TripOfferSheet />
     </View>
   )
 }

@@ -27,7 +27,7 @@ const newTripAlertAsset = require('../../../../assets/audio/new-trip-alert.mp3')
 // the "decide now" window every driver app gives (Grab/Be ≈ 15–30 s), not a
 // server-side expiry.
 const OFFER_SECONDS = 20
-const RING_SIZE = 148
+const RING_SIZE = 132
 const RING_STROKE = 8
 
 // Grab-style full-screen trip offer: fare first (the number drivers decide
@@ -143,13 +143,25 @@ export function TripOfferSheet() {
 
         <XStack alignItems="center" justifyContent="space-between">
           <AppText variant="h2">Chuyến mới</AppText>
-          <AppText variant="label" color="$textSecondary">
-            Còn {secondsLeft}s
-          </AppText>
+          <XStack alignItems="center" gap="$3">
+            <AppText variant="label" color="$textSecondary">
+              Còn {secondsLeft}s
+            </AppText>
+            {/* "Để sau": close locally, the trip stays in the Chờ list. */}
+            <Pressable
+              onPress={dismiss}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Để sau"
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.chip.val }}
+            >
+              <Ionicons name="close" size={18} color={theme.textSecondary.val} />
+            </Pressable>
+          </XStack>
         </XStack>
 
-        <YStack alignItems="center" marginVertical="$3">
-          <View width={RING_SIZE} height={RING_SIZE} alignItems="center" justifyContent="center">
+        <YStack alignItems="center" marginVertical="$2">
+          <View width={RING_SIZE} height={RING_SIZE} alignItems="center" justifyContent="center" paddingHorizontal={RING_STROKE + 12}>
             <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
               <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={r} stroke={isLight ? '#EDE9FE' : '#2E2250'} strokeWidth={RING_STROKE} fill="none" />
               <Circle
@@ -199,13 +211,19 @@ export function TripOfferSheet() {
           <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />
         </YStack>
 
-        <YStack gap="$3" marginTop="$4">
-          <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} full />
-          <XStack gap="$3">
-            <Button label="Để sau" variant="outline" onPress={dismiss} full />
-            <Button label="Từ chối" variant="outline" onPress={() => reject()} loading={rejecting} full />
-          </XStack>
-        </YStack>
+        {/* One row, reject left / accept right and wider (Grab, Be, Uber).
+            Width comes from the YStack columns (default stretch), not from
+            Button's `full`: that is flex:1 all the way down, which measures
+            0 high in an auto-height column — the sheet then sized itself
+            without the buttons and they spilled off the bottom edge. */}
+        <XStack gap="$3" marginTop="$4">
+          <YStack flex={1}>
+            <Button label="Từ chối" variant="outline" onPress={() => reject()} loading={rejecting} />
+          </YStack>
+          <YStack flex={2}>
+            <Button label="Nhận chuyến" variant="primary" onPress={() => accept()} loading={accepting} />
+          </YStack>
+        </XStack>
       </Animated.View>
     </Animated.View>
   )
@@ -216,8 +234,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 6, 20, 0.55)',
     justifyContent: 'flex-end',
-    zIndex: 70,
-    elevation: 70,
+    // Above AssistantChatOverlay (100) and ChatVoiceDock (110).
+    zIndex: 120,
+    elevation: 120,
   },
   sheet: {
     borderTopLeftRadius: 28,
