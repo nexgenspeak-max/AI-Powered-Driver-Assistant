@@ -212,6 +212,24 @@ export async function listCompletedByDriverInRange(driverPhone: string, fromIso:
   return items;
 }
 
+/** Every trip of one driver_phone value (paginated, no cap) — for lifetime stats. */
+export async function listAllByDriver(driverPhone: string): Promise<Trip[]> {
+  const items: Trip[] = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const result = await docClient.send(new QueryCommand({
+      TableName: config.dynamodbTable,
+      IndexName: 'driver_phone-created_at-index',
+      KeyConditionExpression: 'driver_phone = :p',
+      ExpressionAttributeValues: { ':p': driverPhone },
+      ExclusiveStartKey: exclusiveStartKey,
+    }));
+    items.push(...((result.Items as Trip[]) ?? []));
+    exclusiveStartKey = result.LastEvaluatedKey;
+  } while (exclusiveStartKey);
+  return items;
+}
+
 export async function listByDriverAndStatus(driverPhone: string, status: string, limit = 50): Promise<Trip[]> {
   const trips = await listByDriver(driverPhone, 200);
   return trips.filter(t => t.status === status).slice(0, limit);

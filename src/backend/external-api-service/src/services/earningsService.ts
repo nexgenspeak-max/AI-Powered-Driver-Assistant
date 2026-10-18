@@ -1,5 +1,6 @@
 import * as tripService from './tripService';
 import { phoneVariants } from '../utils/phone';
+import { cacheGet, cacheSet, driverProfileStatsKey } from '../cache/redis';
 
 const FARE_PER_KM = 12000;
 const BASE_FARE = 15000;
@@ -59,13 +60,21 @@ export async function summaryForDriver(driverPhone: string, period: 'week' | 'mo
   };
 }
 
-export function buildProfile(driverPhone: string, trips: tripService.Trip[]) {
-  const mine = trips.filter(t => t.driver_phone === driverPhone || !t.driver_phone);
-  const completed = mine.filter(t => t.status === 'completed');
-  const offered = mine.filter(t =>
+export type DriverProfileStats = {
+  phone: string;
+  rating: number;
+  acceptance_rate: number;
+  completion_rate: number;
+  total_trips: number;
+};
+
+/** Pure: stats over a driver's trips (caller passes ALL of them, every phone format). */
+export function buildProfile(driverPhone: string, trips: tripService.Trip[]): DriverProfileStats {
+  const completed = trips.filter(t => t.status === 'completed');
+  const offered = trips.filter(t =>
     ['confirmed', 'rejected', 'completed', 'calling', 'notified'].includes(t.status),
   );
-  const accepted = mine.filter(t =>
+  const accepted = trips.filter(t =>
     ['confirmed', 'completed', 'calling', 'notified'].includes(t.status),
   );
   const acceptanceRate = offered.length
@@ -81,6 +90,32 @@ export function buildProfile(driverPhone: string, trips: tripService.Trip[]) {
       : 100,
     total_trips: completed.length,
   };
+}
+
+const PROFILE_STATS_TTL_S = 300;
+
+// Lifetime figures for the profile screen. The driver context only carries
+// the 50 most recent trips per phone format (fine for lists), and the old
+// stats were computed over that window with a strict driver_phone equality —
+// so 'Tổng chuyến' read 21 while 27 trips were completed (25 stored as
+// 0888…, 2 as +84888…). Cached 5 min; invalidated on any status change.
+export async function profileForDriver(driverPhone: string): Promise<DriverProfileStats> {
+  const key = driverProfileStatsKey(driverPhone);
+  const cached = await cacheGet<DriverProfileStats>(key);
+  if (cached) return cached;
+  const seen = new Set<string>();
+  const trips: tripService.Trip[] = [];
+  for (const variant of phoneVariants(driverPhone)) {
+    for (const trip of await tripService.listAllByDriver(variant)) {
+      if (trip.trip_id && !seen.has(trip.trip_id)) {
+        seen.add(trip.trip_id);
+        trips.push(trip);
+      }
+    }
+  }
+  const stats = buildProfile(driverPhone, trips);
+  await cacheSet(key, stats, PROFILE_STATS_TTL_S);
+  return stats;
 }
 
 export function activeBonuses() {

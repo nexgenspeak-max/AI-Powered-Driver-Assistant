@@ -4,7 +4,7 @@ import * as tripService from './tripService';
 import * as earningsService from './earningsService';
 import * as driverSettingsService from './driverSettingsService';
 import * as routeOptimizationService from './routeOptimizationService';
-import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverOptimizedRouteKey, driverPendingNudgeKey } from '../cache/redis';
+import { cacheDel, cacheGet, cacheSet, driverContextKey, driverLastCallKey, driverLiveLocationKey, driverOptimizedRouteKey, driverPendingNudgeKey, driverProfileStatsKey } from '../cache/redis';
 import { phoneVariants } from '../utils/phone';
 
 interface DriverLiveLocation {
@@ -43,7 +43,7 @@ async function tripsForDriver(phone: string): Promise<tripService.Trip[]> {
 }
 
 export async function buildDriverContext(driverPhone: string) {
-  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings] = await Promise.all([
+  const [driver, trips, todayEarnings, lastCall, currentLocation, pendingNudge, driverSettings, profileStats] = await Promise.all([
     driverService.get(driverPhone),
     tripsForDriver(driverPhone),
     earningsService.todayForDriver(driverPhone),
@@ -51,6 +51,7 @@ export async function buildDriverContext(driverPhone: string) {
     cacheGet<DriverLiveLocation>(driverLiveLocationKey(driverPhone)),
     cacheGet<{ kind: string }>(driverPendingNudgeKey(driverPhone)),
     driverSettingsService.getByPhone(driverPhone),
+    earningsService.profileForDriver(driverPhone),
   ]);
 
   const upcoming = trips
@@ -85,7 +86,7 @@ export async function buildDriverContext(driverPhone: string) {
 
   return {
     driver: driver ?? { phone: driverPhone, status: 'offline', name: '' },
-    driver_profile: earningsService.buildProfile(driverPhone, trips),
+    driver_profile: profileStats,
     today_earnings: todayEarnings,
     active_bonuses: earningsService.activeBonuses(),
     upcoming_trips: upcoming.map(earningsService.enrichTrip),
@@ -214,6 +215,9 @@ export async function invalidateTripParties(trip: tripService.Trip | null) {
     // misleading, not just outdated. Cheap: this only deletes a cache key,
     // actual recomputation happens lazily on the next context read.
     tasks.push(cacheDel(...phoneVariants(trip.driver_phone).map(driverOptimizedRouteKey)));
+    // Lifetime profile stats (earningsService.profileForDriver) change with
+    // every completed / rejected trip.
+    tasks.push(cacheDel(...phoneVariants(trip.driver_phone).map(driverProfileStatsKey)));
   }
   if (trip.customer_phone) tasks.push(invalidateCustomerContext(trip.customer_phone));
   await Promise.all(tasks);

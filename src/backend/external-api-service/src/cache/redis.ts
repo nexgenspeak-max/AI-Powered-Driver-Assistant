@@ -100,6 +100,10 @@ export async function cacheDel(...keys: string[]): Promise<void> {
   await c.del(...keys);
 }
 
+export function driverProfileStatsKey(phone: string): string {
+  return `driver:profile_stats:${phone.replace(/^\+/, '')}`;
+}
+
 export function driverContextKey(phone: string): string {
   return `driver:context:${phone.replace(/^\+/, '')}`;
 }
