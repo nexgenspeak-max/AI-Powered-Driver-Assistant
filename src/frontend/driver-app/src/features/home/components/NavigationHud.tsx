@@ -1,7 +1,7 @@
 import { Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, YStack, View, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../../components/icons'
 import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { TOP_OVERLAY_CLEARANCE } from '../../../constants'
@@ -13,19 +13,19 @@ import type { RouteStep } from '../../../types'
 // also degrades sensibly if MAPS_PROVIDER=google's longer vocabulary
 // ("turn-slight-left", "roundabout-right", ...) ever shows up here — never
 // throws on an unrecognized value, just falls back to a plain "ahead" arrow.
-function maneuverIcon(maneuver: string): keyof typeof Ionicons.glyphMap {
+function maneuverIcon(maneuver: string): IconName {
   const m = maneuver.toLowerCase()
   // Category checks (uturn/roundabout/merge-fork-ramp) come BEFORE the
   // generic left/right substring checks — Google's own vocabulary includes
   // compound values like "roundabout-left"/"fork-right", which contain
   // "left"/"right" too, so checking those first would always win and the
   // more specific icon below would never be reachable for them.
-  if (m.includes('uturn')) return 'return-down-back'
-  if (m.includes('roundabout')) return 'sync'
-  if (m.includes('merge') || m.includes('fork') || m.includes('ramp')) return 'git-merge-outline'
-  if (m.includes('left')) return 'arrow-back'
-  if (m.includes('right')) return 'arrow-forward'
-  return 'arrow-up'
+  if (m.includes('uturn')) return 'uturn'
+  if (m.includes('roundabout')) return 'roundabout'
+  if (m.includes('merge') || m.includes('fork') || m.includes('ramp')) return 'merge'
+  if (m.includes('left')) return 'turn-left'
+  if (m.includes('right')) return 'turn-right'
+  return 'straight'
 }
 
 function formatManeuverDistance(meters: number): string {
@@ -63,7 +63,7 @@ function IconButton({
   color,
   label,
 }: {
-  name: keyof typeof Ionicons.glyphMap
+  name: IconName
   onPress: () => void
   color: string
   label: string
@@ -84,7 +84,7 @@ function IconButton({
         backgroundColor: theme.primaryMuted.val,
       }}
     >
-      <Ionicons name={name} size={18} color={color} />
+      <Icon name={name} size={18} color={color} />
     </Pressable>
   )
 }
@@ -131,8 +131,9 @@ export function NavigationHud({
     <SolidCard style={{ position: 'absolute', left: 16, right: 16, top: insets.top + TOP_OVERLAY_CLEARANCE }}>
       <XStack alignItems="center" gap="$3" paddingHorizontal="$4" paddingVertical="$3">
         <View width={44} height={44} borderRadius={22} alignItems="center" justifyContent="center" backgroundColor={purple}>
-          <Ionicons
+          <Icon
             name={arrived ? 'flag' : error ? 'warning' : maneuverIcon(step?.maneuver ?? '')}
+            strokeWidth={2.25}
             size={22}
             color={onPrimary}
           />

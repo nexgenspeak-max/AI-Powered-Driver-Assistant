@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import { View } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './icons'
 import { haptics } from '../utils/haptics'
 
 // A brief positive-outcome moment: a green disc + checkmark springs in, fires a
@@ -48,7 +48,7 @@ export function SuccessCheck({ size = 72, onDone }: SuccessCheckProps) {
         alignItems="center"
         justifyContent="center"
       >
-        <Ionicons name="checkmark" size={size * 0.55} color="#ffffff" />
+        <Icon name="check" size={size * 0.55} color="#ffffff" />
       </View>
     </Animated.View>
   )

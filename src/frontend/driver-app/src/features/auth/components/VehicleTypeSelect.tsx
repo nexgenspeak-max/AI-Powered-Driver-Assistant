@@ -7,7 +7,7 @@ import {
   type LayoutRectangle,
 } from 'react-native'
 import { XStack, YStack, useTheme, useThemeName } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { AppText } from '../../../components/AppText'
 import { authGlassTheme } from '../../../theme'
 import { haptics } from '../../../utils/haptics'
@@ -109,7 +109,7 @@ export function VehicleTypeSelect({ value, onChange, error }: Props) {
             <AppText variant="body" color={current ? '$textPrimary' : '$textMuted'} flex={1}>
               {current?.label ?? 'Chọn loại xe'}
             </AppText>
-            <Ionicons
+            <Icon
               name={open ? 'chevron-up' : 'chevron-down'}
               size={20}
               color={theme.textMuted.val}
@@ -170,7 +170,7 @@ export function VehicleTypeSelect({ value, onChange, error }: Props) {
                       {opt.label}
                     </AppText>
                     {selected ? (
-                      <Ionicons name="checkmark-circle" size={22} color={theme.primary.val} />
+                      <Icon name="check-circle" size={22} color={theme.primary.val} />
                     ) : (
                       <RNView
                         style={{

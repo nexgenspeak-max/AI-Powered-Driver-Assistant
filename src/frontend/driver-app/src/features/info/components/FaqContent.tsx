@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { XStack, View, useTheme } from 'tamagui'
 import { TouchableOpacity } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
 import { FAQ_ITEMS } from '../data/faqData'
@@ -28,7 +28,7 @@ export function FaqContent() {
                 <AppText variant="title" flex={1} paddingRight="$2">
                   {item.question}
                 </AppText>
-                <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted.val} />
+                <Icon name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted.val} />
               </XStack>
             </TouchableOpacity>
             {isOpen && (

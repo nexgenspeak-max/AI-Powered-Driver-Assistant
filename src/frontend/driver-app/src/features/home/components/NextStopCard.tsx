@@ -1,7 +1,7 @@
 import { Linking, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, YStack, View, useTheme } from 'tamagui'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { Button } from '../../../components/Button'
@@ -54,7 +54,7 @@ export function NextStopCard({
             justifyContent="center"
             backgroundColor={accent}
           >
-            <Ionicons name={isPickup ? 'location' : 'flag'} size={20} color={theme.textInverse.val} />
+            <Icon name={isPickup ? 'pin' : 'flag'} size={20} color={theme.textInverse.val} />
           </View>
           <YStack flex={1} gap={2}>
             <XStack alignItems="center" gap="$2">
@@ -93,7 +93,7 @@ export function NextStopCard({
             variant="primary"
             full
             onPress={onNavigate}
-            icon={<MaterialCommunityIcons name="navigation-variant" size={18} color="#ffffff" />}
+            icon={<Icon name="navigate" size={18} color="#ffffff" />}
           />
           {phone ? (
             <Pressable
@@ -111,7 +111,7 @@ export function NextStopCard({
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Ionicons name="call" size={22} color={theme.onSuccessContainer.val} />
+              <Icon name="phone" size={22} color={theme.onSuccessContainer.val} />
             </Pressable>
           ) : null}
         </XStack>

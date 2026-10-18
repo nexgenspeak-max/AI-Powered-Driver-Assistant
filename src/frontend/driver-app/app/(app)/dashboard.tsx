@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable } from "react-native";
 import { XStack, YStack, useTheme } from "tamagui";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../src/components/icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Screen } from "../../src/components/Screen";
@@ -165,7 +165,7 @@ export default function DashboardScreen() {
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Ionicons name="add" size={24} color={theme.onPrimaryContainer.val} />
+          <Icon name="plus" size={24} color={theme.onPrimaryContainer.val} />
         </Pressable>
       </XStack>
       {/* Short labels, no icons — 3 segments is already tight; an icon +
@@ -199,7 +199,7 @@ export default function DashboardScreen() {
 
       {!showTripSkeleton && isError && (
         <EmptyState
-          icon="alert-circle-outline"
+          icon="alert-circle"
           title="Không thể tải chuyến đi"
           message="Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại."
           actionLabel="Thử lại"

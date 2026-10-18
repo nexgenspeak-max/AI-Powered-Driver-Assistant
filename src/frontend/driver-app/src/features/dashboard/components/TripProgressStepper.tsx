@@ -1,5 +1,5 @@
 import { XStack, YStack, View, useTheme } from "tamagui";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../../components/icons";
 import { AppText } from "../../../components/AppText";
 import type { TripStatus } from "../../../types";
 
@@ -51,7 +51,7 @@ export function TripProgressStepper({ status }: { status: TripStatus }) {
                 borderWidth={isCurrent ? 2 : isDone ? 0 : 1.5}
                 borderColor={isCurrent ? theme.success.val : theme.borderStrong.val}
               >
-                {isDone && <Ionicons name="checkmark" size={11} color={theme.textInverse.val} />}
+                {isDone && <Icon name="check" size={11} color={theme.textInverse.val} />}
                 {isCurrent && <View width={6} height={6} borderRadius={3} backgroundColor={theme.success.val} />}
               </View>
               <AppText

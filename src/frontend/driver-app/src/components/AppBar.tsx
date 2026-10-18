@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
 import { XStack, View, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppText } from './AppText'
 
@@ -41,7 +41,7 @@ export function AppBar({ title, onBack, right, showBack = true }: AppBarProps) {
             accessibilityLabel="Quay lại"
             style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Ionicons name="chevron-back" size={26} color={theme.textPrimary.val} />
+            <Icon name="chevron-left" size={26} color={theme.textPrimary.val} />
           </TouchableOpacity>
         ) : (
           <View width={40} />

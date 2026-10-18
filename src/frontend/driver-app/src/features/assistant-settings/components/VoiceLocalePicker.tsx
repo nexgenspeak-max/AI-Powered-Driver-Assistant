@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable } from 'react-native'
 import { View, XStack, YStack, useTheme, useThemeName } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../../components/icons'
 import { AppText } from '../../../components/AppText'
 import { haptics } from '../../../utils/haptics'
 import {
@@ -11,18 +11,18 @@ import {
   type VoiceRoutingLang,
 } from '../../../services/voiceLang'
 
-const ROW_ICON = 'language-outline' as const
+const ROW_ICON = 'language' as const
 
 type Props = {
   value: VoiceRoutingLang
   onChange: (lang: VoiceRoutingLang) => void
 }
 
-function RowIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
+function RowIcon({ name }: { name: IconName }) {
   const theme = useTheme()
   return (
     <View width={24} alignItems="center">
-      <Ionicons name={name} size={20} color={theme.textSecondary.val} />
+      <Icon name={name} size={20} color={theme.textSecondary.val} />
     </View>
   )
 }
@@ -80,7 +80,7 @@ export function VoiceLocalePicker({ value, onChange }: Props) {
               {countryCodeToFlagEmoji(current.flagCountry)} {current.nativeLabel} · {current.regionHint}
             </AppText>
           </YStack>
-          <Ionicons
+          <Icon
             name={open ? 'chevron-up' : 'chevron-down'}
             size={20}
             color={theme.textMuted.val}
@@ -123,7 +123,7 @@ export function VoiceLocalePicker({ value, onChange }: Props) {
                         </AppText>
                       </YStack>
                       {selected ? (
-                        <Ionicons name="checkmark-circle" size={22} color={theme.primary.val} />
+                        <Icon name="check-circle" size={22} color={theme.primary.val} />
                       ) : (
                         <View width={22} height={22} borderRadius={11} borderWidth={1.5} borderColor="$border" />
                       )}

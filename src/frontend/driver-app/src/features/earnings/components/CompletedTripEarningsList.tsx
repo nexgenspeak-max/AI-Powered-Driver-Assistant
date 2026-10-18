@@ -1,5 +1,5 @@
 import { XStack, YStack, View, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
 import { formatCurrency, formatKm, formatTime } from '../../../utils/format'
@@ -49,7 +49,7 @@ function TripRow({ trip, last }: { trip: EarningsTrip; last: boolean }) {
       borderBottomColor="$divider"
     >
       <View width={36} height={36} borderRadius={18} backgroundColor="$successContainer" alignItems="center" justifyContent="center">
-        <Ionicons name="checkmark" size={18} color={theme.onSuccessContainer.val} />
+        <Icon name="check" size={18} color={theme.onSuccessContainer.val} />
       </View>
       <YStack flex={1} minWidth={0} gap={2}>
         <AppText variant="bodyStrong" numberOfLines={1}>

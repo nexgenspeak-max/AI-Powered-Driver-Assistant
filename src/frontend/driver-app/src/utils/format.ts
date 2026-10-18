@@ -17,7 +17,8 @@ export function formatTime(iso: string): string {
 /** "4,5 km" under 10 km, "12 km" above — Vietnamese decimal comma. */
 export function formatKm(km?: number | null): string {
   if (km == null || !Number.isFinite(km)) return ''
-  if (km >= 10) return `${Math.round(km)} km`
+  // Vietnamese grouping: "1.674 km" (dot thousands, comma decimals).
+  if (km >= 10) return `${String(Math.round(km)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} km`
   return `${km.toFixed(1).replace('.', ',')} km`
 }
 

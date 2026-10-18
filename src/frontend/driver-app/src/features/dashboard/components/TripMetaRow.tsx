@@ -1,5 +1,5 @@
 import { XStack, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../../components/icons'
 import { AppText } from '../../../components/AppText'
 import { formatKm, formatMinutes, formatTime } from '../../../utils/format'
 
@@ -20,20 +20,20 @@ export function TripMetaRow({
 }) {
   const theme = useTheme()
   const congestion = trafficNote && !/thông thoáng/i.test(trafficNote) ? trafficNote : null
-  const items: { icon: keyof typeof Ionicons.glyphMap; text: string; tone?: 'warning' }[] = []
+  const items: { icon: IconName; text: string; tone?: 'warning' }[] = []
   const km = formatKm(distanceKm)
   const min = formatMinutes(etaMinutes)
-  if (km) items.push({ icon: 'navigate-outline', text: km })
-  if (min) items.push({ icon: 'time-outline', text: min })
-  if (pickupTime) items.push({ icon: 'calendar-outline', text: formatTime(pickupTime) })
-  if (congestion) items.push({ icon: 'warning-outline', text: congestion, tone: 'warning' })
+  if (km) items.push({ icon: 'distance', text: km })
+  if (min) items.push({ icon: 'clock', text: min })
+  if (pickupTime) items.push({ icon: 'calendar', text: formatTime(pickupTime) })
+  if (congestion) items.push({ icon: 'warning', text: congestion, tone: 'warning' })
   if (items.length === 0) return null
 
   return (
     <XStack flexWrap="wrap" gap="$3" alignItems="center">
       {items.map(item => (
         <XStack key={item.icon + item.text} alignItems="center" gap={4}>
-          <Ionicons
+          <Icon
             name={item.icon}
             size={14}
             color={item.tone === 'warning' ? theme.warning.val : theme.textMuted.val}

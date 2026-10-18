@@ -1,5 +1,5 @@
 import { YStack, XStack, View, useTheme } from "tamagui";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../../components/icons";
 import { Surface } from "../../../components/Surface";
 import { AppText } from "../../../components/AppText";
 import { StatCard } from "../../../components/StatCard";
@@ -38,8 +38,8 @@ export function ProfileCard({ driver, profile }: Props) {
                 color={isOnline ? "$onSuccessContainer" : "$textSecondary"}
                 glass={false}
                 icon={
-                  <Ionicons
-                    name="ellipse"
+                  <Icon
+                    name="dot"
                     size={7}
                     color={isOnline ? theme.success.val : theme.textMuted.val}
                   />
@@ -50,7 +50,7 @@ export function ProfileCard({ driver, profile }: Props) {
         </XStack>
         {!!driver.vehicle_name && (
           <XStack alignItems="center" gap="$3" paddingTop="$3" borderTopWidth={1} borderTopColor="$divider">
-            <Ionicons name="car-outline" size={20} color={theme.textSecondary.val} />
+            <Icon name="car" size={20} color={theme.textSecondary.val} />
             <AppText variant="body" flex={1} numberOfLines={1}>
               {driver.vehicle_name}
             </AppText>
@@ -68,19 +68,19 @@ export function ProfileCard({ driver, profile }: Props) {
       <YStack gap="$3">
         <SectionTitle>Thống kê</SectionTitle>
         <XStack gap="$3">
-          <StatCard label="Đánh giá" value={profile.rating.toFixed(2)} icon="star-outline" />
-          <StatCard label="Tổng chuyến" value={String(profile.total_trips)} icon="bar-chart-outline" />
+          <StatCard label="Đánh giá" value={profile.rating.toFixed(2)} icon="star" />
+          <StatCard label="Tổng chuyến" value={String(profile.total_trips)} icon="chart" />
         </XStack>
         <XStack gap="$3">
           <StatCard
             label="Tỉ lệ nhận"
             value={`${profile.acceptance_rate.toFixed(0)}%`}
-            icon="thumbs-up-outline"
+            icon="thumbs-up"
           />
           <StatCard
             label="Tỉ lệ hoàn thành"
             value={`${profile.completion_rate.toFixed(0)}%`}
-            icon="checkmark-circle-outline"
+            icon="check-circle"
           />
         </XStack>
       </YStack>

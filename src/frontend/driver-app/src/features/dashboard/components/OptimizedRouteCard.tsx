@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Pressable } from 'react-native'
 import { XStack, YStack, View, useTheme } from 'tamagui'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { Surface } from '../../../components/Surface'
 import { AppText } from '../../../components/AppText'
 import { colorForTrip } from '../../home/lib/mapConstants'
 import type { OptimizedRoute } from '../../../types'
+import { formatKm, formatMinutes } from '../../../utils/format'
 
 function formatDistance(meters: number): string {
-  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`
+  return meters >= 1000 ? formatKm(meters / 1000) : `${Math.round(meters)} m`
 }
 
 function colorByTripId(route: OptimizedRoute): Record<string, string> {
@@ -43,11 +44,11 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
   return (
     <Surface clip borderRadius={24} padding="$4" gap="$3">
       <XStack alignItems="center" gap="$2">
-        <MaterialCommunityIcons name="routes" size={22} color={theme.primary.val} />
+        <Icon name="route" size={22} color={theme.primary.val} />
         <YStack flex={1} gap="$1">
           <AppText variant="title">Lộ trình tối ưu</AppText>
           <AppText variant="caption" color="$textSecondary">
-            {stops.length} điểm · {formatDistance(totalM)} · ~{totalMin} phút · {basisLabel}
+            {stops.length} điểm · {formatDistance(totalM)} · ~{formatMinutes(totalMin)} · {basisLabel}
           </AppText>
         </YStack>
       </XStack>
@@ -82,7 +83,7 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
               </AppText>
               {stop.distance_m > 0 ? (
                 <AppText variant="caption" color="$textMuted">
-                  {formatDistance(stop.distance_m)} · ~{stop.eta_minutes} phút
+                  {formatDistance(stop.distance_m)} · ~{formatMinutes(stop.eta_minutes)}
                 </AppText>
               ) : i === 0 ? (
                 <AppText variant="caption" color="$textMuted">
@@ -105,7 +106,7 @@ export function OptimizedRouteCard({ route }: { route: OptimizedRoute }) {
           <AppText variant="label" color="$primary">
             {expanded ? 'Thu gọn' : `Xem cả ${stops.length} điểm`}
           </AppText>
-          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.primary.val} />
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.primary.val} />
         </XStack>
       </Pressable>
     </Surface>

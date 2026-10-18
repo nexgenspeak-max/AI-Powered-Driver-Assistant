@@ -3,7 +3,7 @@ import { EmptyState } from '../../../components/EmptyState'
 export function EmptyTripsState({ isOnline }: { isOnline: boolean }) {
   return (
     <EmptyState
-      icon={isOnline ? 'checkmark-circle-outline' : 'power-outline'}
+      icon={isOnline ? 'check-circle' : 'power'}
       title={isOnline ? 'Chưa có chuyến nào' : 'Bạn đang offline'}
       message={
         isOnline

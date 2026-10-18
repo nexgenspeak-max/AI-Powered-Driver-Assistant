@@ -1,7 +1,7 @@
 import { Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { XStack, YStack, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { router } from 'expo-router'
 import { AppText } from '../../../components/AppText'
 import { CzenMark } from '../../../components/CzenMark'
@@ -26,7 +26,7 @@ export function AuthHeader({ title, subtitle }: { title: string; subtitle: strin
           accessibilityLabel="Quay lại"
           style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.chip.val }}
         >
-          <Ionicons name="chevron-back" size={22} color={theme.textPrimary.val} />
+          <Icon name="chevron-left" size={22} color={theme.textPrimary.val} />
         </Pressable>
       </XStack>
       <YStack gap="$3">

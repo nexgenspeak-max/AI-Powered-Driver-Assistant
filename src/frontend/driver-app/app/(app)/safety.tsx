@@ -1,6 +1,6 @@
 import { Linking, TouchableOpacity } from 'react-native'
 import { View, YStack, XStack, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../src/components/icons'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
@@ -52,7 +52,7 @@ export default function SafetyScreen() {
           </AppText>
           {SAFETY_TIPS.map((tip, i) => (
             <XStack key={i} gap="$2" alignItems="flex-start">
-              <Ionicons name="shield-checkmark-outline" size={16} color={theme.success.val} style={{ marginTop: 2 }} />
+              <Icon name="shield-check" size={16} color={theme.success.val} style={{ marginTop: 2 }} />
               <AppText variant="body" flex={1}>
                 {tip}
               </AppText>
@@ -85,7 +85,7 @@ function TouchableRow({
     >
       <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3" minHeight={44}>
         <XStack alignItems="center" gap="$3" flex={1}>
-          <Ionicons name="call" size={18} color={iconColor} />
+          <Icon name="phone" size={18} color={iconColor} />
           <AppText variant="label" flexShrink={1} numberOfLines={1}>
             {label}
           </AppText>

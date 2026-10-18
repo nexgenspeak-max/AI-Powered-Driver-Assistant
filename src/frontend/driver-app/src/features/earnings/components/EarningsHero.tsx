@@ -93,7 +93,7 @@ export function EarningsHero({
             <Stat label="Chuyến" value={String(tripCount)} />
             <Stat label="TB/chuyến" value={perTrip != null ? formatCurrency(perTrip, currency) : '—'} />
             {hoursOnline != null ? (
-              <Stat label="Giờ online" value={`${hoursOnline.toFixed(1)}h`} />
+              <Stat label="Giờ online" value={`${hoursOnline.toFixed(1).replace(".", ",")} giờ`} />
             ) : bonusEarnings != null ? (
               <Stat label="Thưởng" value={formatCurrency(bonusEarnings, currency)} />
             ) : null}

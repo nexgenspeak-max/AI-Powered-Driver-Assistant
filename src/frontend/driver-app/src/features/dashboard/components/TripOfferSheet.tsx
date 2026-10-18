@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated'
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio'
 import Svg, { Circle } from 'react-native-svg'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { AppText } from '../../../components/AppText'
 import { RouteLine } from '../../../components/RouteLine'
 import { Button } from '../../../components/Button'
@@ -155,7 +155,7 @@ export function TripOfferSheet() {
               accessibilityLabel="Để sau"
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.chip.val }}
             >
-              <Ionicons name="close" size={18} color={theme.textSecondary.val} />
+              <Icon name="close" size={18} color={theme.textSecondary.val} />
             </Pressable>
           </XStack>
         </XStack>
@@ -205,7 +205,7 @@ export function TripOfferSheet() {
                 </AppText>
               )}
             </YStack>
-            <Ionicons name="person-circle-outline" size={22} color={theme.textMuted.val} />
+            <Icon name="customer" size={22} color={theme.textMuted.val} />
           </XStack>
 
           <RouteLine pickup={trip.pickup_address} dropoff={trip.dropoff_address} />

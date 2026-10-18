@@ -1,26 +1,22 @@
 import { View } from 'react-native'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Icon, type IconName } from './icons'
 
-/** Fixed slot — Material icons at 26px per ui-mobile (icon-only tabs). */
+/** Czen glyphs at 26pt in a fixed 30pt slot (icon-only tabs). */
 export const TAB_BAR_ICON_SIZE = 26
 export const TAB_BAR_ICON_SLOT = 30
 
 export type DriverTabRoute = 'index' | 'dashboard' | 'earnings' | 'profile'
 
-type MaterialName = keyof typeof MaterialCommunityIcons.glyphMap
-
 /**
- * Material Community Icons (Material Design family) — filled / outline pairs.
- * Prefer this over Ionicons for tab chrome (foundation / M3-adjacent look).
+ * One drawn glyph per tab; the selected state is the same glyph in duotone
+ * (tinted body + heavier stroke, see icons/Icon.tsx) rather than a swap to
+ * an unrelated filled font glyph, so the bar never "jumps" shape on tap.
  */
-export const DRIVER_TAB_ICONS: Record<
-  DriverTabRoute,
-  { on: MaterialName; off: MaterialName; a11y: string }
-> = {
-  index: { on: 'map', off: 'map-outline', a11y: 'Trang chủ, bản đồ' },
-  dashboard: { on: 'car', off: 'car-outline', a11y: 'Chuyến đi' },
-  earnings: { on: 'wallet', off: 'wallet-outline', a11y: 'Thu nhập' },
-  profile: { on: 'account-circle', off: 'account-circle-outline', a11y: 'Cá nhân' },
+export const DRIVER_TAB_ICONS: Record<DriverTabRoute, { icon: IconName; a11y: string }> = {
+  index: { icon: 'map', a11y: 'Trang chủ, bản đồ' },
+  dashboard: { icon: 'car', a11y: 'Chuyến đi' },
+  earnings: { icon: 'wallet', a11y: 'Thu nhập' },
+  profile: { icon: 'profile', a11y: 'Cá nhân' },
 }
 
 export function DriverTabBarIcon({
@@ -34,14 +30,13 @@ export function DriverTabBarIcon({
   color: string
   focused: boolean
 }) {
-  const g = DRIVER_TAB_ICONS[route]
   return (
     <View
       style={{ width: TAB_BAR_ICON_SLOT, height: TAB_BAR_ICON_SLOT, alignItems: 'center', justifyContent: 'center' }}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <MaterialCommunityIcons name={focused ? g.on : g.off} size={size} color={color} />
+      <Icon name={DRIVER_TAB_ICONS[route].icon} size={size} color={color} active={focused} />
     </View>
   )
 }

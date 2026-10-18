@@ -1,7 +1,7 @@
 import { Linking, TouchableOpacity } from 'react-native'
 import { View, YStack, XStack, useTheme } from 'tamagui'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../src/components/icons'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
@@ -21,7 +21,7 @@ export default function SupportScreen() {
       <Surface flat>
         <YStack padding="$4" gap="$1">
           <Row
-            iconName="call"
+            iconName="phone"
             iconColor={theme.success.val}
             label="Hotline hỗ trợ tài xế"
             value={SUPPORT_PHONE}
@@ -37,7 +37,7 @@ export default function SupportScreen() {
           />
           <View height={1} backgroundColor="$border" />
           <Row
-            iconName="help-circle"
+            iconName="help"
             iconColor={theme.warning.val}
             label="Câu hỏi thường gặp"
             value=""
@@ -56,7 +56,7 @@ function Row({
   value,
   onPress,
 }: {
-  iconName: keyof typeof Ionicons.glyphMap
+  iconName: IconName
   iconColor: string
   label: string
   value: string
@@ -74,7 +74,7 @@ function Row({
     >
       <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingVertical="$3" minHeight={44}>
         <XStack alignItems="center" gap="$3" flex={1}>
-          <Ionicons name={iconName} size={20} color={iconColor} />
+          <Icon name={iconName} size={20} color={iconColor} />
           <AppText variant="label" flexShrink={1} numberOfLines={1}>
             {label}
           </AppText>

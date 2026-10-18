@@ -1,7 +1,7 @@
 import { TouchableOpacity } from 'react-native'
 import { View, XStack, useTheme } from 'tamagui'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../src/components/icons'
 import Constants from 'expo-constants'
 import { useMutation } from '@tanstack/react-query'
 import { useDriverContext } from '../../src/features/dashboard/hooks/useDriverContext'
@@ -74,45 +74,45 @@ export default function ProfileScreen() {
 
         <Surface clip borderRadius={24}>
           <SectionTitle>Tài khoản</SectionTitle>
-          <MenuRow icon="create-outline" label="Chỉnh sửa hồ sơ" onPress={() => router.push('/edit-profile')} />
+          <MenuRow icon="edit" label="Chỉnh sửa hồ sơ" onPress={() => router.push('/edit-profile')} />
           <Divider />
-          <MenuRow icon="car-outline" label="Quản lý xe" onPress={() => router.push('/vehicle')} />
+          <MenuRow icon="car" label="Quản lý xe" onPress={() => router.push('/vehicle')} />
         </Surface>
 
         <Surface clip borderRadius={24}>
           <SectionTitle>Thanh toán & Giấy tờ</SectionTitle>
-          <MenuRow icon="card-outline" label="Tài khoản ngân hàng" onPress={() => router.push('/bank-info')} />
+          <MenuRow icon="card" label="Tài khoản ngân hàng" onPress={() => router.push('/bank-info')} />
           <Divider />
-          <MenuRow icon="document-text-outline" label="Giấy tờ xác minh" onPress={() => router.push('/documents')} />
+          <MenuRow icon="document-text" label="Giấy tờ xác minh" onPress={() => router.push('/documents')} />
         </Surface>
 
         <Surface clip borderRadius={24}>
           <SectionTitle>Hỗ trợ & Pháp lý</SectionTitle>
-          <MenuRow icon="shield-checkmark-outline" label="Trung tâm an toàn" onPress={() => router.push('/safety')} />
+          <MenuRow icon="shield-check" label="Trung tâm an toàn" onPress={() => router.push('/safety')} />
           <Divider />
-          <MenuRow icon="help-buoy-outline" label="Hỗ trợ" onPress={() => router.push('/support')} />
+          <MenuRow icon="support" label="Hỗ trợ" onPress={() => router.push('/support')} />
           <Divider />
-          <MenuRow icon="document-outline" label="Điều khoản & Chính sách bảo mật" onPress={() => router.push('/terms')} />
+          <MenuRow icon="document" label="Điều khoản & Chính sách bảo mật" onPress={() => router.push('/terms')} />
         </Surface>
 
         <Surface clip borderRadius={24}>
           <SectionTitle>Cài đặt</SectionTitle>
-          <MenuRow icon="mic-outline" label="Cài đặt trợ lý" onPress={() => router.push('/assistant-settings')} />
+          <MenuRow icon="mic" label="Cài đặt trợ lý" onPress={() => router.push('/assistant-settings')} />
           <Divider />
           <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4">
             <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
-              <RowIcon name="moon-outline" />
+              <RowIcon name="moon" />
               <AppText variant="body">Chế độ tối</AppText>
             </XStack>
             <ThemeToggle isDark={themeMode === 'dark'} onToggle={toggleTheme} />
           </XStack>
           <Divider />
-          <MenuRow icon="information-circle-outline" label="Giới thiệu" onPress={() => router.push('/about')} />
+          <MenuRow icon="info" label="Giới thiệu" onPress={() => router.push('/about')} />
           <Divider />
-          <MenuRow icon="help-circle-outline" label="Câu hỏi thường gặp" onPress={() => router.push('/faq')} />
+          <MenuRow icon="help" label="Câu hỏi thường gặp" onPress={() => router.push('/faq')} />
           <Divider />
           <MenuRow
-            icon="log-out-outline"
+            icon="logout"
             label="Đăng xuất"
             labelColor="$danger"
             showChevron={false}
@@ -133,11 +133,11 @@ export default function ProfileScreen() {
   )
 }
 
-function RowIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
+function RowIcon({ name }: { name: IconName }) {
   const theme = useTheme()
   return (
     <View width={24} alignItems="center">
-      <Ionicons name={name} size={20} color={theme.textSecondary.val} />
+      <Icon name={name} size={20} color={theme.textSecondary.val} />
     </View>
   )
 }
@@ -153,7 +153,7 @@ function MenuRow({
   showChevron = true,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap
+  icon: IconName
   label: string
   labelColor?: string
   showChevron?: boolean
@@ -169,7 +169,7 @@ function MenuRow({
             {label}
           </AppText>
         </XStack>
-        {showChevron && <Ionicons name="chevron-forward" size={18} color={theme.textMuted.val} />}
+        {showChevron && <Icon name="chevron-right" size={18} color={theme.textMuted.val} />}
       </XStack>
     </TouchableOpacity>
   )

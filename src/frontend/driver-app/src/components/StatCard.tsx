@@ -1,5 +1,5 @@
 import { XStack } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from './icons'
 import { useTheme } from 'tamagui'
 import { Surface } from './Surface'
 import { AppText } from './AppText'
@@ -12,7 +12,7 @@ import { AppText } from './AppText'
 export type StatCardProps = {
   label: string
   value: string
-  icon?: keyof typeof Ionicons.glyphMap
+  icon?: IconName
 }
 
 export function StatCard({ label, value, icon }: StatCardProps) {
@@ -21,7 +21,7 @@ export function StatCard({ label, value, icon }: StatCardProps) {
     <Surface clip borderRadius={24} level="sm" flex={1} padding="$3" gap="$2">
       <XStack alignItems="center" gap="$2">
         {icon && (
-          <Ionicons name={icon} size={14} color={theme.textMuted.val} />
+          <Icon name={icon} size={14} color={theme.textMuted.val} />
         )}
         <AppText variant="caption" color="$textSecondary">
           {label}

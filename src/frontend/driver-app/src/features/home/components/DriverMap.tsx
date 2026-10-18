@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View, Text, Image } from 'react-native'
 import { useIsFocused } from '@react-navigation/native'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import {
   Map,
   Camera,
@@ -97,7 +97,7 @@ function StopMarker({ kind, name, color, order }: { kind: 'pickup' | 'dropoff'; 
           <Text style={{ fontSize: 10, fontWeight: '700', color }}>{order}</Text>
         </View>
       )}
-      <Ionicons name={kind === 'pickup' ? 'location' : 'flag'} size={12} color="#ffffff" />
+      <Icon name={kind === 'pickup' ? 'pin' : 'flag'} size={12} color="#ffffff" />
       <Text numberOfLines={1} style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
         {name}
       </Text>

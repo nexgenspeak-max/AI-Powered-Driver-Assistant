@@ -88,7 +88,7 @@ export default function EarningsScreen() {
         <Skeleton height={168} radius={24} />
       ) : contextError && !context ? (
         <EmptyState
-          icon="alert-circle-outline"
+          icon="alert-circle"
           title="Không thể tải thu nhập"
           message="Kiểm tra kết nối rồi thử lại."
           actionLabel="Thử lại"
@@ -122,7 +122,7 @@ export default function EarningsScreen() {
 
           {completed.length === 0 ? (
             <EmptyState
-              icon="wallet-outline"
+              icon="wallet"
               title="Chưa có thu nhập"
               message={isOnline ? 'Hoàn thành chuyến đầu tiên để thấy thu nhập ở đây.' : 'Bật nhận chuyến để bắt đầu kiếm tiền hôm nay.'}
               actionLabel={!isOnline && ready ? 'Bật nhận chuyến' : undefined}

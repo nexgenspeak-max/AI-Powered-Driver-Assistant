@@ -1,11 +1,11 @@
 import { View, YStack, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from './icons'
 import { Surface } from './Surface'
 import { AppText } from './AppText'
 import { Button } from './Button'
 
 interface Props {
-  icon: keyof typeof Ionicons.glyphMap
+  icon: IconName
   title: string
   message: string
   actionLabel?: string
@@ -27,7 +27,7 @@ export function EmptyState({ icon, title, message, actionLabel, onAction }: Prop
           alignItems="center"
           justifyContent="center"
         >
-          <Ionicons name={icon} size={28} color={theme.primary.val} />
+          <Icon name={icon} size={28} color={theme.primary.val} />
         </View>
         <AppText variant="title" textAlign="center">
           {title}

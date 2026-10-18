@@ -1,6 +1,6 @@
 import { View } from 'react-native'
 import { XStack, YStack, useTheme, useThemeName } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from '../../src/components/icons'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Screen } from '../../src/components/Screen'
@@ -109,7 +109,7 @@ export default function AssistantSettingsScreen() {
           />
           <View style={{ height: 1, backgroundColor: theme.border.val }} />
           <ToggleRow
-            iconName="mic-outline"
+            iconName="mic"
             label="Chế độ rảnh tay"
             description="Nghe từ khoá đánh thức ở chế độ nền để điều khiển bằng giọng nói"
             value={settings?.hands_free_mode ?? false}
@@ -119,7 +119,7 @@ export default function AssistantSettingsScreen() {
           />
           <View style={{ height: 1, backgroundColor: theme.border.val }} />
           <ToggleRow
-            iconName="call-outline"
+            iconName="phone"
             label="Thông báo khách khi gần điểm đón"
             description={`Tự động gọi/nhắn khách khi tài xế còn cách điểm đón dưới ${formatMeters(settings?.notify_on_pickup_approach_radius_m)}`}
             value={settings?.notify_on_pickup_approach ?? false}
@@ -129,7 +129,7 @@ export default function AssistantSettingsScreen() {
           />
           <View style={{ height: 1, backgroundColor: theme.border.val }} />
           <ToggleRow
-            iconName="navigate-outline"
+            iconName="distance"
             label="Tự gợi ý điểm dừng tiếp theo"
             description={`Trợ lý tự đề xuất điểm đón/trả kế tiếp khi còn cách dưới ${formatMeters(settings?.auto_suggest_next_stop_radius_m)}`}
             value={settings?.auto_suggest_next_stop ?? false}
@@ -157,7 +157,7 @@ function ToggleRow({
   isLight,
   theme,
 }: {
-  iconName: keyof typeof Ionicons.glyphMap
+  iconName: IconName
   label: string
   description: string
   value: boolean
@@ -174,7 +174,7 @@ function ToggleRow({
     <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$4" minHeight={56}>
       <XStack alignItems="center" gap="$3" flex={1} paddingRight="$3">
         <View style={{ width: 24, alignItems: 'center' }}>
-          <Ionicons name={iconName} size={20} color={theme.textSecondary.val} />
+          <Icon name={iconName} size={20} color={theme.textSecondary.val} />
         </View>
         <YStack flex={1}>
           <AppText variant="body">{label}</AppText>

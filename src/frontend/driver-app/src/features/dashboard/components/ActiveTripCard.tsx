@@ -1,6 +1,6 @@
 import { Alert, Linking } from "react-native";
 import { XStack, YStack, View, useTheme } from "tamagui";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../../components/icons";
 import { TripMetaRow } from "./TripMetaRow";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Surface } from "../../../components/Surface";
@@ -178,7 +178,7 @@ export function ActiveTripCard({
             <Button
               label="Gọi khách"
               variant="outline"
-              icon={<Ionicons name="call-outline" size={18} color={theme.textPrimary.val} />}
+              icon={<Icon name="phone" size={18} color={theme.textPrimary.val} />}
               onPress={() => Linking.openURL(`tel:${trip.customer_phone}`).catch(() => {})}
               full
             />

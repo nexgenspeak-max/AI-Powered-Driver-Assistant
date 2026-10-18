@@ -1,7 +1,7 @@
 import { Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, View, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../../components/icons'
 import { SolidCard } from '../../../components/SolidCard'
 import { AppText } from '../../../components/AppText'
 import { TOP_OVERLAY_CLEARANCE } from '../../../constants'
@@ -55,7 +55,7 @@ export function MapStatusPill({
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <Ionicons name="locate" size={20} color={theme.primary.val} />
+          <Icon name="locate" size={20} color={theme.primary.val} />
         </Pressable>
       </SolidCard>
     </>

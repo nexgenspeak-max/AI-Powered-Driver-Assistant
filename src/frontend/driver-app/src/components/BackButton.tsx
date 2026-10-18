@@ -2,7 +2,7 @@ import { useTheme } from 'tamagui'
 import Animated from 'react-native-reanimated'
 import { GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './icons'
 import { router } from 'expo-router'
 import { useThemeStore } from '../stores/themeStore'
 import { GlassMaterial, GlowOverlay, useGlassPress } from './LiquidGlass'
@@ -58,7 +58,7 @@ export function BackButton({ to = '/profile' }: Props = {}) {
           style={{ width: BACK_BUTTON_SIZE, height: BACK_BUTTON_SIZE }}
         >
           <GlowOverlay size={70} id="backButtonGlow" touchX={touchX} touchY={touchY} glowOpacity={glowOpacity} />
-          <Ionicons name="arrow-back" size={20} color={theme.textPrimary.val} />
+          <Icon name="arrow-left" size={20} color={theme.textPrimary.val} />
         </GlassMaterial>
       </Animated.View>
     </GestureDetector>

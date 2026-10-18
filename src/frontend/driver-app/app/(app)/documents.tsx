@@ -1,6 +1,6 @@
 import { Alert, TouchableOpacity } from 'react-native'
 import { View, YStack, XStack, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../src/components/icons'
 import { Screen } from '../../src/components/Screen'
 import { Surface } from '../../src/components/Surface'
 import { AppText } from '../../src/components/AppText'
@@ -34,7 +34,7 @@ export default function DocumentsScreen() {
               >
                 <XStack alignItems="center" justifyContent="space-between" gap="$3" paddingHorizontal="$2" paddingVertical="$3" minHeight={44}>
                   <XStack alignItems="center" gap="$3" flex={1}>
-                    <Ionicons name="document-attach-outline" size={20} color={theme.primary.val} />
+                    <Icon name="document-upload" size={20} color={theme.primary.val} />
                     <AppText variant="label" flexShrink={1} numberOfLines={1}>
                       {doc.label}
                     </AppText>

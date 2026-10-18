@@ -13,7 +13,7 @@ import { GlassSheen, CTA_GRADIENT } from "../../../components/LiquidGlass";
 import { KeyboardSafeView } from "../../../components/KeyboardSafeView";
 import { AppText } from "../../../components/AppText";
 import { CzenMark } from "../../../components/CzenMark";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../../components/icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useAssistantChatStore } from "../stores/assistantChatStore";
@@ -155,7 +155,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         style={{ flex: 1, backgroundColor: theme.surface.val }}
         keyboardVerticalOffset={60}
       >
-        {/* Header — same rhythm as AppBar (safe area + 52pt, $3 gutters, Ionicons) */}
+        {/* Header — same rhythm as AppBar (safe area + 52pt, $3 gutters, Czen icons) */}
         <View
           paddingTop={insets.top}
           borderBottomWidth={1}
@@ -176,7 +176,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons
+                <Icon
                   name="chevron-down"
                   size={26}
                   color={theme.textPrimary.val}
@@ -360,8 +360,8 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
               opacity: voice.status === "connected" ? 1 : 0.35,
             }}
           >
-            <Ionicons
-              name={voice.isMicMuted ? "mic-off" : "mic-outline"}
+            <Icon
+              name={voice.isMicMuted ? "mic-off" : "mic"}
               size={20}
               color={
                 voice.isMicMuted ? theme.danger.val : theme.textPrimary.val
@@ -399,7 +399,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
               opacity: voice.status === "connecting" ? 0.35 : 1,
             }}
           >
-            <Ionicons name="send" size={18} color={theme.textPrimary.val} />
+            <Icon name="send" size={18} color={theme.textPrimary.val} />
           </TouchableOpacity>
         </XStack>
       </KeyboardSafeView>

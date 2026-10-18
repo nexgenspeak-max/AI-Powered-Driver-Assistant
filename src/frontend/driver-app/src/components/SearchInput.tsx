@@ -1,6 +1,6 @@
 import { TextInput, TouchableOpacity, View as RNView } from 'react-native'
 import { View, useTheme, useThemeName } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './icons'
 import { GlassSheen, getGlassShadow } from './LiquidGlass'
 
 const HEIGHT = 44
@@ -39,7 +39,7 @@ export function SearchInput({ value, onChangeText, placeholder }: Props) {
         }}
       >
         <GlassSheen borderRadius={RADIUS} />
-        <Ionicons name="search" size={18} color={theme.textMuted.val} />
+        <Icon name="search" size={18} color={theme.textMuted.val} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -61,7 +61,7 @@ export function SearchInput({ value, onChangeText, placeholder }: Props) {
             accessibilityLabel="Xóa tìm kiếm"
             style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Ionicons name="close-circle" size={18} color={theme.textMuted.val} />
+            <Icon name="close-circle" size={18} color={theme.textMuted.val} />
           </TouchableOpacity>
         )}
       </RNView>

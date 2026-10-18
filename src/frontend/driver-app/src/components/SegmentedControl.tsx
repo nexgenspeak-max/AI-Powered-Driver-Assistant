@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { View, useTheme } from 'tamagui'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon, type IconName } from './icons'
 import { AppText } from './AppText'
 import { CTA_GRADIENT } from './LiquidGlass'
 import { haptics } from '../utils/haptics'
@@ -30,7 +30,7 @@ const PILL_RADIUS = 14
 export type SegmentOption<T extends string> = {
   value: T
   label: string
-  icon?: keyof typeof Ionicons.glyphMap
+  icon?: IconName
 }
 
 export function SegmentedControl<T extends string>({
@@ -125,7 +125,7 @@ export function SegmentedControl<T extends string>({
             })}
           >
             {opt.icon && (
-              <Ionicons
+              <Icon
                 name={opt.icon}
                 size={16}
                 color={active ? '#ffffff' : theme.textSecondary.val}

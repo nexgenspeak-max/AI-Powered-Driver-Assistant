@@ -10,7 +10,7 @@ export default function BankInfoScreen() {
       contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
     >
       <EmptyState
-        icon="wallet-outline"
+        icon="wallet"
         title="Chưa liên kết tài khoản ngân hàng"
         message="Thêm tài khoản ngân hàng để nhận thanh toán tiền cước trực tiếp. Tính năng này đang được phát triển."
         actionLabel="Thêm tài khoản ngân hàng"
