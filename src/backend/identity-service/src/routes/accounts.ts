@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import * as userService from '../services/userService';
 import { authenticate } from '../middleware/authenticate';
 import * as settingsService from '../services/settingsService';
+import bcrypt from 'bcryptjs';
+import { canCreateAccount, canListAccounts, canManage } from '../services/accountAccess';
 
 const router = Router();
 
@@ -15,6 +17,9 @@ const EDITABLE_FIELDS = ['name', 'fcm_token', 'vehicle_type', 'vehicle_plate', '
 
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
+    if (!canListAccounts(req.user!.role as userService.Role)) {
+      return res.status(403).json({ detail: 'Only staff accounts can list accounts' });
+    }
     const role = req.query.role as userService.Role | undefined;
     if (!role) return res.status(400).json({ detail: 'role query param is required' });
     const users = await userService.listByRole(role);
@@ -28,14 +33,30 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 // (admin) creates their account here. Drivers still register via /auth/register.
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
-    if (req.user!.role !== 'admin') return res.status(403).json({ detail: 'Only admin can create accounts' });
-    const { role, name, phone, email } = req.body as { role?: userService.Role; name?: string; phone?: string; email?: string };
-    if (role !== 'customer') return res.status(400).json({ detail: 'only role=customer can be created here' });
+    const { role, name, phone, email, password } = req.body as {
+      role?: userService.Role; name?: string; phone?: string; email?: string; password?: string;
+    };
+    if (!canCreateAccount(req.user!.role as userService.Role, role)) {
+      return res.status(403).json({ detail: 'Not allowed to create this kind of account' });
+    }
+    if (role === 'admin') {
+      // super_admin creates dispatcher accounts (public sign-up for admin is closed).
+      if (!name || !email || !password) return res.status(400).json({ detail: 'name, email and password are required' });
+      if (password.length < 10) return res.status(400).json({ detail: 'password must be at least 10 characters' });
+      if (await userService.getByEmail(email, 'admin')) {
+        return res.status(409).json({ detail: 'Email already registered', code: 'DUPLICATE_EMAIL' });
+      }
+      const admin = await userService.create({
+        role, name, email: email.trim().toLowerCase(), password_hash: await bcrypt.hash(password, 10), permissions: ['*'],
+      });
+      await settingsService.create(admin.id);
+      return res.status(201).json(sanitize(admin));
+    }
     if (!name || !phone) return res.status(400).json({ detail: 'name and phone are required' });
     if (await userService.getByPhone(phone, 'customer')) {
       return res.status(409).json({ detail: 'A customer with this phone already exists', code: 'DUPLICATE_PHONE' });
     }
-    const user = await userService.create({ role, name, phone, ...(email ? { email } : {}), permissions: [] });
+    const user = await userService.create({ role: 'customer', name, phone, ...(email ? { email } : {}), permissions: [] });
     await settingsService.create(user.id);
     return res.status(201).json(sanitize(user));
   } catch (err) {
@@ -57,8 +78,14 @@ router.get('/phone/:phone', authenticate, async (req: Request, res: Response) =>
 router.patch('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const isSelf = req.user!.sub === req.params.id;
-    const isAdmin = req.user!.role === 'admin';
-    if (!isSelf && !isAdmin) return res.status(403).json({ detail: 'Not authorized to edit this account' });
+    let isAdmin = false;
+    if (!isSelf) {
+      const target = await userService.getById(req.params.id);
+      if (!target) return res.status(404).json({ detail: 'Account not found' });
+      // admin manages drivers/customers; super_admin manages dispatchers.
+      isAdmin = canManage(req.user!.role as userService.Role, target.role);
+      if (!isAdmin) return res.status(403).json({ detail: 'Not authorized to edit this account' });
+    }
 
     const body = req.body as Record<string, unknown> & { status?: userService.Status };
     const fields: Record<string, unknown> = {};

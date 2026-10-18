@@ -6,7 +6,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "build": "tsc",
     "backfill-settings": "ts-node-dev --respawn=false --transpile-only scripts/backfillSettings.ts",
-    "create-super-admin": "ts-node-dev --respawn=false --transpile-only scripts/createSuperAdmin.ts"
+    "create-super-admin": "ts-node-dev --respawn=false --transpile-only scripts/createSuperAdmin.ts",
+    "verify:access": "ts-node --transpile-only src/services/accountAccess.selfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",

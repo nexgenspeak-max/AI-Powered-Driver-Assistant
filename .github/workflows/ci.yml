@@ -63,6 +63,9 @@ jobs:
       - name: Live first-leg self-check
         if: matrix.service == 'external-api-service'
         run: npm run verify:live-first-leg
+      - name: Account access self-check
+        if: matrix.service == 'identity-service'
+        run: npm run verify:access
 
   driver-app:
     name: driver-app · typecheck + navigation math

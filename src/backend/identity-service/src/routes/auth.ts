@@ -10,6 +10,20 @@ import { config } from '../config';
 
 const router = Router();
 
+import { canRegister } from '../services/accountAccess';
+
+/** Role of an optional bearer token on an otherwise public route. */
+function callerRole(req: Request): userService.Role | undefined {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) return undefined;
+  try {
+    const claims = verifyToken(header.slice(7));
+    return claims.type === 'access' ? (claims.role as userService.Role) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const DEFAULT_PERMISSIONS: Record<userService.Role, string[]> = {
   admin: ['*'],
   super_admin: ['ops:*'],
@@ -62,6 +76,10 @@ router.post('/register', async (req: Request, res: Response) => {
 
     if (role === 'super_admin') {
       return res.status(403).json({ detail: 'super_admin cannot be registered via this endpoint' });
+    }
+    if (!canRegister(role, callerRole(req))) {
+      // Dispatcher accounts used to be open to anyone; now only a super_admin creates them.
+      return res.status(403).json({ detail: 'admin accounts are created by a super_admin' });
     }
 
     if (role === 'admin') {
