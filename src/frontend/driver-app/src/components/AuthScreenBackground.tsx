@@ -1,33 +1,22 @@
 import type { PropsWithChildren } from 'react'
-import { ImageBackground, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useThemeName } from 'tamagui'
-import { layoutBackground } from '../theme/layoutAssets'
 
 /**
- * Full-bleed landing atmosphere behind Login / Register.
- * Same composition both themes (layoutAssets); theme look = scrim only.
+ * Clean brand backdrop shared by Landing / Login / Register: a quiet violet
+ * wash fading into the screen background. No illustration — the Czen mark
+ * is the only picture, and form fields stay on a calm, high-contrast field.
  */
 export function AuthScreenBackground({ children }: PropsWithChildren) {
   const isLight = useThemeName() === 'light'
-  const scrimColors = isLight
-    ? (['rgba(245,244,248,0.55)', 'rgba(245,244,248,0.88)', 'rgba(245,244,248,0.96)'] as const)
-    : (['rgba(18,18,18,0.35)', 'rgba(18,18,18,0.78)', 'rgba(18,18,18,0.94)'] as const)
+  const backdrop = isLight
+    ? (['#EDE9FE', '#F5F4F8', '#F5F4F8'] as const)
+    : (['#2A1B4D', '#1A1420', '#121212'] as const)
 
   return (
     <View style={styles.root}>
-      <ImageBackground
-        source={layoutBackground('landing', isLight ? 'light' : 'dark')}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-        accessibilityIgnoresInvertColors
-      />
-      <LinearGradient
-        colors={[...scrimColors]}
-        locations={[0, 0.45, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+      <LinearGradient colors={[...backdrop]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
       {children}
     </View>
   )

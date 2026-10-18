@@ -1,6 +1,5 @@
-import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
+import { AuthScreenBackground } from '../../../components/AuthScreenBackground'
 import { XStack, YStack, useThemeName } from 'tamagui'
 import { StatusBar } from 'expo-status-bar'
 import { router } from 'expo-router'
@@ -18,22 +17,11 @@ export function LandingScreen() {
   const themeMode = useThemeStore(s => s.mode)
   const toggleTheme = useThemeStore(s => s.toggle)
   const titleColor = isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark
-  // Clean brand backdrop (no illustration): a quiet violet wash fading into
-  // the screen background, so the mark tile is the only picture on screen.
-  const backdrop = isLight
-    ? (['#EDE9FE', '#F5F4F8', '#F5F4F8'] as const)
-    : (['#2A1B4D', '#1A1420', '#121212'] as const)
 
   return (
     <>
       <StatusBar style={isLight ? 'dark' : 'light'} />
-      <View style={styles.root}>
-        <LinearGradient
-          colors={[...backdrop]}
-          locations={[0, 0.5, 1]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+      <AuthScreenBackground>
 
         <YStack
           flex={1}
@@ -74,13 +62,7 @@ export function LandingScreen() {
             <Button label="Đăng ký" variant="outline" onPress={() => router.push('/register')} />
           </YStack>
         </YStack>
-      </View>
+      </AuthScreenBackground>
     </>
   )
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-})

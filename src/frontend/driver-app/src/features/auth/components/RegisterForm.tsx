@@ -10,6 +10,8 @@ import axios from 'axios'
 import { router, Link } from 'expo-router'
 import { KeyboardSafeView } from '../../../components/KeyboardSafeView'
 import { AuthScreenBackground } from '../../../components/AuthScreenBackground'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { AuthHeader } from './AuthHeader'
 import { GlassAuthInput } from '../../../components/GlassAuthInput'
 import { GlassButton } from '../../../components/GlassButton'
 import { Button } from '../../../components/Button'
@@ -77,6 +79,7 @@ export function RegisterForm() {
     reset()
   }
   const isLight = useThemeName() === 'light'
+  const insets = useSafeAreaInsets()
 
   return (
     <>
@@ -85,20 +88,10 @@ export function RegisterForm() {
         <KeyboardSafeView>
           <ScrollView
             style={{ flex: 1, backgroundColor: 'transparent' }}
-            contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 }}
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 24), gap: 24, width: '100%', maxWidth: authGlassTheme.card.maxWidth, alignSelf: 'center' }}
             keyboardShouldPersistTaps="handled"
           >
-            <YStack alignItems="center" gap="$2">
-              <AppText
-                variant="display"
-                color={isLight ? authGlassTheme.titleColor.light : authGlassTheme.titleColor.dark}
-              >
-                Trở thành tài xế
-              </AppText>
-              <AppText variant="body" color="$textSecondary">
-                Đăng ký để bắt đầu kiếm tiền cùng Czen
-              </AppText>
-            </YStack>
+            <AuthHeader title="Trở thành tài xế Czen" subtitle="Vài thông tin về bạn và xe là xong." />
 
             <Card
               width="100%"
@@ -112,7 +105,7 @@ export function RegisterForm() {
                   value={value} onChangeText={onChange} onBlur={onBlur} error={errors.name?.message} />
               )} />
               <Controller name="phone" control={control} render={({ field: { onChange, onBlur, value } }) => (
-                <GlassAuthInput label="Số điện thoại" placeholder="+84901234567" keyboardType="phone-pad"
+                <GlassAuthInput label="Số điện thoại" placeholder="0901 234 567" keyboardType="phone-pad"
                   value={value} onChangeText={onChange} onBlur={onBlur} error={errors.phone?.message} />
               )} />
               <Controller name="email" control={control} render={({ field: { onChange, onBlur, value } }) => (
@@ -147,9 +140,6 @@ export function RegisterForm() {
               <AppText variant="body" textAlign="center" color="$textSecondary">
                 Đã có tài khoản?{' '}
                 <Link href="/login" style={{ color: authGlassTheme.linkColor, fontWeight: '600' }}>Đăng nhập</Link>
-              </AppText>
-              <AppText variant="caption" textAlign="center" color="$textMuted">
-                <Link href="/(auth)" style={{ color: authGlassTheme.linkColor }}>← Quay lại</Link>
               </AppText>
             </Card>
           </ScrollView>
