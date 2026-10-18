@@ -15,7 +15,7 @@ def test_short_address_does_not_cut_mid_word():
     addr = "Tòa nhà lotte, 54 liễu giai, ba đình, hà nội"
     result = short_address(addr, 36)
     assert "đ..." not in result
-    assert result.endswith("...")
+    assert not result.endswith(".")
     assert len(result) <= 36
 
 

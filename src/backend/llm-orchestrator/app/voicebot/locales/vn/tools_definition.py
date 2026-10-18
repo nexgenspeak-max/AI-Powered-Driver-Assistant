@@ -105,7 +105,17 @@ raw_schema = {
             "Gọi khi hỏi chuyến hiện tại, số điện thoại khách, chuyến này bao tiền / cước bao nhiêu, "
             "khách có hành lý, vali, trẻ em, ghi chú gì không. KHÔNG trả lời mấy câu này từ trí nhớ."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "aspect": {
+                    "type": "string",
+                    "enum": ["all", "fare", "luggage"],
+                    "description": "Phần tài xế hỏi: fare = cước/giá; luggage = hành lý, trẻ em, ghi chú; all = tóm tắt chuyến.",
+                }
+            },
+            "required": [],
+        },
     },
 
     "suggest_next_stop": {

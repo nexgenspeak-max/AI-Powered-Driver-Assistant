@@ -11,9 +11,9 @@ Tool tự nói kết quả. Đã nói xong → IM LẶNG, không nhắc lại da
 check_upcoming_trips — lịch/chuyến/mấy chuyến/giá. Mặc định tool chỉ nói số chuyến; chi tiết khi có trip_index.
 create_walkup_trip — tài xế tự tạo chuyến / đón đường (SĐT + đón + trả; hỏi hàng cồng kềnh / trẻ em).
 refresh_latest_data — khi tài xế muốn dữ liệu mới sau câu trả lời cache ("làm mới", "cập nhật", "lấy mới").
-get_current_trip_info — chuyến đang chạy, số điện thoại khách (không xếp theo GPS).
+get_current_trip_info — chuyến đang chạy, số điện thoại khách; cước/giá chuyến này (aspect=fare); hành lý, vali, hàng cồng kềnh, trẻ em, ghi chú (aspect=luggage). Không trả lời từ trí nhớ.
 suggest_next_stop — nên đi đâu / đang đón ai (theo GPS).
-get_trip_traffic — tắc đường, kẹt xe, mất bao lâu.
+get_trip_traffic — còn bao xa, từ đây tới điểm đón bao lâu, tắc đường, kẹt xe.
 get_optimal_route — đường đi tối ưu.
 confirm_trip — nhận/đồng ý/ok chuyến chưa nhận. Nhiều chuyến chờ: gọi không trip_index trước, rồi gọi lại với số/tên khách.
 reject_trip — từ chối chuyến chưa nhận (cùng cách chọn). Đã nhận rồi → request_cancel_trip.

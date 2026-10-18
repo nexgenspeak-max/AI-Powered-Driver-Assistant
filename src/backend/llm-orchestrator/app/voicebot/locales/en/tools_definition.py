@@ -105,7 +105,17 @@ raw_schema = {
             "customer phone, how much is this ride, any luggage, suitcase, children or notes. "
             "Never answer these from memory."
         ),
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "aspect": {
+                    "type": "string",
+                    "enum": ["all", "fare", "luggage"],
+                    "description": "What the driver asked: fare; luggage = luggage, children, notes; all = trip summary.",
+                }
+            },
+            "required": [],
+        },
     },
 
     "suggest_next_stop": {

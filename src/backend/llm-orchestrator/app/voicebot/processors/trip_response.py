@@ -13,6 +13,7 @@ from app.voicebot.processors.trip_format import (
     format_trip_list,
     format_traffic_info,
     format_driver_leg,
+    format_trip_aspect,
     trip_extras,
     status_phrase,
     _needs_schedule_confirm,
@@ -186,7 +187,7 @@ def build_trip_count_response(
 ) -> ToolResponse:
     if len(trips) == 1:
         resp = build_trip_detail_response(trips[0], 1, lang)
-        resp.response_knowledge = format_trip_existence(trips[0], lang)
+        resp.response_knowledge = format_trip_count_summary(trips, lang, scope_label=scope_label)
         return resp
 
     spoken = format_trip_count_summary(trips, lang, scope_label=scope_label)
@@ -246,9 +247,12 @@ def build_trip_list_response(trips: list[dict], lang: str = "vi") -> ToolRespons
 
 
 def build_current_trip_response(
-    trip: dict, lang: str = "vi", *, prefix: str = "", leg: dict | None = None,
+    trip: dict, lang: str = "vi", *, prefix: str = "", leg: dict | None = None, aspect: str = "all",
 ) -> ToolResponse:
     detail = build_trip_detail_response(trip, 1, lang)
+    targeted = format_trip_aspect(trip, aspect, lang)
+    if targeted:
+        detail.response_knowledge = targeted
     leg_line = format_driver_leg(leg, lang)
     if leg_line:
         detail.follow_up_knowledge = [*detail.follow_up_knowledge, f"driver_to_next_stop: {leg_line}"]

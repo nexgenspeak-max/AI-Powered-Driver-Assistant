@@ -40,7 +40,7 @@ async def test_check_upcoming_trips_speaks_count_first_not_full_list():
         raise AssertionError("check_upcoming_trips should StopResponse after speaking")
 
     spoken = context.session.say.await_args.args[0]
-    assert "chuyến với" in spoken
+    assert "Bạn có 1 chuyến" in spoken
     assert "Trương Bá Chính" in spoken
     assert "chi tiết" not in spoken.lower()
 

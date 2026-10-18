@@ -109,3 +109,26 @@ def test_single_trip_count_states_the_count_and_time():
 
     assert format_trip_count_summary([TRIP], "vi") == "Bạn có 1 chuyến: đón Nguyễn Thu Hà lúc 13:16."
     assert format_trip_count_summary([TRIP], "en") == "You have 1 trip: pick up Nguyễn Thu Hà at 13:16."
+
+
+def test_current_trip_aspect_answers_the_question_asked():
+    from app.voicebot.locales.vn.tools.get_current_trip_info import _format_current_trip_reply
+
+    userdata = {"context": {"current_trip": TRIP}}
+    fare = _format_current_trip_reply(userdata, {"aspect": "fare"})
+    assert fare.response_knowledge == "Cước ước tính chuyến của Nguyễn Thu Hà là 59.400đ."
+    lug = _format_current_trip_reply(userdata, {"aspect": "luggage"})
+    assert "vali lớn" in lug.response_knowledge
+    plain = {**TRIP, "has_bulky_goods": False, "note": ""}
+    lug2 = _format_current_trip_reply({"context": {"current_trip": plain}}, {"aspect": "luggage"})
+    assert lug2.response_knowledge == "Nguyễn Thu Hà không ghi chú hàng cồng kềnh hay trẻ em."
+    summary = _format_current_trip_reply(userdata, {})
+    assert summary.response_knowledge.startswith("Chuyến 1 với Nguyễn Thu Hà")
+
+
+def test_count_reply_for_one_trip_and_no_ellipsis():
+    from app.voicebot.processors.trip_response import build_trip_count_response
+
+    resp = build_trip_count_response([TRIP], "vi")
+    assert resp.response_knowledge == "Bạn có 1 chuyến: đón Nguyễn Thu Hà lúc 13:16."
+    assert "..." not in format_trip_detail(TRIP, 1, "vi")

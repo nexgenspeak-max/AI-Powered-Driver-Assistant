@@ -54,7 +54,9 @@ def short_address(address: str, max_len: int = 48) -> str:
     if len(result) > max_len - 3:
         boundary = result.rfind(" ", 0, max_len - 3)
         result = result[:boundary if boundary > 0 else max_len - 3].rstrip()
-    return result.rstrip(",") + "..."
+    # No "..." marker: this text is spoken and shown in a chat bubble, and the
+    # sentence after it added its own period ("Quán Thánh.... Bạn nhận…").
+    return result.rstrip(",")
 
 
 def format_route_order(route: dict, lang: str = "vi") -> str:
@@ -210,6 +212,28 @@ def trip_extras(trip: dict, lang: str = "vi") -> str:
         if note:
             parts.append(f"Ghi chú: {note}.")
     return " ".join(p for p in parts if p)
+
+
+def format_trip_aspect(trip: dict, aspect: str, lang: str = "vi") -> str:
+    """One targeted sentence for "cước bao nhiêu?" / "khách có vali không?".
+
+    The trip tools speak their reply themselves, so a generic trip summary
+    answered "cước bao nhiêu" without ever saying the fare.
+    """
+    customer = trip.get("customer_name") or ("the customer" if lang == "en" else "khách")
+    if aspect == "fare":
+        fare = fmt_money(estimated_fare(trip), lang)
+        if lang == "en":
+            return f"The estimated fare for {customer}'s ride is {fare}."
+        return f"Cước ước tính chuyến của {customer} là {fare}."
+    if aspect == "luggage":
+        extras = trip_extras(trip, lang)
+        if extras:
+            return extras
+        if lang == "en":
+            return f"{customer} noted no bulky luggage and no children."
+        return f"{customer} không ghi chú hàng cồng kềnh hay trẻ em."
+    return ""
 
 
 def format_traffic_info(trip: dict, lang: str = "vi", leg: dict | None = None) -> str:

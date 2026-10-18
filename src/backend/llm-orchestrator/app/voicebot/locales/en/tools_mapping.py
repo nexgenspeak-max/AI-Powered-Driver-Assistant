@@ -10,9 +10,9 @@ Cache-read tools speak themselves. After they speak → stay silent; do not repe
 check_upcoming_trips — schedule/trip count/fare. Tool says count first; trip_index for one trip's details.
 create_walkup_trip — add street-hail / walk-up trip (phone + pickup + drop-off; ask bulky goods / children).
 refresh_latest_data — when the driver wants fresh data after a cache answer ("refresh", "update", "get the latest").
-get_current_trip_info — in-progress trip, customer phone (not GPS-ranked).
+get_current_trip_info — in-progress trip, customer phone; this ride's fare (aspect=fare); luggage, suitcase, bulky goods, children, notes (aspect=luggage). Never from memory.
 suggest_next_stop — where to go / who I'm picking up (GPS).
-get_trip_traffic — traffic, congestion, how long.
+get_trip_traffic — how far, how long from here to the pickup, traffic, congestion.
 get_optimal_route — best route.
 confirm_trip — accept/yes/ok an unconfirmed trip. Multiple waiting: call without trip_index first, then again with number or name.
 reject_trip — decline an unconfirmed trip (same selection). Already accepted → request_cancel_trip.
