@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Box,
-  Divider,
   Drawer,
   IconButton,
   InputAdornment,
@@ -29,21 +28,26 @@ import { filterAdminNavItems, groupLabel, navItemLabel } from '../i18n/navText'
 import { useAdminLocale } from '../i18n/useAdminLocale'
 import { ADMIN_NAV_GROUPS, ADMIN_NAV_ITEMS, type AdminNavItem } from './navRegistry'
 
-export const SETTINGS_SIDEBAR_WIDTH = 260
-export const SETTINGS_SIDEBAR_COLLAPSED_WIDTH = 52
+export const SETTINGS_SIDEBAR_WIDTH = 264
+export const SETTINGS_SIDEBAR_COLLAPSED_WIDTH = 60
 
 function navButtonSx(active: boolean, collapsed: boolean) {
   return {
-    borderRadius: 1.5,
+    position: 'relative',
+    borderRadius: 1.25,
     mb: 0.25,
-    minHeight: 44,
-    minWidth: collapsed ? 44 : undefined,
+    minHeight: 40,
+    minWidth: collapsed ? 40 : undefined,
     justifyContent: collapsed ? 'center' : 'flex-start',
-    px: collapsed ? 1 : 1.5,
-    py: 1,
-    color: active ? '#fff' : PALETTE.shellText,
+    px: collapsed ? 1 : 1.25,
+    py: 0.75,
+    color: active ? PALETTE.shellHeading : PALETTE.shellText,
     bgcolor: active ? PALETTE.shellNavActive : 'transparent',
-    '&:hover': { bgcolor: active ? PALETTE.shellNavActive : PALETTE.shellNavHover },
+    '& .MuiListItemIcon-root': { color: active ? PALETTE.light : PALETTE.shellMuted },
+    '&::before': active && !collapsed
+      ? { content: '""', position: 'absolute', left: -12, top: 8, bottom: 8, width: 3, borderRadius: 4, bgcolor: PALETTE.mid }
+      : {},
+    '&:hover': { bgcolor: active ? PALETTE.shellNavActive : PALETTE.shellNavHover, color: PALETTE.shellHeading },
     '&.Mui-selected:hover': { bgcolor: PALETTE.shellNavActive },
   } as const
 }
@@ -207,6 +211,22 @@ function NavList({
   )
 }
 
+export function BrandMark({ size = 34 }: { size?: number }) {
+  return (
+    <Box
+      sx={{
+        width: size, height: size, borderRadius: size / 3.2, flexShrink: 0,
+        display: 'grid', placeItems: 'center',
+        backgroundImage: PALETTE.brandGradient,
+        boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
+        color: '#fff', fontWeight: 800, fontSize: size * 0.5, letterSpacing: '-0.04em',
+      }}
+    >
+      C
+    </Box>
+  )
+}
+
 function SidebarBody({ collapsed, onNavigate, onToggleCollapse }: {
   collapsed: boolean
   onNavigate: () => void
@@ -228,47 +248,34 @@ function SidebarBody({ collapsed, onNavigate, onToggleCollapse }: {
   }
 
   const expand = () => setSidebarCollapsed(false)
+  const iconBtnSx = {
+    width: 36, height: 36, color: PALETTE.shellMuted,
+    '&:hover': { bgcolor: PALETTE.shellNavHover, color: PALETTE.shellHeading },
+  } as const
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ px: collapsed ? 1 : 2, pt: 2, pb: collapsed ? 1.5 : 2 }}>
-        {collapsed ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-            <Tooltip title={displayName} placement="right" arrow>
-              <Avatar sx={{ width: 32, height: 32, fontSize: 13, fontWeight: 700, bgcolor: PALETTE.base }}>
-                {initial}
-              </Avatar>
-            </Tooltip>
-          </Box>
-        ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-            <Avatar sx={{ width: 36, height: 36, fontSize: 14, fontWeight: 700, bgcolor: PALETTE.base }}>
-              {initial}
-            </Avatar>
+      <Box sx={{ px: collapsed ? 1 : 2.25, pt: 2.25, pb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: collapsed ? 'center' : 'flex-start', mb: collapsed ? 0 : 2.25 }}>
+          <BrandMark size={collapsed ? 30 : 34} />
+          {!collapsed ? (
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', lineHeight: 1.25 }} noWrap>
-                {displayName}
+              <Typography sx={{ fontWeight: 800, fontSize: 17, color: PALETTE.shellHeading, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                Czen
               </Typography>
-              <Typography variant="caption" sx={{ color: PALETTE.shellMuted, display: 'block' }} noWrap>
-                {admin?.email ?? t.shell.fallbackRole}
+              <Typography sx={{ fontSize: 12, color: PALETTE.shellMuted, lineHeight: 1.3 }} noWrap>
+                {t.shell.brandSubtitle}
               </Typography>
             </Box>
-            <Tooltip title={t.shell.signOut}>
-              <IconButton
-                onClick={handleLogout}
-                aria-label={t.shell.signOut}
-                sx={{
-                  width: 44,
-                  height: 44,
-                  color: PALETTE.shellMuted,
-                  '&:hover': { bgcolor: PALETTE.shellNavHover, color: '#fff' },
-                }}
-              >
-                <LogoutIcon fontSize="small" />
+          ) : null}
+          {!collapsed ? (
+            <Tooltip title={t.shell.collapseSidebar}>
+              <IconButton onClick={onToggleCollapse} aria-label={t.shell.collapseSidebar} sx={iconBtnSx}>
+                <ChevronLeftIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-          </Box>
-        )}
+          ) : null}
+        </Box>
 
         {!collapsed ? (
           <TextField
@@ -284,20 +291,12 @@ function SidebarBody({ collapsed, onNavigate, onToggleCollapse }: {
                     <SearchIcon sx={{ fontSize: 18, color: PALETTE.shellMuted }} />
                   </InputAdornment>
                 ),
-                sx: {
-                  bgcolor: PALETTE.shellSearch,
-                  borderRadius: 1.5,
-                  color: '#fff',
-                  fontSize: 14,
-                  '& fieldset': { border: 'none' },
-                },
+                sx: { bgcolor: PALETTE.shellSearch, fontSize: 13.5 },
               },
             }}
           />
         ) : null}
       </Box>
-
-      {!collapsed ? <Divider sx={{ borderColor: PALETTE.shellBorder, mx: 2 }} /> : null}
 
       <NavList
         collapsed={collapsed}
@@ -306,67 +305,37 @@ function SidebarBody({ collapsed, onNavigate, onToggleCollapse }: {
         onExpand={expand}
       />
 
-      <Box
-        sx={{
-          px: collapsed ? 0.75 : 2,
-          py: 1.5,
-          borderTop: `1px solid ${PALETTE.shellBorder}`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: collapsed ? 'center' : 'stretch',
-          gap: collapsed ? 0.75 : 0,
-        }}
-      >
+      <Box sx={{ px: collapsed ? 0.75 : 1.5, py: 1.5, borderTop: `1px solid ${PALETTE.shellBorder}`, display: 'flex', flexDirection: 'column', gap: 1, alignItems: collapsed ? 'center' : 'stretch' }}>
         <AdminLocalePicker variant={collapsed ? 'collapsed' : 'sidebar'} />
-
         {collapsed ? (
           <>
-            <Tooltip title={t.shell.signOut} placement="right" arrow>
-              <IconButton
-                onClick={handleLogout}
-                aria-label={t.shell.signOut}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  color: PALETTE.shellMuted,
-                  '&:hover': { bgcolor: PALETTE.shellNavHover, color: '#fff' },
-                }}
-              >
+            <Tooltip title={`${displayName} · ${t.shell.signOut}`} placement="right" arrow>
+              <IconButton onClick={handleLogout} aria-label={t.shell.signOut} sx={iconBtnSx}>
                 <LogoutIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             <Tooltip title={t.shell.expandSidebar} placement="right" arrow>
-              <IconButton
-                onClick={onToggleCollapse}
-                aria-label={t.shell.expandSidebar}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  color: PALETTE.shellMuted,
-                  '&:hover': { bgcolor: PALETTE.shellNavHover, color: '#fff' },
-                }}
-              >
+              <IconButton onClick={onToggleCollapse} aria-label={t.shell.expandSidebar} sx={iconBtnSx}>
                 <ChevronRightIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           </>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 1 }}>
-            <Typography variant="caption" sx={{ color: PALETTE.shellMuted }}>
-              {t.shell.sectionsFooter(ADMIN_NAV_ITEMS.length)}
-            </Typography>
-            <Tooltip title={t.shell.collapseSidebar} placement="top" arrow>
-              <IconButton
-                onClick={onToggleCollapse}
-                aria-label={t.shell.collapseSidebar}
-                sx={{
-                  width: 36,
-                  height: 36,
-                  color: PALETTE.shellMuted,
-                  '&:hover': { bgcolor: PALETTE.shellNavHover, color: '#fff' },
-                }}
-              >
-                <ChevronLeftIcon fontSize="small" />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1, borderRadius: 1.5, bgcolor: PALETTE.shellElevated, border: `1px solid ${PALETTE.shellBorder}` }}>
+            <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 700, backgroundImage: PALETTE.brandGradient, color: '#fff' }}>
+              {initial}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography sx={{ fontWeight: 600, fontSize: 13.5, color: PALETTE.shellHeading, lineHeight: 1.25 }} noWrap>
+                {displayName}
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: PALETTE.shellMuted }} noWrap>
+                {admin?.email ?? t.shell.fallbackRole}
+              </Typography>
+            </Box>
+            <Tooltip title={t.shell.signOut}>
+              <IconButton onClick={handleLogout} aria-label={t.shell.signOut} sx={iconBtnSx}>
+                <LogoutIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           </Box>

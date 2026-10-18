@@ -21,6 +21,11 @@ export type AdminContentMessages = {
     online: string
     offline: string
     locked: string
+    searchTrips: string
+    searchPeople: string
+    rowsPerPage: string
+    pageRange: (from: number, to: number, count: number) => string
+    noMatches: string
   }
   tripStatus: Record<TripStatus, string>
   stats: {
@@ -41,6 +46,9 @@ export type AdminContentMessages = {
       assignDriver: string
       bookedVia: string
       accountName: string
+      route: string
+      pickupTime: string
+      driver: string
     }
     driver: {
       name: string
@@ -75,6 +83,9 @@ export type AdminContentMessages = {
     submit: string
     submitting: string
     failed: string
+    sections: { customer: string; route: string; assignment: string }
+    summaryTitle: string
+    summaryHint: string
     ph: {
       customerName: string
       customerPhone: string
@@ -96,6 +107,7 @@ export type AdminMessages = {
   groups: Record<AdminNavGroupId, string>
   nav: Record<AdminNavMessageKey, { label: string; description: string }>
   shell: {
+    brandSubtitle: string
     searchPlaceholder: string
     signOut: string
     openMenu: string
@@ -111,6 +123,9 @@ export type AdminMessages = {
   login: {
     title: string
     subtitle: string
+    heroTitle: string
+    heroBody: string
+    features: string[]
     email: string
     password: string
     submit: string
@@ -171,6 +186,11 @@ const CONTENT_EN: AdminContentMessages = {
     online: 'Online',
     offline: 'Offline',
     locked: 'Locked',
+    searchTrips: 'Search by customer, phone, address or trip ID',
+    searchPeople: 'Search by name or phone',
+    rowsPerPage: 'Rows per page',
+    pageRange: (from, to, count) => `${from}–${to} of ${count}`,
+    noMatches: 'Nothing matches this search',
   },
   tripStatus: TRIP_STATUS_EN,
   stats: {
@@ -191,6 +211,9 @@ const CONTENT_EN: AdminContentMessages = {
       assignDriver: 'Assign driver',
       bookedVia: 'Booked via',
       accountName: 'Account name',
+      route: 'Route',
+      pickupTime: 'Pickup time',
+      driver: 'Driver',
     },
     driver: {
       name: 'Name',
@@ -225,6 +248,9 @@ const CONTENT_EN: AdminContentMessages = {
     submit: 'Create & notify driver',
     submitting: 'Creating…',
     failed: 'Failed to create trip',
+    sections: { customer: 'Customer', route: 'Route', assignment: 'Driver and time' },
+    summaryTitle: 'Summary',
+    summaryHint: 'The driver gets the offer on their phone as soon as you create the trip.',
     ph: {
       customerName: 'Nguyễn Văn A',
       customerPhone: '+84901234567',
@@ -261,13 +287,18 @@ const CONTENT_VI: AdminContentMessages = {
     online: 'Trực tuyến',
     offline: 'Ngoại tuyến',
     locked: 'Đã khóa',
+    searchTrips: 'Tìm theo khách, SĐT, địa chỉ hoặc mã chuyến',
+    searchPeople: 'Tìm theo tên hoặc SĐT',
+    rowsPerPage: 'Số dòng mỗi trang',
+    pageRange: (from, to, count) => `${from}–${to} trên ${count}`,
+    noMatches: 'Không có kết quả phù hợp',
   },
   tripStatus: TRIP_STATUS_VI,
   stats: {
     pending: 'Chờ xử lý',
     active: 'Đang chạy',
     completed: 'Hoàn thành',
-    driversOnline: 'TX online',
+    driversOnline: 'Tài xế trực tuyến',
     totalDrivers: 'Tổng tài xế',
     totalCustomers: 'Tổng khách hàng',
   },
@@ -281,6 +312,9 @@ const CONTENT_VI: AdminContentMessages = {
       assignDriver: 'Gán tài xế',
       bookedVia: 'Kênh đặt',
       accountName: 'Tài khoản',
+      route: 'Lộ trình',
+      pickupTime: 'Giờ đón',
+      driver: 'Tài xế',
     },
     driver: {
       name: 'Tên',
@@ -315,6 +349,9 @@ const CONTENT_VI: AdminContentMessages = {
     submit: 'Tạo & thông báo tài xế',
     submitting: 'Đang tạo…',
     failed: 'Tạo chuyến thất bại',
+    sections: { customer: 'Khách hàng', route: 'Lộ trình', assignment: 'Tài xế và thời gian' },
+    summaryTitle: 'Tóm tắt',
+    summaryHint: 'Tài xế nhận lời mời trên điện thoại ngay khi bạn tạo chuyến.',
     ph: {
       customerName: 'Nguyễn Văn A',
       customerPhone: '+84901234567',
@@ -362,7 +399,8 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       },
     },
     shell: {
-      searchPlaceholder: 'Search settings',
+      brandSubtitle: 'Dispatch console',
+      searchPlaceholder: 'Search pages',
       signOut: 'Sign out',
       openMenu: 'Open navigation menu',
       noSearchResults: 'No settings match your search.',
@@ -375,8 +413,11 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       search: 'Search',
     },
     login: {
-      title: 'Admin Panel',
-      subtitle: 'Sign in to manage the system',
+      title: 'Sign in',
+      subtitle: 'Use your dispatcher account to continue.',
+      heroTitle: 'Every trip, driver and call in one place',
+      heroBody: 'Czen Dispatch gives the operations team a live view of bookings and lets them assign drivers in seconds.',
+      features: ['Live trip board with status filters', 'Assign online drivers in one click', 'Call history with AI summaries'],
       email: 'Email',
       password: 'Password',
       submit: 'Sign in',
@@ -416,7 +457,8 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       },
     },
     shell: {
-      searchPlaceholder: 'Tìm mục cài đặt',
+      brandSubtitle: 'Bảng điều phối',
+      searchPlaceholder: 'Tìm trang',
       signOut: 'Đăng xuất',
       openMenu: 'Mở menu điều hướng',
       noSearchResults: 'Không có mục nào khớp tìm kiếm.',
@@ -429,8 +471,11 @@ export const ADMIN_MESSAGES: Record<AdminLocale, AdminMessages> = {
       search: 'Tìm kiếm',
     },
     login: {
-      title: 'Admin Panel',
-      subtitle: 'Đăng nhập để quản lý hệ thống',
+      title: 'Đăng nhập',
+      subtitle: 'Dùng tài khoản điều phối viên để tiếp tục.',
+      heroTitle: 'Mọi chuyến đi, tài xế và cuộc gọi ở một nơi',
+      heroBody: 'Czen Dispatch cho đội vận hành theo dõi đặt chuyến theo thời gian thực và gán tài xế chỉ trong vài giây.',
+      features: ['Bảng chuyến trực tiếp, lọc theo trạng thái', 'Gán tài xế đang trực tuyến bằng một lần bấm', 'Lịch sử cuộc gọi kèm tóm tắt bằng AI'],
       email: 'Email',
       password: 'Mật khẩu',
       submit: 'Đăng nhập',

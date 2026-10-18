@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import {
-  Alert, Box, Button, Card, CardContent, CircularProgress,
+  Alert, Box, Button, CircularProgress,
   IconButton, InputAdornment, Stack, TextField, Typography,
 } from '@mui/material'
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
+import { BrandMark } from '../layouts/SettingsSidebar'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { AdminLocalePicker } from '../components/AdminLocalePicker'
@@ -61,66 +62,85 @@ export default function LoginPage() {
   const errorMsg = error ? getLoginErrorMessage(error, t.login) : null
 
   return (
-    <Box sx={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3,
-      background: `linear-gradient(150deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 55%, ${PALETTE.mid} 100%)`,
-    }}>
-      <Box sx={{ width: '100%', maxWidth: 400 }}>
-        <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Box sx={{
-            width: 64, height: 64, borderRadius: '18px', mx: 'auto', mb: 2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${PALETTE.light} 0%, ${PALETTE.base} 100%)`,
-          }}>
-            <AdminPanelSettingsIcon sx={{ color: '#fff', fontSize: 34 }} />
+    <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.1fr 1fr' }, bgcolor: PALETTE.shellContent }}>
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' }, flexDirection: 'column', justifyContent: 'space-between',
+          p: 6, position: 'relative', overflow: 'hidden',
+          background: `radial-gradient(1200px 600px at -10% -10%, rgba(139,92,246,0.55), transparent 60%),
+                       radial-gradient(800px 500px at 110% 110%, rgba(96,165,250,0.25), transparent 60%),
+                       ${PALETTE.darkest}`,
+          borderRight: `1px solid ${PALETTE.shellBorder}`,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <BrandMark size={40} />
+          <Box>
+            <Typography sx={{ fontWeight: 800, fontSize: 20, color: '#fff', lineHeight: 1.1 }}>Czen Dispatch</Typography>
+            <Typography sx={{ fontSize: 13, color: PALETTE.pale, opacity: 0.75 }}>{t.shell.brandSubtitle}</Typography>
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>{t.login.title}</Typography>
-          <Typography variant="body2" sx={{ color: PALETTE.light, mt: 0.5 }}>
-            {t.login.subtitle}
-          </Typography>
         </Box>
+        <Box sx={{ maxWidth: 520 }}>
+          <Typography sx={{ fontSize: 38, fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.03em', color: '#fff' }}>
+            {t.login.heroTitle}
+          </Typography>
+          <Typography sx={{ mt: 2, fontSize: 16, lineHeight: 1.6, color: PALETTE.pale, opacity: 0.8 }}>
+            {t.login.heroBody}
+          </Typography>
+          <Stack spacing={1.5} sx={{ mt: 4 }}>
+            {t.login.features.map(f => (
+              <Box key={f} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: 'rgba(52,211,153,0.15)', color: PALETTE.success }}>
+                  <CheckRoundedIcon sx={{ fontSize: 16 }} />
+                </Box>
+                <Typography sx={{ color: '#fff', fontSize: 15 }}>{f}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+        <Typography sx={{ fontSize: 12, color: PALETTE.pale, opacity: 0.5 }}>© {new Date().getFullYear()} Czen · AI-Powered Driver Assistant</Typography>
+      </Box>
 
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Box component="form" onSubmit={handleSubmit}>
-              <Stack spacing={2.5}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, md: 6 } }}>
+        <Box sx={{ width: '100%', maxWidth: 400 }}>
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.25, mb: 4 }}>
+            <BrandMark size={36} />
+            <Typography sx={{ fontWeight: 800, fontSize: 18 }}>Czen Dispatch</Typography>
+          </Box>
+          <Typography variant="h4" sx={{ mb: 1 }}>{t.login.title}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>{t.login.subtitle}</Typography>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Stack spacing={2.25}>
+              <TextField
+                label={t.login.email} type="email" required fullWidth
+                value={form.email} onChange={set('email')}
+                placeholder="dispatcher@czen.vn"
+              />
+              <TextField
+                label={t.login.password} type={showPassword ? 'text' : 'password'} required fullWidth
+                value={form.password} onChange={set('password')}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(v => !v)} edge="end" size="small">
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
+              <Button type="submit" variant="contained" size="large" disabled={isPending} sx={{ py: 1.4 }}>
+                {isPending ? <CircularProgress size={22} color="inherit" /> : t.login.submit}
+              </Button>
+              <Box sx={{ pt: 1 }}>
                 <AdminLocalePicker variant="compact" />
-
-                <TextField
-                  label={t.login.email} type="email" required fullWidth size="small"
-                  value={form.email} onChange={set('email')}
-                  placeholder="admin@example.com"
-                />
-                <TextField
-                  label={t.login.password} type={showPassword ? 'text' : 'password'} required fullWidth size="small"
-                  value={form.password} onChange={set('password')}
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword(v => !v)} edge="end" size="small">
-                            {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-
-                {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
-
-                <Button type="submit" variant="contained" size="large" disabled={isPending}
-                  sx={{
-                    py: 1.5, fontWeight: 700, borderRadius: 2, textTransform: 'none',
-                    background: `linear-gradient(135deg, ${PALETTE.base} 0%, ${PALETTE.mid} 100%)`,
-                    '&:hover': { background: `linear-gradient(135deg, ${PALETTE.darkest} 0%, ${PALETTE.base} 100%)` },
-                  }}>
-                  {isPending ? <CircularProgress size={22} color="inherit" /> : t.login.submit}
-                </Button>
-              </Stack>
-            </Box>
-          </CardContent>
-        </Card>
+              </Box>
+            </Stack>
+          </Box>
+        </Box>
       </Box>
     </Box>
   )

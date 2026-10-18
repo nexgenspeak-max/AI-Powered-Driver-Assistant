@@ -1,10 +1,13 @@
 import {
-  Button, Chip, CircularProgress, Table, TableBody, TableCell,
+  Box, CircularProgress, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Typography,
 } from '@mui/material'
 import type { Driver } from '../../../types'
 import { useAdminContent } from '../../../i18n/useAdminContent'
-import { tableEmptyCellSx, tableHeadCellSx, tableHeadRowSx, tableRowSx } from '../../../styles/shellStyles'
+import { StatusPill } from '../../../components/StatusPill'
+import { LockButton, PersonCell, SearchBar } from '../../../components/PeopleCells'
+import { usePeopleSearch } from '../../../components/usePeopleSearch'
+import { tableEmptyCellSx, tableRowSx } from '../../../styles/shellStyles'
 import { formatDate } from '../../../utils/format'
 import { useLockDriver } from '../hooks/useLockDriver'
 
@@ -20,15 +23,18 @@ export function DriverTable({ drivers, loading }: Props) {
   const { mutate: lockDriver, isPending } = useLockDriver()
   const { c, accountStatusLabel } = useAdminContent()
   const cols = c.table.driver
+  const { query, setQuery, filtered } = usePeopleSearch(drivers)
   const headers = [cols.name, cols.phone, cols.status, cols.registered, cols.actions]
 
   return (
+    <Box>
+    <SearchBar value={query} onChange={setQuery} placeholder={c.common.searchPeople} />
     <TableContainer>
       <Table size="small">
         <TableHead>
-          <TableRow sx={tableHeadRowSx}>
+          <TableRow>
             {headers.map((h, i) => (
-              <TableCell key={i} sx={tableHeadCellSx}>{h}</TableCell>
+              <TableCell key={i}>{h}</TableCell>
             ))}
           </TableRow>
         </TableHead>
@@ -39,24 +45,22 @@ export function DriverTable({ drivers, loading }: Props) {
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
-          ) : drivers.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} align="center" sx={tableEmptyCellSx}>
                 {c.common.noDrivers}
               </TableCell>
             </TableRow>
           ) : (
-            drivers.map(d => {
+            filtered.map(d => {
               const locked = d.status === 'locked'
               const registered = formatDate(d.created_at ?? d.registered_at)
               return (
                 <TableRow key={d.phone} hover sx={tableRowSx}>
+                  <TableCell><PersonCell name={d.name} /></TableCell>
+                  <TableCell sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{d.phone}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{d.name}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{d.phone}</TableCell>
-                  <TableCell>
-                    <Chip label={accountStatusLabel(d.status)} size="small" color={STATUS_COLOR[d.status]} />
+                    <StatusPill label={accountStatusLabel(d.status)} tone={STATUS_COLOR[d.status]} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="caption" color="text.secondary">
@@ -64,18 +68,16 @@ export function DriverTable({ drivers, loading }: Props) {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color={locked ? 'success' : 'error'}
+                    <LockButton
+                      locked={locked}
                       disabled={isPending}
+                      lockLabel={c.common.lock}
+                      unlockLabel={c.common.unlock}
                       onClick={() => {
                         if (!locked && !window.confirm(c.common.confirmLock(d.name))) return
                         lockDriver({ id: d.id, locked: !locked })
                       }}
-                    >
-                      {locked ? c.common.unlock : c.common.lock}
-                    </Button>
+                    />
                   </TableCell>
                 </TableRow>
               )
@@ -84,5 +86,6 @@ export function DriverTable({ drivers, loading }: Props) {
         </TableBody>
       </Table>
     </TableContainer>
+    </Box>
   )
 }

@@ -7,9 +7,6 @@ export const tableHeadRowSx: SxProps<Theme> = {
 }
 
 export const tableHeadCellSx: SxProps<Theme> = {
-  fontWeight: 600,
-  fontSize: 12,
-  color: 'text.secondary',
   py: 1.25,
   borderBottom: `1px solid ${PALETTE.shellBorder}`,
 }
@@ -21,9 +18,9 @@ export const tableEmptyCellSx: SxProps<Theme> = {
 
 export const tableRowSx: SxProps<Theme> = {
   '&:last-child td': { borderBottom: 0 },
-  '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+  '&:hover': { bgcolor: 'rgba(167,139,250,0.04)' },
 }
 
 export const sectionGap = 3
 
-export const contentMaxWidth = 1080
+export const contentMaxWidth = 1440

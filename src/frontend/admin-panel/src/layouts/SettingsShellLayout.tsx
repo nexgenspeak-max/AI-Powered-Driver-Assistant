@@ -25,8 +25,8 @@ export function SettingsShellLayout({ children }: { children: React.ReactNode })
           flex: 1,
           minWidth: 0,
           overflow: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 7, md: 3 },
+          px: { xs: 2, sm: 3, md: 4, lg: 5 },
+          py: { xs: 7, md: 4 },
         }}
       >
         <SettingsPageFrame>{children}</SettingsPageFrame>

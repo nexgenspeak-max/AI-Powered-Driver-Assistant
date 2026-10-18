@@ -7,7 +7,6 @@ import { useDispatchTrip } from '../features/trips/hooks/useDispatchTrip'
 import { useDrivers } from '../features/drivers/hooks/useDrivers'
 import { useCustomers } from '../features/customers/hooks/useCustomers'
 import { useUiStore } from '../stores/uiStore'
-import { normalizeTripStatus } from '../constants/status'
 
 export default function TripBoardPage() {
   const filter      = useUiStore(s => s.tripStatusFilter)
@@ -19,16 +18,13 @@ export default function TripBoardPage() {
   const { data: customers = [] }                         = useCustomers()
   const { mutate: dispatch, isPending: dispatching }     = useDispatchTrip()
 
-  const trips = filter
-    ? allTrips.filter(t => normalizeTripStatus(t.status) === filter)
-    : allTrips
 
   return (
     <Box>
       <TripStatCards trips={allTrips} drivers={drivers} />
       <SettingsPanel sx={{ borderRadius: 2 }}>
         <TripTable
-          trips={trips}
+          trips={allTrips}
           drivers={drivers}
           customers={customers}
           loading={tripsLoading}

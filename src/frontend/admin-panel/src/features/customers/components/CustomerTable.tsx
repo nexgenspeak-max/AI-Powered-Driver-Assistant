@@ -1,10 +1,13 @@
 import {
-  Button, Chip, CircularProgress, Table, TableBody, TableCell,
+  Box, CircularProgress, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Typography,
 } from '@mui/material'
 import type { Customer, CustomerStatus } from '../../../types'
 import { useAdminContent } from '../../../i18n/useAdminContent'
-import { tableEmptyCellSx, tableHeadCellSx, tableHeadRowSx, tableRowSx } from '../../../styles/shellStyles'
+import { StatusPill } from '../../../components/StatusPill'
+import { LockButton, PersonCell, SearchBar } from '../../../components/PeopleCells'
+import { usePeopleSearch } from '../../../components/usePeopleSearch'
+import { tableEmptyCellSx, tableRowSx } from '../../../styles/shellStyles'
 import { formatDate } from '../../../utils/format'
 import { useLockCustomer } from '../hooks/useLockCustomer'
 
@@ -20,15 +23,18 @@ export function CustomerTable({ customers, loading }: Props) {
   const { mutate: lockCustomer, isPending } = useLockCustomer()
   const { c, accountStatusLabel } = useAdminContent()
   const cols = c.table.customer
+  const { query, setQuery, filtered } = usePeopleSearch(customers)
   const headers = [cols.name, cols.phone, cols.email, cols.status, cols.joined, cols.actions]
 
   return (
+    <Box>
+    <SearchBar value={query} onChange={setQuery} placeholder={c.common.searchPeople} />
     <TableContainer>
       <Table size="small">
         <TableHead>
-          <TableRow sx={tableHeadRowSx}>
+          <TableRow>
             {headers.map((h, i) => (
-              <TableCell key={i} sx={tableHeadCellSx}>{h}</TableCell>
+              <TableCell key={i}>{h}</TableCell>
             ))}
           </TableRow>
         </TableHead>
@@ -39,24 +45,22 @@ export function CustomerTable({ customers, loading }: Props) {
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
-          ) : customers.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} align="center" sx={tableEmptyCellSx}>
                 {c.common.noCustomers}
               </TableCell>
             </TableRow>
           ) : (
-            customers.map(cust => {
+            filtered.map(cust => {
               const locked = cust.status === 'locked'
               return (
                 <TableRow key={cust.id} hover sx={tableRowSx}>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{cust.name}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{cust.phone}</TableCell>
+                  <TableCell><PersonCell name={cust.name} /></TableCell>
+                  <TableCell sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{cust.phone}</TableCell>
                   <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{cust.email || '—'}</TableCell>
                   <TableCell>
-                    <Chip label={accountStatusLabel(cust.status)} size="small" color={STATUS_COLOR[cust.status]} />
+                    <StatusPill label={accountStatusLabel(cust.status)} tone={STATUS_COLOR[cust.status]} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="caption" color="text.secondary">
@@ -64,18 +68,16 @@ export function CustomerTable({ customers, loading }: Props) {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color={locked ? 'success' : 'error'}
+                    <LockButton
+                      locked={locked}
                       disabled={isPending}
+                      lockLabel={c.common.lock}
+                      unlockLabel={c.common.unlock}
                       onClick={() => {
                         if (!locked && !window.confirm(c.common.confirmLock(cust.name))) return
                         lockCustomer({ id: cust.id, locked: !locked })
                       }}
-                    >
-                      {locked ? c.common.unlock : c.common.lock}
-                    </Button>
+                    />
                   </TableCell>
                 </TableRow>
               )
@@ -84,5 +86,6 @@ export function CustomerTable({ customers, loading }: Props) {
         </TableBody>
       </Table>
     </TableContainer>
+    </Box>
   )
 }
