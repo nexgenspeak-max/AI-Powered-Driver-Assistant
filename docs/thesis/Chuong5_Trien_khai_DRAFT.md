@@ -23,7 +23,7 @@ Nhà cung cấp STT, LLM và TTS được chọn bằng cấu hình thông qua l
 
 ## 5.2. Tổ chức mã nguồn
 
-Toàn bộ mã nguồn của nguyên mẫu được lưu trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered-Driver-Assistant (phiên bản dùng cho luận văn: commit aa05ba7, ngày 11/10/2026). Mã nguồn được tổ chức thành một kho đơn (monorepo) gồm ba nhánh: `src/backend/` chứa các dịch vụ, `src/frontend/` chứa ứng dụng và trang quản trị, `src/e2e/` chứa kịch bản kiểm thử đầu cuối; thư mục `infra/` chứa hạ tầng dạng mã. Bảng 5.2 liệt kê các thư mục chính; bảng ánh xạ tên thư mục với tên thành phần dùng trong luận văn ở Phụ lục G.
+Toàn bộ mã nguồn của nguyên mẫu được lưu trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered-Driver-Assistant (phiên bản dùng cho luận văn: commit aa05ba7, ngày 11/10/2026). Mã nguồn được tổ chức thành một kho đơn (monorepo) gồm ba nhánh: `src/backend/` chứa các dịch vụ, `src/frontend/` chứa ứng dụng và trang quản trị, `src/e2e/` chứa kịch bản kiểm thử đầu cuối; thư mục `infra/` chứa hạ tầng dạng mã. Bảng 5.2 liệt kê các thư mục chính và tên thành phần tương ứng dùng trong luận văn.
 
 **Bảng 5.2.** Tổ chức mã nguồn
 

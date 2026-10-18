@@ -47,12 +47,7 @@ Các mục tiêu cụ thể gồm:
 3. Triển khai hệ thống nguyên mẫu trên nền tảng truyền thông thời gian thực (WebRTC và SIP), ứng dụng di động của tài xế và các dịch vụ backend, với cấu hình hạ tầng dạng mã cho Amazon Web Services (AWS).
 4. Đánh giá hệ thống theo từng yêu cầu đã đặc tả: độ trễ phản hồi, độ chính xác nhận dạng giọng nói, độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ, khả năng mở rộng và khả năng phục hồi.
 
-Đối với mục tiêu 4, luận văn đặt trước các ngưỡng định hướng sau; đây là mốc kỳ vọng khi đánh giá, chưa phải kết quả đo (phương pháp đo trình bày ở Chương 6):
-
-- **Độ trễ phản hồi:** khoảng thời gian từ khi tài xế kết thúc phát ngôn đến khi hệ thống bắt đầu phát âm thanh trả lời. Thay vì dùng giá trị trung bình, vốn che mất những lần phản hồi chậm, luận văn dùng chỉ số P95: sắp xếp mọi lần đo từ nhanh đến chậm, P95 là thời gian mà 95% số lần phản hồi nhanh hơn hoặc bằng. Ví dụ, P95 = 2 giây nghĩa là cứ 100 lượt hỏi thì tối đa 5 lượt phải chờ lâu hơn 2 giây. Ngưỡng định hướng là P95 ≤ 2 giây trên các luồng nghiệp vụ cốt lõi. Cơ sở lựa chọn ngưỡng trình bày ở Chương 2.
-- **Tỷ lệ lỗi từ** (Word Error Rate – WER): tỷ lệ từ bị thay thế, bị xóa hoặc bị chèn so với câu tham chiếu. Luận văn không đặt ngưỡng tuyệt đối mà so sánh tương đối giữa điều kiện yên tĩnh và điều kiện nhiễu mô phỏng khoang xe.
-- **Độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ:** báo cáo theo nhóm kịch bản.
-- **Khả năng mở rộng và khả năng phục hồi:** đánh giá bằng thử nghiệm tải và tiêm lỗi trên môi trường mô phỏng; ngưỡng cụ thể được nêu cùng yêu cầu phi chức năng ở Chương 3.
+Đối với mục tiêu 4, luận văn đặt trước các ngưỡng định hướng (mốc kỳ vọng, chưa phải kết quả đo): độ trễ phản hồi, tính từ khi tài xế kết thúc phát ngôn đến khi hệ thống bắt đầu trả lời, có P95 ≤ 2 giây trên các luồng nghiệp vụ cốt lõi (P95 = 2 giây nghĩa là cứ 100 lượt hỏi thì tối đa 5 lượt phải chờ lâu hơn 2 giây; cơ sở chọn ngưỡng ở mục 2.8); tỷ lệ lỗi từ (Word Error Rate – WER) được so sánh tương đối giữa điều kiện yên tĩnh và điều kiện nhiễu mô phỏng khoang xe; độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ được báo cáo theo nhóm kịch bản; ngưỡng của khả năng mở rộng và khả năng phục hồi nêu cùng yêu cầu phi chức năng ở Chương 3. Định nghĩa vận hành của từng chỉ số ở mục 6.3.
 
 ## 1.4. Câu hỏi nghiên cứu
 

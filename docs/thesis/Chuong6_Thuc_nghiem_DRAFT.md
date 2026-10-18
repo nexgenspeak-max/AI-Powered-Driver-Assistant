@@ -65,7 +65,7 @@ Khả năng mở rộng và khả năng phục hồi được đánh giá trên 
 | Nhà cung cấp STT, LLM, TTS | Máy chủ giả lập tương thích API OpenAI với độ trễ cố định: STT 0,3 giây, LLM sinh token đầu 0,8 giây, TTS 0,2 giây; TTS trả một câu giọng nói tiếng Việt dài 5,2 giây | SC-01, SC-02, RS-03 |
 | Tài xế nói chuyện với trợ lý | Công cụ `lk perf agent-load-test` (LiveKit CLI 2.19): mỗi phòng có một người tham gia phát lại giọng của tác nhân sau 2 giây như một lượt nói mới, tạo vòng hội thoại liên tục | SC-01, SC-02 |
 
-Công cụ tạo tải là k6. Các thí nghiệm tiêm lỗi gọi trực tiếp công cụ thật của tác nhân (gói tiếng Việt) và hàm ghi bản ghi cuộc gọi, nên kết quả phản ánh đúng câu mà tác nhân sẽ nói với tài xế khi gặp lỗi. Script và lệnh chạy được liệt kê ở Phụ lục H.
+Công cụ tạo tải là k6. Các thí nghiệm tiêm lỗi gọi trực tiếp công cụ thật của tác nhân (gói tiếng Việt) và hàm ghi bản ghi cuộc gọi, nên kết quả phản ánh đúng câu mà tác nhân sẽ nói với tài xế khi gặp lỗi. Script và lệnh chạy được liệt kê ở Phụ lục F.
 
 Ba kịch bản cần nhiều tác nhân cùng tham gia phòng hội thoại (SC-01, SC-02, RS-03) chạy trên máy chủ LiveKit cục bộ với tác nhân thật và nhà cung cấp AI giả lập (bốn dòng cuối của Bảng 6.3). Vì độ trễ của STT, LLM và TTS được cố định, mọi thay đổi độ trễ phản hồi theo số phiên đều đến từ phần kiến trúc (định tuyến phòng, tiến trình phiên, phát hiện giọng nói và kết thúc lượt), không đến từ nhà cung cấp. Độ trễ phản hồi lấy từ dòng nhật ký `user_stop_to_agent_speak` của tác nhân, tức từ lúc người dùng ngừng nói tới lúc tác nhân bắt đầu nói.
 
@@ -229,7 +229,7 @@ Máy chủ LiveKit dùng tối đa 6% (1 phiên) đến 48% (40 phiên) một nh
 3. **Bộ nhớ là tài nguyên giới hạn.** Mỗi phiên chạy trong một tiến trình riêng nên RAM tăng khoảng 225 MB cho mỗi phiên ((10.139 − 1.315) / 39), trong khi CPU ở đỉnh chỉ khoảng 9% một nhân cho mỗi phiên (374% / 40). Với cấu hình tác vụ Fargate 1 vCPU, 2 GB ở Bảng 5.6, một bản sao chỉ chứa khoảng 7 phiên trước khi hết bộ nhớ, dù CPU đủ cho khoảng 10 phiên. Hệ quả cho thiết kế: số bản sao cần xấp xỉ số phiên đồng thời chia 7, và chính sách tự mở rộng nên dựa trên bộ nhớ hoặc số phiên đang chạy chứ không chỉ dựa trên CPU.
 4. **Số lượt mỗi phiên giảm khi một bản sao phục vụ nhiều phiên** (từ 13 lượt ở 1 phiên xuống khoảng 8 lượt ở 40 phiên) và tăng lại khi thêm bản sao (khoảng 10 lượt ở 40 phiên với 4 bản sao). Nhịp lượt phụ thuộc cách bộ tạo tải phát lại giọng nói; độ trễ của các lượt được trả lời không đổi. Nguyên nhân giảm số lượt chưa được phân tích riêng.
 
-Giới hạn của SC-01 và SC-02: mọi thành phần chạy trên một máy 14 nhân, không có độ trễ mạng thật, và nhà cung cấp AI là giả lập nên không thể hiện giới hạn tốc độ hoặc độ trễ tăng của nhà cung cấp thật khi nhiều phiên cùng gọi; bản sao là tiến trình cục bộ chứ không phải tác vụ Fargate. Kết quả kiểm chứng tính chất mở rộng của kiến trúc, chưa phải năng lực tải của hệ thống trên AWS.
+Các kết quả này kiểm chứng tính chất mở rộng của kiến trúc trên một máy thí nghiệm với nhà cung cấp AI giả lập, chưa phải năng lực tải của hệ thống trên AWS (mục 6.13).
 
 ## 6.9. Kết quả khả năng phục hồi — NFR-04 (RQ1)
 
@@ -359,8 +359,8 @@ Các hạn chế của phép đánh giá được phân tích theo bốn loại 
 **Độ tin cậy của kết luận (conclusion validity)** – kết luận thống kê có đủ căn cứ hay không.
 
 - Cỡ mẫu nhỏ: tỷ lệ lỗi từ đo với một người đọc và 22 câu; độ chính xác gọi công cụ trên khoảng 39 lượt. Biện pháp: báo cáo cỡ mẫu và khoảng tin cậy, ghi "mẫu nhỏ" bên cạnh kết luận, không khẳng định khác biệt khi khoảng tin cậy chồng lấn.
-- Nhật ký gốc của đợt đo 05–06/09/2026 được trích bằng script `extract_ch6_metrics.py`; để người khác kiểm tra lại, script và quy tắc xử lý dữ liệu được công bố kèm luận văn (Phụ lục H).
+- Nhật ký gốc của đợt đo 05–06/09/2026 được trích bằng script `extract_ch6_metrics.py`; để người khác kiểm tra lại, script và quy tắc xử lý dữ liệu được công bố kèm luận văn (Phụ lục F).
 
 ## Kết luận chương
 
-Chương 6 đã đánh giá nguyên mẫu theo 19 tiêu chí chấp nhận. Kết quả đạt gồm: các yêu cầu chức năng của khách hàng và giám sát vận hành; khả năng phục hồi ở mức thành phần (200/200 lượt tiêm lỗi). Hai tiêu chí không đạt ở lần đánh giá đầu là tính khả dụng (câu báo lỗi chứa thông tin kỹ thuật) và bảo mật nhật ký (số điện thoại chưa được che); cả hai là lỗi hiện thực, đã được sửa và đạt khi kiểm tra lại. Kết quả không đạt còn lại là độ trễ phản hồi của luồng qua LLM (P95 = 3,75 giây). Khả năng mở rộng đạt trong môi trường mô phỏng: độ trễ phản hồi không tăng từ 1 tới 40 phiên đồng thời, với bộ nhớ khoảng 225 MB mỗi phiên là giới hạn chính. Khi dừng một bản sao tác nhân, phiên mới được bản sao khác phục vụ ngay nhưng phiên đang chạy trên bản sao đó bị mất. Gửi SMS cho khách (AC-11) đạt ở mức kiểm thử nhưng chưa giao được tin thật tới thuê bao Việt Nam vì chưa có tên người gửi đã đăng ký với nhà mạng. Sắp xếp thứ tự ghé cho quãng đường gần tối ưu trên dữ liệu mô phỏng. Mọi kết quả đều kèm cỡ mẫu và giới hạn, phân tích theo bốn loại mối đe dọa độ tin cậy ở mục 6.13.
+Chương 6 đã đánh giá nguyên mẫu theo 19 tiêu chí chấp nhận; kết quả từng tiêu chí được tổng hợp ở Bảng 6.17 và thảo luận theo câu hỏi nghiên cứu ở mục 6.12. Điểm chính là: khả năng phục hồi đạt ở mức thành phần và khả năng mở rộng đạt trong môi trường mô phỏng; hai lỗi hiện thực về tính khả dụng và bảo mật nhật ký đã được sửa và đạt khi kiểm tra lại; độ trễ phản hồi của luồng qua LLM (P95 = 3,75 giây) là kết quả không đạt duy nhất còn lại. Mọi kết quả đều kèm cỡ mẫu và giới hạn theo bốn loại mối đe dọa độ tin cậy ở mục 6.13.

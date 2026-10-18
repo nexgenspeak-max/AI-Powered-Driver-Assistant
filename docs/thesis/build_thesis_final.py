@@ -76,8 +76,8 @@ CONCLUSION_PARAS = [
     "- Hai lỗi hiện thực phát hiện khi đánh giá (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật) đã được sửa trong bộ định dạng nhật ký dùng chung và các công cụ gọi điện, và đạt khi kiểm tra lại (Bảng 6.10, Bảng 6.14); việc còn lại là xóa các tệp nhật ký cũ ghi trước ngày sửa và đưa phép quét nhật ký vào quy trình kiểm thử tự động.",
     "- Hệ thống chưa chạy trên kiến trúc AWS đầy đủ (mục 5.6.1): triển khai các stack bằng infra/deploy-all.sh, đo lại độ trễ và khả năng phục hồi trên Lambda, API Gateway và Fargate.",
     "- Cỡ mẫu nhỏ và một người chấm (RQ3, RQ4): mở rộng bộ câu tham chiếu với nhiều người đọc và nhiều mức nhiễu; chấm độ chính xác gọi công cụ bởi hai người độc lập và báo cáo hệ số đồng thuận.",
-    "- SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin với nhà mạng qua Twilio rồi đặt TWILIO_SMS_FROM, sau đó gửi thử thật và đo tỷ lệ giao tin qua báo cáo trạng thái; trong thời gian chờ, có thể thay SMS bằng cuộc gọi tự động đọc nội dung tin nhắn cho khách qua kênh thoại sẵn có.",
-    "- Địa chỉ nhận thông báo từ Twilio chưa xác thực chữ ký X-Twilio-Signature, nên có thể bị gửi sự kiện giả vào channel-events: xác thực chữ ký bằng twilio.validateRequest với URL công khai đã cấu hình, thử với Twilio thật trước khi bật.",
+    "- SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin với nhà mạng qua Twilio, rồi gửi thử thật và đo tỷ lệ giao tin (mục 6.13).",
+    "- Xác thực chữ ký X-Twilio-Signature ở các địa chỉ nhận thông báo từ Twilio để chặn sự kiện giả (mục 6.13).",
     "- Chưa có nghiên cứu người dùng: thử nghiệm có kiểm soát với tài xế trên kịch bản lái mô phỏng, đo thời gian tác vụ, số lần nhìn màn hình và tải nhận thức.",
 ]
 
@@ -259,45 +259,16 @@ APPENDIX_E_RTM = [
     ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng 4.4)", "Nhật ký gắn room và conv", "Kiểm tra nhật ký", "Bảng 6.14"),
 ]
 
-# Phụ lục F — đối chiếu sequence diagram với mã nguồn (đường dẫn tính từ src/backend/)
-APPENDIX_F_SEQUENCE = [
-    ("S1", "1", "POST /api/v1/auth/login", "identity-service/src/routes/auth.ts:109"),
-    ("S1", "6", "Ký access token, refresh token", "identity-service/src/services/tokenService.ts:16, :22"),
-    ("S1", "9", "POST /api/v1/auth/refresh", "identity-service/src/routes/auth.ts:142"),
-    ("S2", "1", "POST /api/v1/voice/token", "external-api-service/src/routes/voice.ts:47"),
-    ("S2", "4", "Tạo phòng driver-{số}-{UUID}", "external-api-service/src/routes/voice.ts:96"),
-    ("S2", "5", "Ký token LiveKit", "external-api-service/src/routes/voice.ts:157"),
-    ("S2", "6", "Phân công tác nhân", "external-api-service/src/routes/voice.ts:160; services/voiceSessionService.ts:38"),
-    ("S2", "10", "PUT /api/v1/drivers/me/session", "llm-orchestrator/app/services/backend_api.py:501; external-api-service/src/routes/drivers.ts:164"),
-    ("S2", "12", "GET /api/v1/drivers/me/context", "llm-orchestrator/app/services/backend_api.py:217; external-api-service/src/routes/drivers.ts:91"),
-    ("S3", "2, 4", "Chuỗi nhà cung cấp dự phòng, thời gian chờ 5 giây", "llm-orchestrator/app/providers/__init__.py:80, :98, :115"),
-    ("S3", "5", "Câu đệm sau 2 giây", "llm-orchestrator/app/voicebot/processors/turn_filler.py:19"),
-    ("S3", "7", "PATCH /api/v1/trips/{tripId}, thời gian chờ 8 giây", "llm-orchestrator/app/services/backend_api.py:242; external-api-service/src/routes/trips.ts:256"),
-    ("S4", "1", "POST /api/v1/trips/{tripId}/dispatch", "external-api-service/src/routes/trips.ts:540"),
-    ("S4", "2–5", "Tạo phòng, phân công tác nhân, quay số SIP", "external-api-service/src/services/dispatchService.ts:24"),
-    ("S4", "8", "confirm_trip, reject_trip cập nhật trạng thái", "llm-orchestrator/app/voicebot/processors/confirm_trip_flow.py:34"),
-    ("S5", "2", "POST /api/v1/calls/start, thời gian chờ 25 giây", "llm-orchestrator/app/services/backend_api.py:289; external-api-service/src/routes/calls.ts:46"),
-    ("S5", "2–4", "Ba chế độ gọi, quay số SIP", "external-api-service/src/services/callService.ts:123, :148; services/telephony/livekit.ts:19"),
-    ("S5", "6", "POST /api/v1/calls/complete", "llm-orchestrator/app/services/backend_api.py:390; external-api-service/src/routes/calls.ts:127"),
-    ("S5", "7–9", "POST /api/v1/sms/send", "llm-orchestrator/app/services/backend_api.py:322; external-api-service/src/routes/sms.ts:7; services/smsService.ts:5; external-channel-service/src/routes/sms.ts:7"),
-    ("S6", "2", "POST /api/v1/records, thử lại có giới hạn", "llm-orchestrator/app/services/conversation_service.py:270; call-records-service/src/routes/records.ts:6"),
-    ("S6", "5–7", "GET /api/v1/calls/latest, GET /api/v1/records", "external-api-service/src/routes/calls.ts:140; call-records-service/src/routes/records.ts:15, :28"),
-    ("S5", "11", "Lưu sự kiện vào channel-events", "external-channel-service/src/services/twilioMonitor.ts; services/events/dynamoStore.ts"),
-    ("S7", "1", "Sự kiện theo lịch source=ops.schedule", "ops-service/src/index.ts (handler); infra/ops-service/sam.yaml (ScheduleV2)"),
-    ("S7", "2–3", "GET /api/v1/records?date=&cursor=", "ops-service/src/services/reports/index.ts (fetchRecords); call-records-service/src/services/recordService.ts (listByDate)"),
-    ("S7", "4–6", "Tổng hợp; chấm LLM trên mẫu", "ops-service/src/services/reports/aggregate.ts; judge.ts"),
-    ("S7", "7–9", "Lưu daily-reports; GET /api/v1/reports/daily", "ops-service/src/services/reports/store.ts; ops-service/src/routes/reports.ts"),
-]
 
 
-# Phụ lục H — tái lập số liệu thực nghiệm
-APPENDIX_H_INTRO = (
-    "Bảng H.1 liệt kê script và lệnh để tạo lại từng nhóm số liệu ở Chương 6. Các script nằm trong thư mục "
+# Phụ lục F — tái lập số liệu thực nghiệm
+APPENDIX_F_INTRO = (
+    "Bảng F.1 liệt kê script và lệnh để tạo lại từng nhóm số liệu ở Chương 6. Các script nằm trong thư mục "
     "docs/thesis và docs/thesis/experiments của kho mã nguồn (mục 5.2). Thí nghiệm thử tải và tiêm lỗi chạy "
     "trên môi trường cô lập: cơ sở dữ liệu giả lập, thông tin đăng nhập AWS giả, số điện thoại trong dải "
     "giả lập; không thí nghiệm nào gọi tới tài nguyên AWS hoặc nhà cung cấp bên ngoài."
 )
-APPENDIX_H_ROWS = [
+APPENDIX_F_ROWS = [
     ("Độ trễ phản hồi và phân tích điểm nghẽn (Bảng 6.4, 6.5)",
      "python3 docs/thesis/extract_ch6_metrics.py",
      "Nhật ký tác nhân agent.*.log của đợt đo 05–06/09/2026",
@@ -340,8 +311,8 @@ APPENDIX_H_ROWS = [
      "Kết quả đạt/không đạt"),
 ]
 
-# Phụ lục I — bảng thuật ngữ Anh – Việt
-APPENDIX_I_TERMS = [
+# Phụ lục G — bảng thuật ngữ Anh – Việt
+APPENDIX_G_TERMS = [
     ("Acceptance criteria", "Tiêu chí chấp nhận", "ISTQB (n.d.)"),
     ("Architectural driver", "Động lực kiến trúc", "Bass et al. (2021)"),
     ("Architectural pattern", "Mẫu kiến trúc", "Bass et al. (2021)"),
@@ -388,21 +359,6 @@ APPENDIX_I_TERMS = [
     ("Wake word", "Từ khóa đánh thức", "Mục 1.5.2"),
 ]
 
-# Phụ lục G — ánh xạ tên thành phần
-APPENDIX_G_NAMES = [
-    ("Dịch vụ Định danh", "identity-service", "Lambda, API Gateway REST, DynamoDB (accounts, driver-settings)", "Microservices; Data"),
-    ("Dịch vụ Chuyến đi và Điều phối", "external-api-service", "Lambda, API Gateway REST và WebSocket, DynamoDB (trips, ws-connections)", "Microservices; API Gateway; Data"),
-    ("Dịch vụ Liên lạc bằng tin nhắn", "external-channel-service", "Lambda, API Gateway REST, DynamoDB (channel-events)", "Microservices; Data"),
-    ("Dịch vụ Nhật ký cuộc gọi", "call-records-service", "Lambda, API Gateway REST, DynamoDB (call-records)", "Microservices; Data"),
-    ("Dịch vụ Giám sát vận hành", "ops-service", "Lambda, API Gateway REST, DynamoDB (daily-reports), EventBridge Scheduler", "Microservices; Data; Cross-cutting"),
-    ("Dịch vụ Liên lạc hội thoại thời gian thực", "llm-orchestrator", "ECS Fargate, ECR, CloudWatch Logs", "Real-time Communication & Conversational AI"),
-    ("Nền tảng truyền thông thời gian thực", "LiveKit Cloud", "Dịch vụ bên ngoài", "Real-time Communication & Conversational AI"),
-    ("Ứng dụng tài xế", "driver-app, driver-web", "Cài trên điện thoại (Expo); bản web driver-web lưu trên S3", "Client"),
-    ("Ứng dụng khách hàng (ngoài phạm vi)", "customer-app, customer-web", "S3 (bản web)", "Client"),
-    ("Trang quản trị điều hành", "admin-panel", "S3", "Client"),
-    ("Trang giám sát hệ thống", "super-admin-panel", "S3", "Client"),
-    ("Nhà cung cấp dịch vụ thoại", "Twilio", "Dịch vụ bên ngoài", "External Systems"),
-]
 
 # Style/section template. Prefer the original GVHD source if present; else reuse FINAL
 # via a temp copy so we never open+overwrite the same path.
@@ -1558,10 +1514,8 @@ def build() -> Path:
         "Bảng A.1. Danh mục công cụ gói tiếng Việt (45 công cụ)",
         "Bảng D.1. Cấu hình chính của tác nhân hội thoại",
         "Bảng E.1. Ma trận đối chiếu yêu cầu",
-        "Bảng F.1. Đối chiếu các bước sequence với mã nguồn",
-        "Bảng G.1. Ánh xạ tên thành phần",
-        "Bảng H.1. Tái lập số liệu thực nghiệm",
-        "Bảng I.1. Bảng thuật ngữ Anh – Việt",
+        "Bảng F.1. Tái lập số liệu thực nghiệm",
+        "Bảng G.1. Bảng thuật ngữ Anh – Việt",
     ]:
         add_styled(caption, "Normal", first_line_indent=False)
 
@@ -1703,7 +1657,7 @@ def build() -> Path:
     add_styled(
         "Phụ lục gồm: A — danh mục công cụ; B — kịch bản hội thoại mẫu; C — ảnh giao diện; "
         "D — cấu hình môi trường (không chứa bí mật); E — ma trận đối chiếu yêu cầu; "
-        "F — bảng đối chiếu sequence diagram với mã nguồn; G — bảng ánh xạ tên thành phần.",
+        "F — tái lập số liệu thực nghiệm; G — bảng thuật ngữ Anh – Việt.",
         "Normal",
         first_line_indent=True,
     )
@@ -1770,55 +1724,26 @@ def build() -> Path:
     )
     add_styled("", "Normal", first_line_indent=False, space_after=6)
 
-    # ---- Phụ lục F: đối chiếu sequence ----
-    add_styled("Phụ lục F. Đối chiếu sequence diagram với mã nguồn", "Heading 2", first_line_indent=False)
-    add_styled(
-        "Bảng F.1 ghi vị trí mã nguồn (tệp và dòng, tính từ thư mục src/backend/ tại thời điểm viết) "
-        "hiện thực các bước của sequence S1–S6 ở mục 4.5.",
-        "Normal",
-        first_line_indent=True,
-    )
-    add_table_caption("Bảng F.1. Đối chiếu các bước sequence với mã nguồn")
-    add_bordered_table(
-        [["Sequence", "Bước", "Thông điệp", "Vị trí mã nguồn"]]
-        + [list(row) for row in APPENDIX_F_SEQUENCE]
-    )
-    add_styled("", "Normal", first_line_indent=False, space_after=6)
-
-    # ---- Phụ lục G: ánh xạ tên ----
-    add_styled("Phụ lục G. Bảng ánh xạ tên thành phần", "Heading 2", first_line_indent=False)
-    add_styled(
-        "Thân luận văn dùng tên tiếng Việt theo chức năng; Bảng G.1 đối chiếu với tên thư mục mã nguồn, "
-        "tài nguyên AWS và lớp trên Hình 4.1.",
-        "Normal",
-        first_line_indent=True,
-    )
-    add_table_caption("Bảng G.1. Ánh xạ tên thành phần")
-    add_bordered_table(
-        [["Tên trong luận văn", "Tên trong mã nguồn", "Tài nguyên triển khai", "Lớp trên Hình 4.1"]]
-        + [list(row) for row in APPENDIX_G_NAMES]
-    )
-
-    # ---- Phụ lục H: tái lập số liệu ----
-    add_styled("Phụ lục H. Tái lập số liệu thực nghiệm", "Heading 2", first_line_indent=False)
-    add_styled(APPENDIX_H_INTRO, "Normal", first_line_indent=True)
-    add_table_caption("Bảng H.1. Tái lập số liệu thực nghiệm")
+    # ---- Phụ lục F: tái lập số liệu ----
+    add_styled("Phụ lục F. Tái lập số liệu thực nghiệm", "Heading 2", first_line_indent=False)
+    add_styled(APPENDIX_F_INTRO, "Normal", first_line_indent=True)
+    add_table_caption("Bảng F.1. Tái lập số liệu thực nghiệm")
     add_bordered_table(
         [["Số liệu", "Script hoặc lệnh", "Dữ liệu đầu vào", "Kết quả trong luận văn"]]
-        + [list(row) for row in APPENDIX_H_ROWS]
+        + [list(row) for row in APPENDIX_F_ROWS]
     )
     add_styled("", "Normal", first_line_indent=False, space_after=6)
 
-    # ---- Phụ lục I: thuật ngữ ----
-    add_styled("Phụ lục I. Bảng thuật ngữ Anh – Việt", "Heading 2", first_line_indent=False)
+    # ---- Phụ lục G: thuật ngữ ----
+    add_styled("Phụ lục G. Bảng thuật ngữ Anh – Việt", "Heading 2", first_line_indent=False)
     add_styled(
-        "Bảng I.1 liệt kê các thuật ngữ chuyên môn dùng trong luận văn, cách dịch sang tiếng Việt và nguồn "
+        "Bảng G.1 liệt kê các thuật ngữ chuyên môn dùng trong luận văn, cách dịch sang tiếng Việt và nguồn "
         "định nghĩa. Lần xuất hiện đầu trong thân bài ghi tiếng Việt kèm thuật ngữ gốc trong ngoặc đơn.",
         "Normal",
         first_line_indent=True,
     )
-    add_table_caption("Bảng I.1. Bảng thuật ngữ Anh – Việt")
-    add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt", "Nguồn"]] + [list(r) for r in APPENDIX_I_TERMS])
+    add_table_caption("Bảng G.1. Bảng thuật ngữ Anh – Việt")
+    add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt", "Nguồn"]] + [list(r) for r in APPENDIX_G_TERMS])
 
     new.save(str(OUT))
     return OUT
