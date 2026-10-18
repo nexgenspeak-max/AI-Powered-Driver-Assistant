@@ -18,6 +18,7 @@ from pathlib import Path
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor, Inches
@@ -99,13 +100,13 @@ APPENDIX_A_TOOLS = [
     ("update_trip_status", "Cập nhật tiến độ của chuyến đã nhận (không dùng để nhận chuyến mới)."),
     ("call_customer", "Gọi khách của một chuyến."),
     ("call_custom_number", "Bước 1: gọi tới một số điện thoại bất kỳ do tài xế đọc ra (không phải khách của chuyến)."),
-    ("confirm_call_custom_number", "Bước 2: thực hiện gọi số tự do sau khi tài xế xác nhận đúng số."),
+    ("confirm_call_custom_number", "Bước 2: gọi tới số do tài xế đọc ra, sau khi tài xế xác nhận đúng số."),
     ("find_contact", "Bước 1: tìm người trong danh bạ của tài xế theo tên để gọi."),
     ("select_contact_match", "Chọn đúng người khi danh bạ trả về nhiều kết quả trùng tên."),
     ("confirm_contact_call", "Bước cuối: gọi thật tới người trong danh bạ đã xác nhận."),
     ("send_sms_to_customer", "Gửi SMS nội dung tự do cho khách của chuyến đang hoạt động."),
     ("send_sms_to_custom_number", "Bước 1: gửi SMS tới một số bất kỳ do tài xế đọc ra."),
-    ("confirm_send_sms_to_custom_number", "Bước 2: gửi SMS tới số tự do sau khi tài xế xác nhận số và nội dung."),
+    ("confirm_send_sms_to_custom_number", "Bước 2: gửi SMS tới số do tài xế đọc ra, sau khi tài xế xác nhận số và nội dung."),
     ("find_contact_to_message", "Bước 1: tìm người trong danh bạ theo tên để nhắn tin."),
     ("select_contact_match_for_sms", "Chọn đúng người khi tìm danh bạ để nhắn tin trả về nhiều kết quả."),
     ("confirm_send_sms_to_contact", "Bước cuối: gửi tin nhắn thật tới người trong danh bạ đã xác nhận."),
@@ -124,13 +125,13 @@ APPENDIX_A_TOOLS = [
     ("report_trip_issue", "Báo cáo sự cố trong chuyến: hành vi không phù hợp, hư hỏng xe, địa chỉ sai…"),
     ("extend_wait_time", "Yêu cầu thêm thời gian chờ khách tại điểm đón."),
     ("set_driver_status", "Chuyển trạng thái tài xế: online (nhận chuyến) hoặc offline (nghỉ)."),
-    ("confirm_trip", "Xác nhận nhận một chuyến đi mới (đang chờ/thông báo, chưa nhận)."),
+    ("confirm_trip", "Nhận một chuyến mới đang được mời mà tài xế chưa nhận."),
     ("reject_trip", "Từ chối một chuyến đi mới chưa nhận."),
-    ("book_trip", "Đặt một chuyến xe mới cho khách (luồng khách)."),
+    ("book_trip", "Đặt một chuyến xe mới cho khách (phiên của ứng dụng khách hàng)."),
     ("get_my_trip", "Lấy thông tin chuyến hiện tại của khách: trạng thái, tài xế, thời gian dự kiến, địa chỉ."),
     ("request_cancel_my_trip", "Bước 1: hỏi xác nhận trước khi hủy chuyến của khách."),
     ("confirm_cancel_my_trip", "Bước 2: thực hiện hủy chuyến sau khi khách xác nhận."),
-    ("get_driver_eta", "Lấy thời gian dự kiến tài xế đến và vị trí tài xế (luồng khách)."),
+    ("get_driver_eta", "Lấy thời gian dự kiến tài xế đến và vị trí tài xế (phiên của ứng dụng khách hàng)."),
     ("call_driver", "Kết nối trực tiếp khách với tài xế qua điện thoại."),
     ("answer_app_faq", "Tra cứu sổ tay hướng dẫn ứng dụng để trả lời câu hỏi tính năng / cách dùng / quy trình."),
     ("end_conversation", "Chủ động kết thúc cuộc gọi với trợ lý theo yêu cầu tài xế."),
@@ -140,7 +141,9 @@ APPENDIX_B_INTRO = (
     "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh), "
     "minh họa một đường STT → LLM kèm công cụ → TTS cho câu quen thuộc, xử lý im lặng và kết "
     "thúc phiên lịch sự. Nhãn thời gian là độ trễ cảm nhận (user_stop_to_agent_speak); khi "
-    "phản hồi chậm hơn khoảng hai giây, hệ thống có thể phát một câu đệm ngắn trước câu trả lời thật."
+    "phản hồi chậm hơn khoảng hai giây, hệ thống có thể phát một câu đệm ngắn trước câu trả lời thật. "
+    "Phần trong ngoặc vuông là ghi chú lấy từ nhật ký: khâu xử lý (LLM, công cụ được gọi), nhãn của mô-đun nhận dạng ý định "
+    "(FollowUpKnowledge: câu hỏi tiếp về chuyến vừa nhắc; conversational_ack: câu đáp lễ) và độ trễ cảm nhận của lượt đó."
 )
 
 APPENDIX_B_DIALOGUES = [
@@ -245,8 +248,8 @@ APPENDIX_E_RTM = [
     ("FR-K01, FR-K04", "RQ4", "Tác nhân (gọi khách nền, tác nhân gọi thay); Dịch vụ Nhật ký cuộc gọi", "S5", "Phòng custcall-…; test_customer_outbound_opening, test_record_customer_request, test_customer_call_faq", "UC12", "Bảng 6.15"),
     ("FR-K02", "RQ4", "Tác nhân; LiveKit SIP", "S5", "Chế độ nói trực tiếp (bridge); test_outbound_call_modes", "UC12", "Bảng 6.15"),
     ("FR-K03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "confirm_trip_with_customer, send_sms_to_customer", "UC13", "Bảng 6.13 (RS-04, đường lỗi)"),
-    ("FR-Q01 đến FR-Q05", "Ngoài RQ (kiểm tra tuân thủ)", "Trang quản trị điều hành; Dịch vụ Chuyến đi và Điều phối; Dịch vụ Định danh; Dịch vụ Nhật ký cuộc gọi", "S4", "admin-panel: TripBoardPage, CreateTripPage, DriversPage, CustomerPage, CallLogsPage", "UC14, UC17", "Hình C.10 đến C.14"),
-    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng 4.4)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.15 đến C.17"),
+    ("FR-Q01 đến FR-Q05", "Ngoài RQ (kiểm tra tuân thủ)", "Trang quản trị điều hành; Dịch vụ Chuyến đi và Điều phối; Dịch vụ Định danh; Dịch vụ Nhật ký cuộc gọi", "S4", "admin-panel: TripBoardPage, CreateTripPage, DriversPage, CustomerPage, CallLogsPage", "UC14, UC17", "Hình C.12 đến C.16"),
+    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng 4.4)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.17 đến C.19"),
     ("FR-O01, FR-O02", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi; tác nhân", "S7", "session_metrics.py; ops-service/src/services/reports; ReportsPage.tsx", "UC11", "Bảng 6.15"),
     ("NFR-01", "RQ4", "Tác nhân", "S3", "Phân loại phiên; hành động chờ xác nhận; câu báo lỗi (test_call_error_message)", "Danh mục hành vi", "Bảng 6.10 (đạt sau một vòng sửa)"),
     ("NFR-02", "RQ2", "Tác nhân; nhà cung cấp AI", "S2, S3", "turn_filler.py; prefetch.py; context_store.py", "UC01, UC03, UC04, UC07", "Bảng 6.4, Bảng 6.6"),
@@ -256,7 +259,7 @@ APPENDIX_E_RTM = [
     ("CON-01", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S3", "backend_api.py", "Kiểm tra mã nguồn", "Bảng 6.14"),
     ("CON-02", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Mọi sequence", "Bảng DynamoDB riêng từng stack", "Kiểm tra cấu hình", "Bảng 5.6"),
     ("CON-03", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh", "S1", "tokenService.ts", "Kiểm tra mã nguồn", "Bảng 6.14"),
-    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng 4.4)", "Nhật ký gắn room và conv", "Kiểm tra nhật ký", "Bảng 6.14"),
+    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng 4.4)", "Nhật ký gắn mã phòng và mã hội thoại", "Kiểm tra nhật ký", "Bảng 6.14"),
 ]
 
 
@@ -306,7 +309,7 @@ APPENDIX_F_ROWS = [
      "600 bộ điểm dừng sinh ngẫu nhiên, hạt giống 20261013",
      "Tỷ lệ đúng tối ưu; chênh lệch quãng đường so với tối ưu và với thứ tự theo danh sách"),
     ("Luồng khách hàng và báo cáo ngày (Bảng 6.15)",
-     "pytest trong src/backend/llm-orchestrator (529 ca, gồm test_send_sms_flow); npm run verify:ops; npm run verify:records; npm run verify:sms (hai dịch vụ); npm run verify:logger",
+     "pytest trong src/backend/llm-orchestrator (635 ca, gồm test_send_sms_flow); npm run verify:ops; npm run verify:records; npm run verify:sms (hai dịch vụ); npm run verify:logger",
      "Bộ kiểm thử tự động",
      "Kết quả đạt/không đạt"),
 ]
@@ -320,6 +323,11 @@ APPENDIX_G_TERMS = [
     ("Artifact (design science)", "Sản phẩm thiết kế", "Hevner et al. (2004)"),
     ("Availability", "Tính sẵn sàng", "ISO/IEC (2023)"),
     ("Bounded context", "Ngữ cảnh giới hạn", "Newman (2021)"),
+    ("Cold start", "Khởi động nguội", "Jonas et al. (2019)"),
+    ("Hallucination", "Bịa thông tin (mô hình tạo ra thông tin không có trong dữ liệu)", "Mục 2.1"),
+    ("System prompt", "Lời nhắc hệ thống", "Mục 4.5.3"),
+    ("Token", "Token (đơn vị chữ nhỏ nhất mà mô hình ngôn ngữ sinh ra)", "Mục 2.1"),
+    ("Webhook", "Webhook (dịch vụ bên ngoài gọi ngược vào hệ thống để báo sự kiện)", "Mục 4.5.5"),
     ("Cascaded pipeline", "Chuỗi xử lý theo tầng", "Mục 2.1"),
     ("Conclusion validity", "Độ tin cậy của kết luận", "Wohlin et al. (2012)"),
     ("Construct validity", "Độ tin cậy cấu trúc", "Wohlin et al. (2012)"),
@@ -1005,6 +1013,15 @@ def add_toc_field(paragraph: Paragraph) -> None:
     set_run_font(run2, CAPTION_PT)
     run3 = paragraph.add_run()
     run3._r.append(fld_char("end"))
+
+
+def drop_orphan_images(doc) -> None:
+    """The previous FINAL is the style template, so images from earlier builds stay
+    related to the cleared body and pile up in word/media; drop those no longer embedded."""
+    part = doc.part
+    used = {blip.get(qn("r:embed")) for blip in part.element.iter(qn("a:blip"))}
+    for rid in [r for r, rel in part.rels.items() if rel.reltype == RT.IMAGE and r not in used]:
+        part.rels.pop(rid)
 
 
 def build() -> Path:
@@ -1743,8 +1760,9 @@ def build() -> Path:
         first_line_indent=True,
     )
     add_table_caption("Bảng G.1. Bảng thuật ngữ Anh – Việt")
-    add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt", "Nguồn"]] + [list(r) for r in APPENDIX_G_TERMS])
+    add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt", "Nguồn"]] + [list(r) for r in sorted(APPENDIX_G_TERMS, key=lambda r: r[0].lower())])
 
+    drop_orphan_images(new)
     new.save(str(OUT))
     return OUT
 
