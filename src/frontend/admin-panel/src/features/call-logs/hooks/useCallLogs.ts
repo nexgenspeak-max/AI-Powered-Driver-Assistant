@@ -5,7 +5,7 @@ export function useCallLogs(caller?: string) {
   return useQuery({
     queryKey: ['call-logs', caller],
     queryFn: () => callLogsService.list(caller ? { caller } : undefined),
-    // refetchInterval: 10000,
+    refetchInterval: 15000,
   })
 }
 

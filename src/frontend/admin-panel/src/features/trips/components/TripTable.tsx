@@ -25,6 +25,7 @@ type Props = {
   onStatusFilter: (filter: string) => void
   onDispatch: (vars: { trip_id: string; driver_phone: string }) => void
   dispatching: boolean
+  onOpen?: (trip: Trip) => void
 }
 
 const PAGE_SIZES = [15, 30, 50]
@@ -64,7 +65,7 @@ function RouteCell({ pickup, dropoff }: { pickup: string; dropoff: string }) {
   )
 }
 
-export function TripTable({ trips, drivers, customers, loading, statusFilter, onStatusFilter, onDispatch, dispatching }: Props) {
+export function TripTable({ trips, drivers, customers, loading, statusFilter, onStatusFilter, onDispatch, dispatching, onOpen }: Props) {
   const [selected, setSelected] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -161,7 +162,7 @@ export function TripTable({ trips, drivers, customers, loading, statusFilter, on
                 const assigned = trip.driver_phone ? driverByPhone.get(trip.driver_phone) : undefined
                 const account = resolveAccountName(trip, customers)
                 return (
-                  <TableRow key={trip.trip_id} hover sx={tableRowSx}>
+                  <TableRow key={trip.trip_id} hover sx={{ ...tableRowSx, cursor: onOpen ? 'pointer' : undefined }} onClick={() => onOpen?.(trip)}>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       <Typography sx={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 12.5, color: PALETTE.shellHeading }}>
                         #{trip.trip_id.slice(0, 8)}
@@ -186,7 +187,7 @@ export function TripTable({ trips, drivers, customers, loading, statusFilter, on
                     <TableCell><TripStatusChip status={trip.status} /></TableCell>
                     <TableCell>
                       {canDispatch ? (
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                           <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
                             <Select
                               value={driverPhone}

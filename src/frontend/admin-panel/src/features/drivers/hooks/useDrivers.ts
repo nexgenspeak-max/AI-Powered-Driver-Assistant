@@ -5,6 +5,6 @@ export function useDrivers() {
   return useQuery({
     queryKey: ['drivers'],
     queryFn: () => driversService.list(),
-    // refetchInterval: 10000,
+    refetchInterval: 10000,
   })
 }

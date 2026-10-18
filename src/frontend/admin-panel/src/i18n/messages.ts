@@ -93,6 +93,31 @@ export type AdminContentMessages = {
       dropoff: string
     }
   }
+  detail: {
+    created: string
+    updated: string
+    customer: string
+    route: string
+    distance: string
+    eta: string
+    traffic: string
+    fare: string
+    notes: string
+    bulky: string
+    children: string
+    pickupTime: string
+    bookedVia: string
+    driver: string
+    noDriver: string
+    assign: string
+    cancelTrip: string
+    confirmCancel: string
+    cancelled: string
+    dispatched: (name: string) => string
+    failed: string
+    close: string
+    live: (time: string) => string
+  }
   transcript: {
     title: string
     summary: string
@@ -258,6 +283,31 @@ const CONTENT_EN: AdminContentMessages = {
       dropoff: '45 Nguyễn Huệ, District 1',
     },
   },
+  detail: {
+    created: 'Created',
+    updated: 'Updated',
+    customer: 'Customer',
+    route: 'Route',
+    distance: 'Distance',
+    eta: 'Ride time',
+    traffic: 'Traffic',
+    fare: 'Estimated fare',
+    notes: 'Notes',
+    bulky: 'Bulky luggage',
+    children: 'Travelling with children',
+    pickupTime: 'Pickup time',
+    bookedVia: 'Booked via',
+    driver: 'Driver',
+    noDriver: 'No driver assigned yet',
+    assign: 'Send to driver',
+    cancelTrip: 'Cancel trip',
+    confirmCancel: 'Cancel this trip? The driver and customer will see it as cancelled.',
+    cancelled: 'Trip cancelled',
+    dispatched: name => `Offer sent to ${name}`,
+    failed: 'Action failed. Please try again.',
+    close: 'Close',
+    live: time => `Live · updated ${time}`,
+  },
   transcript: {
     title: 'Call transcript',
     summary: 'Summary',
@@ -358,6 +408,31 @@ const CONTENT_VI: AdminContentMessages = {
       pickup: '123 Lê Lợi, Quận 1',
       dropoff: '45 Nguyễn Huệ, Quận 1',
     },
+  },
+  detail: {
+    created: 'Tạo lúc',
+    updated: 'Cập nhật',
+    customer: 'Khách hàng',
+    route: 'Lộ trình',
+    distance: 'Quãng đường',
+    eta: 'Thời gian đi',
+    traffic: 'Giao thông',
+    fare: 'Cước ước tính',
+    notes: 'Ghi chú',
+    bulky: 'Hàng cồng kềnh',
+    children: 'Có trẻ em',
+    pickupTime: 'Giờ đón',
+    bookedVia: 'Kênh đặt',
+    driver: 'Tài xế',
+    noDriver: 'Chưa gán tài xế',
+    assign: 'Gửi cho tài xế',
+    cancelTrip: 'Hủy chuyến',
+    confirmCancel: 'Hủy chuyến này? Tài xế và khách sẽ thấy chuyến đã hủy.',
+    cancelled: 'Đã hủy chuyến',
+    dispatched: name => `Đã gửi lời mời cho ${name}`,
+    failed: 'Thao tác thất bại. Vui lòng thử lại.',
+    close: 'Đóng',
+    live: time => `Trực tiếp · cập nhật ${time}`,
   },
   transcript: {
     title: 'Bản ghi cuộc gọi',

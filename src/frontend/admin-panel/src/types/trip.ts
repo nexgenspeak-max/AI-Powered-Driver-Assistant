@@ -30,6 +30,10 @@ export interface Trip {
   room_name: string
   created_at: string
   updated_at: string
+  estimated_fare?: number
+  has_bulky_goods?: boolean
+  with_children?: boolean
+  note?: string
 }
 
 export interface CreateTripPayload {
