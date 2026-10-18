@@ -5,6 +5,7 @@ import { useTurnByTurnNavigation } from './useTurnByTurnNavigation'
 import { decodePolyline } from '../../../utils/polyline'
 import { pushImmediateLocation } from '../../../services/location/pushImmediateLocation'
 import { colorForTrip, type LngLat } from '../lib/mapConstants'
+import { liveLeg } from '../lib/liveLeg'
 import type { Trip } from '../../../types/trip'
 
 type ActiveTrip = Trip & { estimated_fare: number }
@@ -107,8 +108,13 @@ export function useDriverMapModel() {
         address: first.address,
         lat: first.lat,
         lng: first.lng,
-        distanceKm: first.distance_m > 0 ? first.distance_m / 1000 : null,
-        etaMinutes: first.eta_minutes > 0 ? first.eta_minutes : null,
+        ...liveLeg({
+          serverDistanceM: first.distance_m,
+          serverEtaMin: first.eta_minutes,
+          routeOrigin: context?.current_location ?? null,
+          live: live ? { lat: live.lat, lng: live.lng } : null,
+          stop: { lat: first.lat, lng: first.lng },
+        }),
       }
     }
     const trip = context?.current_trip
@@ -130,7 +136,7 @@ export function useDriverMapModel() {
       distanceKm: toDropoff && trip.distance_km > 0 ? trip.distance_km : null,
       etaMinutes: toDropoff && trip.eta_minutes > 0 ? trip.eta_minutes : null,
     }
-  }, [optimizedRoute, context?.current_trip, trips])
+  }, [optimizedRoute, context?.current_trip, context?.current_location, trips, live?.lat, live?.lng])
 
   const navigationTarget = useMemo(
     () => (nextStop ? { lat: nextStop.lat, lng: nextStop.lng } : null),

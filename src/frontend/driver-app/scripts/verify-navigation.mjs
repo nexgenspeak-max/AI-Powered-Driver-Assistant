@@ -124,3 +124,22 @@ console.log('navigation selfcheck: OK (step advance + overshoot, remaining-from-
   // At 30 km/h (~8.3 m/s) the worst gap near a stop is 150 m, so a 1 km radius can't be skipped.
   console.log('push cadence selfcheck: OK (idle 10 min, en route 60 s/500 m, near stop 15 s/150 m)')
 }
+
+// ── Live next-stop leg (lib/liveLeg.ts) ────────────────────────────────
+{
+  const b = await esbuild.build({ entryPoints: [path.join(appRoot, 'src', 'features', 'home', 'lib', 'liveLeg.ts')], bundle: true, platform: 'node', format: 'esm', write: false, logLevel: 'silent' })
+  const { liveLeg } = await import(`data:text/javascript;base64,${Buffer.from(b.outputFiles[0].text).toString('base64')}`)
+  const stop = { lat: 21.0434, lng: 105.8366 }
+  const origin = { lat: 21.0285, lng: 105.8542 } // ~2.4 km straight
+  // No live fix: server figures as-is.
+  assert.deepEqual(liveLeg({ serverDistanceM: 4000, serverEtaMin: 15, routeOrigin: origin, live: null, stop }), { distanceKm: 4, etaMinutes: 15 })
+  // Live fix ~400 m from the stop: card must no longer say 4 km / 15 min.
+  const near = { lat: 21.0400, lng: 105.8400 }
+  const r = liveLeg({ serverDistanceM: 4000, serverEtaMin: 15, routeOrigin: origin, live: near, stop })
+  assert.ok(r.distanceKm < 1.2 && r.distanceKm > 0.4, `near distance ${r.distanceKm}`)
+  assert.ok(r.etaMinutes <= 5, `near eta ${r.etaMinutes}`)
+  // At the origin: roughly the server figure (detour clamped to <= 2x).
+  const atOrigin = liveLeg({ serverDistanceM: 4000, serverEtaMin: 15, routeOrigin: origin, live: origin, stop })
+  assert.ok(Math.abs(atOrigin.distanceKm - 4) < 0.05, `origin distance ${atOrigin.distanceKm}`)
+  console.log('live leg selfcheck: OK (server figures without GPS, shrinks as the driver closes in)')
+}
