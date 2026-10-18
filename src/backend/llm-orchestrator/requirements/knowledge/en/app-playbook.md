@@ -116,7 +116,7 @@ When the call ends, the AI reads **one** summary (what the customer confirmed). 
 
 ### 3.8 Taking trips, navigation and automatic features
 
-**New trip offers.** While you are online, a new trip opens the *New trip* sheet: estimated fare, distance, duration, pickup time, customer name, notes (bulky luggage, children), pickup and drop-off. You have 20 seconds to tap **Accept** or **Reject**; **Later** (the X) keeps the trip in the *Waiting* list on the Trips tab. The Czen assistant also reads the offer aloud and asks whether you accept.
+**New trip offers.** While you are online, a new trip opens the *New trip* sheet: estimated fare, distance, duration, pickup time, customer name, notes (bulky luggage, children), pickup and drop-off. You have 30 seconds to tap **Accept** or **Reject**; **Later** (the X) keeps the trip in the *Waiting* list on the Trips tab. The Czen assistant also reads the offer aloud and asks whether you accept.
 
 **Go online / offline.** Tap **Go online** on Home, or use the switch at the top of the **Trips** tab.
 

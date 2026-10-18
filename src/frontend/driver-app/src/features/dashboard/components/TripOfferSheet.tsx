@@ -25,8 +25,10 @@ const newTripAlertAsset = require('../../../../assets/audio/new-trip-alert.mp3')
 // How long the sheet stays up before it auto-dismisses locally. The trip
 // itself stays `notified` server-side and remains in the Chờ list — this is
 // the "decide now" window every driver app gives (Grab/Be ≈ 15–30 s), not a
-// server-side expiry.
-const OFFER_SECONDS = 20
+// server-side expiry. 30 s, not 20: the assistant reads the offer aloud once
+// its room connects, measured at 10-16 s on a slow link, which left the
+// driver 3 s to accept after hearing it.
+const OFFER_SECONDS = 30
 const RING_SIZE = 132
 const RING_STROKE = 8
 

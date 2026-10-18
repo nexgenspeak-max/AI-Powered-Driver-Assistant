@@ -116,7 +116,7 @@ Khi cuộc gọi kết thúc, AI đọc **một lần** tóm tắt (khách xác 
 
 ### 3.8 Nhận chuyến, chỉ đường và các tính năng tự động
 
-**Nhận chuyến mới.** Khi đang bật nhận chuyến, chuyến mới hiện thành bảng *Chuyến mới*: cước ước tính, quãng đường, thời gian, giờ đón, tên khách, ghi chú (hàng cồng kềnh, có trẻ em), điểm đón và điểm đến. Có 20 giây để chọn **Nhận chuyến** hoặc **Từ chối**; bấm **Để sau** (dấu X) thì chuyến vẫn nằm trong danh sách *Chờ* ở tab Chuyến. Trợ lý Czen cũng tự đọc chuyến mới và hỏi bạn có nhận không.
+**Nhận chuyến mới.** Khi đang bật nhận chuyến, chuyến mới hiện thành bảng *Chuyến mới*: cước ước tính, quãng đường, thời gian, giờ đón, tên khách, ghi chú (hàng cồng kềnh, có trẻ em), điểm đón và điểm đến. Có 30 giây để chọn **Nhận chuyến** hoặc **Từ chối**; bấm **Để sau** (dấu X) thì chuyến vẫn nằm trong danh sách *Chờ* ở tab Chuyến. Trợ lý Czen cũng tự đọc chuyến mới và hỏi bạn có nhận không.
 
 **Bật / tắt nhận chuyến.** Ở Trang chủ bấm **Bật nhận chuyến**, hoặc dùng công tắc ở đầu tab **Chuyến**.
 
