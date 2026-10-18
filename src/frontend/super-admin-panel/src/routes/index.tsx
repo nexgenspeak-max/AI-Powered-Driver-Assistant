@@ -13,6 +13,7 @@ const CallsPage = lazy(() => import('../pages/CallsPage'))
 const ReportsPage = lazy(() => import('../pages/ReportsPage'))
 const TracesPage = lazy(() => import('../pages/TracesPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
+const DispatchersPage = lazy(() => import('../pages/DispatchersPage'))
 
 function PageLoader() {
   return (
@@ -45,6 +46,7 @@ export function AppRoutes() {
         <Route path={ROUTES.CALLS} element={<ProtectedRoute><CallsPage /></ProtectedRoute>} />
         <Route path={ROUTES.REPORTS} element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
         <Route path={ROUTES.TRACES} element={<ProtectedRoute><TracesPage /></ProtectedRoute>} />
+        <Route path={ROUTES.DISPATCHERS} element={<ProtectedRoute><DispatchersPage /></ProtectedRoute>} />
       </Routes>
     </Suspense>
   )

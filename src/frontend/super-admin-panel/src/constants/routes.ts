@@ -8,4 +8,5 @@ export const ROUTES = {
   CALLS: '/calls',
   TRACES: '/traces',
   REPORTS: '/reports',
+  DISPATCHERS: '/dispatchers',
 } as const

@@ -33,7 +33,11 @@ export default function ReportsPage() {
   const { t } = useOpsLocale()
   const r = t.reports
   const queryClient = useQueryClient()
-  const [date, setDate] = useState(vnDate(-1))
+  // ?date=YYYY-MM-DD deep-links a given day; default is yesterday (Vietnam time).
+  const [date, setDate] = useState(() => {
+    const q = new URLSearchParams(window.location.search).get('date')
+    return q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : vnDate(-1)
+  })
 
   const reportQ = useQuery({
     queryKey: ['ops-report', date],

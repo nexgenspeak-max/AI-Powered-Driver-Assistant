@@ -157,6 +157,28 @@ export type OpsMessages = {
     viewDetails: string
   }
   traces: TracesMessages
+  dispatchers: {
+    add: string
+    name: string
+    email: string
+    status: string
+    created: string
+    actions: string
+    lock: string
+    unlock: string
+    active: string
+    locked: string
+    empty: string
+    dialogTitle: string
+    dialogHint: string
+    password: string
+    generate: string
+    create: string
+    cancel: string
+    createdToast: (email: string) => string
+    failed: string
+    confirmLock: (name: string) => string
+  }
 }
 
 export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
@@ -165,6 +187,7 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       observe: 'System',
       agent: 'Voice assistant',
       activity: 'Activity',
+      access: 'Access',
     },
     nav: {
       overview: {
@@ -198,6 +221,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       traces: {
         label: 'Conversations & Prompts',
         description: 'Every voice session (including tests), live or finished: what the driver said, the exact prompt sent to the LLM, its answer, tools, timings and operations — with hints on what to improve.',
+      },
+      dispatchers: {
+        label: 'Dispatchers',
+        description: 'Dispatcher accounts for the trip board. Only a super admin can create them.',
       },
     },
     shell: {
@@ -353,12 +380,35 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       viewDetails: 'View details',
     },
     traces: TRACES_MESSAGES.en,
+    dispatchers: {
+      add: 'Add dispatcher',
+      name: 'Name',
+      email: 'Email',
+      status: 'Status',
+      created: 'Created',
+      actions: 'Actions',
+      lock: 'Lock',
+      unlock: 'Unlock',
+      active: 'Active',
+      locked: 'Locked',
+      empty: 'No dispatcher accounts yet.',
+      dialogTitle: 'New dispatcher account',
+      dialogHint: 'Share the password with the dispatcher through a private channel. They sign in at the dispatcher console.',
+      password: 'Password (at least 10 characters)',
+      generate: 'Generate',
+      create: 'Create account',
+      cancel: 'Cancel',
+      createdToast: email => `Created ${email}`,
+      failed: 'Could not save the account.',
+      confirmLock: name => `Lock ${name}? They will no longer be able to sign in.`,
+    },
   },
   vi: {
     groups: {
       observe: 'Hệ thống',
       agent: 'Trợ lý thoại',
       activity: 'Nhật ký',
+      access: 'Truy cập',
     },
     nav: {
       overview: {
@@ -392,6 +442,10 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       traces: {
         label: 'Hội thoại & Prompt',
         description: 'Mọi phiên thoại (kể cả bản test), đang diễn ra hoặc đã xong: tài xế nói gì, prompt gửi sang LLM ra sao, LLM trả lời gì, công cụ, thời gian phản hồi và thao tác hệ thống — kèm gợi ý nên cải thiện gì.',
+      },
+      dispatchers: {
+        label: 'Điều phối viên',
+        description: 'Tài khoản điều phối viên dùng bảng chuyến. Chỉ super admin được tạo.',
       },
     },
     shell: {
@@ -547,5 +601,27 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       viewDetails: 'Xem chi tiết',
     },
     traces: TRACES_MESSAGES.vi,
+    dispatchers: {
+      add: 'Thêm điều phối viên',
+      name: 'Tên',
+      email: 'Email',
+      status: 'Trạng thái',
+      created: 'Ngày tạo',
+      actions: 'Thao tác',
+      lock: 'Khóa',
+      unlock: 'Mở khóa',
+      active: 'Đang hoạt động',
+      locked: 'Đã khóa',
+      empty: 'Chưa có tài khoản điều phối viên.',
+      dialogTitle: 'Tài khoản điều phối viên mới',
+      dialogHint: 'Gửi mật khẩu cho điều phối viên qua kênh riêng. Họ đăng nhập ở trang điều phối.',
+      password: 'Mật khẩu (tối thiểu 10 ký tự)',
+      generate: 'Tạo ngẫu nhiên',
+      create: 'Tạo tài khoản',
+      cancel: 'Hủy',
+      createdToast: email => `Đã tạo ${email}`,
+      failed: 'Không lưu được tài khoản.',
+      confirmLock: name => `Khóa ${name}? Người này sẽ không đăng nhập được nữa.`,
+    },
   },
 }

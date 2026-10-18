@@ -7,11 +7,12 @@ import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined'
 import PhoneInTalkOutlinedIcon from '@mui/icons-material/PhoneInTalkOutlined'
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined'
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined'
 import { ROUTES } from '../constants/routes'
 
-export type OpsNavGroupId = 'observe' | 'agent' | 'activity'
+export type OpsNavGroupId = 'observe' | 'agent' | 'activity' | 'access'
 
-export type OpsNavMessageKey = 'overview' | 'reports' | 'agent' | 'tools' | 'prompts' | 'logs' | 'calls' | 'traces'
+export type OpsNavMessageKey = 'overview' | 'reports' | 'agent' | 'tools' | 'prompts' | 'logs' | 'calls' | 'traces' | 'dispatchers'
 
 export type OpsNavItem = {
   route: string
@@ -25,6 +26,7 @@ export const OPS_NAV_GROUPS: ReadonlyArray<{ id: OpsNavGroupId }> = [
   { id: 'observe' },
   { id: 'agent' },
   { id: 'activity' },
+  { id: 'access' },
 ]
 
 export const OPS_NAV_ITEMS: ReadonlyArray<OpsNavItem> = [
@@ -83,6 +85,13 @@ export const OPS_NAV_ITEMS: ReadonlyArray<OpsNavItem> = [
     group: 'activity',
     Icon: PhoneInTalkOutlinedIcon,
     keywords: ['call', 'transcript', 'cuộc gọi', 'thoại'],
+  },
+  {
+    route: ROUTES.DISPATCHERS,
+    messageKey: 'dispatchers',
+    group: 'access',
+    Icon: ManageAccountsOutlinedIcon,
+    keywords: ['dispatcher', 'admin', 'account', 'access', 'điều phối', 'tài khoản', 'quyền'],
   },
 ]
 
