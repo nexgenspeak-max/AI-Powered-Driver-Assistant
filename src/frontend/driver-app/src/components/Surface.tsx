@@ -14,6 +14,8 @@ import { getElevation, type ElevationLevel } from '../theme/elevation'
 //
 // Duplicated in customer-app/src/components/Surface.tsx.
 
+const CARD_RADIUS = 24
+
 export type SurfaceProps = ViewProps & {
   /** Shadow depth. 'none' for a nested surface that shouldn't cast its own. */
   level?: ElevationLevel | 'none'
@@ -22,7 +24,8 @@ export type SurfaceProps = ViewProps & {
   clip?: boolean
   /** Alias for `borderRadius` (GlassSurface compat). */
   cornerRadius?: number
-  /** Flat, transparent-feeling card: no shadow, 1px border. GlassSurface compat. */
+  /** Flat card for settings-style groups: same fill as a Surface, no shadow,
+   *  no border (the old 1px transparent outline read as a debug box). */
   flat?: boolean
 }
 
@@ -36,10 +39,12 @@ export const Surface = forwardRef<RNView, SurfaceProps>(function Surface(
   return (
     <View
       ref={ref}
-      backgroundColor={flat ? 'transparent' : '$surfaceElevated'}
-      borderRadius={cornerRadius ?? '$card'}
+      backgroundColor="$surfaceElevated"
+      // Number, not the '$card' radius token: the theme also has a *color*
+      // named `card`, which shadows the token, so the radius silently dropped
+      // (square cards on every Surface that didn't pass its own radius).
+      borderRadius={cornerRadius ?? CARD_RADIUS}
       overflow={clip ? 'hidden' : 'visible'}
-      {...(flat ? { borderWidth: 1, borderColor: '$borderStrong' } : null)}
       {...rest}
       style={[shadow, style]}
     />
