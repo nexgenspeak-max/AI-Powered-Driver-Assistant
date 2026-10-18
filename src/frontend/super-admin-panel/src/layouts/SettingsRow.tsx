@@ -25,7 +25,7 @@ export function SettingsRow({
         '&:last-child': { borderBottom: 'none' },
       }}
     >
-      <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
           {label}
         </Typography>
@@ -35,7 +35,7 @@ export function SettingsRow({
           </Typography>
         ) : null}
       </Box>
-      <Box sx={{ flexShrink: 0, textAlign: 'right', color: 'text.primary', fontSize: 14 }}>
+      <Box sx={{ maxWidth: '60%', minWidth: 0, overflowWrap: 'anywhere', textAlign: 'right', color: 'text.primary', fontSize: 14 }}>
         {value}
       </Box>
     </Box>

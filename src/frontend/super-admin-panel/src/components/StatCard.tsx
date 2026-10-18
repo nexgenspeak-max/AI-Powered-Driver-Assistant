@@ -9,7 +9,7 @@ export type Stat = {
   icon: ReactNode
 }
 
-/** KPI tile: label on top, big number, tinted icon tile on the right. */
+/** KPI tile: label and tinted icon tile on top, big number below at full card width. */
 export function StatCard({ label, value, color, icon }: Stat) {
   return (
     <Box
@@ -17,9 +17,7 @@ export function StatCard({ label, value, color, icon }: Stat) {
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: 1.5,
+        flexDirection: 'column',
         p: 2.25,
         borderRadius: 2,
         bgcolor: PALETTE.shellStat,
@@ -32,9 +30,10 @@ export function StatCard({ label, value, color, icon }: Stat) {
         '&:hover': { borderColor: `${color}55` },
       }}
     >
-      <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5 }}>
         <Typography
           sx={{
+            minWidth: 0,
             fontSize: 12, fontWeight: 600, color: 'text.secondary', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1.35,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '2.7em',
           }}
@@ -42,29 +41,31 @@ export function StatCard({ label, value, color, icon }: Stat) {
         >
           {label}
         </Typography>
-        <Typography sx={{ fontSize: String(value).length > 6 ? 20 : 30, fontWeight: 700, color: 'text.primary', lineHeight: 1.15, mt: 0.75, fontVariantNumeric: 'tabular-nums' }}>
-          {value}
-        </Typography>
+        <Box
+          sx={{
+            width: 40, height: 40, borderRadius: 1.5, flexShrink: 0,
+            display: 'grid', placeItems: 'center',
+            bgcolor: `${color}1f`, color, border: `1px solid ${color}33`,
+          }}
+        >
+          {icon}
+        </Box>
       </Box>
-      <Box
-        sx={{
-          width: 40, height: 40, borderRadius: 1.5, flexShrink: 0,
-          display: 'grid', placeItems: 'center',
-          bgcolor: `${color}1f`, color, border: `1px solid ${color}33`,
-        }}
-      >
-        {icon}
-      </Box>
+      <Typography sx={{ fontSize: String(value).length > 6 ? 20 : 30, fontWeight: 700, color: 'text.primary', lineHeight: 1.15, mt: 0.5, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+        title={String(value)}>
+        {value}
+      </Typography>
     </Box>
   )
 }
 
-export function StatCardGrid({ stats }: { stats: Stat[] }) {
+/** `minWidth` is the smallest tile width before the row wraps (larger = fewer, wider tiles). */
+export function StatCardGrid({ stats, minWidth = 160 }: { stats: Stat[]; minWidth?: number }) {
   return (
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(auto-fit, minmax(160px, 1fr))' },
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: `repeat(auto-fit, minmax(${minWidth}px, 1fr))` },
         gap: 2,
         mb: 3,
       }}

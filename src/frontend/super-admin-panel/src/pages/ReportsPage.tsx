@@ -97,6 +97,7 @@ export default function ReportsPage() {
       {report ? (
         <>
           <StatCardGrid
+            minWidth={220}
             stats={[
               { label: r.sessions, value: report.activity.sessions, color: PALETTE.info, icon: <ForumOutlinedIcon fontSize="small" /> },
               { label: r.drivers, value: report.activity.drivers_served, color: PALETTE.success, icon: <GroupsOutlinedIcon fontSize="small" /> },
