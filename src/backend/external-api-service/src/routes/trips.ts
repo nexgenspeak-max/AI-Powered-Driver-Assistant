@@ -86,8 +86,10 @@ export function arrivalBlockedMessage(
   radiusM: number,
   status = target === 'pickup' ? 'arrived_pickup' : 'completed',
 ): string {
+  // Round UP, and never print a figure inside the radius: 203 m read
+  // "còn cách khoảng 200 m … trong khoảng 200 m" and looked like a bug.
   const d = distanceM < 1000
-    ? `${Math.max(10, Math.round(distanceM / 10) * 10)} m`
+    ? `${Math.max(radiusM + 10, Math.ceil(distanceM / 10) * 10)} m`
     : `${(Math.round(distanceM / 100) / 10).toString().replace('.', ',')} km`;
   if (target === 'dropoff') {
     return `Bạn còn cách điểm trả khoảng ${d}. Khi đến gần (trong khoảng ${radiusM} m) mới hoàn thành chuyến được.`;

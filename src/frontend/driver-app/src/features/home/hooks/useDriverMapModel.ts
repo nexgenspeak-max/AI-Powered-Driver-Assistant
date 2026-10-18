@@ -134,11 +134,20 @@ export function useDriverMapModel() {
       address: toDropoff ? trip.dropoff_address : trip.pickup_address,
       lat,
       lng,
-      // The trip's own leg figures describe pickup->dropoff, so they only
-      // apply once the customer is on board; the drive TO the pickup has no
-      // server figure until the optimized route (above) provides one.
-      distanceKm: toDropoff && trip.distance_km > 0 ? trip.distance_km : null,
-      etaMinutes: toDropoff && trip.eta_minutes > 0 ? trip.eta_minutes : null,
+      // One stop left (customer on board) means no optimized route, and the
+      // card froze on the trip's own "11 phút · 3,7 km" for the whole ride
+      // (simulator 2026-10-18). The trip's leg is measured from the pickup,
+      // so scale it from there by the live GPS fix like the route branch.
+      ...liveLeg({
+        serverDistanceM: toDropoff && trip.distance_km > 0 ? trip.distance_km * 1000 : null,
+        serverEtaMin: toDropoff && trip.eta_minutes > 0 ? trip.eta_minutes : null,
+        routeOrigin:
+          toDropoff && typeof trip.pickup_lat === 'number' && typeof trip.pickup_lng === 'number'
+            ? { lat: trip.pickup_lat, lng: trip.pickup_lng }
+            : null,
+        live: live ? { lat: live.lat, lng: live.lng } : null,
+        stop: { lat, lng },
+      }),
     }
   }, [optimizedRoute, context?.current_trip, context?.current_location, trips, live?.lat, live?.lng])
 
