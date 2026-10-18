@@ -29,7 +29,7 @@ const STATUS_CAPTION = {
     connecting: "Đang kết nối với Czen…",
     connected: "Đã kết nối — chạm sóng âm để kết thúc",
     error: "Kết nối lỗi — chạm nút Czen để thử lại",
-    inCall: "Đang trong cuộc gọi — không thể tắt",
+    inCall: "Đang gọi khách — chạm nút Czen để huỷ cuộc gọi",
     micOff: "Mic đang tắt — phiên vẫn kết nối",
   },
   en: {

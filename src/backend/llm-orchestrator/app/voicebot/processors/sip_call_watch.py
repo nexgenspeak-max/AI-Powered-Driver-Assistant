@@ -612,6 +612,10 @@ async def _background_no_answer(session: AgentSession, userdata: dict, lang: str
         dialled = await asyncio.shield(redial_task)
     finally:
         userdata["_redial_pending"] = False
+    if dialled is None:  # trip cancelled / finished / customer on board meanwhile
+        await complete_isolated_call(session, userdata, retry.redial_skipped_notice(lang, name), notify_driver=False)
+        dev_event("call_no_answer", ok=True, mode="background", redial=attempt, redial_skipped=True)
+        return
     summary = retry.redial_notice(lang, name, attempt) if dialled else retry.redial_failed_notice(lang, name)
     await complete_isolated_call(session, userdata, summary, notify_driver=not dialled)
     dev_event("call_no_answer", ok=True, mode="background", redial=attempt, redialled=dialled)

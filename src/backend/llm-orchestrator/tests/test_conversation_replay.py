@@ -91,7 +91,7 @@ def test_end_customer_call_handoff_message_empty():
     import inspect
 
     source = inspect.getsource(customer_call_tools.end_customer_call)
-    assert 'return driver, ""' in source
+    assert "return driver, None" in source
     assert "Tóm tắt:" not in source.split("return driver,")[1]
 
 
@@ -99,7 +99,7 @@ def test_end_bridge_call_handoff_message_empty():
     import inspect
 
     source = inspect.getsource(bridge_call_tools.end_bridge_call)
-    assert 'return driver, ""' in source
+    assert "return driver, None" in source
 
 
 def test_replay_d0f6c34d_farewell_and_trip_lookup():

@@ -17,6 +17,8 @@ const BARS = [0.45, 0.8, 1, 0.65]
  * live waveform (tap to end the session). Replaces the separate floating
  * orb + "Trợ lý AI" label that used to sit under the composer.
  */
+import { confirmCancelCall } from '../lib/cancelCall'
+
 export function ComposerVoiceButton() {
   const status = useVoiceSessionStore(s => s.status)
   const level = useVoiceSessionStore(s => s.agentAudioLevel)
@@ -34,7 +36,7 @@ export function ComposerVoiceButton() {
     haptics.selection()
     if (connected) {
       if (isCallActive) {
-        Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
+        confirmCancelCall()
         return
       }
       disconnect({ userInitiated: true })

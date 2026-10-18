@@ -29,6 +29,9 @@ import { bind, clearLogContext } from "../../../services/logger";
 const CALL_STATE_TOPIC = "call_state";
 const AGENT_STATE_TOPIC = "agent_state";
 const CALL_TRANSCRIPT_TOPIC = "call_transcript";
+// Backend processors/call_cancel.py: during an AI call the agent listens to
+// the customer's line, so a cancel can't ride the chat topic.
+const CALL_CONTROL_TOPIC = "call_control";
 
 /** LLM sometimes speaks a bare tool id — hide from chat bubbles. */
 function isRawToolToken(text: string): boolean {
@@ -199,6 +202,8 @@ interface VoiceSessionState {
   disconnect: (opts?: { userInitiated?: boolean }) => void;
   setMicMuted: (muted: boolean) => Promise<void>;
   sendText: (text: string) => Promise<boolean>;
+  /** Ask the agent to hang up the customer call it is running. */
+  cancelCall: () => Promise<boolean>;
 }
 
 export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
@@ -656,6 +661,15 @@ export const useVoiceSessionStore = create<VoiceSessionState>((set, get) => {
     sendText: async (text: string) => {
       if (!room || get().status !== "connected") return false;
       await room.localParticipant.sendText(text, { topic: CHAT_TOPIC });
+      return true;
+    },
+
+    cancelCall: async () => {
+      if (!room || get().status !== "connected") return false;
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ action: "cancel" })),
+        { reliable: true, topic: CALL_CONTROL_TOPIC },
+      );
       return true;
     },
   };

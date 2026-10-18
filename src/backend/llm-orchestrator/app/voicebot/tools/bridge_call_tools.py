@@ -49,4 +49,4 @@ async def end_bridge_call(context: RunContext, summary: str = "") -> tuple[Agent
     except Exception:
         logger.error("end_bridge_call failed", exc_info=True)
         raise
-    return driver, ""
+    return driver, None  # None, not "": "" makes LiveKit ask the old agent for a reply

@@ -485,7 +485,7 @@ def _run_conversation_replay(report: Report) -> None:
 
     cust_src = inspect.getsource(customer_call_tools.end_customer_call)
     bridge_src = inspect.getsource(bridge_call_tools.end_bridge_call)
-    ok = 'return driver, ""' in cust_src and 'return driver, ""' in bridge_src
+    ok = 'return driver, None' in cust_src and 'return driver, None' in bridge_src
     report.add("handback_no_duplicate", "conversation_replay", ok, "empty handoff tuple")
 
 

@@ -308,6 +308,13 @@ async def driver_text_input_cb(sess: Any, ev: Any) -> None:
     agent = getattr(sess, "current_agent", None)
     if agent is not None:
         lang = getattr(agent, "_spoken_intent_lang", "vn")
+    ud = getattr(sess, "userdata", None)
+    if isinstance(ud, dict) and ud.get("lang") == "en":
+        lang = "en"
+    from app.voicebot.processors.call_cancel import maybe_cancel_active_call
+
+    if await maybe_cancel_active_call(sess, ev.text, lang):
+        return
 
     async with sess._claim_user_turn():
         try:

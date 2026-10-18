@@ -896,6 +896,22 @@ async def entrypoint(ctx: JobContext) -> None:
                 session.say(text, allow_interruptions=True)
 
             @ctx.room.on("data_received")
+            def _on_call_control(packet) -> None:
+                # Driver-app "Huỷ cuộc gọi": RoomIO listens to the customer's
+                # SIP leg during an agent call, so this rides its own topic.
+                from app.voicebot.processors.call_cancel import CALL_CONTROL_TOPIC, cancel_active_call
+
+                if packet.topic != CALL_CONTROL_TOPIC:
+                    return
+                try:
+                    payload = json.loads(packet.data.decode("utf-8"))
+                except Exception:
+                    logger.warning("call_control: bad payload", exc_info=True)
+                    return
+                if payload.get("action") == "cancel":
+                    asyncio.create_task(cancel_active_call(session, "en" if lang == "en" else "vn"))
+
+            @ctx.room.on("data_received")
             def _on_call_transcript(packet) -> None:
                 if packet.topic != CALL_TRANSCRIPT_TOPIC:
                     return

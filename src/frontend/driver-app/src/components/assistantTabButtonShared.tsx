@@ -18,6 +18,7 @@ import { usePathname } from 'expo-router'
 import { useVoiceSessionStore, type VoiceSessionStatus } from '../features/home/stores/voiceSessionStore'
 import { useAssistantChatStore } from '../features/home/stores/assistantChatStore'
 import { useCurrentUser } from '../features/auth/hooks/useCurrentUser'
+import { confirmCancelCall } from '../features/home/lib/cancelCall'
 import { useAppForeground } from '../hooks/useAppForeground'
 
 export const ORB_SIZE = 64
@@ -134,7 +135,7 @@ export function useAssistantTabButton() {
         return
       }
       if (voice.isCallActive) {
-        Alert.alert('Đang trong cuộc gọi', 'Không thể tắt trong lúc đang gọi điện. Vui lòng đợi cuộc gọi kết thúc.')
+        confirmCancelCall()
         return
       }
       voice.disconnect({ userInitiated: true })

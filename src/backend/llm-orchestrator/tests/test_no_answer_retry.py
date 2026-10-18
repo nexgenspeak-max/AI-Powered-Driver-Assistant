@@ -33,8 +33,11 @@ def test_policy_allows_two_redials():
 @pytest.mark.asyncio
 async def test_redial_waits_then_dials_background_with_next_attempt():
     sleep, start = AsyncMock(), AsyncMock(return_value={"call_id": "c2"})
-    ok = await retry.redial_after_delay(_userdata()["customer_call"], 1, sleep=sleep, start_call=start)
-    assert ok
+    ok = await retry.redial_after_delay(
+        _userdata()["customer_call"], 1, sleep=sleep, start_call=start,
+        get_trip=AsyncMock(return_value={"status": "confirmed"}),
+    )
+    assert ok is True
     sleep.assert_awaited_once_with(retry.REDIAL_DELAY_SECONDS)
     kw = start.await_args.kwargs
     assert kw["mode"] == "background" and kw["retry_attempt"] == 1 and kw["phone_number"] == "0901111111"
@@ -131,3 +134,27 @@ def test_worker_waits_long_enough_for_a_pending_redial():
     src = inspect.getsource(main_mod)
     assert "shutdown_process_timeout=90.0" in src
     assert retry.REDIAL_DELAY_SECONDS < 90.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["cancelled", "completed", "picked_up", "no_show"])
+async def test_redial_skipped_when_trip_no_longer_needs_a_call(status):
+    """Live 2026-10-18: a trip cancelled during the 60 s wait was still redialled."""
+    start = AsyncMock()
+    res = await retry.redial_after_delay(
+        _userdata()["customer_call"], 1, sleep=AsyncMock(), start_call=start,
+        get_trip=AsyncMock(return_value={"status": status}),
+    )
+    assert res is None
+    start.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_redial_still_dials_when_trip_lookup_fails():
+    start = AsyncMock(return_value={})
+    res = await retry.redial_after_delay(
+        _userdata()["customer_call"], 1, sleep=AsyncMock(), start_call=start,
+        get_trip=AsyncMock(side_effect=RuntimeError("503")),
+    )
+    assert res is True
+    start.assert_awaited_once()

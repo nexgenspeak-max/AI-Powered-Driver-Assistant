@@ -20,6 +20,11 @@ logger = logging.getLogger("llm-orchestrator.no_answer_retry")
 
 MAX_REDIALS = 2
 REDIAL_DELAY_SECONDS = 60.0
+# A redial is pointless once the trip is over or the customer is on board.
+# Live 2026-10-18: a trip cancelled during the 60 s wait was still redialled.
+NO_REDIAL_STATUSES = frozenset({
+    "cancelled", "cancelled_by_driver", "completed", "no_show", "rejected", "picked_up",
+})
 
 
 def next_attempt(current: int) -> int | None:
@@ -41,6 +46,12 @@ def final_notice(lang: str, name: str) -> str:
     return f"Tôi đã gọi {name} {total} lần nhưng khách không nghe máy. Bạn có thể nhắn tin hoặc gọi lại sau."
 
 
+def redial_skipped_notice(lang: str, name: str) -> str:
+    if lang == "en":
+        return f"{name} did not answer. The trip changed meanwhile, so I did not call again."
+    return f"{name} chưa nghe máy. Chuyến đã thay đổi nên mình không gọi lại."
+
+
 def redial_failed_notice(lang: str, name: str) -> str:
     if lang == "en":
         return f"{name} did not answer and I could not place another call right now."
@@ -53,10 +64,23 @@ async def redial_after_delay(
     *,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     start_call: Callable[..., Awaitable[dict]] | None = None,
-) -> bool:
-    """Wait REDIAL_DELAY_SECONDS, then place redial `attempt`. Returns True if dialled."""
+    get_trip: Callable[[str], Awaitable[dict]] | None = None,
+) -> bool | None:
+    """Wait REDIAL_DELAY_SECONDS, then place redial `attempt`.
+
+    True if dialled, False if dialling failed, None if skipped because the
+    trip no longer needs the customer called."""
     start = start_call or backend_api.start_call
     await sleep(REDIAL_DELAY_SECONDS)
+    trip_id = call_meta.get("trip_id", "")
+    if trip_id:
+        try:
+            status = str((await (get_trip or backend_api.get_trip)(trip_id)).get("status") or "")
+        except Exception:
+            status = ""  # can't tell: keep the redial (the safer side for a waiting driver)
+        if status in NO_REDIAL_STATUSES:
+            logger.info("no-answer redial %d skipped | trip=%s status=%s", attempt, trip_id[:8], status)
+            return None
     try:
         await start(
             driver_id=call_meta.get("driver_phone", ""),

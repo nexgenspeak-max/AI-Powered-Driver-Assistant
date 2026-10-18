@@ -289,6 +289,13 @@ async def update_trip_status(trip_id: str, status: str) -> dict:
     return payload
 
 
+async def get_trip(trip_id: str) -> dict:
+    c = _get_client()
+    r = await c.get(f"{_trip_base()}/api/v1/trips/{trip_id}", headers=auth_headers(), timeout=8)
+    r.raise_for_status()
+    return r.json()
+
+
 async def get_trip_location(trip_id: str) -> dict:
     c = _get_client()
     r = await c.get(

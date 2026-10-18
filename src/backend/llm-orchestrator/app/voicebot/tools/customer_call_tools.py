@@ -513,5 +513,6 @@ async def end_customer_call(
     except Exception:
         logger.error("end_customer_call failed", exc_info=True)
         raise
-    # Handoff message is empty — DriverAgent.on_enter speaks resume_summary once.
-    return driver, ""
+    # No handoff output: DriverAgent.on_enter speaks resume_summary once. None,
+    # not "": an empty string still made LiveKit ask the old agent to reply.
+    return driver, None
