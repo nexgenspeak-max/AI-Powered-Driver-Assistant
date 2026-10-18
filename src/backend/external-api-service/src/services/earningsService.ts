@@ -68,27 +68,31 @@ export type DriverProfileStats = {
   total_trips: number;
 };
 
-/** Pure: stats over a driver's trips (caller passes ALL of them, every phone format). */
-export function buildProfile(driverPhone: string, trips: tripService.Trip[]): DriverProfileStats {
-  const completed = trips.filter(t => t.status === 'completed');
-  const offered = trips.filter(t =>
-    ['confirmed', 'rejected', 'completed', 'calling', 'notified'].includes(t.status),
-  );
-  const accepted = trips.filter(t =>
-    ['confirmed', 'completed', 'calling', 'notified'].includes(t.status),
-  );
-  const acceptanceRate = offered.length
-    ? Math.round((accepted.length / offered.length) * 100)
-    : 100;
+const ACCEPTED_STATUSES = new Set(['confirmed', 'arrived_pickup', 'picked_up', 'completed', 'cancelled_by_driver', 'no_show']);
+const DECLINED_STATUSES = new Set(['rejected', 'no_answer']);
 
+/**
+ * Pure: stats over a driver's trips (caller passes ALL of them, every phone format).
+ * - acceptance: accepted / decided offers. Offers still waiting (notified /
+ *   calling / pending) are not decided yet — they used to count as accepted.
+ *   Walk-ups the driver created himself (booked_via=driver) were never offers.
+ * - completion: completed / accepted trips that are finished (completed or
+ *   cancelled by the driver); a customer no-show is not the driver's fault.
+ */
+export function buildProfile(driverPhone: string, trips: tripService.Trip[]): DriverProfileStats {
+  const offers = trips.filter(t => (t as { booked_via?: string }).booked_via !== 'driver');
+  const accepted = offers.filter(t => ACCEPTED_STATUSES.has(t.status)).length;
+  const declined = offers.filter(t => DECLINED_STATUSES.has(t.status)).length;
+  const completed = trips.filter(t => t.status === 'completed').length;
+  const cancelledByDriver = trips.filter(t => t.status === 'cancelled_by_driver').length;
+  const decided = accepted + declined;
+  const finished = completed + cancelledByDriver;
   return {
     phone: driverPhone,
     rating: 4.85,
-    acceptance_rate: acceptanceRate,
-    completion_rate: accepted.length
-      ? Math.round((completed.length / accepted.length) * 100)
-      : 100,
-    total_trips: completed.length,
+    acceptance_rate: decided ? Math.round((accepted / decided) * 100) : 100,
+    completion_rate: finished ? Math.round((completed / finished) * 100) : 100,
+    total_trips: completed,
   };
 }
 
