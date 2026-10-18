@@ -6,6 +6,7 @@ export type OpsMessages = {
   groups: Record<OpsNavGroupId, string>
   nav: Record<OpsNavMessageKey, { label: string; description: string }>
   shell: {
+    brandSubtitle: string
     searchPlaceholder: string
     signOut: string
     openMenu: string
@@ -24,6 +25,9 @@ export type OpsMessages = {
   login: {
     title: string
     subtitle: string
+    heroTitle: string
+    heroBody: string
+    features: string[]
     email: string
     password: string
     submit: string
@@ -197,7 +201,8 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       },
     },
     shell: {
-      searchPlaceholder: 'Search',
+      brandSubtitle: 'System monitoring',
+      searchPlaceholder: 'Search pages',
       signOut: 'Sign out',
       openMenu: 'Open navigation menu',
       noSearchResults: 'No pages match your search.',
@@ -213,8 +218,11 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       viewing: 'Viewing',
     },
     login: {
-      title: 'Super Admin',
-      subtitle: 'Sign in with a super_admin account',
+      title: 'Sign in',
+      subtitle: 'Use a super_admin account to continue.',
+      heroTitle: 'See how the whole system is doing',
+      heroBody: 'Czen Ops tracks service health, the voice agent configuration, live logs, call traces and the daily quality report.',
+      features: ['Health and latency of every backend service', 'Turn-by-turn traces of each voice conversation', 'Daily report graded by an AI judge'],
       email: 'Email',
       password: 'Password',
       submit: 'Sign in',
@@ -387,6 +395,7 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       },
     },
     shell: {
+      brandSubtitle: 'Giám sát hệ thống',
       searchPlaceholder: 'Tìm trang',
       signOut: 'Đăng xuất',
       openMenu: 'Mở menu điều hướng',
@@ -403,8 +412,11 @@ export const OPS_MESSAGES: Record<OpsLocale, OpsMessages> = {
       viewing: 'Đang xem',
     },
     login: {
-      title: 'Super Admin',
-      subtitle: 'Đăng nhập bằng tài khoản super_admin',
+      title: 'Đăng nhập',
+      subtitle: 'Dùng tài khoản super_admin để tiếp tục.',
+      heroTitle: 'Nắm tình trạng toàn hệ thống',
+      heroBody: 'Czen Ops theo dõi sức khỏe các dịch vụ, cấu hình tác nhân giọng nói, nhật ký trực tiếp, vết hội thoại và báo cáo chất lượng hằng ngày.',
+      features: ['Tình trạng và độ trễ của từng dịch vụ backend', 'Vết từng lượt của mỗi cuộc hội thoại giọng nói', 'Báo cáo ngày được mô hình AI chấm điểm'],
       email: 'Email',
       password: 'Mật khẩu',
       submit: 'Đăng nhập',

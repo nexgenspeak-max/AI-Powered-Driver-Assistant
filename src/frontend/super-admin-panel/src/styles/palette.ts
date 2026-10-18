@@ -1,32 +1,45 @@
-/** Brand PALETTE — Cursor-style shell (same as admin-panel) + purple accent. */
+/**
+ * Czen operations palette — shared by the dispatcher (admin-panel) and the
+ * ops (super-admin-panel) consoles so both read as one product with the
+ * driver app: deep navy-violet surfaces, violet accent, calm status colours.
+ */
 export const PALETTE = {
-  darkest: '#2a1448',
-  base: '#401f68',
-  mid: '#7c5b9c',
-  light: '#c3aee0',
-  pale: '#f3effa',
-  ink: '#2b2630',
-  gray: '#8b8792',
-  border: '#e6e1ee',
+  // Brand
+  darkest: '#1e1340',
+  base:    '#6d3fe0',
+  mid:     '#8b5cf6',
+  light:   '#a78bfa',
+  pale:    '#ede9fe',
+  ink:     '#1f1a2e',
+  gray:    '#8f89a6',
+  border:  '#e6e1ee',
   surface: '#faf9fc',
-  chipBg: '#efe7f8',
-  shellSidebar: '#252526',
-  shellContent: '#1e1e1e',
-  shellPanel: '#2d2d2d',
-  shellElevated: '#333333',
-  shellStat: '#2a2a2e',
-  shellTableHead: '#323232',
-  shellBorder: 'rgba(255,255,255,0.08)',
-  shellNavHover: 'rgba(255,255,255,0.06)',
-  shellNavActive: 'rgba(124, 91, 156, 0.28)',
-  shellSearch: '#3c3c3c',
-  shellMuted: '#9d9d9d',
-  shellText: '#cccccc',
-  shellAccent: '#7c5b9c',
-  success: '#4ade80',
+  chipBg:  '#efe7f8',
+  brandGradient: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 45%, #4c1d95 100%)',
+
+  /** Authenticated shell (dark) */
+  shellSidebar:  '#0f0c1c',
+  shellContent:  '#0b0916',
+  shellPanel:    '#141126',
+  shellElevated: '#1b1731',
+  shellStat:     '#141126',
+  shellTableHead:'#17142b',
+  shellBorder:   'rgba(167, 139, 250, 0.12)',
+  shellBorderStrong: 'rgba(167, 139, 250, 0.22)',
+  shellNavHover:  'rgba(167, 139, 250, 0.08)',
+  shellNavActive: 'rgba(139, 92, 246, 0.18)',
+  shellSearch:    '#17142b',
+  shellMuted:     '#9a94b5',
+  shellText:      '#d9d5ea',
+  shellHeading:   '#f4f2fb',
+  shellAccent:    '#8b5cf6',
+
+  // Status
+  success: '#34d399',
   warning: '#fbbf24',
-  danger: '#f87171',
-  info: '#22d3ee',
-  up: '#4ade80',
-  down: '#f87171',
+  danger:  '#f87171',
+  info:    '#60a5fa',
+  codeBg:  '#07060d',
+  up:      '#34d399',
+  down:    '#f87171',
 }

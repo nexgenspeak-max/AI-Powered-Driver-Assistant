@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Box, Button, Chip, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Stack, Typography } from '@mui/material'
+import { StatusPill } from '../components/StatusPill'
 import CloudDoneOutlinedIcon from '@mui/icons-material/CloudDoneOutlined'
 import TranslateOutlinedIcon from '@mui/icons-material/TranslateOutlined'
 import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined'
@@ -108,11 +109,7 @@ export default function OverviewPage() {
             value={
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary">{t.overview.latency(svc.latency_ms)}</Typography>
-                <Chip
-                  size="small"
-                  label={svc.ok ? t.overview.up : t.overview.down}
-                  color={svc.ok ? 'success' : 'error'}
-                />
+                <StatusPill label={svc.ok ? t.overview.up : t.overview.down} tone={svc.ok ? 'success' : 'error'} />
               </Stack>
             }
           />

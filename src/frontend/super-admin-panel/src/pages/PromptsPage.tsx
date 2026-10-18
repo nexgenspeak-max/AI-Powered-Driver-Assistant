@@ -99,7 +99,7 @@ export default function PromptsPage() {
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                   fontSize: 12,
                   lineHeight: 1.5,
-                  bgcolor: PALETTE.darkest,
+                  bgcolor: PALETTE.codeBg,
                   borderRadius: 1,
                   color: PALETTE.pale,
                   whiteSpace: 'pre-wrap',

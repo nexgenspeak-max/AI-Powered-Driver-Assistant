@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Box,
-  Divider,
   Drawer,
   IconButton,
   InputAdornment,
@@ -21,13 +20,13 @@ import MenuIcon from '@mui/icons-material/Menu'
 import { ROUTES } from '../constants/routes'
 import { PALETTE } from '../styles/palette'
 import { useAuthStore } from '../stores/authStore'
-import { OPS_NAV_GROUPS, OPS_NAV_ITEMS } from './navRegistry'
+import { OPS_NAV_GROUPS } from './navRegistry'
 import { filterOpsNavItems, groupLabel, navItemLabel } from '../i18n/navText'
 import { useOpsLocale } from '../i18n/useOpsLocale'
 import { LocalePicker } from '../components/LocalePicker'
 import { VoiceTreeNav } from './VoiceTreeNav'
 
-export const SETTINGS_SIDEBAR_WIDTH = 280
+export const SETTINGS_SIDEBAR_WIDTH = 272
 
 const drawerPaperSx = {
   width: SETTINGS_SIDEBAR_WIDTH,
@@ -59,6 +58,8 @@ function NavList({ onNavigate, query }: { onNavigate: () => void; query: string 
               color: PALETTE.shellMuted,
               fontWeight: 600,
               letterSpacing: 0.4,
+              textTransform: 'uppercase',
+              fontSize: 11,
             }}
           >
             {groupLabel(group.id, locale)}
@@ -78,14 +79,19 @@ function NavList({ onNavigate, query }: { onNavigate: () => void; query: string 
                   onClick={onNavigate}
                   selected={active}
                   sx={{
-                    borderRadius: 1.5,
+                    position: 'relative',
+                    borderRadius: 1.25,
                     mb: 0.25,
-                    minHeight: 44,
-                    py: 1,
-                    px: 1.5,
-                    color: active ? PALETTE.pale : PALETTE.shellText,
+                    minHeight: 40,
+                    py: 0.75,
+                    px: 1.25,
+                    color: active ? PALETTE.shellHeading : PALETTE.shellText,
                     bgcolor: active ? PALETTE.shellNavActive : 'transparent',
-                    '&:hover': { bgcolor: active ? PALETTE.shellNavActive : PALETTE.shellNavHover },
+                    '& .MuiListItemIcon-root': { color: active ? PALETTE.light : PALETTE.shellMuted },
+                    '&::before': active
+                      ? { content: '""', position: 'absolute', left: -12, top: 8, bottom: 8, width: 3, borderRadius: 4, bgcolor: PALETTE.mid }
+                      : {},
+                    '&:hover': { bgcolor: active ? PALETTE.shellNavActive : PALETTE.shellNavHover, color: PALETTE.shellHeading },
                     '&.Mui-selected:hover': { bgcolor: PALETTE.shellNavActive },
                   }}
                 >
@@ -130,45 +136,25 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
     navigate(ROUTES.LOGIN)
   }
 
+  const iconBtnSx = {
+    width: 36, height: 36, color: PALETTE.shellMuted,
+    '&:hover': { bgcolor: PALETTE.shellNavHover, color: PALETTE.shellHeading },
+  } as const
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ px: 2, pt: 2.5, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-              fontSize: 14,
-              fontWeight: 700,
-              bgcolor: PALETTE.mid,
-            }}
-          >
-            {initial}
-          </Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: PALETTE.pale, lineHeight: 1.25 }} noWrap>
-              {user?.name ?? t.shell.fallbackName}
+      <Box sx={{ px: 2.25, pt: 2.25, pb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.25 }}>
+          <BrandMark />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 17, color: PALETTE.shellHeading, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+              Czen Ops
             </Typography>
-            <Typography variant="caption" sx={{ color: PALETTE.shellMuted, display: 'block' }} noWrap>
-              {user?.email ?? t.shell.fallbackRole}
+            <Typography sx={{ fontSize: 12, color: PALETTE.shellMuted, lineHeight: 1.3 }} noWrap>
+              {t.shell.brandSubtitle}
             </Typography>
           </Box>
-          <Tooltip title={t.shell.signOut}>
-            <IconButton
-              onClick={handleLogout}
-              aria-label={t.shell.signOut}
-              sx={{
-                width: 44,
-                height: 44,
-                color: PALETTE.shellMuted,
-                '&:hover': { bgcolor: PALETTE.shellNavHover, color: PALETTE.pale },
-              }}
-            >
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
         </Box>
-
         <TextField
           fullWidth
           size="small"
@@ -182,28 +168,51 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
                   <SearchIcon sx={{ fontSize: 18, color: PALETTE.shellMuted }} />
                 </InputAdornment>
               ),
-              sx: {
-                bgcolor: PALETTE.shellSearch,
-                borderRadius: 1.5,
-                color: PALETTE.pale,
-                fontSize: 14,
-                '& fieldset': { border: 'none' },
-              },
+              sx: { bgcolor: PALETTE.shellSearch, fontSize: 13.5 },
             },
           }}
         />
       </Box>
 
-      <Divider sx={{ borderColor: PALETTE.shellBorder, mx: 2 }} />
-
       <NavList onNavigate={onNavigate} query={query} />
 
-      <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${PALETTE.shellBorder}` }}>
+      <Box sx={{ px: 1.5, py: 1.5, borderTop: `1px solid ${PALETTE.shellBorder}`, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <LocalePicker />
-        <Typography variant="caption" sx={{ color: PALETTE.shellMuted, display: 'block', mt: 1 }}>
-          {t.shell.sectionsFooter(OPS_NAV_ITEMS.length)}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1, borderRadius: 1.5, bgcolor: PALETTE.shellElevated, border: `1px solid ${PALETTE.shellBorder}` }}>
+          <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 700, backgroundImage: PALETTE.brandGradient, color: '#fff' }}>
+            {initial}
+          </Avatar>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: 13.5, color: PALETTE.shellHeading, lineHeight: 1.25 }} noWrap>
+              {user?.name ?? t.shell.fallbackName}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: PALETTE.shellMuted }} noWrap>
+              {user?.email ?? t.shell.fallbackRole}
+            </Typography>
+          </Box>
+          <Tooltip title={t.shell.signOut}>
+            <IconButton onClick={handleLogout} aria-label={t.shell.signOut} sx={iconBtnSx}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
+    </Box>
+  )
+}
+
+export function BrandMark({ size = 34 }: { size?: number }) {
+  return (
+    <Box
+      sx={{
+        width: size, height: size, borderRadius: size / 3.2, flexShrink: 0,
+        display: 'grid', placeItems: 'center',
+        backgroundImage: PALETTE.brandGradient,
+        boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
+        color: '#fff', fontWeight: 800, fontSize: size * 0.5, letterSpacing: '-0.04em',
+      }}
+    >
+      C
     </Box>
   )
 }

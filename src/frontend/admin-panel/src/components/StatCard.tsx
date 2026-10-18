@@ -33,10 +33,16 @@ export function StatCard({ label, value, color, icon }: Stat) {
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', letterSpacing: '0.03em', textTransform: 'uppercase' }} noWrap>
+        <Typography
+          sx={{
+            fontSize: 12, fontWeight: 600, color: 'text.secondary', letterSpacing: '0.03em', textTransform: 'uppercase', lineHeight: 1.35,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '2.7em',
+          }}
+          title={label}
+        >
           {label}
         </Typography>
-        <Typography sx={{ fontSize: 30, fontWeight: 700, color: 'text.primary', lineHeight: 1.15, mt: 0.75, fontVariantNumeric: 'tabular-nums' }}>
+        <Typography sx={{ fontSize: String(value).length > 6 ? 20 : 30, fontWeight: 700, color: 'text.primary', lineHeight: 1.15, mt: 0.75, fontVariantNumeric: 'tabular-nums' }}>
           {value}
         </Typography>
       </Box>

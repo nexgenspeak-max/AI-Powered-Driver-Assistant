@@ -14,6 +14,12 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(r).padStart(2, '0')}`
 }
 
+function formatStarted(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export default function CallsPage() {
   const { t } = useOpsLocale()
   const [callId, setCallId] = useState<string | null>(null)
@@ -47,10 +53,10 @@ export default function CallsPage() {
                   onClick={() => setCallId(row.call_id)}
                   sx={{ cursor: 'pointer', minHeight: 44 }}
                 >
-                  <TableCell>{row.caller}</TableCell>
-                  <TableCell>{row.started_at}</TableCell>
-                  <TableCell>{formatDuration(row.duration_seconds)}</TableCell>
-                  <TableCell>{row.summary || t.calls.noSummary}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{row.caller}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{formatStarted(row.started_at)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{formatDuration(row.duration_seconds)}</TableCell>
+                  <TableCell sx={{ color: row.summary ? 'text.primary' : 'text.secondary', lineHeight: 1.5 }}>{row.summary || t.calls.noSummary}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
