@@ -26,7 +26,7 @@ export function AuthHeader({ title, subtitle }: { title: string; subtitle: strin
           accessibilityLabel="Quay lại"
           style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.chip.val }}
         >
-          <Icon name="chevron-left" size={22} color={theme.textPrimary.val} />
+          <Icon name="chevron-left" size={22} strokeWidth={2.4} color={theme.textPrimary.val} />
         </Pressable>
       </XStack>
       <YStack gap="$3">

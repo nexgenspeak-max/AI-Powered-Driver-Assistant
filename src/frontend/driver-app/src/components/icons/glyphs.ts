@@ -12,7 +12,10 @@
 // Paths are hand-written on the grid; keep new glyphs to the same rules.
 
 export type GlyphPart =
-  | { d: string; body?: boolean }
+  // `solid`: filled shape (the *-fill tab variants). `evenodd` lets one path
+  // carry its own knock-outs (door of the house, wallet clasp) so a filled
+  // glyph keeps its inner detail instead of becoming a blob.
+  | { d: string; body?: boolean; solid?: boolean; evenodd?: boolean }
   | { cx: number; cy: number; r: number; body?: boolean; dot?: boolean }
 
 const circle = (cx: number, cy: number, r: number, extra: { body?: boolean; dot?: boolean } = {}): GlyphPart => ({ cx, cy, r, ...extra })
@@ -20,7 +23,55 @@ const circle = (cx: number, cy: number, r: number, extra: { body?: boolean; dot?
 const defineGlyphs = <K extends string>(g: Record<K, GlyphPart[]>) => g
 
 export const GLYPHS = defineGlyphs({
-  // ── Tabs ────────────────────────────────────────────────────────────
+  // ── Tabs: outline (idle) + drawn solid (selected) pairs ────────────
+  // Solid variants are separate drawings, not the outline with a fill: the
+  // inner detail is knocked out (evenodd) so they stay legible at 24pt.
+  home: [
+    { d: 'M3.8 10.4 11.1 4.3a1.4 1.4 0 0 1 1.8 0l7.3 6.1a1.5 1.5 0 0 1 .5 1.1v7.6a1.9 1.9 0 0 1-1.9 1.9h-3.3a.9.9 0 0 1-.9-.9v-4.4a1.1 1.1 0 0 0-1.1-1.1h-3a1.1 1.1 0 0 0-1.1 1.1v4.4a.9.9 0 0 1-.9.9H5.2a1.9 1.9 0 0 1-1.9-1.9v-7.6a1.5 1.5 0 0 1 .5-1.1Z' },
+  ],
+  'home-fill': [
+    { d: 'M3.8 10.4 11.1 4.3a1.4 1.4 0 0 1 1.8 0l7.3 6.1a1.5 1.5 0 0 1 .5 1.1v7.6a1.9 1.9 0 0 1-1.9 1.9h-3.3a.9.9 0 0 1-.9-.9v-4.4a1.1 1.1 0 0 0-1.1-1.1h-3a1.1 1.1 0 0 0-1.1 1.1v4.4a.9.9 0 0 1-.9.9H5.2a1.9 1.9 0 0 1-1.9-1.9v-7.6a1.5 1.5 0 0 1 .5-1.1Z', solid: true },
+  ],
+  wheel: [
+    circle(12, 12, 8.6),
+    circle(12, 12, 2.5),
+    { d: 'M3.5 12h6' },
+    { d: 'M14.5 12h6' },
+    { d: 'M12 14.5v6' },
+  ],
+  'wheel-fill': [
+    // rim: two concentric circles, evenodd → ring
+    { d: 'M12 2.4a9.6 9.6 0 1 1 0 19.2 9.6 9.6 0 0 1 0-19.2Zm0 2.4a7.2 7.2 0 1 0 0 14.4 7.2 7.2 0 0 0 0-14.4Z', solid: true, evenodd: true },
+    circle(12, 12, 3.3, { dot: true }),
+    { d: 'M3.6 10.7h6.2v2.6H3.6Z', solid: true },
+    { d: 'M14.2 10.7h6.2v2.6h-6.2Z', solid: true },
+    { d: 'M10.7 14.2h2.6v6.2h-2.6Z', solid: true },
+  ],
+  purse: [
+    { d: 'M6.2 6.6h12.3a2 2 0 0 1 2 2v9.4a2.4 2.4 0 0 1-2.4 2.4H6a2.5 2.5 0 0 1-2.5-2.5V8.4' },
+    { d: 'M3.5 8.4a1.9 1.9 0 0 1 1.9-1.9L15.1 4a1.3 1.3 0 0 1 1.6 1.3v1.3' },
+    { d: 'M20.5 11h-3.6a2.3 2.3 0 0 0 0 4.6h3.6' },
+    circle(17, 13.3, 0.9, { dot: true }),
+  ],
+  'purse-fill': [
+    { d: 'M5.1 6.1 15 3.5a1.8 1.8 0 0 1 2.2 1.7V6H5.4l-.3.1Z', solid: true },
+    {
+      d: 'M3.2 8.5A2.1 2.1 0 0 1 5.3 6.6h13.2a2.2 2.2 0 0 1 2.2 2.2v1.6h-3.8a2.9 2.9 0 0 0 0 5.8h3.8v1.8a2.6 2.6 0 0 1-2.6 2.6H5.9a2.7 2.7 0 0 1-2.7-2.7V8.5Zm13.8 3.7a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Z',
+      solid: true,
+      evenodd: true,
+    },
+    { d: 'M20.7 11.6v3.4h-3.8a1.7 1.7 0 0 1 0-3.4h3.8Z', solid: true },
+  ],
+  person: [
+    circle(12, 7.9, 3.7),
+    { d: 'M4.9 19.1c.5-3.2 3.4-5.4 7.1-5.4s6.6 2.2 7.1 5.4a1.2 1.2 0 0 1-1.2 1.4H6.1a1.2 1.2 0 0 1-1.2-1.4Z' },
+  ],
+  'person-fill': [
+    circle(12, 7.9, 4, { dot: true }),
+    { d: 'M4.6 19c.5-3.4 3.5-5.8 7.4-5.8s6.9 2.4 7.4 5.8a1.4 1.4 0 0 1-1.4 1.6H6a1.4 1.4 0 0 1-1.4-1.6Z', solid: true },
+  ],
+
+  // ── Legacy tab glyphs (still used inline: map overlay, profile rows) ─
   map: [
     { d: 'M9 4.5 3.5 6.6v13l5.5-2.1 6 2.1 5.5-2.1v-13L15 6.6 9 4.5Z', body: true },
     { d: 'M9 4.5v13' },

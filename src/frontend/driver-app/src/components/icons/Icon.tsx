@@ -41,8 +41,9 @@ export const Icon = memo(function Icon({
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" style={style} pointerEvents="none">
       {GLYPHS[name].map((p, i) => {
-        const fill = 'dot' in p && p.dot ? color : active && p.body ? color : 'none'
-        const fillOpacity = 'dot' in p && p.dot ? 1 : BODY_TINT
+        const solid = 'solid' in p && p.solid
+        const fill = solid || ('dot' in p && p.dot) ? color : active && p.body ? color : 'none'
+        const fillOpacity = solid || ('dot' in p && p.dot) ? 1 : BODY_TINT
         const common = {
           stroke: 'dot' in p && p.dot ? 'none' : color,
           strokeWidth: sw,
@@ -51,7 +52,16 @@ export const Icon = memo(function Icon({
           fill,
           fillOpacity,
         }
-        return 'd' in p ? <Path key={i} d={p.d} {...common} /> : <Circle key={i} cx={p.cx} cy={p.cy} r={p.r} {...common} />
+        if ('d' in p) {
+          // Solid shapes: fill only (a stroke would also run round every
+          // knock-out and close it up at small sizes).
+          return solid ? (
+            <Path key={i} d={p.d} fill={color} fillRule={p.evenodd ? 'evenodd' : 'nonzero'} />
+          ) : (
+            <Path key={i} d={p.d} {...common} />
+          )
+        }
+        return <Circle key={i} cx={p.cx} cy={p.cy} r={p.r} {...common} />
       })}
     </Svg>
   )

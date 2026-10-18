@@ -7,10 +7,11 @@
  *  - edge-attached, full width, 80dp + bottom safe-area inset
  *  - `$surfaceElevated` surface, hairline `$outlineVariant` top edge,
  *    8dp top corner radius, soft upward elevation shadow
- *  - icon-only destinations (meaning carried by the icon + a Vietnamese
- *    `accessibilityLabel`); filled when active, outline when inactive
- *  - active indicator = a short `$primary` line along the tab's TOP edge,
- *    sliding between tabs (Reanimated, 200ms, honours reduce-motion)
+ *  - icon + label destinations (Grab/Be/Uber all label their tabs — an
+ *    icon-only bar read as unfinished); drawn Czen glyphs, solid when
+ *    active, outline when idle
+ *  - active indicator = M3 pill behind the icon (fades + scales in, 180ms,
+ *    honours reduce-motion) + semibold primary label
  *  - the AI assistant orb stays docked in the centre slot, rising
  *    `BUTTON_RISE` above the bar's top edge (rendered as a sibling so the
  *    bar's own bounds don't clip it)
@@ -22,7 +23,7 @@
  */
 
 import { memo, useEffect, useRef, useState } from 'react'
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native'
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -38,10 +39,52 @@ import { AssistantTabButton } from './AssistantTabButton'
 import { TAB_BAR_ICON_SIZE, TabBarAiSlotSpacer } from './tabBarIcons'
 
 const TOP_CORNER_RADIUS = 8
-const INDICATOR_HEIGHT = 3
-// Fraction of a slot's width the active indicator line spans.
-const INDICATOR_WIDTH_RATIO = 0.52
-const MOVE_MS = 200
+const PILL_W = 56
+const PILL_H = 30
+const PILL_MS = 180
+const LABEL_STYLE = { fontSize: 11, lineHeight: 14, letterSpacing: 0.1 } as const
+
+/** One destination: M3 pill behind the icon + label under it. */
+function TabItem({
+  focused,
+  label,
+  icon,
+  activeColor,
+  idleColor,
+  pillColor,
+  reduced,
+}: {
+  focused: boolean
+  label: string
+  icon: React.ReactNode
+  activeColor: string
+  idleColor: string
+  pillColor: string
+  reduced: boolean
+}) {
+  const p = useSharedValue(focused ? 1 : 0)
+  useEffect(() => {
+    p.value = reduced ? (focused ? 1 : 0) : withTiming(focused ? 1 : 0, { duration: PILL_MS })
+  }, [focused, reduced, p])
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: [{ scaleX: 0.6 + 0.4 * p.value }],
+  }))
+  return (
+    <View style={styles.item}>
+      <View style={styles.iconWrap}>
+        <Animated.View pointerEvents="none" style={[styles.pill, { backgroundColor: pillColor }, pillStyle]} />
+        {icon}
+      </View>
+      <Text
+        numberOfLines={1}
+        style={[LABEL_STYLE, { color: focused ? activeColor : idleColor, fontFamily: focused ? 'Inter_600SemiBold' : 'Inter_500Medium' }]}
+      >
+        {label}
+      </Text>
+    </View>
+  )
+}
 
 function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme()
@@ -73,25 +116,7 @@ function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProp
 
   const [barWidth, setBarWidth] = useState(0)
   const slotW = barWidth > 0 ? barWidth / slotCount : 0
-  const indicatorW = slotW * INDICATOR_WIDTH_RATIO
-  // Real-route index -> slot index once the AI slot is inserted ahead of it.
-  const activeSlot = activeIndex < aiSlotIndex ? activeIndex : activeIndex + 1
   const aiCenterX = aiSlotIndex * slotW + slotW / 2
-
-  const tx = useSharedValue(0)
-  const placed = useRef(false)
-  useEffect(() => {
-    if (slotW === 0) return
-    const target = activeSlot * slotW + (slotW - indicatorW) / 2
-    // First real placement jumps (no slide in from the left edge on mount).
-    tx.value = reduced || !placed.current ? target : withTiming(target, { duration: MOVE_MS })
-    placed.current = true
-  }, [activeSlot, slotW, indicatorW, reduced, tx])
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.value }],
-    width: indicatorW,
-  }))
 
   const onPress = (routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: routeKey, canPreventDefault: true })
@@ -124,22 +149,20 @@ function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProp
       onLayout={(e: LayoutChangeEvent) => setBarWidth(e.nativeEvent.layout.width)}
     >
       <View style={[styles.row, { height: NAV_BAR_HEIGHT }]}>
-        {barWidth > 0 && (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.indicator,
-              { backgroundColor: theme.primary.val },
-              indicatorStyle,
-            ]}
-          />
-        )}
-
         {Array.from({ length: slotCount }).map((_, slot) => {
           if (slot === aiSlotIndex) {
             return (
               <View key="ai-slot" pointerEvents="none" style={styles.slot}>
-                <TabBarAiSlotSpacer />
+                {/* The orb itself floats above (sibling below); this keeps
+                    its label on the same baseline as the other tabs. */}
+                <View style={styles.item}>
+                  <View style={styles.iconWrap}>
+                    <TabBarAiSlotSpacer />
+                  </View>
+                  <Text numberOfLines={1} style={[LABEL_STYLE, { color: theme.textSecondary.val, fontFamily: 'Inter_500Medium' }]}>
+                    Trợ lý
+                  </Text>
+                </View>
               </View>
             )
           }
@@ -161,7 +184,15 @@ function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProp
               android_ripple={{ color: theme.primaryMuted.val, borderless: true }}
               style={({ pressed }) => [styles.slot, { opacity: pressed ? 0.6 : 1 }]}
             >
-              {icon}
+              <TabItem
+                focused={isFocused}
+                label={label}
+                icon={icon}
+                activeColor={theme.primary.val}
+                idleColor={theme.textSecondary.val}
+                pillColor={theme.primaryMuted.val}
+                reduced={!!reduced}
+              />
             </Pressable>
           )
         })}
@@ -176,22 +207,29 @@ function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProp
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingTop: 10,
   },
   slot: {
     flex: 1,
-    height: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
     minHeight: 48,
   },
-  indicator: {
+  item: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconWrap: {
+    width: PILL_W,
+    height: PILL_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pill: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    height: INDICATOR_HEIGHT,
-    borderBottomLeftRadius: INDICATOR_HEIGHT,
-    borderBottomRightRadius: INDICATOR_HEIGHT,
+    width: PILL_W,
+    height: PILL_H,
+    borderRadius: PILL_H / 2,
   },
 })
 

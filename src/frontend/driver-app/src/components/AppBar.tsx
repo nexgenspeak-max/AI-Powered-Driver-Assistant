@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TouchableOpacity } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import { router } from 'expo-router'
 import { XStack, View, useTheme } from 'tamagui'
 import { Icon } from './icons'
@@ -29,20 +29,31 @@ export function AppBar({ title, onBack, right, showBack = true }: AppBarProps) {
     <View
       backgroundColor="$background"
       paddingTop={insets.top}
-      borderBottomWidth={1}
+      borderBottomWidth={StyleSheet.hairlineWidth}
       borderBottomColor="$border"
     >
-      <XStack height={52} alignItems="center" paddingHorizontal="$3" gap="$2">
+      <XStack height={56} alignItems="center" paddingHorizontal="$4" gap="$3">
         {showBack ? (
-          <TouchableOpacity
+          // Tonal round back button — same control as the auth header, so
+          // every screen's "back" is one recognisable object, 40pt visual /
+          // 48pt touch.
+          <Pressable
             onPress={onBack ?? (() => router.back())}
-            hitSlop={12}
+            hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
-            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: theme.chip.val,
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
-            <Icon name="chevron-left" size={26} color={theme.textPrimary.val} />
-          </TouchableOpacity>
+            <Icon name="chevron-left" size={22} strokeWidth={2.4} color={theme.textPrimary.val} />
+          </Pressable>
         ) : (
           <View width={40} />
         )}
