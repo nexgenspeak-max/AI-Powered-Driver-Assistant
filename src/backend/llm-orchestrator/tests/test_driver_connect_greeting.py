@@ -126,3 +126,61 @@ def test_outbound_offer_reads_fare_distance_and_asks():
     assert "thông thoáng" not in msg
     assert msg.endswith("Bạn nhận chuyến này không?")
     assert_tts_safe_vn(msg)
+
+
+class _Room:
+    def __init__(self, identities):
+        self.remote_participants = {i: type("P", (), {"identity": i})() for i in identities}
+
+
+class _Session:
+    def __init__(self, room):
+        self.agent_state = "listening"
+        self.room_io = object()
+        self.userdata = {"_job_ctx": type("Ctx", (), {"room": room})()}
+
+
+def test_in_app_audio_ready_waits_for_driver_to_join():
+    import asyncio
+    from app.voicebot.processors.sip_call_watch import wait_for_in_app_audio_ready
+
+    room = _Room([])
+
+    async def run():
+        async def join_later():
+            await asyncio.sleep(0.3)
+            room.remote_participants["driver-1"] = type("P", (), {"identity": "driver-1"})()
+
+        joiner = asyncio.create_task(join_later())
+        t0 = asyncio.get_running_loop().time()
+        await wait_for_in_app_audio_ready(_Session(room), participant_timeout=3, post_ready_delay=0)
+        await joiner
+        return asyncio.get_running_loop().time() - t0
+
+    waited = asyncio.run(run())
+    assert 0.25 <= waited < 2
+
+
+def test_in_app_audio_ready_ignores_other_agents_and_times_out():
+    import asyncio
+    from app.voicebot.processors.sip_call_watch import wait_for_in_app_audio_ready
+
+    async def run():
+        t0 = asyncio.get_running_loop().time()
+        await wait_for_in_app_audio_ready(
+            _Session(_Room(["agent-AJ_x"])), participant_timeout=0.3, post_ready_delay=0
+        )
+        return asyncio.get_running_loop().time() - t0
+
+    assert 0.25 <= asyncio.run(run()) < 1.5
+
+
+def test_nudge_sessions_wait_for_driver_before_speaking():
+    import inspect
+    from app.voicebot.locales.vn import agent as vn_agent
+    from app.voicebot.locales.en import agent as en_agent
+
+    for mod in (vn_agent, en_agent):
+        src = inspect.getsource(mod)
+        nudge_at = src.index("await speak_nudges(")
+        assert "await wait_for_in_app_audio_ready(self.session)" in src[nudge_at - 600:nudge_at]

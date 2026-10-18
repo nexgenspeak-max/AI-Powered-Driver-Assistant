@@ -192,6 +192,11 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
             return
         if not self._trip and self._proactive_nudges:
             from app.voicebot.processors.nudge import speak_nudges
+            from app.voicebot.processors.sip_call_watch import wait_for_in_app_audio_ready
+
+            # Nudge rooms are dispatched before the phone joins — speaking
+            # now would read the offer into an empty room.
+            await wait_for_in_app_audio_ready(self.session)
 
             await speak_nudges(
                 self.session, self._proactive_nudges,

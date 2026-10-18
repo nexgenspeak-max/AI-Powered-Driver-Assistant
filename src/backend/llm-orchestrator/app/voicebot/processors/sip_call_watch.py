@@ -110,15 +110,49 @@ def sip_identity_of(userdata: dict) -> str:
 
 
 _DEFAULT_IN_APP_AUDIO_DELAY = 0.25
+# Slow mobile connects (ICE over cellular) measured up to ~11 s.
+_DEFAULT_DRIVER_JOIN_TIMEOUT = 20.0
+
+
+def _has_remote_listener(room) -> bool:
+    """True once someone other than an agent is in the room."""
+    try:
+        participants = list(room.remote_participants.values())
+    except Exception:
+        return True  # can't tell — don't block speech on it
+    return any(
+        not str(getattr(p, "identity", "") or "").startswith("agent-")
+        for p in participants
+    )
+
+
+async def _wait_for_driver_participant(session: AgentSession, *, timeout: float) -> None:
+    userdata = getattr(session, "userdata", None) or {}
+    job_ctx = userdata.get("_job_ctx") if isinstance(userdata, dict) else None
+    room = getattr(job_ctx, "room", None)
+    if room is None or timeout <= 0:
+        return
+    deadline = time.monotonic() + timeout
+    while not _has_remote_listener(room):
+        if time.monotonic() >= deadline:
+            logger.warning("driver did not join within %.1fs — speaking anyway", timeout)
+            return
+        await asyncio.sleep(0.1)
 
 
 async def wait_for_in_app_audio_ready(
     session: AgentSession,
     *,
     timeout: float = 5.0,
+    participant_timeout: float = _DEFAULT_DRIVER_JOIN_TIMEOUT,
     post_ready_delay: float = _DEFAULT_IN_APP_AUDIO_DELAY,
 ) -> None:
     """Wait until RoomIO output is wired so in-app TTS reaches the mobile client.
+
+    Also waits for the driver's own participant: a nudge-opened room (new trip
+    offer) gets its agent dispatched before the phone has joined. Live
+    2026-10-18: the app took 10.8 s to connect and the offer was spoken 6 s
+    before it arrived — the driver heard nothing and saw no transcript.
 
     Live 2026-08-30: DriverAgent.on_enter() runs during session.start(), before
     RoomIO attaches. The connect filler TTS finished into an empty pipe; drivers
@@ -137,6 +171,7 @@ async def wait_for_in_app_audio_ready(
             "in-app audio ready wait timed out after %.1fs — speaking anyway",
             timeout,
         )
+    await _wait_for_driver_participant(session, timeout=participant_timeout)
     if post_ready_delay > 0:
         await asyncio.sleep(post_ready_delay)
 
