@@ -56,7 +56,7 @@ async function main() {
   calls = []; failCall = 0;
   assert.equal(await getDistanceMatrix(pts(3), pts(3), 'k'), null);
 
-  console.log('goong matrix selfcheck: OK (≤100-cell tiles, stitching, column tiling, partial failure, total failure)');
+  process.stdout.write('goong matrix selfcheck: OK (≤100-cell tiles, stitching, column tiling, partial failure, total failure)\n');
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => { process.stderr.write(`${err instanceof Error ? err.stack : String(err)}\n`); process.exit(1); });

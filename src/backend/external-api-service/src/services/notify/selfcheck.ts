@@ -13,7 +13,7 @@ const PUSH_BUDGET_MS = 50;
 
 const NO_POLL_FILES = [
   'src/frontend/driver-app/src/features/dashboard/hooks/useDriverContext.ts',
-  'src/frontend/driver-app/src/features/dashboard/components/TripOfferBanner.tsx',
+  'src/frontend/driver-app/src/features/dashboard/components/TripOfferSheet.tsx',
   'src/frontend/customer-app/src/features/home/hooks/useCustomerContext.ts',
   'src/frontend/customer-app/src/features/trips/hooks/useTripStatus.ts',
 ];
@@ -113,6 +113,30 @@ export async function assertNotifyWs(): Promise<{ open_ms: number; push_ms: numb
       }
 
       await notify('driver', 'nobody', 'trip_offer', { trip_id: 'ignored' });
+
+      // Same driver on two clients (phone + simulator/web, or a reconnect
+      // racing the old socket's close): BOTH must get the offer. The old
+      // one-socket-per-driver map let the newest connection steal it.
+      const secondWs = new WebSocket(`ws://127.0.0.1:${port}/ws?role=driver&id=${encodeURIComponent(driverId)}`);
+      try {
+        await waitOpen(secondWs);
+        const firstGot = onceMessage(driverWs);
+        const secondGot = onceMessage(secondWs);
+        await notify('driver', driverId, 'trip_offer', { trip_id: 'trip-fanout' });
+        for (const raw of await Promise.all([firstGot, secondGot])) {
+          if ((JSON.parse(raw) as { data: { trip_id: string } }).data.trip_id !== 'trip-fanout') {
+            throw new Error(`fan-out payload mismatch ${raw}`);
+          }
+        }
+        // Closing one client keeps the other subscribed.
+        secondWs.close();
+        await new Promise((r) => setTimeout(r, 50));
+        const stillGot = onceMessage(driverWs);
+        await notify('driver', driverId, 'trip_offer', { trip_id: 'after-close' });
+        if (!(await stillGot).includes('after-close')) throw new Error('first socket lost after second closed');
+      } finally {
+        secondWs.close();
+      }
 
       const bad = new WebSocket(`ws://127.0.0.1:${port}/ws`);
       await new Promise<void>((resolve, reject) => {

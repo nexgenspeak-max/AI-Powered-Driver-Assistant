@@ -66,4 +66,4 @@ function pathCost(order: number[], fromStart: number[], matrix: number[][]): num
   assert.deepEqual([...improved].sort((a, b) => a - b), Array.from({ length: n }, (_, i) => i));
 }
 
-console.log('twoOpt selfcheck: OK (precedence, duration-vs-distance, cell fallback, 2-opt monotonic)');
+process.stdout.write('twoOpt selfcheck: OK (precedence, duration-vs-distance, cell fallback, 2-opt monotonic)\n');
