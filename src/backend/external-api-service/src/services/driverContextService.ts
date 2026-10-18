@@ -123,7 +123,7 @@ export async function buildDriverContext(driverPhone: string) {
     // stops (nothing to order) or trips lack coords. Cached, invalidated on
     // active-stop-set change (see invalidateTripParties below) — NOT
     // recomputed on every GPS ping.
-    optimized_route: optimizedRoute,
+    optimized_route: routeOptimizationService.withLiveFirstLeg(optimizedRoute, currentLocation ?? null),
     fetched_at: new Date().toISOString(),
   };
 }

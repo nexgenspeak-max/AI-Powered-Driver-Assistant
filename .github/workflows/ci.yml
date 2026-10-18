@@ -60,6 +60,9 @@ jobs:
       - name: Profile stats self-check
         if: matrix.service == 'external-api-service'
         run: npm run verify:profile-stats
+      - name: Live first-leg self-check
+        if: matrix.service == 'external-api-service'
+        run: npm run verify:live-first-leg
 
   driver-app:
     name: driver-app · typecheck + navigation math

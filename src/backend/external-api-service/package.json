@@ -18,7 +18,8 @@
     "verify:proximity-message": "ts-node --transpile-only src/services/proximityMessage.selfcheck.ts",
     "verify:arrival": "ts-node --transpile-only src/routes/arrivalGeofence.selfcheck.ts",
     "verify:profile-stats": "ts-node --transpile-only src/services/profileStats.selfcheck.ts",
-    "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts"
+    "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts",
+    "verify:live-first-leg": "ts-node --transpile-only src/services/liveFirstLeg.selfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1101.0",

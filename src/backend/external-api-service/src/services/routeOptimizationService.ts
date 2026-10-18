@@ -382,6 +382,40 @@ export async function computeOptimizedRoute(
   }
 }
 
+// The route is cached until the stop set changes (a recompute costs a
+// Distance Matrix plus one Direction call per hop), so its first leg is
+// measured from wherever the driver was at compute time. Simulator
+// 2026-10-18: after a 2 km move the trips tab still said "356 m · ~2 phút"
+// while the car was 2.4 km away, and voice read the same stale figure.
+// Without any provider call, re-estimate stops[0] from the live fix using the
+// road/straight-line ratio the original leg had (same idea as driver-app's
+// lib/liveLeg.ts). Later legs are stop-to-stop and stay valid.
+export const LIVE_LEG_MIN_MOVE_M = 150;
+const LIVE_LEG_DEFAULT_DETOUR = 1.3;
+
+export function withLiveFirstLeg(route: OptimizedRoute | null, live: LatLng | null): OptimizedRoute | null {
+  if (!route || !live || !route.driver_location || route.stops.length === 0) return route;
+  if (distanceMeters(route.driver_location, live) < LIVE_LEG_MIN_MOVE_M) return route;
+  const [first, ...rest] = route.stops;
+  const straightThen = distanceMeters(route.driver_location, first);
+  const straightNow = distanceMeters(live, first);
+  // A short original leg says little about the road shape (356 m of road for
+  // ~110 m straight read as a 3x detour), so only trust legs over 500 m.
+  let detour = straightThen > 500 && first.distance_m > 0 ? first.distance_m / straightThen : LIVE_LEG_DEFAULT_DETOUR;
+  detour = Math.min(2, Math.max(1, detour));
+  const distance = Math.round(straightNow * detour);
+  // Keep the leg's own pace (traffic included); a leg with no figures gets a city pace.
+  const pace = first.distance_m > 0 && first.eta_minutes > 0 ? first.eta_minutes / first.distance_m : 60 / 25000;
+  const eta = Math.max(1, Math.round(distance * pace));
+  return {
+    ...route,
+    stops: [{ ...first, distance_m: distance, eta_minutes: eta }, ...rest],
+    total_distance_m: Math.max(0, route.total_distance_m - first.distance_m + distance),
+    total_duration_s: Math.max(0, route.total_duration_s - first.eta_minutes * 60 + eta * 60),
+    driver_location: live,
+  };
+}
+
 export async function getOptimizedRoute(
   driverPhone: string,
   trips: tripService.Trip[],

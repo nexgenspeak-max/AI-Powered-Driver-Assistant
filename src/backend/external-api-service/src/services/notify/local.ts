@@ -61,9 +61,19 @@ export function attachWebSocketServer(httpServer: Server): void {
 
 export async function notify(role: NotifyRole, id: string, event: string, data: unknown): Promise<void> {
   const sockets = connections.get(connectionKey(role, id));
-  if (!sockets || sockets.size === 0) return;
-  const payload = JSON.stringify({ event, data });
-  for (const ws of sockets) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+  if (!sockets || sockets.size === 0) {
+    // Was silent: a trip_offer to a driver with no socket just vanished.
+    // Customers mostly have no socket open, so only drivers are logged.
+    if (role === 'driver') log.info('notify: no live socket', { role, event });
+    return;
   }
+  const payload = JSON.stringify({ event, data });
+  let sent = 0;
+  for (const ws of sockets) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+      sent += 1;
+    }
+  }
+  log.info('notify sent', { role, event, sockets: sockets.size, sent });
 }
