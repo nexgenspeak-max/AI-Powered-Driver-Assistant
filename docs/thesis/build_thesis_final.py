@@ -207,7 +207,7 @@ APPENDIX_C_FIGURES = [
     ("thesis_screenshots/caidattroly.jpg", "Hình C.5. Cài đặt trợ lý: ngôn ngữ, chế độ gọi khách mặc định, chế độ rảnh tay và nhắc khách khi gần điểm đón."),
     ("thesis_screenshots/caidattroly2.jpg", "Hình C.6. Cài đặt trợ lý: chọn bán kính nhắc khách (500 m, 1 km, 2 km, 3 km) và gợi ý điểm dừng tiếp theo."),
     ("thesis_screenshots/mapdetails.jpg", "Hình C.7. Màn hình dẫn đường trên bản đồ của ứng dụng tài xế (chức năng bản đồ, không thuộc trợ lý giọng nói): hướng rẽ, khoảng cách và thời gian còn lại."),
-    ("thesis_screenshots/chuyendidangchay.jpg", "Hình C.8. Lộ trình tối ưu cho nhiều điểm đón, trả và thẻ chuyến với các bước Đã nhận, Đã đến, Đã đón."),
+    ("thesis_screenshots/chuyendidangchay.jpg", "Hình C.8. Tab Chuyến: lộ trình tối ưu qua các điểm đón, trả (quãng đường và thời gian theo vị trí xe) và thẻ chuyến với các bước Đã nhận, Đã đến, Đã đón; số điện thoại khách được làm mờ."),
     ("thesis_screenshots/themchuyen2.jpg", "Hình C.9. Tài xế tự tạo chuyến cho khách vãng lai."),
     ("thesis_screenshots/profile.jpg", "Hình C.10. Hồ sơ tài xế và các chỉ số vận hành tính trên toàn bộ lịch sử chuyến (đánh giá, số chuyến, tỷ lệ nhận, tỷ lệ hoàn thành)."),
     ("thesis_screenshots/thunhap.jpg", "Hình C.11. Thu nhập theo kỳ, biểu đồ 7 ngày và lịch sử chuyến đã hoàn thành."),

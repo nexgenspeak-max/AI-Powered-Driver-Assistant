@@ -110,9 +110,9 @@ EN = {
     "Nhà cung cấp\nmô hình AI": "AI model\nproviders", "STT · LLM · TTS\nchính và dự phòng": "STT · LLM · TTS\nprimary + fallback",
     "Liên lạc\nhội thoại\nthời gian thực": "Voice\nagent", "Cụm ECS": "ECS\ncluster", "Kênh thông báo\nthời gian thực": "Real-time\npush channel",
     "Định danh": "Identity", "Chuyến đi và\nĐiều phối": "Trips &\ndispatch", "Liên lạc\nbằng tin nhắn": "Channel",
-    "Nhật ký\ncuộc gọi": "Call\nrecords", "Giám sát\nvận hành": "Operations", "Lưu trữ web tĩnh": "Static web hosting",
+    "Nhật ký\ncuộc gọi": "Call\nrecords", "Giám sát\nvận hành": "Operations", "Lưu trữ web tĩnh": "Static web\nhosting",
     "Nhật ký tập trung": "Central logs", "Quyền truy cập": "Access control", "Hạ tầng dạng mã": "Infra as code",
-    "Lịch báo cáo ngày": "Daily report job", "Dịch vụ bản đồ": "Maps service",
+    "Lịch báo cáo ngày": "Daily report job", "Dịch vụ bản đồ": "Maps service", "Dịch vụ\nbản đồ": "Maps\nservice", "Goong ·\nGoogle Maps": "Goong ·\nGoogle Maps", "Bộ nhớ đệm\nphiên": "Session\ncache",
     "Kho image": "Image\nregistry", "HTTPS qua API Gateway": "HTTPS via API Gateway",
     "<Service>RestApi (mỗi dịch vụ một API)": "<Service>RestApi (one API per service)",
     # turn pipeline
@@ -253,7 +253,7 @@ def architecture(view: str = "structure") -> Diagram:
       (giao thức và mục đích ở Bảng 4.4).
     """
     F, T = ARCH_PX, ARCH_TECH_PX
-    d = Diagram(ARCH_VIEWS[view], 2260, 1380)
+    d = Diagram(ARCH_VIEWS[view], 2362, 1420)
 
     def lab(title: str, tech: str = "") -> str:
         title, tech = tr(title), tr(tech)
@@ -290,17 +290,18 @@ def architecture(view: str = "structure") -> Diagram:
         ("band-rtai", "Real-time Communication &amp;<br>Conversational AI Layer", 350, 600, "#FFF7ED"),
         ("band-apigw", "API Gateway Layer", 960, 330, "#F5F0FF"),
         ("band-ms", "Microservices Layer", 1300, 420, "#FFF4EC"),
-        ("band-data", "Data Layer", 1730, 520, "#FBF0FC"),
+        ("band-data", "Data Layer", 1730, 400, "#FBF0FC"),
+        # Outside the AWS Cloud box: services the system calls but does not run.
+        ("band-ext", "External Services", 2140, 216, "#F2F4F4"),
     ]:
         d.vertex(cid, text, column.format(fill=fill), x, 10, w, 1100, data={"layer": cid.removeprefix("band-")})
 
-    d.vertex("aws-cloud", "AWS Cloud", group("group_aws_cloud_alt", "#232F3E"), 620, 110, 1630, 1260)
-    d.vertex("region", "Region ap-southeast-1", group("group_region", "#00A4A6", dashed=1), 636, 150, 1608, 1216)
+    d.vertex("aws-cloud", "AWS Cloud", group("group_aws_cloud_alt", "#232F3E"), 620, 110, 1515, 1260)
+    d.vertex("region", "Region ap-southeast-1", group("group_region", "#00A4A6", dashed=1), 636, 150, 1493, 1216)
     d.vertex("vpc", "VPC", group("group_vpc2", "#8C4FFF"), 640, 240, 300, 380)
     d.vertex("subnet", "Public subnet", group("group_security_group", "#7AA116", fill="#F2F6E8"), 656, 290, 272, 320)
     # Tiêu đề khung đặt ở đáy để mũi tên vào hai hộp từ phía trên không cắt chữ.
-    d.vertex("ext-box", "External Systems", region_box.replace("verticalAlign=top;", "verticalAlign=bottom;spacingBottom=6;"), 20, 1165, 580, 185)
-    d.vertex("cross-box", "Cross-cutting Concerns", region_box, 650, 1165, 1580, 182)
+    d.vertex("cross-box", "Cross-cutting Concerns", region_box, 650, 1165, 1478, 182)
 
     # ── Client ──
     d.vertex("driver", lab("Tài xế"), general("user"), 151, 130, 48, 48)
@@ -359,22 +360,24 @@ def architecture(view: str = "structure") -> Diagram:
                      1790, y + 2 + 70 * j, 60, 60,
                      data={"service": tech.replace("\n", ""), "layer": "data",
                            "aws_resource": f"{prefix}{logical}Table", "source": f"infra/{tech.replace(chr(10), '')}/sam.yaml"})
-    d.vertex("s3", lab("Lưu trữ web tĩnh", "Amazon S3"), icon("s3", "storage", "left"), 2170, 1030, 64, 64,
+    d.vertex("s3", lab("Lưu trữ web tĩnh", "Amazon S3"), icon("s3", "storage", "left"), 2050, 1044, 64, 64,
              data={"service": "frontend", "layer": "data", "aws_resource": "S3 bucket", "source": "infra/frontend/deploy.sh"})
 
     # ── Cross-cutting (đáy, nhãn dưới icon) và hệ thống bên ngoài ──
     for cid, title, tech, res, cat, cx in [
         ("cw", "Nhật ký tập trung", "CloudWatch Logs", "cloudwatch_2", "management", 1100),
-        ("iam", "Quyền truy cập", "AWS IAM · JWT", "identity_and_access_management", "security", 1420),
-        ("cfn", "Hạ tầng dạng mã", "CloudFormation · SAM", "cloudformation", "management", 2060),
-        ("sched", "Lịch báo cáo ngày", "EventBridge Scheduler", "eventbridge", "integration", 1740),
+        ("iam", "Quyền truy cập", "AWS IAM · JWT", "identity_and_access_management", "security", 1394),
+        ("cfn", "Hạ tầng dạng mã", "CloudFormation · SAM", "cloudformation", "management", 1990),
+        ("sched", "Lịch báo cáo ngày", "EventBridge Scheduler", "eventbridge", "integration", 1688),
     ]:
         d.vertex(cid, lab(title, tech), icon(res, cat), cx - 28, 1212, 56, 56,
                  data={"layer": "cross-cutting", "aws_resource": tech})
-    d.vertex("maps", lab("Dịch vụ bản đồ", "Goong · Google Maps"), ext_box, 34, 1180, 270, 110,
+    # Right-hand column, level with Dịch vụ Chuyến đi (the only backend caller):
+    # at the bottom-left the two links crossed the whole figure.
+    d.vertex("maps", lab("Dịch vụ\nbản đồ", "Goong ·\nGoogle Maps"), ext_box, 2148, 590, 200, 150,
              data={"layer": "external", "external": "true",
                    "source": "src/backend/external-api-service/src/services/mapsService.ts"})
-    d.vertex("redis", lab("Bộ nhớ đệm phiên", "Redis (tùy chọn)"), ext_box, 316, 1180, 270, 110,
+    d.vertex("redis", lab("Bộ nhớ đệm\nphiên", "Redis (tùy chọn)"), ext_box, 2148, 285, 200, 130,
              data={"layer": "external", "external": "true",
                    "source": "src/backend/external-api-service/src/cache/redis.ts"})
 
@@ -415,12 +418,14 @@ def architecture(view: str = "structure") -> Diagram:
         ("a-ops", "apigw-rest", "fn-ops", {Q: "⑰"}, (1, .95, .15, 0), [(1360, 411), (1360, 920), (1650, 920)], EDGE, 0.3),
         ("f18a", "agent", "cw", {D: "⑱", C: "⑱"}, (1, .8, .3, 0), [(945, 401), (945, 1090), (1089, 1090)], aux, 0.0),
         ("f18b", "fn-ops", "cw", {Q: "⑱ ㉙"}, (.25, 1, .7, 0), [(1656, 1100), (1111, 1100)], aux, 0.0),
-        ("f19", "sched", "fn-ops", {Q: "⑲"}, (.5, 0, .75, 1), [(1740, 1098), (1688, 1098)], EDGE, 0.0),
+        ("f19", "sched", "fn-ops", {Q: "⑲"}, (.5, 0, .75, 1), None, EDGE, 0.0),
         ("f20a", "fn-ops", "apigw-rest", {Q: "⑳ ㉗"}, (.75, 0, 1, .65), [(1688, 900), (1375, 900), (1375, 392)], EDGE, 0.8),
         # Dịch vụ bản đồ và bộ nhớ đệm phiên: chỉ Dịch vụ Chuyến đi và Điều phối gọi; ứng dụng tài xế tải bản đồ nền.
-        ("f23", "fn-trip", "maps", {D: "㉓", P: "㉓", "structure": "HTTPS"}, (.15, 1, .5, 0), [(1650, 495), (1270, 495), (1270, 1140), (169, 1140)], EDGE, 0.85),
-        ("f24", "fn-trip", "redis", {D: "㉔", P: "㉔", "structure": "TLS"}, (.3, 1, .5, 0), [(1659, 507), (1282, 507), (1282, 1152), (451, 1152)], aux, 0.85),
-        ("f25", "driver-app", "maps", {D: "㉕", "structure": "HTTPS"}, (0, .5, 0, .5), [(25, 287), (25, 1235)], EDGE, 0.66),
+        # Trip service → maps runs in the gap between the trip and channel rows;
+        # → Redis in the gap above its tables; the app's map tiles go round the bottom edge.
+        ("f23", "fn-trip", "maps", {D: "㉓", P: "㉓", "structure": "HTTPS"}, (.75, 1, 0, .5), [(1688, 545), (2138, 545), (2138, 665)], EDGE, 0.55),
+        ("f24", "fn-trip", "redis", {D: "㉔", P: "㉔", "structure": "TLS"}, (.75, 0, 0, .5), [(1688, 350)], aux, 0.7),
+        ("f25", "driver-app", "maps", {D: "㉕", "structure": "HTTPS"}, (0, .5, .5, 1), [(25, 287), (25, 1395), (2248, 1395)], EDGE, 0.55),
         # Giám sát vận hành: mô hình chấm của báo cáo ngày (reports/judge.ts) và trạng thái tác vụ tác nhân (status/ecsProbe.ts).
         ("f28", "fn-ops", "ai", {Q: "㉘", "structure": "HTTPS"}, (.5, 1, .49, 1), [(1672, 1130), (480, 1130)], EDGE, -0.2),
         ("f29", "fn-ops", "ecs", {Q: "㉙"}, (.4, 1, 0, .5), [(1665.6, 1120), (650, 1120), (650, 682)], EDGE, 0.7),
