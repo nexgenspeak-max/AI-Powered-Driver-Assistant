@@ -2,7 +2,7 @@ import logging
 from livekit.agents import RunContext, function_tool
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.locales.vn.constants import ERR_NO_ACTIVE_DRIVER
-from app.voicebot.processors import context_store, customer_call
+from app.voicebot.processors import call_intent, context_store, customer_call
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 from app.voicebot.processors.tool_reply import R, trip_actions
 
@@ -69,6 +69,10 @@ async def call_customer(raw_arguments: dict, context: RunContext):
         )
 
     target = resolved
+    if not call_intent.is_explicit(raw_arguments):
+        return await call_intent.ask_before_calling(
+            context, target, mode=mode, message=message, lang="vn"
+        )
     if mode == "agent":
         return await _speak_or_handoff(
             context,

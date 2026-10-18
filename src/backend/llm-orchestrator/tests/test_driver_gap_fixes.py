@@ -76,7 +76,7 @@ async def test_decline_clears_cancel_without_api():
         await handle_driver_utterance(session, MagicMock(text_content="không"), lang="vn")
     assert context_store.get_pending_driver_action(userdata) is None
     assert userdata["pending_cancel_trip_id"] is None
-    assert "hủy thao tác" in session.say.await_args.args[0].lower()
+    assert "không làm nữa" in session.say.await_args.args[0].lower()
 
 
 @pytest.mark.asyncio

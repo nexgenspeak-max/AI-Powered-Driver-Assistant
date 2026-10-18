@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 import unicodedata
 from typing import Any
 
@@ -40,7 +41,15 @@ _CHECK_EARNINGS_BOT = (
     "tuần này",
     "tuần vừa rồi",
 )
+# A pending action answers the bot's *last* line only. Older than this, or
+# once the driver has said anything that is not a yes/no, it is dropped —
+# live 2026-10-18: a call armed by a menu question survived a whole traffic
+# exchange and the driver's "Ok." about traffic dialled the customer.
+PENDING_TTL_S = 30.0
+
 _CALL_BOT_VN = (
+    "mình gọi",
+    "mình nhắn khách",
     "em nhắn khách",
     "nhắn khách",
     "em gọi",
@@ -190,7 +199,17 @@ def infer_from_bot_line(text: str, userdata: dict, *, lang: str = "vn") -> None:
         logger.info("pending_action set intent=upcoming trip_index=%s", args.get("trip_index"))
         return
     if any(p in t for p in _CALL_BOT_VN):
-        message = _extract_call_message(text)
+        existing = context_store.get_pending_driver_action(userdata)
+        if existing and existing.get("intent") == "call_customer" and _age_s(existing) < 3.0:
+            # call_intent.ask_before_calling already armed the exact call
+            # this question describes (with its trip_index) — keep it.
+            return
+        is_question = "?" in text
+        if is_question and " hay " in f" {t} ":
+            # A menu ("xem chuyến hay gọi khách?") is not a promise to call.
+            return
+        # Never lift a "message for the customer" out of a question.
+        message = "" if is_question else _extract_call_message(text)
         args = _call_customer_args(userdata, message=message)
         context_store.set_pending_driver_action(
             userdata, "call_customer", args, source=text[:120]
@@ -238,9 +257,40 @@ def is_action_decline(text: str, lang: str) -> bool:
     return t in ("không", "khong", "thôi", "đừng", "dung") or t.startswith("không ")
 
 
+def _age_s(pending: dict) -> float:
+    at = pending.get("at")
+    if not isinstance(at, (int, float)):
+        return 0.0
+    return max(0.0, time.monotonic() - float(at))
+
+
+def expire_stale(userdata: dict, text: str, lang: str) -> bool:
+    """Drop a pending action the driver's new turn does not answer.
+
+    Called at the START of each driver turn, before this turn may arm a new
+    pending (infer_from_driver_utterance). Returns True when one was dropped.
+    """
+    pending = context_store.get_pending_driver_action(userdata)
+    if not pending:
+        return False
+    too_old = _age_s(pending) > PENDING_TTL_S
+    answers_it = is_action_confirm(text, lang) or is_action_decline(text, lang)
+    if too_old or not answers_it:
+        context_store.clear_pending_driver_action(userdata)
+        logger.info(
+            "pending_action expired intent=%s reason=%s",
+            pending.get("intent"),
+            "ttl" if too_old else "topic_changed",
+        )
+        return True
+    return False
+
+
 def should_execute(userdata: dict, text: str, lang: str) -> bool:
     pending = context_store.get_pending_driver_action(userdata)
     if not pending:
+        return False
+    if _age_s(pending) > PENDING_TTL_S:
         return False
     return is_action_confirm(text, lang)
 

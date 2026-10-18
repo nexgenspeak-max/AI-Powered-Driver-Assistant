@@ -64,7 +64,7 @@ async def test_call_customer_ambiguous_speaks_without_dial():
         "app.voicebot.processors.customer_call.backend_api.start_call",
         new_callable=AsyncMock,
     ) as dial:
-        result = await _run(context, {"mode": "agent"})
+        result = await _run(context, {"mode": "agent", "intent_clarity": "explicit"})
     assert result == "stopped"
     dial.assert_not_awaited()
     spoken = context.session.say.await_args.args[0]
@@ -79,7 +79,7 @@ async def test_call_customer_self_call_blocked():
         "app.voicebot.processors.customer_call.backend_api.start_call",
         new_callable=AsyncMock,
     ) as dial:
-        result = await _run(context, {"mode": "agent", "trip_index": 1})
+        result = await _run(context, {"mode": "agent", "trip_index": 1, "intent_clarity": "explicit"})
     assert result == "stopped"
     dial.assert_not_awaited()
     spoken = context.session.say.await_args.args[0]
@@ -98,7 +98,7 @@ async def test_call_customer_agent_handoff_tuple():
         return_value=(fake_agent, ""),
     ):
         result = await call_customer.__wrapped__(
-            {"mode": "agent", "trip_index": 1}, context
+            {"mode": "agent", "trip_index": 1, "intent_clarity": "explicit"}, context
         )
 
     assert result == (fake_agent, "")
@@ -110,6 +110,6 @@ async def test_call_customer_no_trips_speaks():
     userdata: dict = {"driver_phone": "0900000001", "room_name": "r", "context": {}}
     context_store.load_driver_context(userdata, {"upcoming_trips": []})
     context = _ctx(userdata)
-    result = await _run(context, {"mode": "agent"})
+    result = await _run(context, {"mode": "agent", "intent_clarity": "explicit"})
     assert result == "stopped"
     assert context.session.say.await_args.args[0]

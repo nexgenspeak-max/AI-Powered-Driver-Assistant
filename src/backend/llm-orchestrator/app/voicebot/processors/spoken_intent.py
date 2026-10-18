@@ -159,13 +159,13 @@ async def _log_driver_turn(userdata: dict, text: str) -> None:
 
 
 async def _speak_declined(session: Any, lang: str) -> None:
-    spoken = "Okay, I won't do that." if lang == "en" else "Đã hủy thao tác."
+    spoken = "Okay, I won't do that." if lang == "en" else "Ok, mình không làm nữa."
     await context_store.speak_and_stop(session, spoken)
 
 
 def _decline_confirmed_action(userdata: dict, text: str, lang: str) -> bool:
     pending = context_store.get_pending_driver_action(userdata)
-    if not pending or pending.get("intent") not in ("cancel", "no_show"):
+    if not pending or pending.get("intent") not in ("cancel", "no_show", "call_customer"):
         return False
     if not pending_action.is_action_decline(text, lang):
         return False
@@ -186,6 +186,8 @@ async def _execute_pending_action(session: Any, userdata: dict, *, lang: str) ->
     logger.info("pending_action execute intent=%s args=%s", intent, args)
 
     if intent == "call_customer":
+        # The driver's yes to this exact pending call IS the explicit intent.
+        args["intent_clarity"] = "explicit"
         fn = _tool(lang, "app.voicebot.locales.vn.tools.call_customer", "app.voicebot.locales.en.tools.call_customer", "call_customer")
         utterance = context_store.get_last_driver_utterance(userdata) or pending.get("source") or ""
         context_store.set_pending_call_utterance(userdata, utterance)
@@ -299,6 +301,7 @@ async def driver_text_input_cb(sess: Any, ev: Any) -> None:
         userdata = sess.userdata
         if isinstance(userdata, dict):
             context_store.set_last_driver_utterance(userdata, ev.text)
+            pending_action.expire_stale(userdata, ev.text, lang)
             pending_action.infer_from_driver_utterance(ev.text, userdata, lang=lang)
         try:
             await handle_driver_utterance(sess, message, lang=lang)
@@ -360,6 +363,7 @@ class SpokenIntentMixin:
         lang = self._spoken_intent_lang
         if isinstance(userdata, dict):
             context_store.set_last_driver_utterance(userdata, text)
+            pending_action.expire_stale(userdata, text, lang)
             pending_action.infer_from_driver_utterance(text, userdata, lang=lang)
         try:
             await handle_driver_utterance(self.session, new_message, lang=lang)

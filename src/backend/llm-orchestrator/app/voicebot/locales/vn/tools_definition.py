@@ -223,8 +223,19 @@ raw_schema = {
                         "chung không có nội dung cụ thể cần truyền đạt trước."
                     ),
                 },
+                "intent_clarity": {
+                    "type": "string",
+                    "enum": ["explicit", "ambiguous"],
+                    "description": (
+                        "Tài xế có thật sự muốn GỌI khách không. 'explicit' CHỈ khi lượt vừa rồi tài xế "
+                        "nói rõ muốn gọi/nhắn/báo khách (vd 'gọi khách đi', 'báo khách ra đón') hoặc vừa "
+                        "đồng ý câu hỏi gọi của bạn. 'ambiguous' cho mọi trường hợp khác: câu mơ hồ "
+                        "('cần lắm', 'ngay lúc này', 'không biết'), 'ok' cho chuyện khác, hoặc bạn tự đoán. "
+                        "Không chắc → 'ambiguous' (hệ thống sẽ hỏi lại, không gọi)."
+                    ),
+                },
             },
-            "required": ["mode"],
+            "required": ["mode", "intent_clarity"],
         },
     },
 
