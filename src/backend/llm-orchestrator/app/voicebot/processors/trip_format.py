@@ -387,7 +387,15 @@ def format_trip_count_summary(
     if n == 0:
         return ""
     if n == 1:
-        return format_trip_existence(trips[0], lang)
+        # A count question deserves the count ("bao nhiêu chuyến?" used to
+        # get only "Bạn có chuyến với Hà.").
+        trip = trips[0]
+        customer = trip.get("customer_name") or ("customer" if lang == "en" else "khách")
+        time = (trip.get("pickup_time") or "").strip()
+        scope = f" {scope_label}" if scope_label else ""
+        if lang == "en":
+            return f"You have 1 trip{scope}: pick up {customer}" + (f" at {time}." if time else ".")
+        return f"Bạn có 1 chuyến{scope}: đón {customer}" + (f" lúc {time}." if time else ".")
 
     if lang == "en":
         if scope_label:

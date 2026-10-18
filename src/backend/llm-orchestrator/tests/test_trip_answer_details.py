@@ -102,3 +102,10 @@ def test_trip_tools_refresh_before_answering():
 
     for mod in (get_current_trip_info, get_trip_traffic, en_cur, en_tr):
         assert "await refresh_driver_context(context.userdata)" in inspect.getsource(mod)
+
+
+def test_single_trip_count_states_the_count_and_time():
+    from app.voicebot.processors.trip_format import format_trip_count_summary
+
+    assert format_trip_count_summary([TRIP], "vi") == "Bạn có 1 chuyến: đón Nguyễn Thu Hà lúc 13:16."
+    assert format_trip_count_summary([TRIP], "en") == "You have 1 trip: pick up Nguyễn Thu Hà at 13:16."
