@@ -39,6 +39,21 @@ import { AssistantTabButton } from './AssistantTabButton'
 import { TAB_BAR_ICON_SIZE, TabBarAiSlotSpacer } from './tabBarIcons'
 
 const TOP_CORNER_RADIUS = 8
+
+/** Hidden (href: null) routes -> the tab they are reached from. */
+const HIDDEN_ROUTE_PARENT: Record<string, string> = {
+  'add-trip': 'dashboard',
+  'edit-profile': 'profile',
+  'assistant-settings': 'profile',
+  vehicle: 'profile',
+  'bank-info': 'profile',
+  documents: 'profile',
+  safety: 'profile',
+  support: 'profile',
+  terms: 'profile',
+  about: 'profile',
+  faq: 'profile',
+}
 const PILL_W = 56
 const PILL_H = 30
 const PILL_MS = 180
@@ -107,7 +122,12 @@ function NavigationBarInner({ state, descriptors, navigation }: BottomTabBarProp
   useEffect(() => {
     if (foundIndex !== -1) lastVisible.current = foundIndex
   }, [foundIndex])
-  const activeIndex = foundIndex !== -1 ? foundIndex : lastVisible.current
+  // Hidden detail screens belong to a tab — highlight that tab, so a screen
+  // opened by deep link or notification doesn't light up "Trang chủ".
+  const selectedName = state.routes[state.index]?.name
+  const parentName = selectedName ? HIDDEN_ROUTE_PARENT[selectedName] : undefined
+  const parentIndex = parentName ? visibleRoutes.findIndex((route) => route.name === parentName) : -1
+  const activeIndex = foundIndex !== -1 ? foundIndex : parentIndex !== -1 ? parentIndex : lastVisible.current
 
   // The assistant orb owns the middle slot: real tabs shift outward to make
   // room, e.g. 4 routes -> [route0, route1, AI, route2, route3].

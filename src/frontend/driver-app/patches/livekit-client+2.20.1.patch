@@ -1,0 +1,19 @@
+diff --git a/node_modules/livekit-client/dist/livekit-client.esm.mjs b/node_modules/livekit-client/dist/livekit-client.esm.mjs
+index c813d4f..77a10f1 100644
+--- a/node_modules/livekit-client/dist/livekit-client.esm.mjs
++++ b/node_modules/livekit-client/dist/livekit-client.esm.mjs
+@@ -17025,7 +17025,13 @@ class SignalClient {
+     this.log.info('signal connected');
+     clearTimeout(timeoutHandle);
+     this.startPingInterval();
+-    this.startReadingLoop(connection.readable.getReader(), firstMessage);
++    // patched (Czen): the loop rejects with the raw WebSocket error Event when
++    // the socket dies after opening (ws.onerror -> controller.error(e)); it was
++    // never caught, surfacing as "Uncaught (in promise) Event". The close /
++    // reconnect path already handles the disconnect itself.
++    this.startReadingLoop(connection.readable.getReader(), firstMessage).catch(e => {
++      this.log.warn('signal reading loop ended', { error: e && e.message ? e.message : String(e && e.type || e) });
++    });
+   }
+   /**
+    * Validates the first message received from the signal server
