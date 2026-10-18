@@ -40,7 +40,11 @@ apiClient.interceptors.response.use(
       logoutAndReset()
     }
 
-    console.error('[API]', err.config?.url, err.response?.status, err.message)
+    // 4xx answers the UI already explains (409 "chưa đến nơi", 400 validation,
+    // 404) are expected outcomes, not crashes — console.error opened the
+    // full-screen dev LogBox over the app for every geofence refusal.
+    const expected = typeof status === 'number' && status >= 400 && status < 500 && status !== 401
+    ;(expected ? console.warn : console.error)('[API]', err.config?.url, status, err.message)
     return Promise.reject(err)
   },
 )
