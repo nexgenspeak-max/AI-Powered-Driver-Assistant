@@ -201,7 +201,7 @@ APPENDIX_D_ENV = [
 # Phụ lục C — thư viện ảnh giao diện (ảnh gốc; xử lý che thông tin trực tiếp trên DOCX nếu cần)
 APPENDIX_C_FIGURES = [
     ("thesis_screenshots/register.jpg", "Hình C.1. Màn hình đăng ký trở thành tài xế trên ứng dụng Czen."),
-    ("thesis_screenshots/chuyenmoi_offer.jpg", "Hình C.2. Bảng mời nhận chuyến: cước ước tính, vòng đếm ngược 20 giây, thông tin khách và lộ trình; bảng nằm trên cả khung trợ lý đang đọc chuyến mới."),
+    ("thesis_screenshots/chuyenmoi_offer.jpg", "Hình C.2. Bảng mời nhận chuyến: cước ước tính, vòng đếm ngược 30 giây, thông tin khách và lộ trình; bảng nằm trên cả khung trợ lý đang đọc chuyến mới."),
     ("thesis_screenshots/trolyczen2.jpg", "Hình C.3. Khung trợ lý ở trạng thái đang kết nối, kèm các câu gợi ý nhanh."),
     ("thesis_screenshots/trolyczen_goiy.jpg", "Hình C.4. Câu gợi ý nhanh nằm dưới lời chào của trợ lý cho tới lượt nói đầu tiên của tài xế."),
     ("thesis_screenshots/caidattroly.jpg", "Hình C.5. Cài đặt trợ lý: ngôn ngữ, chế độ gọi khách mặc định, chế độ rảnh tay và nhắc khách khi gần điểm đón."),
