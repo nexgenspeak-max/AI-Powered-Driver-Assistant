@@ -29,6 +29,8 @@ export type NextStop = {
   lng: number
   distanceKm: number | null
   etaMinutes: number | null
+  /** Driver already marked "Đã đến" for this pickup — waiting for the rider. */
+  arrived: boolean
 }
 
 export function useDriverMapModel() {
@@ -105,6 +107,7 @@ export function useDriverMapModel() {
         kind: first.kind,
         customerName: first.customer_name || trip?.customer_name || '',
         customerPhone: trip?.customer_phone || '',
+        arrived: first.kind === 'pickup' && trip?.status === 'arrived_pickup',
         address: first.address,
         lat: first.lat,
         lng: first.lng,
@@ -127,6 +130,7 @@ export function useDriverMapModel() {
       kind: toDropoff ? 'dropoff' : 'pickup',
       customerName: trip.customer_name,
       customerPhone: trip.customer_phone,
+      arrived: !toDropoff && trip.status === 'arrived_pickup',
       address: toDropoff ? trip.dropoff_address : trip.pickup_address,
       lat,
       lng,

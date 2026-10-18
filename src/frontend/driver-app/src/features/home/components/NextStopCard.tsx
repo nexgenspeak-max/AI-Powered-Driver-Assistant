@@ -28,7 +28,7 @@ export function NextStopCard({
   const theme = useTheme()
   const isPickup = stop.kind === 'pickup'
   const accent = isPickup ? theme.primary.val : theme.success.val
-  const kindLabel = isPickup ? 'Đón khách' : 'Trả khách'
+  const kindLabel = !isPickup ? 'Trả khách' : stop.arrived ? 'Đã đến · chờ khách' : 'Đón khách'
   const km = formatKm(stop.distanceKm)
   const min = formatMinutes(stop.etaMinutes)
   const meta = [min, km].filter(Boolean).join(' · ')
