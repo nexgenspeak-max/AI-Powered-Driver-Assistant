@@ -336,7 +336,7 @@ Khi tài xế đang có phiên trợ lý mở trong ứng dụng, chuyến mới
 | 2 ⑳ | Dịch vụ Giám sát vận hành → Dịch vụ Nhật ký cuộc gọi | GET /api/v1/records?date={ngày}&limit=500, lặp theo con trỏ phân trang | Dùng chỉ mục record_date-started_at-index |
 | 3 | Dịch vụ Nhật ký cuộc gọi → Dịch vụ Giám sát vận hành | Bản ghi: lời thoại, loại phiên, chỉ số phiên | Bản ghi cũ thiếu loại phiên: suy ra từ tiền tố tên phòng |
 | 4 | Dịch vụ Giám sát vận hành | Tổng hợp: số phiên, số tài xế, độ trễ trung bình/P50/P95, tỷ lệ công cụ thành công, tỷ lệ API lỗi, lỗi theo loại | Phiên không có chỉ số chỉ tính vào phần hoạt động |
-| 5 ㉘ | Dịch vụ Giám sát vận hành → Mô hình chấm (LLM) | Chấm một mẫu cố định theo ngày các cặp (câu tài xế, câu trả lời) | Chỉ khi có khóa API; không có thì ghi chú trong báo cáo |
+| 5 ㉘ | Dịch vụ Giám sát vận hành → Mô hình chấm (LLM) | Chấm riêng từng cặp (câu tài xế, câu trả lời) trong một mẫu cố định theo ngày, kèm tên các công cụ đã trả dữ liệu trong phiên | Chỉ khi có khóa API; không có thì ghi chú trong báo cáo |
 | 6 | Mô hình chấm → Dịch vụ Giám sát vận hành | Kết quả: correct, incorrect hoặc unclear | Mẫu chấm cố định theo ngày nên lập lại cho cùng kết quả |
 | 7 ㉑ | Dịch vụ Giám sát vận hành → DynamoDB daily-reports | Lưu báo cáo theo khóa report_date | Lập lại thì ghi đè |
 | 8 | Trang giám sát hệ thống → Dịch vụ Giám sát vận hành | GET /api/v1/reports/daily?date= hoặc ?from=&to= | Chỉ tài khoản quản trị hệ thống |

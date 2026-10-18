@@ -180,15 +180,15 @@ Bản ghi hội thoại được hiển thị đồng bộ với lời nói đ�
 
 **Hình 5.5.** Hội thoại mẫu: tra cứu lịch trình trong ngày
 
-Trang giám sát hệ thống có thêm trang "Báo cáo ngày" (`super-admin-panel/src/pages/ReportsPage.tsx`) hiển thị các nhóm chỉ số (Hình 5.6), ví dụ câu trả lời bị chấm sai và bảng xu hướng 7 ngày (Hình 5.7). Ảnh chụp dùng dữ liệu thật của ngày 06/09/2026 trong bảng nhật ký cuộc gọi của môi trường phát triển: 15 phiên, 4 tài xế, 133 lượt nói; mô hình chấm đánh giá mẫu 30 lượt với 16 đúng và 14 sai (tỷ lệ 53,3%). Các ô độ trễ và tỷ lệ công cụ thành công để trống vì những bản ghi này được tạo trước khi tác nhân gửi kèm chỉ số phiên (mục 5.3.6); báo cáo nêu rõ điều này ở dòng "Ghi chú" thay vì ước lượng. Với bản ghi cũ chưa có trường loại phiên, dịch vụ suy ra loại phiên từ tiền tố tên phòng trong mã cuộc gọi (`driver-`, `trip-`, `customer-`, `custcall-`), cùng quy ước với tác nhân hội thoại (`app/agent/session.py`).
+Trang giám sát hệ thống có thêm trang "Báo cáo ngày" (`super-admin-panel/src/pages/ReportsPage.tsx`) hiển thị các nhóm chỉ số (Hình 5.6), ví dụ câu trả lời bị chấm sai và bảng xu hướng 7 ngày (Hình 5.7). Ảnh chụp dùng dữ liệu thật ngày 18/10/2026 của môi trường phát triển: 52 phiên (28 phiên tài xế và 24 cuộc gọi khách chạy nền) của một tài khoản tài xế thử nghiệm; 23 lượt có đo độ trễ, trung bình 1,08 giây và P95 3,92 giây (không đạt ngưỡng 2 giây của NFR-02); toàn bộ lời gọi công cụ thành công. Mô hình chấm (gpt-4o-mini) chấm riêng từng lượt trong mẫu 30 lượt, kèm danh sách công cụ đã trả dữ liệu trong phiên để không coi số liệu lấy từ công cụ là bịa: 21 đúng, 6 sai, 3 không rõ (tỷ lệ 77,8%). Các câu bị chấm sai chỉ ra hai lỗi thật, đã được sửa sau đó: chỉ mục sổ tay hướng dẫn chưa được dựng nên câu hỏi về cách dùng ứng dụng nhận câu "Sổ tay hướng dẫn tạm thời không khả dụng", và câu trả lời khi tài xế chỉ có một chuyến không nêu số lượng. Dòng "API lỗi nhiều nhất" cho thấy lời gọi lấy lại tóm tắt sau mỗi cuộc gọi khách luôn trả mã 404 vì bản ghi chưa kịp lưu; lời gọi thừa này cũng đã được bỏ. Số liệu một ngày của một tài xế thử nghiệm chỉ minh họa cách đọc báo cáo, không dùng để đánh giá chất lượng ở Chương 6. Với bản ghi cũ chưa có trường loại phiên, dịch vụ suy ra loại phiên từ tiền tố tên phòng trong mã cuộc gọi (`driver-`, `trip-`, `customer-`, `custcall-`), cùng quy ước với tác nhân hội thoại (`app/agent/session.py`).
 
 ![Trang báo cáo ngày](thesis_screenshots/superadmin/baocaongay.png)
 
-**Hình 5.6.** Trang báo cáo vận hành ngày: các chỉ số tổng hợp (dữ liệu ngày 06/09/2026)
+**Hình 5.6.** Trang báo cáo vận hành ngày: các chỉ số tổng hợp (dữ liệu ngày 18/10/2026)
 
 ![Câu trả lời bị chấm sai và xu hướng 7 ngày](thesis_screenshots/superadmin/baocaongay_xuhuong.png)
 
-**Hình 5.7.** Trang báo cáo vận hành ngày: ví dụ câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 06/09/2026)
+**Hình 5.7.** Trang báo cáo vận hành ngày: ví dụ câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 18/10/2026)
 
 Trang cài đặt trợ lý (`app/(app)/assistant-settings.tsx`) cho phép chọn ngôn ngữ, chế độ gọi khách mặc định, bật nhắc khách khi gần điểm đón và chọn bán kính nhắc. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk (`features/assistant-wakeword/wakeWordService.ts`); khi khớp từ khóa, ứng dụng mở phiên theo cùng luồng như khi bấm nút và không gửi đoạn âm thanh đánh thức tới mô hình ngôn ngữ. Các ảnh giao diện khác đặt ở Phụ lục C.
 
