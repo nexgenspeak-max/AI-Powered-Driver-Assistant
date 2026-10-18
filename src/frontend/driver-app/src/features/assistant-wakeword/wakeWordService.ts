@@ -104,7 +104,7 @@ const RESTART_DELAY_MS = 300;
 // not one per id), so reusing it keeps a single notification that just
 // changes text instead of fighting the call's own start/stop calls.
 const SERVICE_ID = 4471;
-const LISTENING_TITLE = "Czen Driver";
+const LISTENING_TITLE = "Czen";
 const LISTENING_MESSAGE = "Đang lắng nghe từ khoá đánh thức trợ lý";
 
 let modelLoaded = false;

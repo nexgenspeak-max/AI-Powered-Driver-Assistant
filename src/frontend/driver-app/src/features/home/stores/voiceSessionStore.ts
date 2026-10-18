@@ -64,7 +64,7 @@ async function startCallForegroundService() {
   ensureForegroundServiceRegistered();
   await getForegroundService().start({
     id: 4471,
-    title: "Czen Driver",
+    title: "Czen",
     message: "Đang trong cuộc gọi với trợ lý AI",
     ServiceType: "microphone",
     icon: "ic_launcher",

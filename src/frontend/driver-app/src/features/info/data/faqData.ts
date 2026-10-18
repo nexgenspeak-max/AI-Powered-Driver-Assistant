@@ -3,10 +3,10 @@ export type FaqItem = {
   answer: string
 }
 
-export const ABOUT_TITLE = 'Czen Driver - Trợ lý đồng hành cùng tài xế'
+export const ABOUT_TITLE = 'Czen — trợ lý giọng nói đồng hành cùng tài xế'
 
 export const ABOUT_PARAGRAPHS = [
-  'Czen Driver là ứng dụng dành cho tài xế, tích hợp trợ lý AI bằng giọng nói giúp bạn nhận chuyến, chỉ đường và xử lý công việc nhanh chóng mà không cần rời tay khỏi vô lăng.',
+  'Czen là ứng dụng dành cho tài xế, tích hợp trợ lý AI bằng giọng nói giúp bạn nhận chuyến, chỉ đường và xử lý công việc nhanh chóng mà không cần rời tay khỏi vô lăng.',
   'Bật "Chế độ rảnh tay" trong Cài đặt trợ lý để gọi trợ lý bất cứ lúc nào: xác nhận/từ chối chuyến mới, xem lộ trình tối ưu cho chuyến nhiều điểm giao, chỉ đường từng chặng, gọi hoặc nhắn tin cho khách và người thân, tra cứu thu nhập, thưởng, hay báo cáo sự cố.',
   'Khi bạn đến gần điểm đón hoặc trả khách, ứng dụng tự động nhận diện vị trí để nhắc nhở hoặc gợi ý điểm dừng tiếp theo, giúp bạn tập trung lái xe an toàn hơn.',
   'Mọi chuyến đi, thu nhập và vị trí của bạn đều được cập nhật theo thời gian thực ngay trên trang tổng quan.',
