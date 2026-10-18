@@ -146,6 +146,17 @@ Các màn phụ (hồ sơ, xe, giấy tờ, ngân hàng, an toàn, hỗ trợ, c
 
 Trạng thái 2026-10-17 (tối): P1, P2, P3 (lộ trình thu gọn), P4, P5 (AppBar cho 11 màn phụ), P6, P7 (chip trạng thái + gợi ý lệnh) đã xong; P0 dùng primitives sẵn có; P8 còn lại.
 
+Cập nhật 2026-10-18 (kiểm trên iOS Simulator 26.1, tài khoản thật):
+
+- **Bộ icon Czen** (`src/components/icons`): 57 glyph SVG tự vẽ trên lưới 24, nét tròn 1.75, trạng thái chọn duotone; thay toàn bộ Ionicons/MaterialCommunityIcons (32 file). Quy tắc vẽ ghi ở đầu `glyphs.ts`.
+- **Màn chào chuyến**: hiện trên cả panel trợ lý; cước ước tính có từ `GET /trips/:id`; hàng nút Từ chối | Nhận chuyến; Để sau là nút đóng.
+- **Đăng nhập/Đăng ký**: chung nền gradient với Landing, header có nút quay lại 44pt và logo.
+- **Surface**: sửa bo góc (token `$card` bị màu `card` che) và biến thể `flat`.
+- **Định dạng số**: `1.675 km`, `28 giờ 04 phút`, `0,0 giờ`.
+- Backend: WebSocket local gửi tới mọi kết nối của tài xế; DistanceMatrix Goong chia ô ≤100; dựng lộ trình single-flight + cache đoạn đường.
+
+Còn lại của P8: audit haptic/motion, a11y (VoiceOver nhãn từng màn), soát light mode từng màn.
+
 | Giai đoạn | Nội dung | Tiêu chí nghiệm thu |
 |---|---|---|
 | **P0 — Nền** | Token motion, `Sheet` primitive, `StatTile`, `ListRow`, `ActionBar`; AppBar chuẩn cho màn phụ | tsc sạch; 2 ảnh chụp light/dark |
