@@ -78,6 +78,9 @@ export function useGlassPress(width: number, height: number, options: UseGlassPr
     })
     .enabled(enabled)
     .hitSlop(hitSlop ?? 0)
+    // Never cancel the RN touch underneath — Button now takes its press from
+    // a JS Pressable (see Button.tsx) and only uses this for the visuals.
+    .cancelsTouchesInView(false)
 
   const panGesture = Gesture.Pan()
     .minDistance(1)
@@ -101,6 +104,7 @@ export function useGlassPress(width: number, height: number, options: UseGlassPr
     })
     .enabled(enabled)
     .hitSlop(hitSlop ?? 0)
+    .cancelsTouchesInView(false)
 
   const gesture: ComposedGesture = Gesture.Race(panGesture, tapGesture)
 

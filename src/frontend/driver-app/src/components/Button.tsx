@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { styled, View, useTheme, GetProps } from 'tamagui'
-import { View as RNView, ActivityIndicator, StyleSheet, type LayoutChangeEvent } from 'react-native'
+import { View as RNView, ActivityIndicator, Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native'
 import { GestureDetector } from 'react-native-gesture-handler'
 import Animated from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -107,8 +107,12 @@ interface Props extends Omit<FrameProps, 'variant' | 'disabled' | 'onPress'> {
 export function Button({ label, variant = 'primary', loading, disabled, onPress, full, icon, ...rest }: Props) {
   const isDisabled = !!(disabled || loading)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  // The press itself comes from a plain RN Pressable (JS responder), not from
+  // the gesture-handler Tap: after a deep link remounted a frozen tab, the
+  // native Tap stayed attached to a stale view and "Chỉ đường" stopped
+  // responding (simulator 2026-10-18). gesture-handler now drives only the
+  // liquid-glass stretch/glow, which degrades harmlessly if detached.
   const { gesture, stretchStyle, touchX, touchY, glowOpacity } = useGlassPress(size.width, size.height, {
-    onPress,
     enabled: !isDisabled,
   })
 
@@ -148,6 +152,12 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
           : theme.textInverse.val
 
   return (
+    <Pressable
+      onPress={isDisabled ? undefined : onPress}
+      disabled={isDisabled}
+      accessible={false}
+      style={full ? { flex: 1 } : undefined}
+    >
     <GestureDetector gesture={gesture}>
       {/* `full` has to reach this wrapper too, not just ButtonFrame below —
           otherwise a row of two `full` buttons (Reject/Accept) won't actually
@@ -223,5 +233,6 @@ export function Button({ label, variant = 'primary', loading, disabled, onPress,
         </RNView>
       </Animated.View>
     </GestureDetector>
+    </Pressable>
   )
 }
