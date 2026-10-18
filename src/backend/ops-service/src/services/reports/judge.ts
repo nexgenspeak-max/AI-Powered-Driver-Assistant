@@ -6,6 +6,7 @@ const log = getLogger('report_judge');
 export interface Exchange {
   call_id: string;
   context: string;
+  tools: string[];          // tools that succeeded in this session
   user: string;
   assistant: string;
 }
@@ -22,35 +23,57 @@ const METHOD =
   'unclear = không đủ ngữ cảnh để kết luận. Tỷ lệ đúng = correct / (correct + incorrect).';
 
 const SYSTEM =
-  'You grade a Vietnamese in-car voice assistant for ride-hailing drivers. For each numbered item you get the recent ' +
-  'context, the driver utterance and the assistant reply. Verdict "correct" if the reply addresses what the driver asked ' +
-  'and does not invent trip, earnings, location or call facts; "incorrect" if it misunderstands the request, does the ' +
-  'wrong action, or states facts that look made up; "unclear" if the context is not enough to decide. Answer JSON only: ' +
-  '{"results":[{"i":<number>,"verdict":"correct|incorrect|unclear","reason":"<short, Vietnamese>"}]}';
+  'You grade one turn of a Vietnamese in-car voice assistant for ride-hailing drivers. You get the recent context, ' +
+  'the backend tools that returned data in that session, the driver utterance and the assistant reply. ' +
+  'Trip, earnings, location and call figures come from those tools and you cannot see their output: do not call a ' +
+  'figure invented just because it is not in the context when a matching tool ran. Verdict "correct" if the reply ' +
+  'addresses what the driver asked; "incorrect" if it misunderstands the request, does the wrong action, refuses or ' +
+  'fails to answer, or states facts no listed tool could have supplied; "unclear" if the context is not enough to ' +
+  'decide. Answer JSON only: {"verdict":"correct|incorrect|unclear","reason":"<short, Vietnamese>"}';
 
-/** One batched LLM call over the sample. Returns null when judging is not configured. */
+/** Parallel requests in flight while grading a sample. */
+const CONCURRENCY = 6;
+
+/**
+ * One LLM call per item. A single batched call over 30 items drifted: verdicts and
+ * reasons landed on neighbouring items (report 2026-10-18), so items are graded alone.
+ * Returns null when judging is not configured.
+ */
 export async function judge(items: Exchange[], opts: JudgeOptions | null): Promise<JudgeResult | null> {
   if (!opts || !opts.apiKey || !items.length) return null;
   const fetchFn = opts.fetchFn ?? fetch;
-  const body = items
-    .map((x, i) => `#${i + 1}\nNgữ cảnh:\n${x.context || '(đầu phiên)'}\nTài xế: ${x.user}\nTrợ lý: ${x.assistant}`)
-    .join('\n\n');
-  const res = await fetchFn('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${opts.apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: opts.model,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: body }],
-    }),
-  });
-  if (!res.ok) {
-    log.error('judge request failed', { ok: false, status: res.status });
-    throw new Error(`judge http_${res.status}`);
+  const gradeOne = async (x: Exchange): Promise<{ verdict?: string; reason?: string }> => {
+    const res = await fetchFn('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${opts.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: opts.model,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: `Ngữ cảnh:\n${x.context || '(đầu phiên)'}\nCông cụ: ${x.tools.join(', ') || '(không)'}\nTài xế: ${x.user}\nTrợ lý: ${x.assistant}` },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      log.error('judge request failed', { ok: false, status: res.status });
+      throw new Error(`judge http_${res.status}`);
+    }
+    const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    try {
+      return JSON.parse(payload.choices?.[0]?.message?.content ?? '{}');
+    } catch {
+      return {};
+    }
+  };
+  const results: { i: number; verdict?: string; reason?: string }[] = [];
+  for (let start = 0; start < items.length; start += CONCURRENCY) {
+    const batch = items.slice(start, start + CONCURRENCY);
+    const graded = await Promise.all(batch.map(gradeOne));
+    graded.forEach((g, k) => results.push({ i: start + k + 1, ...g }));
   }
-  const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return tally(items, payload.choices?.[0]?.message?.content ?? '{}', opts.model);
+  return tally(items, JSON.stringify({ results }), opts.model);
 }
 
 /** Pure: parse the grader output and count verdicts. Items the grader skipped count as unclear. */

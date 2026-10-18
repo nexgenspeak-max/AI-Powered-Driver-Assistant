@@ -4,6 +4,7 @@ from app.voicebot.processors.trip_format import (
     format_customer_phones,
     format_primary_customer_phone,
     format_trip_detail,
+    format_trip_existence,
     short_address,
 )
 
@@ -78,3 +79,11 @@ def test_format_trip_count_summary_vn():
     many = format_trip_count_summary([{}, {}, {}], lang="vi")
     assert "3 chuyến" in many
     assert len(many) < 40
+
+
+def test_single_trip_answer_states_the_count():
+    """Daily report 2026-10-18: "Hôm nay tôi có bao nhiêu chuyến?" got
+    "Bạn có chuyến với Nguyễn Thu Hà." with no number, judged incorrect."""
+    vi = format_trip_existence({"customer_name": "Nguyễn Thu Hà"}, lang="vi")
+    assert "1 chuyến" in vi and "Nguyễn Thu Hà" in vi
+    assert "1 trip" in format_trip_existence({"customer_name": "Ha"}, lang="en")

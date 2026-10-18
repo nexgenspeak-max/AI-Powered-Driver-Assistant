@@ -1,4 +1,5 @@
 import { DailyReport, ReportRecord } from './types';
+import type { Exchange } from './judge';
 
 const SLOW_MS = 2000;
 const DRIVER_MODES = new Set(['driver', 'outbound']);
@@ -137,16 +138,19 @@ export function aggregate(date: string, records: ReportRecord[], now = new Date(
 }
 
 /** Driver→assistant exchanges usable for judging (driver sessions only). */
-export function exchanges(records: ReportRecord[]): { call_id: string; context: string; user: string; assistant: string }[] {
-  const out: { call_id: string; context: string; user: string; assistant: string }[] = [];
+export function exchanges(records: ReportRecord[]): Exchange[] {
+  const out: Exchange[] = [];
   for (const r of records) {
     const mode = modeOf(r);
     if (!DRIVER_MODES.has(mode)) continue;
     const t = r.turns ?? [];
+    // Records keep tool counts per session, not per turn: the judge gets the
+    // names of tools that succeeded so tool-backed figures are not read as invented.
+    const tools = Object.entries(r.metrics?.tools?.by_name ?? {}).filter(([, v]) => v.ok > 0).map(([k]) => k);
     for (let i = 1; i < t.length; i += 1) {
       if (t[i - 1].role === 'user' && t[i].role === 'assistant') {
         const context = t.slice(Math.max(0, i - 5), i - 1).map((x) => `${x.role === 'user' ? 'Tài xế' : 'Trợ lý'}: ${x.text}`).join('\n');
-        out.push({ call_id: r.call_id, context, user: t[i - 1].text, assistant: t[i].text });
+        out.push({ call_id: r.call_id, context, tools, user: t[i - 1].text, assistant: t[i].text });
       }
     }
   }

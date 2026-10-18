@@ -288,16 +288,21 @@ async def _finish_isolated_call(context: RunContext, summary: str) -> str:
         except Exception:
             logger.error("complete_background_call failed", exc_info=True)
 
-        try:
-            confirmed = await backend_api.get_latest_call_record(driver_phone)
-            if confirmed.get("call_id") == call_id and confirmed.get("summary"):
-                summary = confirmed["summary"]
-        except Exception:
-            logger.warning(
-                "failed to confirm persisted summary via cache/call_id lookup — "
-                "using the locally-generated one instead",
-                exc_info=True,
-            )
+        # Only when we have no summary at all: either finish_and_get_summary
+        # already saved the record and returned that exact text, or the record
+        # is saved later at job teardown and this lookup can only 404 (it was
+        # counted as an API error on every custcall, daily report 2026-10-18).
+        if not summary:
+            try:
+                confirmed = await backend_api.get_latest_call_record(driver_phone)
+                if confirmed.get("call_id") == call_id and confirmed.get("summary"):
+                    summary = confirmed["summary"]
+            except Exception:
+                logger.warning(
+                    "failed to confirm persisted summary via cache/call_id lookup — "
+                    "using the locally-generated one instead",
+                    exc_info=True,
+                )
     else:
         logger.warning(
             "complete_background_call skipped | driver_phone=%r call_id=%r",

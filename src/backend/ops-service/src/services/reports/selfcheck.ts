@@ -21,7 +21,7 @@ const records: ReportRecord[] = [
     turns: [{ role: 'user', text: 'còn mấy chuyến', ts: 1 }, { role: 'assistant', text: 'Bạn còn 2 chuyến.', ts: 2 }],
     metrics: metrics('driver', [800, 1600, 2400], {
       fillers: 1,
-      tools: { total: 4, errors: 1, by_name: {} },
+      tools: { total: 4, errors: 1, by_name: { get_my_trips: { ok: 3, error: 0 }, call_customer: { ok: 0, error: 1 } } },
       http: { total: 5, errors: 1, by_error: { 'PATCH /api/v1/trips/T 500': 1 } },
       errors: { http: 1 }, fallbacks: { 'llm:openai': 1 },
     }) },
@@ -61,6 +61,7 @@ assert.equal(modeOf({ call_id: 'driver-0901-x', caller: '0901', started_at: '', 
 const ex = exchanges(records);
 assert.equal(ex.length, 1);
 assert.equal(ex[0].user, 'còn mấy chuyến');
+assert.deepEqual(ex[0].tools, ['get_my_trips']);            // only tools that returned data
 assert.deepEqual(sample([1, 2, 3, 4, 5], 3, 'd'), sample([1, 2, 3, 4, 5], 3, 'd')); // reproducible
 assert.equal(sample([1, 2], 5, 'd').length, 2);
 

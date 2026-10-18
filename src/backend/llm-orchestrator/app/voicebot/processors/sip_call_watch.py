@@ -457,7 +457,10 @@ async def complete_isolated_call(
 
         await backend_api.complete_background_call(driver_phone, call_id, summary)
 
-        if driver_phone and call_id:
+        # Skip when a summary already exists: it is either the text
+        # finish_and_get_summary just saved, or the record is only saved at
+        # teardown and the lookup would 404 (see customer_call_tools).
+        if driver_phone and call_id and not summary:
             try:
                 confirmed = await backend_api.get_latest_call_record(driver_phone)
                 if confirmed.get("call_id") == call_id and confirmed.get("summary"):

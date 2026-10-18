@@ -352,11 +352,15 @@ def format_customer_phones(trips: list[dict], lang: str = "vi") -> str:
 
 
 def format_trip_existence(trip: dict, lang: str = "vi") -> str:
-    """Yes/no trip presence — customer name only, details on follow-up."""
+    """Single-trip presence — count plus customer name, details on follow-up.
+
+    States "1" so it also answers "how many trips?" (judged incorrect without
+    the count, daily report 2026-10-18).
+    """
     customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
     if lang == "en":
-        return f"You have a trip with {customer}."
-    return f"Bạn có chuyến với {customer}."
+        return f"You have 1 trip, with {customer}."
+    return f"Bạn có 1 chuyến, với khách {customer}."
 
 
 def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
