@@ -95,6 +95,13 @@ export function useTurnByTurnNavigation(
       fetchedForRef.current = null
       offRouteTicksRef.current = 0
       setOffRoute(false)
+      // Clear the finished leg too: the pickup leg's steps (index past the
+      // end, i.e. "arrived") survived deactivation, so starting navigation
+      // to the drop-off read as arrived at once and closed itself before
+      // its own route arrived (simulator 2026-10-18).
+      setSteps([])
+      setPolyline(null)
+      setStepIndex(0)
       return
     }
     if (!origin) return

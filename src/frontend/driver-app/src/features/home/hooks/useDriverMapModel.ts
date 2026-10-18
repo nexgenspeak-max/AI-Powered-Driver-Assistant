@@ -33,6 +33,8 @@ export type NextStop = {
   arrived: boolean
 }
 
+const ARRIVED_HUD_MS = 4000
+
 export function useDriverMapModel() {
   const { data: context } = useDriverContext()
   // Next point of each active trip — drives the live-push cadence so the
@@ -172,7 +174,11 @@ export function useDriverMapModel() {
   const nav = useTurnByTurnNavigation(navActive, navOrigin, navigationTarget)
 
   useEffect(() => {
-    if (navActive && nav.arrived) setNavActive(false)
+    // Show "Đã đến nơi" briefly before closing: closing at once made a tap
+    // on Chỉ đường look dead when the driver was already at the stop.
+    if (!navActive || !nav.arrived) return
+    const t = setTimeout(() => setNavActive(false), ARRIVED_HUD_MS)
+    return () => clearTimeout(t)
   }, [navActive, nav.arrived])
 
   useEffect(() => {
