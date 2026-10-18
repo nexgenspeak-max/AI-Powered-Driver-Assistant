@@ -31,6 +31,9 @@ async def update_trip_status(raw_arguments: dict, context: RunContext) -> str:
 
     try:
         updated = await backend_api.update_trip_status(trip_id, status)
+    except backend_api.ArrivalBlocked as blocked:
+        # Not there yet: say how far, and that calling the customer is fine.
+        return await context_store.speak_and_stop(context.session, blocked.detail or "Bạn chưa đến nơi, khi đến gần mới xác nhận được.")
     except Exception:
         logger.error("update_trip_status API failed", exc_info=True)
         return await context_store.speak_and_stop(

@@ -53,10 +53,12 @@ export const config = {
   // from the 1km call-offer trigger above.
   nextStopAnnounceMeters: Number(process.env.NEXT_STOP_ANNOUNCE_METERS || 200),
   // How close (meters) the driver's reported GPS must be to the pickup/
-  // dropoff point before arrived_pickup/picked_up/completed is accepted —
-  // separate knob from proximityAlertMeters (the auto-call trigger) even
-  // though they default to the same distance.
-  arrivalRadiusMeters: Number(process.env.ARRIVAL_RADIUS_METERS || 1000),
+  // dropoff point before arrived_pickup/picked_up/completed is accepted.
+  // 200 m covers GPS + geocoding error; 1 km let a driver mark "Đã đến"
+  // well before arriving (product decision 2026-10-18). Separate knob from
+  // proximityAlertMeters (the 1 km "call the customer" trigger) — calling
+  // the customer stays allowed at any distance.
+  arrivalRadiusMeters: Number(process.env.ARRIVAL_RADIUS_METERS || 200),
 
   // Feature flags — default OFF so deploying this code never changes
   // production behavior on its own; flip on per-environment once verified.

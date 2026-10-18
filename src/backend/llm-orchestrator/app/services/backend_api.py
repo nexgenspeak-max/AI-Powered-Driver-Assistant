@@ -239,14 +239,44 @@ async def get_current_trip(driver_phone: str) -> dict | None:
     return r.json()
 
 
+class ArrivalBlocked(Exception):
+    """Trip-service refused arrived/picked-up/completed: driver not there yet."""
+
+    def __init__(self, detail: str, distance_m: int | None, radius_m: int | None) -> None:
+        super().__init__(detail)
+        self.detail = detail
+        self.distance_m = distance_m
+        self.radius_m = radius_m
+
+
+_ARRIVAL_STATUSES = {"arrived_pickup", "picked_up", "completed"}
+
+
 async def update_trip_status(trip_id: str, status: str) -> dict:
     c = _get_client()
+    # Voice acts for the driver: ask trip-service to apply the same arrival
+    # geofence the app gets (it uses the driver's latest live GPS), instead
+    # of the service-caller bypass that let "đã đến rồi" skip it.
+    body: dict = {"status": status}
+    if status.lower() in _ARRIVAL_STATUSES:
+        body["enforce_arrival"] = True
     r = await c.patch(
         f"{_trip_base()}/api/v1/trips/{trip_id}",
-        json={"status": status},
+        json=body,
         headers=auth_headers(),
         timeout=8,
     )
+    if r.status_code == 409 and status.lower() in _ARRIVAL_STATUSES:
+        try:
+            data = r.json()
+        except Exception:
+            data = {}
+        if isinstance(data, dict) and data.get("distance_meters") is not None:
+            raise ArrivalBlocked(
+                str(data.get("detail") or ""),
+                int(data["distance_meters"]),
+                int(data["required_radius_meters"]) if data.get("required_radius_meters") is not None else None,
+            )
     r.raise_for_status()
     logger.info("trip %s → %s", trip_id, status)
     try:

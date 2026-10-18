@@ -11,7 +11,7 @@ import { enrichTrip } from '../services/earningsService';
 import { authServiceClient } from '../services/authServiceClient';
 import { config } from '../config';
 import { TripData } from '../services/dispatchService';
-import { cacheSet, driverLocationKey, driverLiveLocationKey } from '../cache/redis';
+import { cacheSet, cacheGet, driverLocationKey, driverLiveLocationKey } from '../cache/redis';
 import { distanceMeters, type LatLng } from '../utils/geo';
 import { notifyDriver, notifyCustomer } from '../services/notify';
 import { maybeNotifyCustomerOfProximity, maybeNotifyCustomerOfDropoffProximity } from '../services/proximityService';
@@ -78,6 +78,16 @@ const ARRIVAL_LOCATION_TARGET: Partial<Record<string, 'pickup' | 'dropoff'>> = {
   picked_up: 'pickup',
   completed: 'dropoff',
 };
+
+/** "Bạn còn cách điểm đón khoảng 1,4 km. Khi đến gần (trong khoảng 200 m) mới xác nhận được — bạn vẫn có thể gọi khách ngay." */
+export function arrivalBlockedMessage(target: 'pickup' | 'dropoff', distanceM: number, radiusM: number): string {
+  const d = distanceM < 1000
+    ? `${Math.max(10, Math.round(distanceM / 10) * 10)} m`
+    : `${(Math.round(distanceM / 100) / 10).toString().replace('.', ',')} km`;
+  return target === 'pickup'
+    ? `Bạn còn cách điểm đón khoảng ${d}. Khi đến gần (trong khoảng ${radiusM} m) mới xác nhận đã đến được, bạn vẫn có thể gọi khách ngay.`
+    : `Bạn còn cách điểm trả khoảng ${d}. Khi đến gần (trong khoảng ${radiusM} m) mới hoàn thành chuyến được.`;
+}
 
 // Local seed/booking may omit driver_phone only when DEFAULT_DRIVER_PHONE is set.
 // Production clients must always send driver_phone; never bake a number into code.
@@ -279,14 +289,26 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
       }
     }
     const arrivalTarget = ARRIVAL_LOCATION_TARGET[status];
-    if (arrivalTarget && req.user?.role !== 'admin') {
+    // Service callers normally bypass the arrival check, but the voice agent
+    // acts FOR the driver ("đã đến rồi") and sets enforce_arrival — without
+    // it, saying "đã đến" by voice skipped the geofence entirely.
+    const enforceForService = req.body.enforce_arrival === true;
+    if (arrivalTarget && (req.user?.role !== 'admin' || enforceForService)) {
       const targetLat = arrivalTarget === 'pickup' ? trip.pickup_lat : trip.dropoff_lat;
       const targetLng = arrivalTarget === 'pickup' ? trip.pickup_lng : trip.dropoff_lng;
       // Older/text-only-address trips have no stored coords to check against
       // — nothing to validate, so let those through same as before this rule.
       if (typeof targetLat === 'number' && typeof targetLng === 'number') {
-        const driverLat = Number(req.body.lat);
-        const driverLng = Number(req.body.lng);
+        let driverLat = Number(req.body.lat);
+        let driverLng = Number(req.body.lng);
+        if ((!Number.isFinite(driverLat) || !Number.isFinite(driverLng)) && enforceForService && trip.driver_phone) {
+          // Voice has no GPS of its own — use the driver app's latest push.
+          const live = await cacheGet<{ lat: number; lng: number }>(driverLiveLocationKey(trip.driver_phone));
+          if (live) {
+            driverLat = live.lat;
+            driverLng = live.lng;
+          }
+        }
         if (!Number.isFinite(driverLat) || !Number.isFinite(driverLng)) {
           return res.status(400).json({
             detail: 'Cần vị trí hiện tại (lat/lng) của tài xế để xác nhận trạng thái này',
@@ -295,9 +317,7 @@ router.patch('/:tripId', async (req: Request, res: Response) => {
         const distance = distanceMeters({ lat: driverLat, lng: driverLng }, { lat: targetLat, lng: targetLng });
         if (distance > config.arrivalRadiusMeters) {
           return res.status(409).json({
-            detail: arrivalTarget === 'pickup'
-              ? 'Bạn chưa đến điểm đón khách. Vui lòng di chuyển đến gần điểm đón để xác nhận.'
-              : 'Bạn chưa đến điểm trả khách. Vui lòng di chuyển đến gần điểm trả khách để hoàn thành chuyến.',
+            detail: arrivalBlockedMessage(arrivalTarget, distance, config.arrivalRadiusMeters),
             distance_meters: Math.round(distance),
             required_radius_meters: config.arrivalRadiusMeters,
           });

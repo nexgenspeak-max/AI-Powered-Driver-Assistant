@@ -16,6 +16,7 @@
     "verify:route-order": "ts-node --transpile-only src/utils/twoOpt.selfcheck.ts",
     "verify:goong-matrix": "ts-node --transpile-only src/services/maps/goongMatrix.selfcheck.ts",
     "verify:proximity-message": "ts-node --transpile-only src/services/proximityMessage.selfcheck.ts",
+    "verify:arrival": "ts-node --transpile-only src/routes/arrivalGeofence.selfcheck.ts",
     "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts"
   },
   "dependencies": {

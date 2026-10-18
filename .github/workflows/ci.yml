@@ -54,6 +54,9 @@ jobs:
       - name: Pickup-approach message self-check
         if: matrix.service == 'external-api-service'
         run: npm run verify:proximity-message
+      - name: Arrival geofence self-check
+        if: matrix.service == 'external-api-service'
+        run: npm run verify:arrival
 
   driver-app:
     name: driver-app · typecheck + navigation math
