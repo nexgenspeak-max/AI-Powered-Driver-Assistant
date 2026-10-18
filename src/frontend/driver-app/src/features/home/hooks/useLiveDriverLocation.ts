@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Location from 'expo-location'
+import { shouldPush } from '../lib/pushCadence'
+import type { LatLng } from '../../../utils/geo'
 import { driversService } from '../../../services/api/drivers'
 
 export interface LiveCoords {
@@ -12,21 +14,18 @@ export interface LiveCoords {
   heading: number | null
 }
 
-// Steady-state throttle for the backend push below, once the app has
-// already sent its first fix — matches locationTracking.ts's own ~10-min
-// cadence by design, now that trip.ts/drivers.ts push fresh GPS on the
-// events that actually need it (trip confirmed, arrived_pickup, picked_up,
-// completed — see useDispatchSocket.ts's 'trip_confirmed'/'schedule_updated'
-// handling and pushImmediateLocation.ts). Blanket 30s polling isn't needed
-// on top of those targeted pushes, and 10 min keeps this endpoint's load in
-// line with the original background task it complements.
-const BACKEND_PUSH_INTERVAL_MS = 10 * 60 * 1000
+// Cadence of the backend push is distance-aware (lib/pushCadence.ts): the
+// cheap ~10-min ping while idle, every 60 s / 500 m with an active trip, and
+// every 15 s / 150 m inside 3 km of a stop — the backend's pickup-approach
+// call (default 1 km) is evaluated on each push, so the old flat 10 minutes
+// let a moving driver skip right past the radius.
+const WALL_CLOCK_TICK_MS = 15 * 1000
 
 // lastPushedAtRef starts at 0, so the very first push below (as soon as
 // `enabled` is true and a fix has landed — i.e. right as the app opens with
 // the driver already online, or the moment they go online) always fires
 // immediately regardless of this throttle: `now - 0` is always way past
-// BACKEND_PUSH_INTERVAL_MS. That's deliberate — the whole point of this
+// the cadence in lib/pushCadence.ts. That's deliberate — the whole point of this
 // hook is making sure driverLiveLocationKey is never empty (hasLocation=
 // false) right as the app loads/reloads the driver's schedule.
 
@@ -38,19 +37,19 @@ const BACKEND_PUSH_INTERVAL_MS = 10 * 60 * 1000
 // routeOptimizationService.ts's hasLocation=false fallback). This hook only
 // needs foreground permission, which is already required for the map to
 // work, so it's a far more reliable path to keep the backend's
-// driverLiveLocationKey fresh — throttled to BACKEND_PUSH_INTERVAL_MS so it
-// doesn't spam the API on every 3s/5m local tick. Pushes via
-// updateLiveLocation (POST /me/location/live), NOT updateLocation — that
-// endpoint also runs a per-trip proximity-notification loop meant to stay
-// on the slow ~10-min cadence, so this hook intentionally hits the
-// side-effect-free counterpart instead of piling 20x more calls onto it.
+// driverLiveLocationKey fresh. Pushes via updateLiveLocation
+// (POST /me/location/live), which also runs the proximity checks.
 // `enabled` gates the push (not the local stream, which the map always
-// needs) to match useProximityTracking's online-only pinging.
-export function useLiveDriverLocation(enabled: boolean): LiveCoords | null {
+// needs) to match useProximityTracking's online-only pinging. `stops` are
+// the active trips' next points (pickup, or dropoff once picked up).
+export function useLiveDriverLocation(enabled: boolean, stops: LatLng[] = []): LiveCoords | null {
   const [coords, setCoords] = useState<LiveCoords | null>(null)
   const enabledRef = useRef(enabled)
   const coordsRef = useRef<LiveCoords | null>(null)
   const lastPushedAtRef = useRef(0)
+  const lastPushedPointRef = useRef<LatLng | null>(null)
+  const stopsRef = useRef<LatLng[]>(stops)
+  stopsRef.current = stops
 
   useEffect(() => {
     enabledRef.current = enabled
@@ -62,9 +61,11 @@ export function useLiveDriverLocation(enabled: boolean): LiveCoords | null {
   const pushIfDue = () => {
     if (!enabledRef.current || !coordsRef.current) return
     const now = Date.now()
-    if (now - lastPushedAtRef.current < BACKEND_PUSH_INTERVAL_MS) return
+    const here = { lat: coordsRef.current.lat, lng: coordsRef.current.lng }
+    if (!shouldPush({ now, lastPushAt: lastPushedAtRef.current, here, lastPushed: lastPushedPointRef.current, stops: stopsRef.current })) return
     lastPushedAtRef.current = now
-    const { lat, lng } = coordsRef.current
+    lastPushedPointRef.current = here
+    const { lat, lng } = here
     driversService.updateLiveLocation(lat, lng).catch(() => {})
   }
 
@@ -103,7 +104,7 @@ export function useLiveDriverLocation(enabled: boolean): LiveCoords | null {
       // wall-clock cadence regardless of movement, using whatever fix is
       // already in coordsRef, so a stationary driver's location keeps
       // getting refreshed instead of quietly going stale.
-      intervalId = setInterval(pushIfDue, BACKEND_PUSH_INTERVAL_MS)
+      intervalId = setInterval(pushIfDue, WALL_CLOCK_TICK_MS)
     })()
 
     return () => {

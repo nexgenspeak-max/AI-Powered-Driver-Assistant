@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
+import { distanceMeters } from '../../../utils/geo'
 
 // Defined at module scope (not inside a component) so Expo/TaskManager can
 // re-register it on a headless relaunch — same requirement documented in
@@ -21,6 +22,30 @@ let onUpdate: LocationUpdateHandler = (coords) => {
   console.log('[locationTracking] ->', coords)
 }
 let tracking = false
+// Re-register once per app launch so a task still running from an older
+// build picks up the current options below.
+let configuredThisLaunch = false
+
+// JS-side floor on top of the OS filters: iOS ignores `timeInterval`
+// (Android-only in expo-location) and, with distanceInterval 0, delivered a
+// fix — and so a POST /me/location — every second while driving (measured
+// on the simulator 2026-10-18: 31 pings in 28 s). At most one push per
+// MIN_GAP_MS unless the driver moved MIN_MOVE_M, which still keeps the
+// backend's 1 km pickup-approach check well inside the radius.
+const MIN_GAP_MS = 20 * 1000
+const MIN_MOVE_M = 150
+let lastSentAt = 0
+let lastSent: DriverCoords | null = null
+
+function dueToSend(c: DriverCoords): boolean {
+  const now = Date.now()
+  if (!lastSent || now - lastSentAt >= MIN_GAP_MS || distanceMeters(lastSent, c) >= MIN_MOVE_M) {
+    lastSentAt = now
+    lastSent = c
+    return true
+  }
+  return false
+}
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
@@ -33,7 +58,8 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   const last = locations?.[locations.length - 1]
   if (!last) return
 
-  onUpdate({ lat: last.coords.latitude, lng: last.coords.longitude })
+  const coords = { lat: last.coords.latitude, lng: last.coords.longitude }
+  if (dueToSend(coords)) onUpdate(coords)
 })
 
 export function setLocationUpdateHandler(handler: LocationUpdateHandler): void {
@@ -60,7 +86,11 @@ export async function startTracking(): Promise<boolean> {
   // expo-location has no background task API on web (the function is simply
   // absent) — the Chuyến tab crashed the whole web preview on this line.
   if (Platform.OS === 'web') return false
-  const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
+  let alreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
+  if (alreadyRunning && !configuredThisLaunch) {
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME).catch(() => {})
+    alreadyRunning = false
+  }
 
   if (!alreadyRunning) {
     const granted = await ensurePermission()
@@ -82,18 +112,24 @@ export async function startTracking(): Promise<boolean> {
 
   if (alreadyRunning) return true
 
-  // Purely time-based (10 min) — distanceInterval: 0 means "don't also
-  // trigger early on movement", so the driver's live-location cadence stays
-  // predictable regardless of how far/fast they drive between pings.
+  // OS-level filters (the JS floor above still applies): ~100 m on both
+  // platforms, iOS batches background fixes (deferred*) and uses the
+  // automotive activity profile; Android's timeInterval caps the rate.
   await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
     accuracy: Location.Accuracy.Balanced,
-    timeInterval: 600000,
-    distanceInterval: 0,
+    timeInterval: 30000,
+    distanceInterval: 100,
+    deferredUpdatesInterval: 30000,
+    deferredUpdatesDistance: MIN_MOVE_M,
+    activityType: Location.ActivityType.AutomotiveNavigation,
+    pausesUpdatesAutomatically: false,
+    showsBackgroundLocationIndicator: true,
     foregroundService: {
-      notificationTitle: 'Czen Driver đang theo dõi vị trí',
+      notificationTitle: 'Czen đang theo dõi vị trí',
       notificationBody: 'Giúp báo cho khách hàng khi bạn sắp đến điểm đón.',
     },
   })
+  configuredThisLaunch = true
 
   return true
 }

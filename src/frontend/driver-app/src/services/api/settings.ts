@@ -19,7 +19,11 @@ export const settingsService = {
     authClient.get<AccountSettings>(`/settings/${accountId}`).then(r => r.data),
 
   update: (accountId: string, payload: Partial<Pick<AccountSettings,
-    'hands_free_mode' | 'notify_on_pickup_approach' | 'auto_suggest_next_stop' | 'default_customer_call_mode'
+    | 'hands_free_mode'
+    | 'notify_on_pickup_approach'
+    | 'notify_on_pickup_approach_radius_m'
+    | 'auto_suggest_next_stop'
+    | 'default_customer_call_mode'
   >>) =>
     authClient.patch<AccountSettings>(`/settings/${accountId}`, payload).then(r => r.data),
 }

@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { Pressable, View } from 'react-native'
 import { XStack, YStack, useTheme, useThemeName } from 'tamagui'
 import { Icon, type IconName } from '../../src/components/icons'
 import { useEffect, useState } from 'react'
@@ -55,6 +55,27 @@ export default function AssistantSettingsScreen() {
       queryClient.setQueryData(queryKey, data)
       if (payload.notify_on_pickup_approach === true) pushImmediateLocation('notify')
       if (payload.auto_suggest_next_stop === true) pushImmediateLocation('suggest')
+    },
+  })
+
+  const { mutate: setNotifyRadius } = useMutation({
+    mutationFn: (radius: number) =>
+      settingsService.update(driver!.id, { notify_on_pickup_approach_radius_m: radius }),
+    onMutate: async radius => {
+      await queryClient.cancelQueries({ queryKey })
+      const previous = queryClient.getQueryData<AccountSettings>(queryKey)
+      if (previous) {
+        queryClient.setQueryData<AccountSettings>(queryKey, { ...previous, notify_on_pickup_approach_radius_m: radius })
+      }
+      return { previous }
+    },
+    onError: (_err, _radius, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous)
+    },
+    onSuccess: data => {
+      queryClient.setQueryData(queryKey, data)
+      // Re-evaluate right away with the new radius.
+      pushImmediateLocation('notify')
     },
   })
 
@@ -127,6 +148,14 @@ export default function AssistantSettingsScreen() {
             isLight={isLight}
             theme={theme}
           />
+          {settings?.notify_on_pickup_approach ? (
+            <RadiusChips
+              label="Gọi nhắc khi còn cách"
+              options={NOTIFY_RADIUS_OPTIONS}
+              value={settings.notify_on_pickup_approach_radius_m}
+              onChange={setNotifyRadius}
+            />
+          ) : null}
           <View style={{ height: 1, backgroundColor: theme.border.val }} />
           <ToggleRow
             iconName="distance"
@@ -143,9 +172,59 @@ export default function AssistantSettingsScreen() {
   )
 }
 
+const NOTIFY_RADIUS_OPTIONS = [500, 1000, 2000, 3000]
+
+/** Radius choice under the pickup-approach toggle — 44pt chips, one row. */
+function RadiusChips({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: number[]
+  value: number
+  onChange: (radius: number) => void
+}) {
+  return (
+    <YStack paddingHorizontal="$4" paddingBottom="$4" gap="$2">
+      <AppText variant="caption" color="$textSecondary" paddingLeft={36}>
+        {label}
+      </AppText>
+      <XStack gap="$2" paddingLeft={36} flexWrap="wrap">
+        {options.map(m => {
+          const selected = m === value
+          return (
+            <Pressable
+              key={m}
+              onPress={() => !selected && onChange(m)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${label} ${formatMeters(m)}`}
+              hitSlop={4}
+            >
+              <XStack
+                height={36}
+                paddingHorizontal="$3"
+                borderRadius={18}
+                alignItems="center"
+                backgroundColor={selected ? '$primary' : '$chip'}
+              >
+                <AppText variant="label" color={selected ? '$textInverse' : '$textPrimary'}>
+                  {formatMeters(m)}
+                </AppText>
+              </XStack>
+            </Pressable>
+          )
+        })}
+      </XStack>
+    </YStack>
+  )
+}
+
 function formatMeters(meters: number | undefined): string {
   if (!meters) return '—'
-  return meters >= 1000 ? `${(meters / 1000).toFixed(meters % 1000 === 0 ? 0 : 1)}km` : `${meters}m`
+  return meters >= 1000 ? `${(meters / 1000).toFixed(meters % 1000 === 0 ? 0 : 1).replace('.', ',')} km` : `${meters} m`
 }
 
 function ToggleRow({

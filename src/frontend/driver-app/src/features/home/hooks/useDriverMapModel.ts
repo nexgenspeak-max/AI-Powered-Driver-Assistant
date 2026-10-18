@@ -32,7 +32,20 @@ export type NextStop = {
 
 export function useDriverMapModel() {
   const { data: context } = useDriverContext()
-  const live = useLiveDriverLocation(context?.driver.status === 'online')
+  // Next point of each active trip — drives the live-push cadence so the
+  // backend's 1 km pickup reminder is checked often enough near a stop.
+  const activeStops = useMemo(
+    () =>
+      (context?.active_trips ?? EMPTY_TRIPS)
+        .map(t =>
+          t.status === 'picked_up'
+            ? { lat: t.dropoff_lat, lng: t.dropoff_lng }
+            : { lat: t.pickup_lat, lng: t.pickup_lng },
+        )
+        .filter((p): p is { lat: number; lng: number } => typeof p.lat === 'number' && typeof p.lng === 'number'),
+    [context?.active_trips],
+  )
+  const live = useLiveDriverLocation(context?.driver.status === 'online', activeStops)
 
   // Stable identity when lat/lng unchanged — DriverMap camera effect must not
   // see a new array every render or setCameraStop loops ("Maximum update depth").

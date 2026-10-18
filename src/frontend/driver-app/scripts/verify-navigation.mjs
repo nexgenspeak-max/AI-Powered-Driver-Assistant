@@ -89,3 +89,38 @@ assert.ok(REROUTE_MIN_INTERVAL_MS >= 10_000)
 assert.equal(offRouteTick(far, [], 5, 0, 1).offRoute, false)
 
 console.log('navigation selfcheck: OK (step advance + overshoot, remaining-from-position, off-route detection + throttle)')
+
+// ── Live-push cadence (lib/pushCadence.ts) ─────────────────────────────
+{
+  const builtCadence = await esbuild.build({
+    entryPoints: [path.join(appRoot, 'src', 'features', 'home', 'lib', 'pushCadence.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    write: false,
+    logLevel: 'silent',
+  })
+  const c = await import(`data:text/javascript;base64,${Buffer.from(builtCadence.outputFiles[0].text).toString('base64')}`)
+  const pickup = { lat: 21.048, lng: 105.844 }
+  const far = { lat: 21.0285, lng: 105.8542 } // ~2.4 km
+  const veryFar = { lat: 21.0, lng: 105.8 } // ~6.6 km
+  const t0 = 1_000_000
+
+  // No active stop: idle 10-min ping only.
+  assert.equal(c.pushPolicy(far, []).intervalMs, c.IDLE_INTERVAL_MS)
+  assert.equal(c.shouldPush({ now: t0 + 60_000, lastPushAt: t0, here: far, lastPushed: veryFar, stops: [] }), false, 'idle: moving 5 km does not push before 10 min')
+  // First fix always pushes.
+  assert.equal(c.shouldPush({ now: t0, lastPushAt: 0, here: far, lastPushed: null, stops: [pickup] }), true)
+  // En route (> 3 km): 60 s or 500 m.
+  assert.equal(c.pushPolicy(veryFar, [pickup]).intervalMs, c.EN_ROUTE_INTERVAL_MS)
+  assert.equal(c.shouldPush({ now: t0 + 30_000, lastPushAt: t0, here: veryFar, lastPushed: veryFar, stops: [pickup] }), false)
+  assert.equal(c.shouldPush({ now: t0 + 61_000, lastPushAt: t0, here: veryFar, lastPushed: veryFar, stops: [pickup] }), true)
+  // Near (<= 3 km): 15 s, or 150 m moved.
+  assert.equal(c.pushPolicy(far, [pickup]).intervalMs, c.NEAR_INTERVAL_MS)
+  const moved200 = { lat: far.lat + 0.0018, lng: far.lng } // ~200 m north
+  assert.equal(c.shouldPush({ now: t0 + 5_000, lastPushAt: t0, here: moved200, lastPushed: far, stops: [pickup] }), true, 'near: 200 m move pushes immediately')
+  assert.equal(c.shouldPush({ now: t0 + 5_000, lastPushAt: t0, here: far, lastPushed: far, stops: [pickup] }), false)
+  assert.equal(c.shouldPush({ now: t0 + 16_000, lastPushAt: t0, here: far, lastPushed: far, stops: [pickup] }), true)
+  // At 30 km/h (~8.3 m/s) the worst gap near a stop is 150 m, so a 1 km radius can't be skipped.
+  console.log('push cadence selfcheck: OK (idle 10 min, en route 60 s/500 m, near stop 15 s/150 m)')
+}
