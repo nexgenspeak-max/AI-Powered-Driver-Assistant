@@ -21,7 +21,12 @@ export function defaultProbes(): HealthProbe[] {
   // Local: the worker writes log files; deployed: ECS reports running tasks.
   const voice: HealthProbe = config.logSource === 'cloudwatch'
     ? () => ecsServiceProbe('llm-orchestrator')
-    : async () => logFreshnessProbe('llm-orchestrator', resolveLogFiles('llm-orchestrator'), config.logFreshnessMs);
+    : async () => {
+        // An idle worker logs nothing for minutes, so log age alone reported a
+        // running agent as down. Ask its health server first.
+        const live = await httpProbe('llm-orchestrator', config.agentHealthUrl, 1500);
+        return live.ok ? live : logFreshnessProbe('llm-orchestrator', resolveLogFiles('llm-orchestrator'), config.logFreshnessMs);
+      };
   const self: HealthProbe = async () => ({ id: 'ops-service', ok: true, latency_ms: 0, detail: 'self' });
   return [...http, self, voice];
 }

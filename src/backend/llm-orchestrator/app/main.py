@@ -42,5 +42,8 @@ if __name__ == "__main__":
             # `dev` defaults num_idle_processes to 0, so the first job waits
             # ~1.5s to spawn a process ("no warmed process available").
             num_idle_processes=1,
+            # Fixed health port so ops-service can tell a running-but-idle
+            # worker from a stopped one (dev mode picked a random port).
+            port=int(os.getenv("AGENT_HEALTH_PORT", "8091")),
         )
     )

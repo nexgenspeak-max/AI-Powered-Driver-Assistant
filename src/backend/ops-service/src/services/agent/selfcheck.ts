@@ -4,7 +4,7 @@
  */
 import { parseDotEnv } from './envFile';
 import { parseManifest } from './manifest';
-import { loadAgentSnapshot, loadPromptsSnapshot } from './index';
+import { loadAgentSnapshot, loadPromptsSnapshot, parseFlatToml } from './index';
 import { parseToolSchemaSections } from './toolsDefinition';
 import { config } from '../../config';
 
@@ -23,6 +23,18 @@ STT_PROVIDER=google
 assert(envSample.LLM_MODEL === 'gpt-test', 'parseDotEnv LLM_MODEL');
 assert(envSample.STT_PROVIDER === 'google', 'parseDotEnv STT_PROVIDER');
 assert(!('comment' in envSample), 'parseDotEnv skips comments');
+
+const tomlSample = parseFlatToml(`
+# local agent settings
+stt_provider = "google"
+llm_model = "gpt-5.6-luna"  # inline comment
+google_tts_speaking_rate = 0.95
+skip_list = ["a", "b"]
+`)
+assert(tomlSample.STT_PROVIDER === 'google', 'parseFlatToml string')
+assert(tomlSample.LLM_MODEL === 'gpt-5.6-luna', 'parseFlatToml inline comment')
+assert(tomlSample.GOOGLE_TTS_SPEAKING_RATE === '0.95', 'parseFlatToml number')
+assert(!('SKIP_LIST' in tomlSample), 'parseFlatToml skips arrays')
 
 const manifest = parseManifest(`
 default: vn

@@ -65,6 +65,34 @@ function envPath(root: string): { path: string; label: string } {
   return { path: example, label: 'envs/.env.example' };
 }
 
+/**
+ * Non-secret agent settings moved to envs/config.<env>.toml (flat
+ * `key = value`, see llm-orchestrator app/config/local_config.py); reading
+ * only .env left every model on the Agent page as "-". Same precedence as
+ * the agent: a variable set in .env wins over the TOML value.
+ */
+export function parseFlatToml(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\s+#.*$/, '').trim();
+    if (!line || line.startsWith('#') || line.startsWith('[')) continue;
+    const m = line.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/);
+    if (!m) continue;
+    let value = m[2].trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    } else if (value.startsWith('[') || value.startsWith('{')) {
+      continue;
+    }
+    out[m[1].toUpperCase()] = value;
+  }
+  return out;
+}
+
+function tomlPath(root: string): string {
+  return join(root, 'envs', `config.${config.env === 'local' ? 'local' : config.env}.toml`);
+}
+
 function readEnv(file: string): Record<string, string> {
   if (!existsSync(file)) {
     return {};
@@ -152,8 +180,12 @@ function listTools(root: string): ToolEntry[] {
 }
 
 export function loadAgentSnapshot(root = config.voiceAgentRoot): AgentSnapshot {
-  const { path: envFile, label } = envPath(root);
-  const env = readEnv(envFile);
+  const { path: envFile, label: envLabel } = envPath(root);
+  const secretsEnv = readEnv(envFile);
+  const toml = tomlPath(root);
+  const tomlEnv = existsSync(toml) ? parseFlatToml(readFileSync(toml, 'utf8')) : {};
+  const env: Record<string, string> = { ...tomlEnv, ...secretsEnv };
+  const label = existsSync(toml) ? `envs/${toml.split('/').pop()} + ${envLabel}` : envLabel;
   let env_mtime = '-';
   try {
     env_mtime = statSync(envFile).mtime.toISOString();
@@ -183,8 +215,8 @@ export function loadAgentSnapshot(root = config.voiceAgentRoot): AgentSnapshot {
     .sort()
     .map((key) => ({ key, value: env[key] }));
 
-  const secret_keys = Object.keys(env)
-    .filter((key) => isSecretEnvKey(key) && presentFlag(env, key))
+  const secret_keys = Object.keys(secretsEnv)
+    .filter((key) => isSecretEnvKey(key) && presentFlag(secretsEnv, key))
     .sort();
 
   return {
@@ -206,14 +238,15 @@ export function loadAgentSnapshot(root = config.voiceAgentRoot): AgentSnapshot {
       },
       tts: {
         provider: pick('TTS_PROVIDER'),
-        voice: pick('TTS_VOICE') || pick('GOOGLE_TTS_VOICE') || pick('ELEVENLABS_VOICE_ID'),
+        // pick() falls back to '-', which is truthy, so chain on '' instead.
+        voice: pick('TTS_VOICE', '') || pick('GOOGLE_TTS_VOICE', '') || pick('ELEVENLABS_VOICE_ID'),
         google_voice: pick('GOOGLE_TTS_VOICE'),
         elevenlabs_model: pick('ELEVENLABS_MODEL'),
       },
     },
     livekit: {
       url: pick('LIVEKIT_URL'),
-      agent_name: pick('LIVEKIT_AGENT_NAME', 'driver-assistant'),
+      agent_name: pick('LIVEKIT_AGENT_NAME', pick('AGENT_NAME', 'driver-assistant')),
     },
     flags: {
       faq_rag: pick('FAQ_RAG_ENABLED', 'true') !== 'false',

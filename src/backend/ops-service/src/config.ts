@@ -35,6 +35,8 @@ export const config = {
   voiceAgentRoot:
     process.env.LLM_ORCHESTRATOR_ROOT || process.env.VOICE_AGENT_ROOT || voiceAgentRoot,
   logFreshnessMs: Number(process.env.LOG_FRESHNESS_MS || 30_000),
+  // LiveKit worker health server (llm-orchestrator main.py, AGENT_HEALTH_PORT).
+  agentHealthUrl: process.env.AGENT_HEALTH_URL || 'http://localhost:8091/',
   callLoggerUrl:
     process.env.CALL_RECORDS_SERVICE_URL ||
     process.env.CALL_LOGGER_URL ||
