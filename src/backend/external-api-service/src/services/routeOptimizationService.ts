@@ -167,15 +167,37 @@ function sleep(ms: number): Promise<void> {
 
 const HOP_RETRY_DELAY_MS = 400;
 
+// Road shape of one stop→stop hop barely changes between rebuilds — only
+// the first hop (from the driver's live GPS) moves. Every rebuild used to
+// re-fetch all ~N hops from Goong /Direction, and bursts of rebuilds (trip
+// change + location push + voice nudge in the same second) got the later
+// calls rate-limited into straight-line segments on the map. Process-local:
+// a cold container (or a restart) just refetches.
+const HOP_CACHE_TTL_MS = 30 * 60 * 1000;
+const HOP_CACHE_MAX = 500;
+const hopCache = new Map<string, { path: LatLng[]; at: number }>();
+
+function hopKey(from: LatLng, to: LatLng): string {
+  return `${from.lat.toFixed(5)},${from.lng.toFixed(5)}>${to.lat.toFixed(5)},${to.lng.toFixed(5)}`;
+}
+
 // One hop's fetch+decode — split out of buildRoadPath so it can be retried.
 // Returns null (not a throw) on any failure/empty result, same "degrade,
-// don't block" contract the loop below already had.
+// don't block" contract the loop below already had. Failures are never
+// cached, so the next rebuild retries that hop.
 async function fetchHopPath(from: LatLng, to: LatLng): Promise<LatLng[] | null> {
+  const key = hopKey(from, to);
+  const hit = hopCache.get(key);
+  if (hit && Date.now() - hit.at < HOP_CACHE_TTL_MS) return hit.path;
   try {
     const route = await mapsService.getRoute('', '', from, to);
     if (route.polyline) {
       const decoded = decodePolyline(route.polyline);
-      if (decoded.length > 0) return decoded;
+      if (decoded.length > 0) {
+        if (hopCache.size >= HOP_CACHE_MAX) hopCache.delete(hopCache.keys().next().value as string);
+        hopCache.set(key, { path: decoded, at: Date.now() });
+        return decoded;
+      }
     }
   } catch {
     // fall through to null — caller logs with hop context
@@ -369,7 +391,19 @@ export async function getOptimizedRoute(
   const cached = await cacheGet<OptimizedRoute>(key);
   if (cached) return cached;
 
-  const computed = await computeOptimizedRoute(driverPhone, trips, currentLocation);
-  if (computed) await cacheSet(key, computed, CACHE_TTL_SECONDS);
-  return computed;
+  // Single-flight: concurrent misses for the same driver (context fetch,
+  // location push and voice nudge all land right after a trip change)
+  // share one computation instead of each firing the full matrix + every
+  // Direction hop at Goong in the same second.
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const run = (async () => {
+    const computed = await computeOptimizedRoute(driverPhone, trips, currentLocation);
+    if (computed) await cacheSet(key, computed, CACHE_TTL_SECONDS);
+    return computed;
+  })().finally(() => inflight.delete(key));
+  inflight.set(key, run);
+  return run;
 }
+
+const inflight = new Map<string, Promise<OptimizedRoute | null>>();
