@@ -118,6 +118,7 @@ export default function AppLayout() {
         <Tabs.Screen name="safety" options={{ href: null, title: 'Safety' }} />
         <Tabs.Screen name="support" options={{ href: null, title: 'Support' }} />
         <Tabs.Screen name="terms" options={{ href: null, title: 'Terms' }} />
+        <Tabs.Screen name="dev-say" options={{ href: null, title: 'Dev say' }} />
       </Tabs>
       <AssistantChatOverlay />
       {/* Last and highest: a new offer auto-opens the voice panel (the
