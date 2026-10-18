@@ -234,28 +234,7 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
                     : "Chạm nút Czen cạnh ô nhập rồi nói, hoặc chọn một gợi ý."}
                 </AppText>
               </YStack>
-              <XStack flexWrap="wrap" justifyContent="center" gap="$2">
-                {SUGGESTIONS[voiceLang].map((s) => (
-                  <Pressable
-                    key={s}
-                    onPress={() => sendText(s)}
-                    accessibilityRole="button"
-                    accessibilityLabel={s}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <View
-                      paddingHorizontal="$3"
-                      paddingVertical="$2"
-                      borderRadius="$pill"
-                      backgroundColor="$chip"
-                      borderWidth={StyleSheet.hairlineWidth}
-                      borderColor="$border"
-                    >
-                      <AppText variant="label">{s}</AppText>
-                    </View>
-                  </Pressable>
-                ))}
-              </XStack>
+              <SuggestionChips items={SUGGESTIONS[voiceLang]} onPick={sendText} align="center" />
             </YStack>
           )}
           {chats.map((chat, i) =>
@@ -317,6 +296,12 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
             <AppText variant="caption" color="$danger">
               {error}
             </AppText>
+          )}
+          {/* Quick replies stay under the greeting until the driver's first
+              turn — the greeting used to arrive and wipe the chips just as
+              they were most useful. */}
+          {chats.length > 0 && !chats.some((c) => c.who === "me") && (
+            <SuggestionChips items={SUGGESTIONS[voiceLang]} onPick={sendText} align="flex-start" />
           )}
         </ScrollView>
 
@@ -413,5 +398,40 @@ export function AssistantChatPanel({ onClose }: Props = {}) {
         </XStack>
       </KeyboardSafeView>
     </Theme>
+  );
+}
+
+function SuggestionChips({
+  items,
+  onPick,
+  align,
+}: {
+  items: readonly string[];
+  onPick: (text: string) => void;
+  align: "center" | "flex-start";
+}) {
+  return (
+    <XStack flexWrap="wrap" justifyContent={align} gap="$2" marginTop={align === "flex-start" ? "$2" : 0}>
+      {items.map((s) => (
+        <Pressable
+          key={s}
+          onPress={() => onPick(s)}
+          accessibilityRole="button"
+          accessibilityLabel={s}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <View
+            paddingHorizontal="$3"
+            paddingVertical="$2"
+            borderRadius="$pill"
+            backgroundColor="$chip"
+            borderWidth={StyleSheet.hairlineWidth}
+            borderColor="$border"
+          >
+            <AppText variant="label">{s}</AppText>
+          </View>
+        </Pressable>
+      ))}
+    </XStack>
   );
 }
