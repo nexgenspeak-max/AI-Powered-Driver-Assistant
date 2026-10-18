@@ -26,50 +26,51 @@ def _trip_facts_block(trip: dict | None, lang: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _sentence(text: str) -> str:
+    """Relay a driver message as one spoken sentence — no quotes, end punctuation."""
+    t = (text or "").strip().strip('"“”').strip()
+    if t and t[-1] not in ".!?":
+        t += "."
+    return t[:1].upper() + t[1:] if t else t
+
+
 def build_customer_call_opening(
     *,
     lang: str,
     pickup_address: str = "",
     trip_id: str = "",
     custom_message: str = "",
+    customer_name: str = "",
+    driver_name: str = "",
 ) -> str:
     """Canned first utterance after SIP pickup — TTS via session.say, no LLM wait.
 
     Outbound callers speak first. Do not add a second sleep on top of
-    wait_for_sip_pickup's post_answer_delay.
+    wait_for_sip_pickup's post_answer_delay. Persona matches the rest of the
+    call ("em", Czen); the driver's message is spoken as a plain sentence,
+    never read out inside quotes.
     """
     is_contact = not trip_id
-    if custom_message:
-        if lang == "en":
-            return (
-                f'Hello, this is the driver\'s assistant. The driver asked me to pass along: '
-                f'"{custom_message}" Can you hear me?'
-            )
-        return (
-            f'Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi nhắn: "{custom_message}". '
-            "Bạn có nghe rõ không?"
-        )
-    if is_contact:
-        if lang == "en":
-            return (
-                "Hello, this is the driver's assistant. The driver asked me to give you a call. "
-                "Can you hear me?"
-            )
-        return (
-            "Xin chào, tôi là trợ lý của tài xế. Tài xế nhờ tôi gọi cho bạn. "
-            "Bạn có nghe rõ không?"
-        )
+    name = (customer_name or "").strip()
+    driver = (driver_name or "").strip()
     if lang == "en":
+        hello = f"Hi {name}, " if name else "Hi, "
+        who = f"this is Czen, {driver}'s assistant." if driver else "this is Czen, your driver's assistant."
+        if custom_message:
+            return f"{hello}{who} {_sentence(custom_message)} Can you hear me okay?"
+        if is_contact:
+            return f"{hello}{who} The driver asked me to give you a call. Can you hear me okay?"
         where = f" at {pickup_address}" if pickup_address else ""
-        return (
-            f"Hello, this is the driver's assistant calling to confirm your pickup{where}. "
-            "Can you hear me?"
-        )
+        return f"{hello}{who} I'm calling to confirm your pickup{where}. Can you hear me okay?"
+
+    hello = f"Dạ em chào anh chị {name} ạ, " if name else "Dạ em chào anh chị ạ, "
+    who = f"em là Czen, trợ lý của tài xế {driver}." if driver else "em là Czen, trợ lý gọi thay tài xế."
+    if custom_message:
+        return f"{hello}{who} {_sentence(custom_message)} Anh chị nghe rõ không ạ?"
+    if is_contact:
+        return f"{hello}{who} Tài xế nhờ em gọi cho anh chị. Anh chị nghe rõ không ạ?"
     where_vi = f" tại {pickup_address}" if pickup_address else ""
-    return (
-        f"Xin chào, tôi là trợ lý của tài xế, gọi để xác nhận đón bạn{where_vi}. "
-        "Bạn có nghe rõ không?"
-    )
+    return f"{hello}{who} Em gọi để xác nhận điểm đón{where_vi}. Anh chị nghe rõ không ạ?"
 
 
 def build_customer_call_prompt(

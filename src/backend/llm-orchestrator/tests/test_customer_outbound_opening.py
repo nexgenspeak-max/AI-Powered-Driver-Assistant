@@ -30,8 +30,33 @@ def test_opening_is_canned_not_llm_and_mentions_custom_message():
         pickup_address="Chợ Bến Thành",
         custom_message="tôi đến trong 5 phút",
     )
-    assert "tôi đến trong 5 phút" in text
-    assert "Xin chào" in text
+    assert "Tôi đến trong 5 phút." in text
+    assert '"' not in text  # relayed as a sentence, not read inside quotes
+    assert text.startswith("Dạ em chào")
+
+
+def test_opening_uses_customer_name_and_czen_persona():
+    text = build_customer_call_opening(
+        lang="vn",
+        trip_id="t1",
+        customer_name="Lan",
+        driver_name="David",
+        custom_message="Tài xế còn khoảng 1 km nữa là tới Chợ Bến Thành",
+    )
+    assert text == (
+        "Dạ em chào anh chị Lan ạ, em là Czen, trợ lý của tài xế David. "
+        "Tài xế còn khoảng 1 km nữa là tới Chợ Bến Thành. Anh chị nghe rõ không ạ?"
+    )
+    assert " tôi " not in f" {text.lower()} "
+
+
+def test_noise_transcripts_are_not_customer_turns():
+    from app.voicebot.processors.stt_noise import is_noise_transcript
+
+    for noise in ("Nhạc chuông.", "nhạc chuông", "[âm nhạc]", "(music)", "♪♪", "tút tút", "Ringing", ""):
+        assert is_noise_transcript(noise), noise
+    for speech in ("Alo", "Dạ", "ừ", "ok em", "Tôi ra ngay", "chuông cửa hỏng rồi em"):
+        assert not is_noise_transcript(speech), speech
 
 
 def test_contact_opening_does_not_mention_pickup():

@@ -21,6 +21,7 @@ from livekit.plugins import silero
 from livekit.agents.llm import ChatMessage
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from app.voicebot.processors.stt_noise import is_noise_transcript
 from app.agent import turn_metrics
 from app.agent.llm_warmup import warmup_llm
 from app.config.settings import get_settings
@@ -711,6 +712,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     # consecutive-silence count at 1 and making the ~2.5min
                     # auto-hangup unreachable no matter how long the real silence.
                     and item.text_content != silence_tracker.silence_message
+                    and not is_noise_transcript(item.text_content)
                 ):
                     silence_tracker.reset_silence_timer(source="conversation_item_added")
                     session_userdata["_customer_spoke"] = True
@@ -764,7 +766,7 @@ async def entrypoint(ctx: JobContext) -> None:
                             f"{ev.transcript!r}"
                         ),
                     )
-                if ev.is_final and ev.transcript.strip():
+                if ev.is_final and ev.transcript.strip() and not is_noise_transcript(ev.transcript):
                     session_userdata["_customer_spoke"] = True
 
             @session.on("user_state_changed")

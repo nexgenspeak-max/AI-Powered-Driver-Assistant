@@ -3,6 +3,8 @@ import logging
 
 from livekit.agents import Agent
 
+from livekit.agents import StopResponse
+from app.voicebot.processors.stt_noise import is_noise_transcript
 from app.voicebot.prompts.customer_call import build_customer_call_opening, build_customer_call_prompt
 from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.speech_text_fix import SpeechTextFixMixin, pronunciations_for_lang
@@ -99,6 +101,13 @@ class CustomerCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
         self.session.userdata["_agent_call_answered"] = True
         await self._speak_opening_if_needed()
 
+    async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        # Ringback / hold music transcribed as text ("Nhạc chuông.") is not a
+        # customer turn — never answer it (live custcall-931030fb).
+        if is_noise_transcript(getattr(new_message, "text_content", "") or ""):
+            logger.info("customer call | dropped non-speech transcript %r", new_message.text_content)
+            raise StopResponse()
+
     def _customer_spoke(self) -> bool:
         return bool(self.session.userdata.get("_customer_spoke"))
 
@@ -139,6 +148,8 @@ class CustomerCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
             pickup_address=self._trip.get("pickup_address", ""),
             trip_id=self._trip.get("trip_id", ""),
             custom_message=self._custom_message,
+            customer_name=self._customer_name,
+            driver_name=self._driver_name,
         )
         logger.info("customer call | speaking opening after pickup")
         await self.session.say(purpose, allow_interruptions=True)

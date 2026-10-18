@@ -43,6 +43,18 @@ function errMsg(err: unknown): string {
 // Fires the "driver is close to pickup" call at most once per trip — the
 // dedupe flag is what makes this safe to call on every single GPS ping
 // without spamming the customer.
+/** "Tài xế còn khoảng 900 m nữa là tới Đền Quán Thánh, anh chị ra điểm đón giúp tài xế nhé."
+ *  Spoken by the customer-call agent as its opening — real distance and the
+ *  short pickup name instead of a fixed "sắp đến" line. */
+export function pickupApproachMessage(distanceM: number, pickupAddress?: string): string {
+  // Round first, then pick the unit, so 996 m reads "1 km", not "1000 m".
+  const rounded = distanceM < 950 ? Math.max(100, Math.round(distanceM / 100) * 100) : Math.round(distanceM / 500) * 500;
+  const d = rounded < 1000 ? `${rounded} m` : `${(rounded / 1000).toString().replace('.', ',')} km`;
+  const place = (pickupAddress ?? '').split(',')[0].trim();
+  const where = place ? ` là tới ${place}` : ' là tới điểm đón';
+  return `Tài xế còn khoảng ${d} nữa${where}, anh chị ra điểm đón giúp tài xế nhé.`;
+}
+
 export async function maybeNotifyCustomerOfProximity(
   trip: tripService.Trip,
   driverCoords: LatLng,
@@ -96,7 +108,7 @@ export async function maybeNotifyCustomerOfProximity(
         mode: 'background',
         customerName: trip.customer_name,
         pickupAddress: trip.pickup_address,
-        customMessage: 'Tài xế sắp đến điểm đón, vui lòng ra cổng hoặc đường lớn để tài xế dễ đón bạn nhé.',
+        customMessage: pickupApproachMessage(distance, trip.pickup_address),
       });
     } catch (err) {
       log.warning('pickup call failed', { trip: tripShort(trip), error: errMsg(err) });
