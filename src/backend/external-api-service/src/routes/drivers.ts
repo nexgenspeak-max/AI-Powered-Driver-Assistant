@@ -57,6 +57,32 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
+// Dispatcher live map: every driver with a fresh GPS fix (the 20-min live
+// cache written by POST /me/location/live). Staff only — a driver must not see
+// where every other driver is.
+router.get('/locations', async (req: Request, res: Response) => {
+  try {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+      return res.status(403).json({ detail: 'Only dispatchers can see driver locations' });
+    }
+    const drivers = await driverService.listAll();
+    const rows = await Promise.all(drivers.map(async (d) => {
+      // The cache is keyed by the phone the app signed in with (0…, 84…, +84…).
+      let loc: { lat: number; lng: number; updated_at?: string } | null = null;
+      for (const p of phoneVariants(d.phone)) {
+        loc = await cacheGet<{ lat: number; lng: number; updated_at?: string }>(driverLiveLocationKey(p));
+        if (loc) break;
+      }
+      return loc && typeof loc.lat === 'number'
+        ? { phone: d.phone, name: d.name, status: d.status, lat: loc.lat, lng: loc.lng, updated_at: loc.updated_at ?? null }
+        : null;
+    }));
+    return res.json(rows.filter(Boolean));
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 router.get('/online', async (_req: Request, res: Response) => {
   try {
     const all = await driverService.listAll();
