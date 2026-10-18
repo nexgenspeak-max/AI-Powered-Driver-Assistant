@@ -7,7 +7,10 @@ import logging
 from functools import lru_cache
 
 from app.config.settings import get_settings
-from app.rag.paths import FAQ_LANGUAGES, index_dir, normalize_language
+from app.rag.build import build_index, index_is_stale
+from app.rag.paths import FAQ_LANGUAGES, index_dir, knowledge_dir, normalize_language
+import re
+
 from app.rag.prompts import VOICE_SYNTHESIS_PROMPT_EN, VOICE_SYNTHESIS_PROMPT_VI
 from llama_index.core import Settings as LlamaSettings
 from llama_index.embeddings.openai import OpenAIEmbedding
@@ -15,6 +18,18 @@ from llama_index.llms.openai import OpenAI
 
 logger = logging.getLogger("llm-orchestrator.rag")
 
+
+
+_MD_EMPHASIS = re.compile(r"(\*\*|__|\*|`)")
+_MD_BULLET = re.compile(r"^\s*(?:[-•]|\d+\.)\s+", re.M)
+
+
+def strip_markdown(text: str) -> str:
+    """The playbook is markdown and the LLM echoes its **bold** / *italic*.
+    The answer is spoken and shown in a chat bubble, so drop the markup."""
+    text = _MD_EMPHASIS.sub("", text)
+    text = _MD_BULLET.sub("", text)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 class FaqRagService:
     """Lazy-loaded LlamaIndex query engines — one index per language."""
@@ -82,6 +97,12 @@ class FaqRagService:
 
         settings = get_settings()
         lang_index_dir = index_dir(settings, lang)
+        lang_knowledge_dir = knowledge_dir(settings, lang)
+        if index_is_stale(lang_knowledge_dir, lang_index_dir):
+            try:
+                build_index(lang_knowledge_dir, lang_index_dir, self._embed_model)
+            except Exception:
+                logger.error("FAQ index build failed for %s", lang, exc_info=True)
         if not lang_index_dir.exists():
             self._load_errors[lang] = (
                 f"FAQ index not found at {lang_index_dir}. "
@@ -135,7 +156,7 @@ class FaqRagService:
         template = VOICE_SYNTHESIS_PROMPT_EN if lang == "en" else VOICE_SYNTHESIS_PROMPT_VI
         prompt = template.format(context=context, question=question)
         result = self._llm.complete(prompt)
-        return str(result).strip()
+        return strip_markdown(str(result))
 
     def answer_sync(self, question: str, language: str = "vi") -> str:
         lang = normalize_language(language)

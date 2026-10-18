@@ -114,6 +114,30 @@ When the call ends, the AI reads **one** summary (what the customer confirmed). 
 2. AI asks for confirmation
 3. Say *"Yes"* / *"Confirm"* to complete cancellation
 
+### 3.8 Taking trips, navigation and automatic features
+
+**New trip offers.** While you are online, a new trip opens the *New trip* sheet: estimated fare, distance, duration, pickup time, customer name, notes (bulky luggage, children), pickup and drop-off. You have 20 seconds to tap **Accept** or **Reject**; **Later** (the X) keeps the trip in the *Waiting* list on the Trips tab. The Czen assistant also reads the offer aloud and asks whether you accept.
+
+**Go online / offline.** Tap **Go online** on Home, or use the switch at the top of the **Trips** tab.
+
+**In-app navigation.** The *Next stop* card on Home shows who to pick up or drop off, where, and how far. Tap **Directions** for turn-by-turn guidance inside the app (turn left/right in how many metres, remaining km and minutes). Going off route triggers an automatic re-route. Stops are ordered by fastest travel time and re-ordered when a trip is added.
+
+**Automatic reminder call near the pickup.** In *Profile → Assistant settings*, enable **Notify customer near pickup** and pick **Call when within**: 500 m, 1 km (default), 2 km or 3 km. When the car enters that radius the AI calls the customer to say the driver is almost there. If nobody answers, it redials. No action needed from the driver.
+
+**Arrived / Complete only when you are really there.** The app and the assistant only allow *Arrived at pickup* within about 200 m of the pickup (map error margin), and *Complete trip* within about 200 m of the drop-off. Further away, the app tells you how far you still are. Calling the customer works at any distance.
+
+**The AI confirms when your intent to call is unclear.** For an ambiguous line (for example *"Maybe call the customer?"*), the AI asks before dialling. Say *"Call"* / *"Yes"* to dial or *"No"* to drop it. The question expires after about 30 seconds or when you change the topic.
+
+**Hands-free mode.** In *Assistant settings*, enable **Hands-free mode**. The app listens in the background for the wake phrase **"hey AI"** to open the assistant without touching the screen (Android for now).
+
+**Suggest the next stop.** Enable it in *Assistant settings*. Within 200 m of the current stop, the assistant proposes the next pickup or drop-off.
+
+**Other settings.** *Assistant language* (Vietnamese or English, applied from the next connection) and *Default way to call customers* (AI calls for you, or you talk directly). Settings are stored on your account, so they follow you to a new phone.
+
+**Type instead of speaking.** In the chat, tap **Mute mic, keep connection** and type. The quick replies *Today's schedule*, *Call customer*, *Today's earnings*, *Where next?* send a question with one tap.
+
+**Earnings.** The **Earnings** tab has Today / 7 days / 30 days, a 7-day chart and trip history. The **Profile** tab shows rating, total trips, acceptance rate and completion rate.
+
 ---
 
 ## 4. How to book a ride (customer)
@@ -197,8 +221,17 @@ A: Wait longer (extend wait time), call the customer via AI, or report a no-show
 **Q: Is it safe to use voice while driving?**  
 A: The AI gives short answers, one task at a time. For complex actions, pull over safely first.
 
-**Q: Can the AI replace Google Maps?**  
-A: No. The AI gives pickup address summaries; use Google Maps / Waze for turn-by-turn navigation.
+**Q: Do I need Google Maps for directions?**  
+A: No. Tap **Directions** on the next-stop card for turn-by-turn navigation inside the app. The AI also answers how far, how long, and whether traffic is heavy.
+
+**Q: Does the app remind the customer when I am close?**  
+A: Yes. Enable *Notify customer near pickup* in *Assistant settings* and choose 500 m / 1 km / 2 km / 3 km. Inside that radius the AI calls the customer to come out.
+
+**Q: Why can't I tap "Arrived at pickup"?**  
+A: The app only allows it within about 200 m of the pickup. Drive closer and tap again. Calling the customer works at any distance.
+
+**Q: How do I turn on hands-free mode?**  
+A: *Profile → Assistant settings* → enable **Hands-free mode**, then say **"hey AI"** to open the assistant without touching the screen (Android).
 
 ### 6.3 Customers
 

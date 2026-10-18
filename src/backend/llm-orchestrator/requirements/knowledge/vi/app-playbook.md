@@ -114,6 +114,30 @@ Khi cuộc gọi kết thúc, AI đọc **một lần** tóm tắt (khách xác 
 2. AI hỏi xác nhận
 3. Nói *"Có"* / *"Đồng ý"* để xác nhận hủy
 
+### 3.8 Nhận chuyến, chỉ đường và các tính năng tự động
+
+**Nhận chuyến mới.** Khi đang bật nhận chuyến, chuyến mới hiện thành bảng *Chuyến mới*: cước ước tính, quãng đường, thời gian, giờ đón, tên khách, ghi chú (hàng cồng kềnh, có trẻ em), điểm đón và điểm đến. Có 20 giây để chọn **Nhận chuyến** hoặc **Từ chối**; bấm **Để sau** (dấu X) thì chuyến vẫn nằm trong danh sách *Chờ* ở tab Chuyến. Trợ lý Czen cũng tự đọc chuyến mới và hỏi bạn có nhận không.
+
+**Bật / tắt nhận chuyến.** Ở Trang chủ bấm **Bật nhận chuyến**, hoặc dùng công tắc ở đầu tab **Chuyến**.
+
+**Chỉ đường ngay trong app.** Thẻ *Điểm dừng tiếp theo* ở Trang chủ cho biết đón/trả ai, ở đâu, còn bao xa. Bấm **Chỉ đường** để dẫn đường từng ngã rẽ ngay trong app (rẽ trái/phải trong bao nhiêu mét, còn bao nhiêu km và phút). Lệch đường thì app tự tính lại. Thứ tự các điểm đón/trả được sắp theo thời gian di chuyển nhanh nhất và tự cập nhật khi có chuyến mới.
+
+**Tự động gọi nhắc khách khi gần điểm đón.** Vào *Cá nhân → Cài đặt trợ lý*, bật **Thông báo khách khi gần điểm đón** rồi chọn **Gọi nhắc khi còn cách**: 500 m, 1 km (mặc định), 2 km hoặc 3 km. Khi xe vào bán kính đó, AI tự gọi cho khách báo tài xế sắp tới để khách ra điểm đón. Khách không bắt máy thì AI gọi lại. Tài xế không cần thao tác gì.
+
+**Đã đến điểm đón / Hoàn thành chuyến chỉ khi thực sự tới nơi.** App và trợ lý chỉ cho đánh dấu *Đã đến điểm đón* khi xe cách điểm đón khoảng 200 m trở xuống (chừa sai số bản đồ), và *Hoàn thành chuyến* khi cách điểm trả khoảng 200 m. Còn xa hơn thì app báo bạn còn cách bao nhiêu. Gọi cho khách thì được ở bất kỳ khoảng cách nào.
+
+**AI hỏi lại khi chưa rõ bạn có muốn gọi khách không.** Nếu câu nói chưa rõ ý (ví dụ *"Hay là gọi khách nhỉ?"*), AI hỏi xác nhận trước khi quay số. Nói *"Gọi đi"* / *"Có"* để gọi, *"Thôi"* để bỏ. Lời hỏi xác nhận tự hết hạn sau khoảng 30 giây hoặc khi bạn chuyển sang chuyện khác.
+
+**Chế độ rảnh tay.** Vào *Cài đặt trợ lý*, bật **Chế độ rảnh tay**. App nghe từ khoá đánh thức **"hey AI"** ở chế độ nền để mở trợ lý mà không cần chạm màn hình (hiện hỗ trợ trên Android).
+
+**Tự gợi ý điểm dừng tiếp theo.** Bật trong *Cài đặt trợ lý*. Khi bạn còn cách điểm hiện tại dưới 200 m, trợ lý tự đề xuất điểm đón/trả kế tiếp.
+
+**Các cài đặt khác.** *Ngôn ngữ trợ lý* (Tiếng Việt hoặc English, áp dụng từ lần kết nối sau) và *Cách gọi khách mặc định* (AI gọi hộ hoặc bạn nói trực tiếp). Cài đặt lưu trên tài khoản nên đổi máy vẫn giữ.
+
+**Gõ thay vì nói.** Trong khung trò chuyện, bấm **Tắt micro, giữ kết nối** rồi gõ câu hỏi. Các nút gợi ý nhanh *Lịch hôm nay*, *Gọi khách*, *Thu nhập hôm nay*, *Nên đi đâu tiếp?* gửi câu hỏi chỉ với một chạm.
+
+**Thu nhập.** Tab **Thu nhập** có Hôm nay / 7 ngày / 30 ngày, biểu đồ 7 ngày và lịch sử chuyến. Tab **Cá nhân** có đánh giá, tổng chuyến, tỉ lệ nhận và tỉ lệ hoàn thành.
+
 ---
 
 ## 4. Cách đặt xe (Khách hàng)
@@ -197,8 +221,17 @@ T: Chờ thêm (gia hạn), gọi khách qua AI, hoặc báo khách vắng mặt
 **H: An toàn khi dùng giọng nói lúc lái xe?**  
 T: AI trả lời ngắn, một việc một lúc. Với thao tác phức tạp nên dừng xe an toàn.
 
-**H: AI có thay Google Maps không?**  
-T: Không. AI cho biết địa chỉ đón/tóm tắt; chỉ đường chi tiết dùng Google Maps / Waze.
+**H: Có cần mở Google Maps để chỉ đường không?**  
+T: Không cần. Bấm **Chỉ đường** trên thẻ điểm dừng tiếp theo để dẫn đường từng ngã rẽ ngay trong app. AI cũng trả lời được còn bao xa, mất bao lâu, đường có kẹt không.
+
+**H: App có tự nhắc khách khi tôi sắp đến không?**  
+T: Có. Bật *Thông báo khách khi gần điểm đón* trong *Cài đặt trợ lý* và chọn bán kính 500 m / 1 km / 2 km / 3 km. Xe vào bán kính đó thì AI tự gọi báo khách ra điểm đón.
+
+**H: Sao tôi bấm "Đã đến điểm đón" không được?**  
+T: App chỉ cho xác nhận khi bạn cách điểm đón khoảng 200 m trở xuống. Hãy đi tiếp tới gần điểm đón rồi bấm lại. Bạn vẫn có thể gọi khách ở bất kỳ khoảng cách nào.
+
+**H: Làm sao bật chế độ rảnh tay?**  
+T: *Cá nhân → Cài đặt trợ lý* → bật **Chế độ rảnh tay**, sau đó nói **"hey AI"** để gọi trợ lý mà không cần chạm màn hình (Android).
 
 ### 6.3 Khách hàng
 
