@@ -174,6 +174,31 @@ export async function listByDriverInRange(driverPhone: string, fromIso: string, 
   return items;
 }
 
+// Completed trips whose COMPLETION (updated_at) falls in [fromIso, toIso].
+// The GSI's range key is created_at, so a created_at window (even padded)
+// drops trips booked long before they were driven — live 2026-10-18: a trip
+// created 2026-09-05 and completed today was missing from "Hôm nay" while
+// the history list showed it. Filters on the partition instead; cost scales
+// with the driver's trip count, paginated like listByDriverInRange.
+export async function listCompletedByDriverInRange(driverPhone: string, fromIso: string, toIso: string): Promise<Trip[]> {
+  const items: Trip[] = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+  do {
+    const result = await docClient.send(new QueryCommand({
+      TableName: config.dynamodbTable,
+      IndexName: 'driver_phone-created_at-index',
+      KeyConditionExpression: 'driver_phone = :p',
+      FilterExpression: '#s = :completed AND updated_at BETWEEN :from AND :to',
+      ExpressionAttributeNames: { '#s': 'status' },
+      ExpressionAttributeValues: { ':p': driverPhone, ':completed': 'completed', ':from': fromIso, ':to': toIso },
+      ExclusiveStartKey: exclusiveStartKey,
+    }));
+    items.push(...((result.Items as Trip[]) ?? []));
+    exclusiveStartKey = result.LastEvaluatedKey;
+  } while (exclusiveStartKey);
+  return items;
+}
+
 export async function listByDriverAndStatus(driverPhone: string, status: string, limit = 50): Promise<Trip[]> {
   const trips = await listByDriver(driverPhone, 200);
   return trips.filter(t => t.status === status).slice(0, limit);

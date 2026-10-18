@@ -4,17 +4,15 @@ import { phoneVariants } from '../utils/phone';
 const FARE_PER_KM = 12000;
 const BASE_FARE = 15000;
 
-// Same phone-variant union as tripsForDriver in driverContextService.ts —
-// driver_phone isn't stored in one consistent format, so a range query for
-// a single exact phone string can undercount. Queried per-variant (not a
-// single BETWEEN scan) because the GSI's partition key is the exact
-// driver_phone value; there's no OR-across-partition-keys in a single
-// Query.
-async function tripsForDriverInRange(driverPhone: string, fromIso: string, toIso: string): Promise<tripService.Trip[]> {
+// Bucketed by completion time (updated_at — nothing updates a trip's row
+// after it is completed), across every phone-format variant of the driver.
+// tripService.listCompletedByDriverInRange explains why this is no longer a
+// padded created_at window.
+async function completedTripsInRange(driverPhone: string, fromIso: string, toIso: string): Promise<tripService.Trip[]> {
   const seen = new Set<string>();
   const trips: tripService.Trip[] = [];
   for (const variant of phoneVariants(driverPhone)) {
-    for (const trip of await tripService.listByDriverInRange(variant, fromIso, toIso)) {
+    for (const trip of await tripService.listCompletedByDriverInRange(variant, fromIso, toIso)) {
       if (trip.trip_id && !seen.has(trip.trip_id)) {
         seen.add(trip.trip_id);
         trips.push(trip);
@@ -22,22 +20,6 @@ async function tripsForDriverInRange(driverPhone: string, fromIso: string, toIso
     }
   }
   return trips;
-}
-
-// A trip can be booked well before it's actually completed and paid out
-// (dispatch delay, a scheduled pickup_time, or just a slow trip) — bucketing
-// by created_at (the only range key the driver_phone GSI has) would then
-// miss a trip completed *today* if it happened to be booked yesterday, e.g.
-// showing "today's earnings: 0" right after a driver completes a ride. Pad
-// the created_at fetch window generously, then bucket for real by
-// updated_at — the timestamp that actually moved when the trip was marked
-// completed, since nothing updates a trip's row afterwards.
-const CREATED_AT_FETCH_PAD_DAYS = 30;
-
-async function completedTripsInRange(driverPhone: string, fromIso: string, toIso: string): Promise<tripService.Trip[]> {
-  const paddedFrom = new Date(new Date(fromIso).getTime() - CREATED_AT_FETCH_PAD_DAYS * 86400000).toISOString();
-  const trips = await tripsForDriverInRange(driverPhone, paddedFrom, toIso);
-  return trips.filter(t => t.status === 'completed' && t.updated_at >= fromIso && t.updated_at <= toIso);
 }
 
 export function tripFare(trip: tripService.Trip): number {
