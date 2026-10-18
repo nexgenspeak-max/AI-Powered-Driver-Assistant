@@ -100,8 +100,10 @@ raw_schema = {
         "type": "function",
         "name": "get_current_trip_info",
         "description": (
-            "Thông tin chuyến đang chạy: khách, số điện thoại, điểm đón-trả, giá, ETA, trạng thái. "
-            "Gọi khi hỏi chuyến hiện tại, số điện thoại khách, chuyến này bao tiền."
+            "Thông tin chuyến đang chạy: khách, số điện thoại, điểm đón-trả, giá cước, ETA, trạng thái, "
+            "khách có hàng cồng kềnh / đi cùng trẻ em / ghi chú, quãng đường từ chỗ tài xế tới điểm dừng kế. "
+            "Gọi khi hỏi chuyến hiện tại, số điện thoại khách, chuyến này bao tiền / cước bao nhiêu, "
+            "khách có hành lý, vali, trẻ em, ghi chú gì không. KHÔNG trả lời mấy câu này từ trí nhớ."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -144,9 +146,10 @@ raw_schema = {
         "type": "function",
         "name": "get_trip_traffic",
         "description": (
-            "Tình trạng giao thông / tắc đường trên chuyến: kẹt xe, ETA, tuyến đường. "
-            "Gọi khi hỏi 'có tắc đường không', 'kẹt xe không', 'giao thông thế nào', "
-            "'mất bao lâu đến'. Dữ liệu từ Google Maps lúc tạo chuyến."
+            "Quãng đường + thời gian từ chỗ tài xế tới điểm đón/trả kế tiếp, rồi tuyến chuyến đi, "
+            "kẹt xe, ETA. Gọi khi hỏi 'còn bao xa', 'từ đây tới điểm đón bao xa / mất bao lâu', "
+            "'có tắc đường không', 'kẹt xe không', 'giao thông thế nào'. Số liệu sống từ bản đồ, "
+            "KHÔNG trả lời từ trí nhớ."
         ),
         "parameters": {
             "type": "object",

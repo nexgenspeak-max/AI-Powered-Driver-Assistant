@@ -150,53 +150,104 @@ def build_outbound_nav_info(trip: dict, lang: str) -> str:
     return "\n".join(lines)
 
 
-def format_traffic_info(trip: dict, lang: str = "vi") -> str:
-    """Traffic / route summary for voice — reads prefetched Google Maps data."""
-    traffic = (trip.get("traffic_note") or "").strip()
+def _spoken_addr(address: str, max_len: int = 40) -> str:
+    # short_address marks a cut with "..."; sentences add their own period.
+    return short_address(address or "", max_len).rstrip(".…").rstrip()
+
+
+def _km(km: float, lang: str) -> str:
+    text = f"{round(float(km), 1):g}"
+    return text if lang == "en" else text.replace(".", ",")
+
+
+_PICKUP_PENDING = ("pending", "notified", "calling", "confirmed")
+
+
+def driver_leg_to_trip(route: dict | None, trip: dict) -> dict | None:
+    """Road distance/time from the driver's position to this trip's next stop.
+
+    `route` is trip-service's optimized_route: stops[0] is measured from the
+    driver, every later stop from the previous one, so the leg is the running
+    sum up to the trip's pickup (not picked up yet) or its dropoff.
+    """
+    if not isinstance(route, dict) or not trip.get("trip_id"):
+        return None
+    kind = "pickup" if (trip.get("status") or "") in _PICKUP_PENDING else "dropoff"
+    meters = 0.0
+    minutes = 0.0
+    for stop in route.get("stops") or []:
+        meters += float(stop.get("distance_m") or 0)
+        minutes += float(stop.get("eta_minutes") or 0)
+        if stop.get("trip_id") == trip["trip_id"] and stop.get("kind") == kind:
+            return {"kind": kind, "km": round(meters / 1000, 1), "minutes": max(1, round(minutes))}
+    return None
+
+
+def format_driver_leg(leg: dict | None, lang: str = "vi") -> str:
+    if not leg:
+        return ""
+    if lang == "en":
+        target = "the pickup" if leg["kind"] == "pickup" else "the drop-off"
+        return f"From where you are to {target}: about {_km(leg['km'], lang)} km, {leg['minutes']} minutes."
+    target = "điểm đón" if leg["kind"] == "pickup" else "điểm trả"
+    return f"Từ chỗ bạn tới {target} khoảng {_km(leg['km'], lang)} km, mất {leg['minutes']} phút."
+
+
+def trip_extras(trip: dict, lang: str = "vi") -> str:
+    """Bulky luggage / children / customer note — what the driver must prepare for."""
+    flags: list[str] = []
+    if trip.get("has_bulky_goods"):
+        flags.append("bulky luggage" if lang == "en" else "hàng cồng kềnh")
+    if trip.get("with_children"):
+        flags.append("travelling with children" if lang == "en" else "đi cùng trẻ em")
+    note = (trip.get("note") or "").strip().rstrip(".")
+    if lang == "en":
+        parts = [f"Customer has {' and '.join(flags)}." if flags else ""]
+        if note:
+            parts.append(f"Note: {note}.")
+    else:
+        parts = [f"Khách có {' và '.join(flags)}." if flags else ""]
+        if note:
+            parts.append(f"Ghi chú: {note}.")
+    return " ".join(p for p in parts if p)
+
+
+def format_traffic_info(trip: dict, lang: str = "vi", leg: dict | None = None) -> str:
+    """Traffic / route summary for voice — the driver's own leg first, then the ride."""
+    traffic = (trip.get("traffic_note") or "").strip().rstrip(".")
     route = (trip.get("route_summary") or "").strip()
     eta = trip.get("eta_minutes")
     km = trip.get("distance_km")
-    pickup = short_address(trip.get("pickup_address", ""), 40)
-    dropoff = short_address(trip.get("dropoff_address", ""), 40)
+    pickup = _spoken_addr(trip.get("pickup_address", ""))
+    dropoff = _spoken_addr(trip.get("dropoff_address", ""))
+    leg_line = format_driver_leg(leg, lang)
 
     if not traffic and not route and not eta:
+        if leg_line:
+            return leg_line
         if lang == "en":
-            return (
-                "No live traffic data for this trip yet. "
-                "Use Google Maps or Waze for turn-by-turn navigation."
-            )
-        return (
-            "Chưa có dữ liệu giao thông cho chuyến này. "
-            "Bạn dùng Google Maps hoặc Waze để xem đường chi tiết."
-        )
+            return "No live traffic data for this trip yet. Tap Directions for turn-by-turn navigation."
+        return "Chưa có dữ liệu giao thông cho chuyến này. Bạn bấm Chỉ đường để xem đường chi tiết."
 
     if lang == "en":
-        msg = f"Route {pickup} to {dropoff}."
-        if traffic:
-            msg += f" Traffic: {traffic}."
-        elif eta:
-            msg += " Traffic looks normal."
-        if route:
-            msg += f" Via {route}."
+        msg = f"{leg_line} " if leg_line else ""
+        msg += f"The ride {pickup} to {dropoff}"
         if eta:
-            msg += f" Estimated {eta} minutes"
+            msg += f" takes about {eta} minutes"
             if km:
-                msg += f", {km} km"
-            msg += "."
+                msg += f", {_km(km, lang)} km"
+        msg += "."
+        msg += f" Traffic: {traffic}." if traffic else " Traffic looks normal."
         return msg
 
-    msg = f"Tuyến {pickup} đến {dropoff}."
-    if traffic:
-        msg += f" {traffic}."
-    elif eta:
-        msg += " Giao thông bình thường."
-    if route:
-        msg += f" Đi qua {route}."
+    msg = f"{leg_line} " if leg_line else ""
+    msg += f"Chuyến từ {pickup} đến {dropoff}"
     if eta:
-        msg += f" Dự kiến {eta} phút"
+        msg += f" mất khoảng {eta} phút"
         if km:
-            msg += f", {km} km"
-        msg += "."
+            msg += f", {_km(km, lang)} km"
+    msg += "."
+    msg += f" {traffic[0].upper() + traffic[1:]}." if traffic else " Giao thông bình thường."
     return msg
 
 
@@ -293,12 +344,18 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
         msg = f"Trip {index} with {customer}, pickup at {pickup}."
         if time:
             msg += f" Pickup time {time}."
+        extras = trip_extras(trip, lang)
+        if extras:
+            msg += f" {extras}"
         if _needs_schedule_confirm(trip):
             msg += _schedule_confirm_prompt(index, time, lang)
         return msg
     msg = f"Chuyến {index} với {customer}, đón tại {pickup}."
     if time:
         msg += f" Giờ đón {time}."
+    extras = trip_extras(trip, lang)
+    if extras:
+        msg += f" {extras}"
     if _needs_schedule_confirm(trip):
         msg += _schedule_confirm_prompt(index, time, lang)
     return msg

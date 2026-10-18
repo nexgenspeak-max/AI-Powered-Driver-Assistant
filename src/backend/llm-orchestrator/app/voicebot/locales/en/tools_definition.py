@@ -100,8 +100,10 @@ raw_schema = {
         "type": "function",
         "name": "get_current_trip_info",
         "description": (
-            "Active trip: customer, phone number, addresses, fare, ETA, status. "
-            "Use for current trip, customer phone, how much is this ride."
+            "Active trip: customer, phone number, addresses, fare, ETA, status, bulky luggage / "
+            "children / customer note, distance from the driver to the next stop. Use for current trip, "
+            "customer phone, how much is this ride, any luggage, suitcase, children or notes. "
+            "Never answer these from memory."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
@@ -143,9 +145,9 @@ raw_schema = {
         "type": "function",
         "name": "get_trip_traffic",
         "description": (
-            "Traffic conditions for a trip: congestion, ETA, route summary. "
-            "Use for 'any traffic', 'jammed', 'how long to get there'. "
-            "Data from Google Maps at trip creation."
+            "Distance and time from the driver to the next pickup/drop-off, then the ride route, "
+            "congestion, ETA. Use for 'how far', 'how far to the pickup / how long from here', "
+            "'any traffic', 'jammed'. Live map data — never answer from memory."
         ),
         "parameters": {
             "type": "object",

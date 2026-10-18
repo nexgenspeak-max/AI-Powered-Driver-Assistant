@@ -12,6 +12,8 @@ from app.voicebot.processors.trip_format import (
     format_trip_existence,
     format_trip_list,
     format_traffic_info,
+    format_driver_leg,
+    trip_extras,
     status_phrase,
     _needs_schedule_confirm,
 )
@@ -35,6 +37,11 @@ def _trip_knowledge_rows(trip: dict, index: int, lang: str) -> list[str]:
     phone = (trip.get("customer_phone") or "").strip()
     if phone:
         rows.append(f"customer_phone: {phone}")
+    rows.append(f"has_bulky_goods: {'yes' if trip.get('has_bulky_goods') else 'no'}")
+    rows.append(f"with_children: {'yes' if trip.get('with_children') else 'no'}")
+    note = (trip.get("note") or "").strip()
+    if note:
+        rows.append(f"customer_note: {note}")
     traffic = (trip.get("traffic_note") or "").strip()
     if traffic:
         rows.append(f"traffic: {traffic}")
@@ -70,6 +77,12 @@ def _trip_follow_up_rows(trip: dict, index: int, lang: str) -> list[str]:
         )
     fare = fmt_money(estimated_fare(trip), lang)
     rows.append(f"{prefix} — giá: {fare}" if lang != "en" else f"{prefix} — fare: {fare}")
+    extras = trip_extras(trip, lang)
+    rows.append(
+        f"{prefix} — hành lý/trẻ em/ghi chú: {extras or 'không có'}"
+        if lang != "en"
+        else f"{prefix} — luggage/children/note: {extras or 'none'}"
+    )
     phone = (trip.get("customer_phone") or "").strip()
     if phone:
         rows.append(
@@ -232,8 +245,13 @@ def build_trip_list_response(trips: list[dict], lang: str = "vi") -> ToolRespons
     )
 
 
-def build_current_trip_response(trip: dict, lang: str = "vi", *, prefix: str = "") -> ToolResponse:
+def build_current_trip_response(
+    trip: dict, lang: str = "vi", *, prefix: str = "", leg: dict | None = None,
+) -> ToolResponse:
     detail = build_trip_detail_response(trip, 1, lang)
+    leg_line = format_driver_leg(leg, lang)
+    if leg_line:
+        detail.follow_up_knowledge = [*detail.follow_up_knowledge, f"driver_to_next_stop: {leg_line}"]
     if prefix:
         detail.response_knowledge = prefix + detail.response_knowledge
         detail.tool = "get_current_trip_info"
@@ -242,8 +260,8 @@ def build_current_trip_response(trip: dict, lang: str = "vi", *, prefix: str = "
     return detail
 
 
-def build_traffic_response(trip: dict, lang: str = "vi") -> ToolResponse:
-    spoken = format_traffic_info(trip, lang)
+def build_traffic_response(trip: dict, lang: str = "vi", leg: dict | None = None) -> ToolResponse:
+    spoken = format_traffic_info(trip, lang, leg)
     index_hint = trip.get("trip_id") or ""
     return ToolResponse(
         tool="get_trip_traffic",
@@ -257,6 +275,7 @@ def build_traffic_response(trip: dict, lang: str = "vi") -> ToolResponse:
             f"traffic_note: {trip.get('traffic_note') or '-'}",
             f"route_summary: {trip.get('route_summary') or '-'}",
             f"eta_minutes: {trip.get('eta_minutes') or '-'}",
+            f"driver_to_next_stop: {format_driver_leg(leg, lang) or '-'}",
             f"trip_id: {index_hint}",
         ],
         action_knowledge=trip_actions(lang="en" if lang == "en" else "vi"),
