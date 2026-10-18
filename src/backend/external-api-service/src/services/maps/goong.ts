@@ -110,21 +110,17 @@ export async function getRoute(
   }
 }
 
-// Real-coordinate-only (never free-text) — used by routeOptimizationService.ts
-// to build a full origins×destinations cost matrix in one call, instead of
-// N*(N-1) separate getRoute() pairs. No documented limit on the number of
-// origins/destinations in Goong's docs — callers must treat a null return
-// (any failure, including a possible size-limit rejection) as "fall back to
-// haversine", never as fatal.
-export async function getDistanceMatrix(
-  origins: LatLng[],
-  destinations: LatLng[],
-  apiKey: string,
-): Promise<DistanceMatrixResult | null> {
-  if (!apiKey || origins.length === 0 || destinations.length === 0) return null;
+// Goong rejects a DistanceMatrix call above 100 cells (origins × destinations)
+// with HTTP 400 and no rows — undocumented, measured 2026-10-18: 10×10 and
+// 11×9 return every cell, 11×10 and 12×12 return 400. A driver with 10 stops
+// needs 11×10 (GPS fix + stops), so the single-call version silently fell
+// back to haversine for exactly the busy schedules that need real travel
+// times most.
+const MAX_MATRIX_CELLS = 100;
 
-  log.info('DistanceMatrix request', { origins: origins.length, destinations: destinations.length });
+type MatrixRows = DistanceMatrixResult['rows'];
 
+async function fetchMatrixChunk(origins: LatLng[], destinations: LatLng[], apiKey: string): Promise<MatrixRows | null> {
   try {
     const params = new URLSearchParams({
       origins: origins.map(o => `${o.lat},${o.lng}`).join('|'),
@@ -138,27 +134,64 @@ export async function getDistanceMatrix(
     // Unlike Goong's /Direction, /DistanceMatrix has no top-level `status`
     // field — only a per-element one (checked below when reading each
     // cell) — so the only thing to validate here is the response shape.
-    if (!Array.isArray(data.rows)) {
-      log.warning('DistanceMatrix unexpected response shape');
+    if (!resp.ok || !Array.isArray(data.rows) || data.rows.length !== origins.length) {
+      log.warning('DistanceMatrix chunk rejected', { http: resp.status, origins: origins.length, destinations: destinations.length });
       return null;
     }
 
-    const rows = (data.rows as any[]).map(row =>
+    return (data.rows as any[]).map(row =>
       ((row.elements ?? []) as any[]).map(el => ({
         distance_m: el.status === 'OK' ? (el.distance?.value ?? null) : null,
         duration_s: el.status === 'OK' ? ((el.duration_in_traffic ?? el.duration)?.value ?? null) : null,
       })),
     );
-
-    const cellCount = rows.reduce((n, row) => n + row.length, 0);
-    const okCount = rows.reduce((n, row) => n + row.filter(c => c.distance_m !== null).length, 0);
-    log.info('DistanceMatrix response', { cells: cellCount, ok: okCount });
-
-    return { origins, destinations, rows };
   } catch (err) {
-    log.warning('DistanceMatrix request failed', {
+    log.warning('DistanceMatrix chunk failed', {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
   }
+}
+
+function slices<T>(items: T[], size: number): { start: number; items: T[] }[] {
+  const out: { start: number; items: T[] }[] = [];
+  for (let i = 0; i < items.length; i += size) out.push({ start: i, items: items.slice(i, i + size) });
+  return out;
+}
+
+// Real-coordinate-only (never free-text) — used by routeOptimizationService.ts
+// to build a full origins×destinations cost matrix instead of N*(N-1)
+// separate getRoute() pairs. Larger matrices are tiled into ≤100-cell
+// requests fetched in parallel and stitched back together; a failed tile
+// leaves only its own cells null (the optimizer already falls back per
+// cell), and only "every tile failed" returns null — callers treat that as
+// "fall back to haversine", never as fatal.
+export async function getDistanceMatrix(
+  origins: LatLng[],
+  destinations: LatLng[],
+  apiKey: string,
+): Promise<DistanceMatrixResult | null> {
+  if (!apiKey || origins.length === 0 || destinations.length === 0) return null;
+
+  const colSize = Math.min(destinations.length, MAX_MATRIX_CELLS);
+  const rowSize = Math.max(1, Math.floor(MAX_MATRIX_CELLS / colSize));
+  const tiles = slices(origins, rowSize).flatMap(r => slices(destinations, colSize).map(c => ({ r, c })));
+  log.info('DistanceMatrix request', { origins: origins.length, destinations: destinations.length, tiles: tiles.length });
+
+  const results = await Promise.all(tiles.map(t => fetchMatrixChunk(t.r.items, t.c.items, apiKey)));
+  if (results.every(r => r === null)) return null;
+
+  const rows: MatrixRows = origins.map(() => destinations.map(() => ({ distance_m: null, duration_s: null })));
+  results.forEach((chunk, i) => {
+    if (!chunk) return;
+    const { r, c } = tiles[i];
+    chunk.forEach((row, ri) => row.forEach((cell, ci) => {
+      if (ci < c.items.length) rows[r.start + ri][c.start + ci] = cell;
+    }));
+  });
+
+  const okCount = rows.reduce((n, row) => n + row.filter(c => c.distance_m !== null).length, 0);
+  log.info('DistanceMatrix response', { cells: origins.length * destinations.length, ok: okCount, tiles_failed: results.filter(r => r === null).length });
+
+  return { origins, destinations, rows };
 }

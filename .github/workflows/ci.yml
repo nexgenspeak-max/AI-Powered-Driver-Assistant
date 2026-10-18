@@ -48,6 +48,9 @@ jobs:
       - name: Route-order selfcheck
         if: matrix.service == 'external-api-service'
         run: npm run verify:route-order
+      - name: Goong matrix tiling self-check
+        if: matrix.service == 'external-api-service'
+        run: npm run verify:goong-matrix
 
   driver-app:
     name: driver-app · typecheck + navigation math
