@@ -10,7 +10,7 @@
 - **Hoàn thành**: nhu cầu tài xế được đáp ứng đúng ngay lần đầu (không tính lần bot tự sửa sau khi bị nhắc).
 - **P** = đúng công cụ nhưng hoàn thành sau khi tự sửa.
 
-## Thống kê 13 phiên (S12–S24), ~43 lượt nghiệp vụ rõ ràng
+## Thống kê 13 phiên (S12–S24), 43 lượt nghiệp vụ rõ ràng (dòng S13 không còn trong bảng)
 
 | Phiên | Đ | P | S | Ghi chú lỗi |
 |---|---|---|---|---|
@@ -30,10 +30,12 @@
 
 ## Con số đưa vào luận văn
 
-- Tổng lượt xét: **≈ 43**.
-- **Chọn đúng công cụ** = (Đ + P) / tổng = 37/43 ≈ **86–88%** (làm tròn 88% trong bảng; strict lần-đầu 32/43 ≈ 74–77%).
-- **Hoàn thành đúng ngay lần đầu** = Đ / tổng = 32/43 ≈ **74–77%** (làm tròn 77%).
-- Phân loại lỗi (Bảng 6.7): E-INTENT ≈ 4 · E-PARAM ≈ 2 · E-UX ≈ 3 · E-CONFIRM ≈ 2 · E-STT ≈ 2 · E-API 0.
+- Tổng ghi lúc chấm: **43 lượt** trong 13 phiên (S12–S24): Đ 32, P 5, S 6.
+- Dòng chi tiết của S13 bị mất khi chép bảng: 12 dòng trên cộng được Đ 29, P 4, S 5 (38 lượt); phần chênh 3/1/1 là của S13. Luận văn dùng tổng 43 lượt và nêu việc này ở mục 6.13.
+- **Chọn đúng công cụ** = (Đ + P) / tổng = 37/43 = **86,0%** (Wilson 95%: 72,7%–93,4%).
+- **Hoàn thành đúng ngay lần đầu** = Đ / tổng = 32/43 = **74,4%** (Wilson 95%: 59,8%–85,1%).
+- Bản trước của luận văn ghi 88% / 77% trên "≈ 39 lượt" và chia theo use case; các số đó không truy được từ bảng chấm (các lượt không gắn nhãn UC), nên đã được thay ngày 20/10/2026.
+- Phân loại lỗi (Bảng 6.9), theo ghi chú khi chấm: E-INTENT 4 · E-PARAM 2 · E-UX 3 · E-CONFIRM 2 · E-STT 2 · E-API 0.
 
 ## Hạn chế của cách chấm này (đã ghi trong §6.11 và §6.12)
 

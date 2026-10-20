@@ -88,7 +88,7 @@ Ba kịch bản cần nhiều tác nhân cùng tham gia phòng hội thoại (SC
 1. **Đơn vị phân tích.** Độ trễ tính theo lượt hội thoại; tỷ lệ lỗi từ tính theo câu rồi gộp theo tổng số từ; độ chính xác gọi công cụ tính theo lượt; tỷ lệ hoàn thành tính theo trường hợp sử dụng.
 2. **Làm sạch.** Loại các lượt không do người dùng nói (lời chào tự động của tác nhân, lượt kiểm thử nội bộ có đánh dấu trong nhật ký). Không loại giá trị ngoại lai chỉ vì lớn; một lượt chỉ bị loại khi có lỗi đo được ghi nhận, và mọi lượt bị loại được nêu kèm lý do. Cỡ mẫu n trong bảng là cỡ mẫu sau làm sạch.
 3. **Phân vị.** P50, P90, P95 tính bằng nội suy tuyến tính giữa hai giá trị kề nhau trong dãy đã sắp xếp (cách tính mặc định của script `extract_ch6_metrics.py`).
-4. **Khoảng tin cậy.** Tỷ lệ (độ chính xác gọi công cụ, tỷ lệ hoàn thành, tỷ lệ phiên duy trì) kèm khoảng tin cậy 95% theo phương pháp Wilson; P95 của các thí nghiệm có lặp lại kèm khoảng tin cậy 95% bằng bootstrap.
+4. **Khoảng tin cậy.** Tỷ lệ (độ chính xác gọi công cụ, tỷ lệ hoàn thành, tỷ lệ phiên duy trì) kèm khoảng tin cậy 95% theo phương pháp Wilson. Mỗi mức tải trong thí nghiệm thử tải chỉ chạy một lần, nên P95 của các thí nghiệm này không kèm khoảng tin cậy (mục 6.13).
 5. **Đạt hay không đạt.** Một tiêu chí chấp nhận được kết luận "đạt" khi giá trị đo thỏa ngưỡng ở Bảng 3.19 hoặc Bảng 3.20; khi cỡ mẫu nhỏ hơn mức dự kiến, kết luận được ghi kèm "mẫu nhỏ".
 
 ## 6.4. Kết quả hiệu năng — NFR-02 (RQ2)
@@ -117,7 +117,7 @@ Nhánh xử lý được gán theo việc mô-đun nhận dạng ý định có 
 
 **Hình 6.1.** P50 và P95 độ trễ phản hồi theo nhánh xử lý, đợt đo 05–06/09/2026 (n = 341 lượt)
 
-Kết quả cho thấy: nhánh rút gọn đạt ngưỡng sát biên (P95 = 2,00 giây); luồng đầy đủ qua LLM không đạt (P95 = 3,75 giây), với thời gian sinh token đầu (P95 ≈ 2,5 giây) là nguyên nhân chính. Trong thiết kế hiện hành, mọi lượt đều đi qua LLM, vì vậy câu đệm sau 2 giây được dùng để báo hiệu hệ thống đang xử lý, còn tải trước ngữ cảnh rút ngắn thời gian thực thi công cụ.
+Kết quả cho thấy: nhánh rút gọn đạt ngưỡng sát biên (P95 = 2,00 giây); luồng đầy đủ qua LLM không đạt (P95 = 3,75 giây), với thời gian sinh token đầu (P95 ≈ 2,5 giây) là nguyên nhân chính. Trong thiết kế hiện hành, mọi lượt đều đi qua LLM, vì vậy câu đệm sau 2 giây được dùng để báo hiệu hệ thống đang xử lý; tải trước ngữ cảnh được dùng để giảm thời gian thực thi công cụ, nhưng tác động của nó chưa được đo riêng.
 
 **Bảng 6.6.** Độ trễ phản hồi trên thiết kế hiện hành (nhật ký ngày 11/10/2026)
 
@@ -143,35 +143,35 @@ Bốn lượt trên là toàn bộ lượt có ghi độ trễ trong nhật ký 
 
 **Hình 6.2.** Tỷ lệ lỗi từ ở điều kiện yên tĩnh và điều kiện nhiễu mô phỏng khoang xe
 
-Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện nhiễu xuất hiện các lỗi thay từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ và mất các từ phụ ngắn (hư từ). Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm, phù hợp với giới hạn không huấn luyện lại mô hình nhận dạng nêu ở Chương 1.
+Tỷ lệ lỗi từ tăng hơn gấp đôi khi có nhiễu, từ 3,1% lên 7,3%. Ở điều kiện nhiễu xuất hiện các lỗi thay từ mang nghĩa ("thu nhập" thành "phim Nhật"), sai chữ số trong địa chỉ và mất các từ phụ ngắn (hư từ). Nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm. Vì luận văn không huấn luyện lại mô hình nhận dạng (mục 1.5.3), mức suy giảm này là của mô hình có sẵn, chưa được điều chỉnh cho tiếng ồn khoang xe.
 
 ## 6.6. Kết quả tính đúng chức năng (RQ4)
 
-**Bảng 6.8.** Độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ (đánh giá thủ công, một người đánh giá, nhật ký 2026-09-05 đến 2026-09-06)
+**Bảng 6.8.** Độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ (chấm thủ công, một người chấm, 43 lượt trong 13 phiên, nhật ký 05–06/09/2026)
 
-| Nhóm nghiệp vụ | n | Đúng công cụ | Hoàn thành ngay lần đầu | Lỗi quan sát |
-|---|---|---|---|---|
-| UC01 Xem lịch, hỏi chuyến | 21 | ≈ 100% | ≈ 95% | 1 lần địa chỉ bị cắt (E-UX) |
-| UC02 Nhận, từ chối chuyến | 4 | 100% | 100% | Không có |
-| UC04 Gọi khách | 6 | ≈ 67% | ≈ 50% | Hỏi cách gọi khách bị hiểu thành lệnh gọi (E-INTENT); chuyển lời nhắn sai nghĩa (E-UX) |
-| UC08 Thu nhập | 6 | ≈ 100% | ≈ 67% | Hỏi thu nhập theo tháng, theo năm trả về thu nhập trong ngày (E-PARAM) |
-| UC07 Hỏi đáp cách sử dụng | 2 | 100% | 100% | Không có |
-| Tổng | ≈ 39 | ≈ 88% | ≈ 77% | Xem Bảng 6.9 |
+| Kết quả chấm | Số lượt | Tỷ lệ |
+|---|---|---|
+| Đúng công cụ, hoàn thành đúng ngay lần đầu | 32 | 74,4% |
+| Đúng công cụ, hoàn thành sau khi trợ lý tự sửa | 5 | 11,6% |
+| Sai công cụ hoặc sai tham số | 6 | 14,0% |
+| Tổng | 43 | 100% |
 
-Với cỡ mẫu khoảng 39 lượt, khoảng tin cậy 95% theo phương pháp Wilson của tỷ lệ chọn đúng công cụ (khoảng 34/39 lượt) là 73%–94%, của tỷ lệ hoàn thành ngay lần đầu (khoảng 30/39 lượt) là 62%–87%. Khoảng tin cậy rộng cho thấy cần mẫu lớn hơn trước khi so sánh giữa các nhóm nghiệp vụ.
+Từ Bảng 6.8, tỷ lệ chọn đúng công cụ là 37/43 = 86,0% (khoảng tin cậy 95% theo phương pháp Wilson: 72,7%–93,4%), tỷ lệ hoàn thành đúng ngay lần đầu là 32/43 = 74,4% (59,8%–85,1%). Khoảng tin cậy rộng cho thấy cần mẫu lớn hơn trước khi so sánh giữa các nhóm nghiệp vụ. Các lượt được chấm không gắn nhãn theo use case, nên luận văn không báo cáo tỷ lệ riêng cho từng use case; các lượt chủ yếu thuộc xem lịch và chuyến (UC01), nhận chuyến (UC02), gọi khách (UC04), hỏi cách sử dụng (UC07) và thu nhập (UC08), và các lượt sai tập trung ở gọi khách và thu nhập (Bảng 6.9).
 
 Lỗi E-INTENT ở UC04 phát sinh từ nhánh rút gọn theo ý định; nhánh này đã bị loại bỏ và kiểm thử `test_spoken_intent` xác nhận câu hỏi cách gọi khách không còn kích hoạt công cụ gọi. Số liệu theo từng trường hợp sử dụng UC03, UC05, UC06 cần một đợt đánh giá có gắn nhãn sẵn, người chấm không được biết trước kết quả mong đợi, và ít nhất hai người chấm.
 
-**Bảng 6.9.** Phân loại lỗi quan sát (n ≈ 39 lượt)
+**Bảng 6.9.** Phân loại lỗi quan sát trong mẫu chấm (43 lượt)
 
-| Mã | Nhóm lỗi | Ví dụ | Khâu nghi ngờ | Số lần |
+| Mã | Nhóm lỗi | Ví dụ | Khâu nghi ngờ | Số lần ghi nhận |
 |---|---|---|---|---|
-| E-INTENT | Nhận dạng đúng nhưng chọn sai thao tác | Hỏi cách gọi khách bị hiểu thành lệnh gọi | Nhánh rút gọn (đã loại bỏ) | ≈ 3 |
-| E-PARAM | Đúng công cụ, sai tham số | Thu nhập "tháng vừa rồi" trả về thu nhập hôm nay | Ngữ cảnh, LLM | ≈ 2 |
-| E-UX | Hoàn thành nghiệp vụ nhưng câu nói khó nghe khi lái | Địa chỉ bị cắt; lời nhắn chuyển sai nghĩa | Lời nhắc hệ thống, TTS | ≈ 3 |
-| E-CONFIRM | Đáp lời nhưng chưa gọi công cụ | Trả lời "Vâng" nhưng không thực hiện cho tới khi tài xế hỏi lại | Lời nhắc hệ thống, hành động chờ xác nhận | ≈ 2 |
-| E-STT | Nhận dạng sai tên riêng | "NexGen Speak" thành "Nick Jan Speed" | STT, nhiễu | ≈ 2 |
-| E-API | Đúng công cụ nhưng API lỗi | Gửi SMS trả mã 503; tác nhân báo không gửi được, phiên tiếp tục (Bảng 5.3) | Dịch vụ Liên lạc bằng tin nhắn, backend | 1 |
+| E-INTENT | Nhận dạng đúng nhưng chọn sai thao tác | Hỏi cách gọi khách bị hiểu thành lệnh gọi | Nhánh rút gọn (đã loại bỏ) | 4 |
+| E-PARAM | Đúng công cụ, sai tham số | Thu nhập "tháng vừa rồi" trả về thu nhập hôm nay | Ngữ cảnh, LLM | 2 |
+| E-UX | Hoàn thành nghiệp vụ nhưng câu nói khó nghe khi lái | Địa chỉ bị cắt; lời nhắn chuyển sai nghĩa | Lời nhắc hệ thống, TTS | 3 |
+| E-CONFIRM | Đáp lời nhưng chưa gọi công cụ | Trả lời "Vâng" nhưng không thực hiện cho tới khi tài xế hỏi lại | Lời nhắc hệ thống, hành động chờ xác nhận | 2 |
+| E-STT | Nhận dạng sai tên riêng | "NexGen Speak" thành "Nick Jan Speed" | STT, nhiễu | 2 |
+| E-API | Đúng công cụ nhưng API lỗi | Không có trong mẫu chấm; một lần ở phiên khác cùng ngày 06/09/2026: gửi SMS trả mã 503, tác nhân báo không gửi được, phiên tiếp tục (Bảng 5.3) | Dịch vụ Liên lạc bằng tin nhắn, backend | 0 |
+
+Số lần ghi nhận lấy từ ghi chú của người chấm; một lượt có thể mang nhiều mã lỗi, nên tổng số lần không bằng số lượt sai ở Bảng 6.8.
 
 ## 6.7. Kết quả tính khả dụng — NFR-01
 
@@ -222,7 +222,7 @@ SC-01 và SC-02 kiểm chứng trực tiếp ngưỡng của NFR-03 ở mức ph
 | SC-02 | 4 | 20 | 20/20 | 229 | 1,50 / 1,51 | 0,48 / 1,51 | 131 / 398 | 10.062 |
 | SC-02 | 4 | 40 | 40/40 | 419 | 1,50 / 1,51 | 0,47 / 1,77 | 278 / 587 | 13.309 |
 
-Máy chủ LiveKit dùng tối đa 6% (1 phiên) đến 48% (40 phiên) một nhân CPU. Kết quả cho bốn nhận xét:
+CPU đỉnh của máy chủ LiveKit tăng từ 6% một nhân (1 phiên) lên 36% (40 phiên, 1 bản sao) và 46–48% (40 phiên, 2 hoặc 4 bản sao). Kết quả cho bốn nhận xét:
 
 1. **Độ trễ không tăng theo số phiên.** P95 ở 20 phiên là 1,51 giây so với 1,54 giây ở 1 phiên, và giữ nguyên tới 40 phiên; mọi phiên đều được phục vụ. Ngưỡng của AC-16 (P95 tăng không quá 20%, tỷ lệ phiên lỗi dưới 1%) vì vậy **đạt trong môi trường mô phỏng**. Mức 1,5 giây gần bằng tổng độ trễ cố định của STT, LLM, TTS giả lập cộng thời gian phát hiện kết thúc lượt, nghĩa là phần kiến trúc gần như không thêm độ trễ hàng đợi khi tải tăng trên máy thí nghiệm.
 2. **Thêm bản sao rút ngắn thời gian tác nhân vào phiên.** Với 20 phiên, thời gian vào phiên P50 giảm từ 1,44 giây (1 bản sao) xuống 0,89 giây (2 bản sao) và 0,48 giây (4 bản sao), vì mỗi bản sao giữ sẵn một tiến trình chờ (`num_idle_processes` = 1) nên phiên mới ít phải chờ tạo tiến trình. Đây là bằng chứng cho chiến thuật duy trì nhiều bản sao tính toán (Bảng 3.18).
@@ -323,7 +323,7 @@ Không bộ dữ liệu nào vi phạm ràng buộc đón trước trả. Heuris
 |---|---|---|---|
 | NFR-02 Hiệu năng | AC-15 | Đợt đo 05–06/09/2026: luồng đầy đủ qua LLM có P95 = 3,75 giây (n = 174); điểm nghẽn là thời gian sinh token đầu (P95 ≈ 2,5 giây) | Không đạt |
 | Nhận dạng giọng nói | AC-19 | WER 3,1% (yên tĩnh) và 7,3% (nhiễu); một người đọc, 22 câu | Đã đo (mẫu nhỏ) |
-| FR của tài xế | AC-01 đến AC-08 | Khoảng 88% lượt chọn đúng công cụ (KTC 95%: 73%–94%), 77% hoàn thành ngay lần đầu (62%–87%); n ≈ 39 | Đã đo (mẫu nhỏ) |
+| FR của tài xế | AC-01 đến AC-08 | 37/43 lượt (86,0%; KTC 95%: 72,7%–93,4%) chọn đúng công cụ, 32/43 (74,4%; 59,8%–85,1%) hoàn thành đúng ngay lần đầu | Đã đo (mẫu nhỏ) |
 | NFR-01 Tính khả dụng | AC-14 | 100% thao tác rủi ro có xác nhận; danh mục kiểm tra đạt 5/6 ở lần đầu (câu báo lỗi khi gọi khách chứa thông tin kỹ thuật), 6/6 sau khi sửa | Đạt sau một vòng sửa |
 | NFR-03 Khả năng mở rộng | AC-16 | SC-01: P95 1,54 giây (1 phiên) và 1,51 giây (20 phiên), 100% phiên được phục vụ tới 40 phiên; SC-02: thêm bản sao rút ngắn thời gian tác nhân vào phiên; giới hạn là RAM khoảng 225 MB mỗi phiên (Bảng 6.12); SC-03: API không lỗi tới 100 người dùng ảo | Đạt (môi trường mô phỏng) |
 | NFR-04 Khả năng phục hồi | AC-17 | 200/200 lượt tiêm lỗi ở mức thành phần đạt; lỗi dạng treo làm câu trả lời chậm 6–8 giây; RS-03: phiên mới 10/10 được bản sao khác phục vụ, phiên đang chạy trên bản sao bị dừng bị mất | Đạt ở mức thành phần; đạt một phần khi dừng bản sao |
@@ -338,7 +338,7 @@ Không bộ dữ liệu nào vi phạm ràng buộc đón trước trả. Heuris
 
 **RQ3 – Tỷ lệ lỗi từ thay đổi thế nào khi có nhiễu?** Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% (tăng 4,2 điểm phần trăm) khi thêm nhiễu mô phỏng khoang xe. Lỗi tăng chủ yếu ở các từ mang nghĩa và chữ số trong địa chỉ. Kết quả dựa trên một người đọc và 22 câu nên chỉ cho thấy xu hướng, chưa đủ để ước lượng mức chênh lệch trong điều kiện thật.
 
-**RQ4 – Tỷ lệ chọn đúng công cụ, hoàn thành nghiệp vụ và các lỗi phổ biến?** Trên khoảng 39 lượt, khoảng 88% lượt chọn đúng công cụ và 77% hoàn thành đúng ngay lần đầu, với khoảng tin cậy rộng do cỡ mẫu nhỏ. Các nhóm lỗi chính là chọn sai thao tác với phát ngôn không rõ ý định, sai phạm vi tham số, câu nói khó nghe khi lái và đáp lời nhưng chưa thực hiện thao tác (Bảng 6.9). Kết quả tương đồng với nhận định của Yao et al. (2024) rằng tác nhân gọi công cụ còn thiếu ổn định ngay cả với mô hình mạnh, và củng cố quyết định xác nhận hai bước cho thao tác có rủi ro. Riêng chức năng sắp xếp thứ tự ghé, dữ liệu mô phỏng cho thấy kết quả gần tối ưu (Bảng 6.16).
+**RQ4 – Tỷ lệ chọn đúng công cụ, hoàn thành nghiệp vụ và các lỗi phổ biến?** Trên 43 lượt được chấm, 37 lượt (86,0%) chọn đúng công cụ và 32 lượt (74,4%) hoàn thành đúng ngay lần đầu, với khoảng tin cậy rộng do cỡ mẫu nhỏ. Các nhóm lỗi chính là chọn sai thao tác với phát ngôn không rõ ý định, sai phạm vi tham số, câu nói khó nghe khi lái và đáp lời nhưng chưa thực hiện thao tác (Bảng 6.9). Kết quả tương đồng với nhận định của Yao et al. (2024) rằng tác nhân gọi công cụ còn thiếu ổn định ngay cả với mô hình mạnh, và củng cố quyết định xác nhận hai bước cho thao tác có rủi ro. Riêng chức năng sắp xếp thứ tự ghé, dữ liệu mô phỏng cho thấy kết quả gần tối ưu (Bảng 6.16).
 
 ## 6.13. Mối đe dọa đối với độ tin cậy của kết quả
 
@@ -347,7 +347,7 @@ Các hạn chế của phép đánh giá được phân tích theo bốn loại 
 **Độ tin cậy nội tại (internal validity)** – kết quả có thật sự do yếu tố đang xét gây ra hay không.
 
 - Số liệu độ trễ lấy từ nhật ký phát triển: 341 lượt trong hai ngày, một tài khoản thử nghiệm, kịch bản do tác giả đọc, còn lẫn một số lượt tự kiểm thử. Việc gán nhánh xử lý dựa trên mô-đun nhận dạng ý định là cách gán xấp xỉ, chỉ áp dụng cho đợt đo này. Một lượt ngoại lai khoảng 21 giây do nghẽn mạng vẫn được giữ trong thống kê theo quy tắc ở mục 6.3. Biện pháp: tách số liệu theo nhánh và theo chặng (Bảng 6.4, Bảng 6.5) để điểm nghẽn không bị trộn với biến động mạng.
-- Độ chính xác gọi công cụ do một người chấm. Biện pháp: tiêu chí chấm được cố định trước (Bảng 6.9, Bảng 6.10). Rủi ro còn lại: thiên lệch người chấm; cần ít nhất hai người chấm độc lập và báo cáo hệ số đồng thuận.
+- Độ chính xác gọi công cụ do một người chấm (tác giả), người chấm biết trước kết quả mong đợi, và các lượt là phiên phát triển nên có nhiều câu ở tình huống biên. Biện pháp: tiêu chí chấm được cố định trước (mục 6.3). Bảng chấm chi tiết lưu theo từng phiên; dòng chi tiết của một phiên (S13) bị mất khi chép sang tệp chấm `ch6_manual_scoring.md`, nên phiên này chỉ còn trong tổng 43 lượt ghi lúc chấm. Rủi ro còn lại: thiên lệch người chấm; cần ít nhất hai người chấm độc lập, không biết trước kết quả mong đợi, và báo cáo hệ số đồng thuận.
 
 **Độ tin cậy bên ngoài (external validity)** – kết quả có khái quát được sang điều kiện khác hay không.
 
@@ -366,7 +366,8 @@ Các hạn chế của phép đánh giá được phân tích theo bốn loại 
 
 **Độ tin cậy của kết luận (conclusion validity)** – kết luận thống kê có đủ căn cứ hay không.
 
-- Cỡ mẫu nhỏ: tỷ lệ lỗi từ đo với một người đọc và 22 câu; độ chính xác gọi công cụ trên khoảng 39 lượt. Biện pháp: báo cáo cỡ mẫu và khoảng tin cậy, ghi "mẫu nhỏ" bên cạnh kết luận, không khẳng định khác biệt khi khoảng tin cậy chồng lấn.
+- Thí nghiệm thử tải chạy mỗi mức tải một lần, nên chưa ước lượng được độ biến thiên giữa các lần chạy.
+- Cỡ mẫu nhỏ: tỷ lệ lỗi từ đo với một người đọc và 22 câu; độ chính xác gọi công cụ trên 43 lượt. Biện pháp: báo cáo cỡ mẫu và khoảng tin cậy, ghi "mẫu nhỏ" bên cạnh kết luận, không khẳng định khác biệt khi khoảng tin cậy chồng lấn.
 - Nhật ký gốc của đợt đo 05–06/09/2026 được trích bằng script `extract_ch6_metrics.py`; để người khác kiểm tra lại, script và quy tắc xử lý dữ liệu được công bố kèm luận văn (Phụ lục F).
 
 ## Kết luận chương

@@ -56,7 +56,7 @@ Bảng 4.2 đánh giá bốn phương án theo các yêu cầu phi chức năng.
 
 ### 4.2.2. Lựa chọn luồng xử lý lượt hội thoại (ADR-02)
 
-**Bối cảnh.** Thời gian mô hình ngôn ngữ sinh token đầu tiên chiếm phần lớn độ trễ của một lượt (số liệu ở Chương 6). Nguyên mẫu từng thử nghiệm một nhánh xử lý rút gọn dựa trên nhận dạng ý định: với các câu quen thuộc, hệ thống gọi thẳng công cụ mà không qua mô hình ngôn ngữ.
+**Bối cảnh.** Thời gian mô hình ngôn ngữ sinh token đầu tiên là phần lớn nhất trong độ trễ của một lượt (số liệu ở Bảng 6.5). Nguyên mẫu từng thử nghiệm một nhánh xử lý rút gọn dựa trên nhận dạng ý định: với các câu quen thuộc, hệ thống gọi thẳng công cụ mà không qua mô hình ngôn ngữ.
 
 **Các phương án và quyết định** được tóm tắt trong Bảng 4.3.
 
@@ -85,7 +85,7 @@ Mỗi lớp dưới đây nêu vai trò, thành phần và dịch vụ AWS đư�
 - **Lớp máy khách (Client Layer)** — nơi người dùng thao tác. Gồm ứng dụng tài xế, trang quản trị điều hành và trang giám sát hệ thống; khách hàng không dùng ứng dụng mà liên lạc qua điện thoại thường, nên điện thoại của khách được vẽ ở lớp này như một điểm cuối bên ngoài hệ thống. Các trang web là tệp tĩnh (HTML, JavaScript) lưu trên Amazon S3, dịch vụ lưu trữ tệp của AWS, và được tải thẳng về trình duyệt.
 - **Lớp truyền thông thời gian thực và hội thoại AI (Real-time Communication & Conversational AI Layer)** — nơi diễn ra cuộc nói chuyện. LiveKit Cloud truyền âm thanh giữa điện thoại người dùng và trợ lý (WebRTC), và quay số ra mạng điện thoại khi cần (SIP). Dịch vụ Liên lạc hội thoại thời gian thực nghe âm thanh, gọi các mô hình AI (STT, LLM, TTS; mỗi khâu có nhà cung cấp chính và dự phòng) và trả lời. Tác nhân chạy liên tục nên được đóng gói thành container và chạy trên Amazon ECS với AWS Fargate: ECS quản lý số bản sao đang chạy, còn Fargate cung cấp máy chủ, nhờ vậy nhóm phát triển không phải tự quản lý máy chủ.
 - **Lớp cổng API (API Gateway Layer)** — cửa vào duy nhất của các dịch vụ nghiệp vụ. Amazon API Gateway nhận yêu cầu HTTPS từ ứng dụng hoặc từ tác nhân rồi chuyển tới đúng dịch vụ. Một cổng dạng WebSocket giữ kết nối mở với ứng dụng tài xế để máy chủ chủ động đẩy thông báo (ví dụ có chuyến mới).
-- **Lớp microservices (Microservices Layer)** — nơi xử lý nghiệp vụ. Gồm năm dịch vụ: Định danh, Chuyến đi và Điều phối, Liên lạc bằng tin nhắn, Nhật ký cuộc gọi, Giám sát vận hành. Mỗi dịch vụ là một hàm AWS Lambda: đoạn mã chỉ chạy khi có yêu cầu, AWS tự tăng số bản chạy song song khi tải tăng và chỉ tính phí theo thời gian chạy thực tế.
+- **Lớp microservices (Microservices Layer)** — nơi xử lý nghiệp vụ. Gồm năm dịch vụ: Định danh, Chuyến đi và Điều phối, Liên lạc bằng tin nhắn, Nhật ký cuộc gọi, Giám sát vận hành. Các dịch vụ này chạy trên AWS Lambda (Dịch vụ Chuyến đi và Điều phối có thêm hai hàm xử lý kết nối WebSocket): đoạn mã chỉ chạy khi có yêu cầu, AWS tự tăng số bản chạy song song khi tải tăng và chỉ tính phí theo thời gian chạy thực tế.
 - **Lớp dữ liệu (Data Layer)** — nơi lưu dữ liệu. Mỗi dịch vụ có bảng riêng trên Amazon DynamoDB, cơ sở dữ liệu NoSQL do AWS quản lý; dịch vụ khác muốn đọc phải gọi API của dịch vụ sở hữu, không đọc thẳng bảng. Danh sách bảng của từng dịch vụ ở Bảng 4.5. Riêng bộ nhớ đệm Redis (dịch vụ bên ngoài, tùy chọn) lưu trạng thái phiên ngắn hạn của Dịch vụ Chuyến đi và Điều phối để các lần chạy Lambda dùng chung; khi không cấu hình, dịch vụ dùng bộ nhớ trong tiến trình.
 - **Các mối quan tâm xuyên suốt (Cross-cutting Concerns)** — các chức năng dùng chung cho mọi lớp: ghi nhật ký tập trung (Amazon CloudWatch Logs); phân quyền truy cập tài nguyên AWS cho từng dịch vụ (AWS IAM) và xác thực người dùng bằng JWT; hẹn giờ chạy báo cáo ngày (Amazon EventBridge Scheduler); mô tả hạ tầng bằng mã để triển khai tự động (AWS CloudFormation, AWS SAM).
 
@@ -93,7 +93,7 @@ Các **hệ thống bên ngoài** không chạy trên AWS: LiveKit Cloud, Twilio
 
 **Giao thức kết nối.** Giao thức và mục đích của từng luồng giữa người dùng và hệ thống (HTTPS kèm JWT, WebRTC, WSS, SIP/PSTN) có ở Bảng 4.4. **Bên trong hệ thống**, các dịch vụ không gọi trực tiếp hàm Lambda của nhau. Mỗi dịch vụ có một API Gateway riêng; khi cần dữ liệu hoặc thao tác của dịch vụ khác, dịch vụ gọi bằng HTTPS tới địa chỉ API Gateway của dịch vụ đích (kịch bản `infra/deploy-all.sh` ghi địa chỉ này vào cấu hình của dịch vụ gọi) và gửi kèm JWT dịch vụ, tức token xác thực do chính dịch vụ gọi tạo ra và chỉ có hiệu lực trong thời gian ngắn (`services/serviceToken.ts`). Vì vậy lời gọi giữa các dịch vụ đi qua cùng cửa vào và cùng bước xác thực như lời gọi từ người dùng (luồng ⑫, ⑮, ⑳). Tác nhân hội thoại cũng gọi dịch vụ nghiệp vụ theo cách này (luồng ⑧, ⑭); các lời gọi khác giữa dịch vụ gồm đọc tài khoản và cài đặt từ Dịch vụ Định danh (㉖) và thăm dò tình trạng các dịch vụ (㉗). Mỗi dịch vụ đọc, ghi bảng DynamoDB của chính mình qua AWS SDK (HTTPS); Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ qua HTTPS và Redis qua kết nối TLS.
 
-Toàn bộ tài nguyên AWS nằm trong vùng ap-southeast-1 (Singapore). Lambda, API Gateway và DynamoDB là dịch vụ cấp vùng, không cần đặt trong mạng riêng ảo (VPC). Dịch vụ Liên lạc hội thoại thời gian thực chạy trong subnet công khai của một VPC; nhóm bảo mật (security group) chỉ cho phép kết nối chiều ra, vì tác nhân chủ động kết nối tới LiveKit Cloud, các API nghiệp vụ và nhà cung cấp AI, không nhận kết nối từ ngoài vào. API Gateway không tự kiểm tra đăng nhập (không dùng tính năng authorizer của API Gateway); JWT được xác minh trong mã của từng dịch vụ bằng khóa bí mật dùng chung với Dịch vụ Định danh.
+Toàn bộ tài nguyên AWS nằm trong vùng ap-southeast-1 (Singapore). Lambda, API Gateway và DynamoDB là dịch vụ cấp vùng, không bắt buộc đặt trong mạng riêng ảo (VPC); các template không đặt hàm Lambda nào vào VPC. Dịch vụ Liên lạc hội thoại thời gian thực chạy trong subnet công khai của một VPC; nhóm bảo mật (security group) chỉ cho phép kết nối chiều ra, vì tác nhân chủ động kết nối tới LiveKit Cloud, các API nghiệp vụ và nhà cung cấp AI, không nhận kết nối từ ngoài vào. API Gateway không tự kiểm tra đăng nhập (không dùng tính năng authorizer của API Gateway); JWT được xác minh trong mã của từng dịch vụ bằng khóa bí mật dùng chung với Dịch vụ Định danh.
 
 Bảng `ws-connections` cần thiết vì API Gateway WebSocket cấp cho mỗi ứng dụng đang kết nối một mã kết nối (connectionId), trong khi hàm Lambda không nhớ gì giữa các lần gọi. Khi ứng dụng kết nối, hàm Lambda lưu cặp mã kết nối và định danh người dùng (ví dụ `driver#<số điện thoại>`); khi cần đẩy thông báo, Dịch vụ Chuyến đi và Điều phối tra bảng này để biết gửi tới kết nối nào; khi ứng dụng ngắt kết nối, bản ghi bị xóa. Bảng này không chứa nội dung hội thoại; lời thoại giữa người dùng và trợ lý được lưu ở bảng `call-records` của Dịch vụ Nhật ký cuộc gọi.
 
@@ -182,7 +182,7 @@ Bảng 4.5 mô tả năng lực nghiệp vụ, nhóm API, bảng dữ liệu s�
 
 ## 4.5. Sequence diagram cho các luồng chính
 
-Mục này mô tả luồng hoạt động chính của từng dịch vụ bằng sequence diagram. Mỗi bước ghi thành phần tham gia, thông điệp (phương thức và đường dẫn API) và tham số chính; vị trí hiện thực trong mã nguồn của từng sequence ở Bảng 5.8. Số trong ngoặc tròn tương ứng với luồng trên Hình 4.2 đến Hình 4.4 (Bảng 4.4).
+Mục này mô tả luồng hoạt động chính của từng dịch vụ bằng sequence diagram. Mỗi bước ghi thành phần tham gia, thông điệp (phương thức và đường dẫn API) và tham số chính; vị trí hiện thực trong mã nguồn của từng sequence ở Bảng 5.8. Số trong ngoặc tròn tương ứng với luồng trên Hình 4.2 đến Hình 4.5 (Bảng 4.4).
 
 ### 4.5.1. S1 — Đăng nhập (Dịch vụ Định danh)
 
@@ -398,7 +398,7 @@ Bảng 4.15 tổng hợp các cơ chế thiết kế đáp ứng NFR-04, NFR-05,
 
 ## 4.8. Thiết kế cho tính khả dụng
 
-Tính khả dụng (NFR-01) được thiết kế ở hai mức. Ở mức kiến trúc, tác nhân hiện thực các chiến thuật khả dụng đã chọn ở Bảng 3.18: hủy bỏ, duy trì mô hình tác vụ, mô hình người dùng và mô hình hệ thống. Ở mức tương tác, thiết kế được đối chiếu với 10 nguyên tắc khả dụng của Nielsen (Nielsen, 1994). Các nguyên tắc này vốn được phát biểu cho giao diện đồ họa; với trợ lý giọng nói, phần lớn được hiện thực bằng lời thoại, phần còn lại bằng giao diện ứng dụng tài xế. Bảng 4.16 trình bày đối chiếu; Hình 4.14 minh họa các phần giao diện liên quan.
+Tính khả dụng (NFR-01) được thiết kế ở hai mức. Ở mức kiến trúc, tác nhân hiện thực các chiến thuật khả dụng đã chọn ở Bảng 3.18: hủy bỏ, duy trì mô hình tác vụ, mô hình người dùng và mô hình hệ thống. Ở mức tương tác, thiết kế được đối chiếu với 10 nguyên tắc khả dụng của Nielsen (Nielsen, 1994). Các nguyên tắc này thường được dùng để đánh giá giao diện màn hình; với trợ lý giọng nói, phần lớn được hiện thực bằng lời thoại, phần còn lại bằng giao diện ứng dụng tài xế. Bảng 4.16 trình bày đối chiếu; Hình 4.14 minh họa các phần giao diện liên quan.
 
 **Bảng 4.16.** Đối chiếu thiết kế trợ lý với 10 nguyên tắc khả dụng của Nielsen
 
