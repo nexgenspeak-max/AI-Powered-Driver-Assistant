@@ -357,7 +357,7 @@ Trạng thái phiên (session state) là dữ liệu tác nhân giữ trong bộ
 
 | Nhóm | Nội dung | Mục đích |
 |---|---|---|
-| Hồ sơ và cài đặt | Chế độ gọi khách mặc định, tùy chọn kích hoạt | Chọn chế độ gọi; cá nhân hóa |
+| Hồ sơ và cài đặt | Chế độ gọi khách mặc định, tùy chọn nhắc khách khi gần điểm đón | Chọn chế độ gọi; cá nhân hóa |
 | Chuyến đi | Chuyến sắp tới, chuyến hiện tại, lịch sử gần | Trả lời câu hỏi về chuyến; cập nhật tiến độ |
 | Thu nhập | Thu nhập trong ngày, tóm tắt theo kỳ | Trả lời câu hỏi thu nhập |
 | Cuộc gọi | Trạng thái đang gọi, cuộc gọi gần nhất | Tránh mở cuộc gọi chồng; tóm tắt cuộc gọi |
@@ -412,7 +412,7 @@ Tính khả dụng (NFR-01) được thiết kế ở hai mức. Ở mức kiế
 | 6 | Nhận biết thay vì phải nhớ (recognition rather than recall) | Trạng thái phiên giữ chuyến hiện tại và khách của chuyến để tài xế không phải đọc mã chuyến hay số điện thoại; lời thoại được hiển thị lại để xem khi dừng xe (Hình 4.14b) | NFR-01 |
 | 7 | Linh hoạt và hiệu quả khi sử dụng (flexibility and efficiency of use) | Mở trợ lý bằng từ khóa đánh thức (Hình 4.14d); chế độ gọi khách mặc định được cài sẵn để trợ lý không phải hỏi lại (Hình 4.14c) | FR-A01, FR-C01 |
 | 8 | Thiết kế thẩm mỹ và tối giản (aesthetic and minimalist design) | Mỗi lượt phản hồi một ý chính; khi tra lịch, trợ lý mặc định chỉ nói số chuyến rồi hỏi tài xế muốn nghe chi tiết chuyến nào | NFR-01 |
-| 9 | Giúp người dùng nhận biết, chẩn đoán và khôi phục khi có lỗi (help users recognize, diagnose, and recover from errors) | Khi API lỗi, trợ lý nói ngắn gọn thao tác chưa thực hiện được và không tạo dữ liệu thay thế; khi không nghe rõ thì hỏi lại | NFR-04, UC09 |
+| 9 | Giúp người dùng nhận biết, chẩn đoán và khôi phục khi có lỗi (help users recognize, diagnose, and recover from errors) | Khi API lỗi, trợ lý nói ngắn gọn thao tác chưa thực hiện được và không tạo dữ liệu thay thế; khi không nghe rõ thì hỏi lại | NFR-04, FR-L02 |
 | 10 | Trợ giúp và tài liệu (help and documentation) | Tài xế và khách hàng hỏi cách sử dụng bằng giọng nói; câu trả lời lấy từ sổ tay hướng dẫn | FR-F01, FR-K04 |
 
 ![Hình 4.14](thesis_screenshots/H4_ux_usability.png)

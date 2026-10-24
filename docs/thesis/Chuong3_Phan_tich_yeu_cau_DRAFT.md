@@ -231,7 +231,7 @@ Năm use case tiêu biểu, ít nhất một use case cho mỗi chân dung, đư
 | Tiền điều kiện | Khách có chuyến đã được tạo (UC14); tài xế yêu cầu gọi khách (UC04) |
 | Kích hoạt | Điện thoại của khách đổ chuông |
 | Kịch bản chính | 1. Khách nghe máy. 2. Trợ lý giới thiệu là trợ lý của tài xế và nêu mục đích cuộc gọi. 3. Khách trao đổi hoặc để lại yêu cầu (ví dụ xin chờ thêm vài phút). 4. Trợ lý ghi nhận yêu cầu và xác nhận lại với khách. 5. Cuộc gọi kết thúc; tài xế nhận được tóm tắt. |
-| Kịch bản mở rộng | 2a. Tài xế chọn chế độ nói trực tiếp: khách nói chuyện trực tiếp với tài xế, trợ lý không phát âm chồng lấn. 3a. Khách hỏi giá hoặc thời gian đến mà dữ liệu chuyến không có: trợ lý không tự đưa ra con số. 3b. Khách hỏi thông tin chung về dịch vụ: trợ lý trả lời theo sổ tay hướng dẫn. 1a. Khách không nghe máy: hệ thống báo cho tài xế. |
+| Kịch bản mở rộng | 1a. Khách không nghe máy: hệ thống báo cho tài xế. 2a. Tài xế chọn chế độ nói trực tiếp: khách nói chuyện trực tiếp với tài xế, trợ lý không phát âm chồng lấn. 3a. Khách hỏi giá hoặc thời gian đến mà dữ liệu chuyến không có: trợ lý không tự đưa ra con số. 3b. Khách hỏi thông tin chung về dịch vụ: trợ lý trả lời theo sổ tay hướng dẫn. |
 | Hậu điều kiện | Yêu cầu của khách được ghi nhận và tóm tắt gửi về cho tài xế |
 | Yêu cầu liên quan | FR-K01, FR-K02, FR-K04 |
 
