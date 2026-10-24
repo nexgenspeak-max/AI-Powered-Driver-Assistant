@@ -83,9 +83,9 @@ CONCLUSION_PARAS = [
 ]
 
 APPENDIX_A_INTRO = (
-    "Bảng A.1 liệt kê 45 công cụ (function tool) của gói ngôn ngữ tiếng Việt: 39 công cụ cho phiên tài xế "
+    "Bảng A.1 liệt kê 47 công cụ (function tool) của gói ngôn ngữ tiếng Việt: 41 công cụ cho phiên tài xế "
     "trong ứng dụng (confirm_trip và reject_trip trong số đó cũng là hai công cụ duy nhất của phiên mời nhận chuyến) và "
-    "7 công cụ cho phiên của ứng dụng khách hàng (answer_app_faq dùng chung; phiên này có trong mã nguồn nhưng ngoài phạm vi luận văn, mục 3.5). Gói tiếng Anh có cùng 39 công cụ cho tài xế. "
+    "7 công cụ cho phiên của ứng dụng khách hàng (answer_app_faq dùng chung; phiên này có trong mã nguồn nhưng ngoài phạm vi luận văn, mục 3.5). Gói tiếng Anh có cùng 41 công cụ cho tài xế. "
     "Mô tả rút gọn từ lược đồ công cụ trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
 )
 
@@ -121,6 +121,8 @@ APPENDIX_A_TOOLS = [
     ("get_earnings_summary", "Xem thu nhập theo tuần (7 ngày) hoặc tháng (30 ngày)."),
     ("check_trip_history", "Xem chuyến đã hoàn thành hoặc bị hủy trong hôm nay."),
     ("get_driver_stats", "Xem thống kê tài xế: điểm đánh giá, tỷ lệ nhận, tỷ lệ hoàn thành, tổng số chuyến."),
+    ("get_active_bonuses", "Đọc các khoản thưởng, ưu đãi đang áp dụng (mức, thời hạn) từ ngữ cảnh tải sẵn; không có thì nói không có."),
+    ("get_driver_status", "Cho biết tài xế đang online hay offline; chỉ xem, không đổi trạng thái."),
     ("report_customer_no_show", "Báo cáo khách không xuất hiện tại điểm đón."),
     ("report_trip_issue", "Báo cáo sự cố trong chuyến: hành vi không phù hợp, hư hỏng xe, địa chỉ sai…"),
     ("extend_wait_time", "Yêu cầu thêm thời gian chờ khách tại điểm đón."),
@@ -1528,7 +1530,7 @@ def build() -> Path:
 
     add_heading1_new_page("Danh sách bảng", bookmark="ds_bang")
     for caption in collect_captions("Bảng") + [
-        "Bảng A.1. Danh mục công cụ gói tiếng Việt (45 công cụ)",
+        "Bảng A.1. Danh mục công cụ gói tiếng Việt (47 công cụ)",
         "Bảng D.1. Cấu hình chính của tác nhân hội thoại",
         "Bảng E.1. Ma trận đối chiếu yêu cầu",
         "Bảng F.1. Tái lập số liệu thực nghiệm",
@@ -1682,7 +1684,7 @@ def build() -> Path:
     # ---- Phụ lục A: danh mục công cụ ----
     add_styled("Phụ lục A. Danh mục công cụ của trợ lý giọng nói", "Heading 2", first_line_indent=False)
     add_styled(APPENDIX_A_INTRO, "Normal", first_line_indent=True)
-    add_table_caption("Bảng A.1. Danh mục công cụ gói tiếng Việt (45 công cụ)")
+    add_table_caption("Bảng A.1. Danh mục công cụ gói tiếng Việt (47 công cụ)")
     add_bordered_table(
         [["STT", "Tên công cụ", "Mô tả ngắn"]]
         + [[str(i), name, desc] for i, (name, desc) in enumerate(APPENDIX_A_TOOLS, 1)]

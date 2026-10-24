@@ -300,6 +300,7 @@ Số ca kiểm thử tự động của tác nhân tăng dần theo các lần s
 - Cuối ngày 18/10/2026, sau khi sửa các lỗi phát hiện khi quay video hướng dẫn trên trình giả lập (lời đọc chuyến mới rơi vào phòng trống, phiên bị đóng khi tài xế gõ chữ, câu phân vân vẫn quay số, câu hỏi hướng dẫn không có chỉ mục, câu trả lời về quãng đường, cước và hành lý thiếu dữ liệu): 613/613 ca đạt.
 - Sau khi bổ sung việc hủy cuộc gọi từ ứng dụng và không gọi lại chuyến đã kết thúc: 633/633 ca đạt.
 - Ngày 19/10/2026, sau khi sửa cách chấm từng lượt của báo cáo ngày và lỗi nhật ký in hai lần tiền tố trong cuộc gọi: 635/635 ca đạt.
+- Ngày 24/10/2026, sau khi thêm hai công cụ đọc thưởng đang áp dụng và trạng thái online (dữ liệu đã có trong ngữ cảnh tải sẵn, trước đó lời nhắc hệ thống cấm trả lời về thưởng): 644/644 ca đạt; bài đánh giá chọn công cụ với mô hình thật (`tool_choice_eval.py`, 9 câu × 5 lần) đạt 45/45.
 
 Lớp chặn gọi khách còn được kiểm bằng một bài đánh giá với mô hình thật (`app/voicebot/testing/call_intent_eval.py`, gpt-5.6-luna, 7 tình huống, mỗi tình huống 3 lần): 20/21 lượt đúng. Mọi câu mơ hồ ("cần lắm… ngay lúc này", "không biết", "Ok." sau một chủ đề khác) đều không tạo cuộc gọi; lượt sai duy nhất là mô hình hỏi lại một yêu cầu đã rõ ràng. Việc đạt các ca kiểm thử chứng minh luồng khách hàng hoạt động trong phạm vi đã thiết kế, nhưng không cho biết mức hài lòng của khách hàng thật.
 
