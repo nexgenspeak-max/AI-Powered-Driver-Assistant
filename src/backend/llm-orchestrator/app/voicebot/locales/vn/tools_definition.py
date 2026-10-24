@@ -594,17 +594,16 @@ raw_schema = {
         "type": "function",
         "name": "get_earnings_summary",
         "description": (
-            "Xem thu nhập theo tuần (7 ngày) hoặc tháng (30 ngày). "
-            "Gọi khi hỏi 'tuần này kiếm bao nhiêu', 'tháng này doanh thu'. "
-            "KHÔNG dùng cho 'tổng từ trước đến nay' — nói rõ hệ thống chưa hỗ trợ lifetime."
+            "Thu nhập theo khoảng: tuần này (week), tháng này (month), hôm qua (yesterday), tuần trước (last_week). "
+            "Hôm nay → get_today_earnings. Tổng từ trước đến nay: chưa hỗ trợ, nói rõ."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "period": {
                     "type": "string",
-                    "enum": ["week", "month"],
-                    "description": "week = 7 ngày gần đây; month = 30 ngày gần đây.",
+                    "enum": ["week", "month", "yesterday", "last_week"],
+                    "description": "week = 7 ngày gần đây; month = 30 ngày; yesterday = hôm qua; last_week = tuần trước.",
                 }
             },
             "required": ["period"],
@@ -649,6 +648,16 @@ raw_schema = {
             "Cho biết tài xế đang online (nhận chuyến) hay offline. "
             "Gọi khi tài xế hỏi 'tôi đang online chưa', 'tôi có đang nhận chuyến không', 'trạng thái của tôi'. "
             "KHÔNG đổi trạng thái — muốn bật/tắt dùng set_driver_status."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_vehicle_info": {
+        "type": "function",
+        "name": "get_vehicle_info",
+        "description": (
+            "Thông tin xe của tài xế: loại xe, biển số, tên xe. "
+            "Gọi khi hỏi 'xe tôi là gì', 'biển số xe tôi', 'tôi đăng ký xe nào'. Không phải thống kê hay chuyến."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },

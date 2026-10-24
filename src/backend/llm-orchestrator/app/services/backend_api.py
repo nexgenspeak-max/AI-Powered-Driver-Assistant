@@ -503,7 +503,7 @@ async def get_today_earnings(driver_phone: str) -> dict:
 
 
 async def get_earnings_summary(driver_phone: str, period: str = "week") -> dict:
-    """Return earnings summary for the given period ('week' | 'month')."""
+    """Return earnings summary for the given period ('week' | 'month' | 'yesterday' | 'last_week')."""
     c = _get_client()
     r = await c.get(
         f"{_trip_base()}/api/v1/drivers/me/earnings/summary",

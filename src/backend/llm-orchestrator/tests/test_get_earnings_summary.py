@@ -61,3 +61,35 @@ async def test_earnings_summary_api_failure_speaks_honest_error():
         await _run(context, {"period": "month"})
 
     assert "Không lấy được" in context.session.say.await_args.args[0]
+
+
+async def test_earnings_summary_yesterday_and_last_week_pass_period_through():
+    from app.voicebot.locales.en.tools.get_earnings_summary import get_earnings_summary as en_tool
+
+    for period, label in (("yesterday", "Hôm qua"), ("last_week", "Tuần trước")):
+        context = MagicMock()
+        context.userdata = {"driver_phone": "0900000001"}
+        context.session.say = AsyncMock()
+        with patch(
+            "app.voicebot.locales.vn.tools.get_earnings_summary.backend_api.get_earnings_summary",
+            new_callable=AsyncMock,
+            return_value={"period": period, "trip_count": 3, "total_earnings": 410_000},
+        ) as api:
+            await _run(context, {"period": period})
+        api.assert_awaited_once_with("0900000001", period=period)
+        spoken = context.session.say.await_args.args[0]
+        assert spoken.startswith(label) and "3 chuyến" in spoken and "410.000đ" in spoken
+
+    context = MagicMock()
+    context.userdata = {"driver_phone": "0900000001"}
+    context.session.say = AsyncMock()
+    with patch(
+        "app.voicebot.locales.en.tools.get_earnings_summary.backend_api.get_earnings_summary",
+        new_callable=AsyncMock,
+        return_value={"period": "last_week", "trip_count": 3, "total_earnings": 410_000},
+    ):
+        try:
+            await en_tool.__wrapped__({"period": "last_week"}, context)
+        except StopResponse:
+            pass
+    assert context.session.say.await_args.args[0].startswith("Last week")

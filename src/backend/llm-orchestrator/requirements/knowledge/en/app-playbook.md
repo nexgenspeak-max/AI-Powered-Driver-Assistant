@@ -194,8 +194,11 @@ A: Yes. The primary voice assistant supports Vietnamese; some configurations als
 
 ### 6.2 Drivers
 
-**Q: How do I check today's / weekly / monthly earnings?**  
-A: Ask the AI: *"How much did I make today?"*, *"This week's earnings?"*, *"This month's revenue?"*. Only those three ranges exist — not lifetime totals.
+**Q: How do I check today's / yesterday's / weekly / monthly earnings?**  
+A: Ask the AI: *"How much did I make today?"*, *"Yesterday's earnings?"*, *"This week's earnings?"*, *"How much last week?"*, *"This month's revenue?"*. "Last week" is the previous calendar week (Monday to Sunday); "this week" and "this month" are the last 7 and 30 days. Lifetime totals are not available.
+
+**Q: How do I see my registered vehicle and plate?**  
+A: Ask the AI: *"What car am I on?"* or *"My plate number?"*. The AI reads the vehicle type, plate and name from your profile; to change them, open Profile in the app.
 
 **Q: How do I see completed or cancelled trips today?**  
 A: Ask *"Completed trips today"* or *"Cancelled trips today"*.

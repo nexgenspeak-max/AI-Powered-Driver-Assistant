@@ -194,8 +194,11 @@ T: Có. Trợ lý AI chính hỗ trợ tiếng Việt; một số cấu hình h�
 
 ### 6.2 Tài xế
 
-**H: Làm sao xem thu nhập hôm nay / tuần / tháng?**  
-T: Hỏi AI: *"Hôm nay kiếm bao nhiêu?"*, *"Tuần này thu nhập?"*, *"Tháng này doanh thu?"*. AI chỉ có 3 khoảng này — chưa có tổng từ trước đến nay.
+**H: Làm sao xem thu nhập hôm nay / hôm qua / tuần / tháng?**  
+T: Hỏi AI: *"Hôm nay kiếm bao nhiêu?"*, *"Hôm qua thu nhập?"*, *"Tuần này thu nhập?"*, *"Tuần trước kiếm được bao nhiêu?"*, *"Tháng này doanh thu?"*. "Tuần trước" là tuần lịch trước (thứ Hai đến Chủ nhật); "tuần này" và "tháng này" là 7 và 30 ngày gần đây. Chưa có tổng từ trước đến nay.
+
+**H: Làm sao xem xe và biển số tôi đã đăng ký?**  
+T: Hỏi AI: *"Xe tôi là gì?"* hoặc *"Biển số xe tôi?"*. AI đọc loại xe, biển số và tên xe trong hồ sơ; muốn sửa thì vào mục Hồ sơ trong ứng dụng.
 
 **H: Hôm nay có thưởng hay ưu đãi gì không?**  
 T: Hỏi AI: *"Hôm nay có thưởng không?"* hoặc *"Đang có ưu đãi gì?"*. AI đọc các khoản thưởng đang áp dụng kèm mức và thời hạn; không có thì AI nói không có.

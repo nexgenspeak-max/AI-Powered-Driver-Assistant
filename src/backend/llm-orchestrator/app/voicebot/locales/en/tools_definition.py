@@ -543,16 +543,16 @@ raw_schema = {
         "type": "function",
         "name": "get_earnings_summary",
         "description": (
-            "View earnings for the last 7 days (week) or 30 days (month). "
-            "Use for 'this week', 'this month'. Do NOT invent lifetime totals — say unsupported."
+            "Earnings for a range: this week (week), this month (month), yesterday, last week (last_week). "
+            "Today → get_today_earnings. Lifetime totals: unsupported, say so."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "period": {
                     "type": "string",
-                    "enum": ["week", "month"],
-                    "description": "week = last 7 days; month = last 30 days.",
+                    "enum": ["week", "month", "yesterday", "last_week"],
+                    "description": "week = last 7 days; month = last 30 days; yesterday; last_week = previous Mon-Sun.",
                 }
             },
             "required": ["period"],
@@ -597,6 +597,16 @@ raw_schema = {
             "Tell whether the driver is currently online (accepting trips) or offline. "
             "Use when the driver asks 'am I online', 'am I receiving trips', 'what is my status'. "
             "Does NOT change the status — use set_driver_status for that."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_vehicle_info": {
+        "type": "function",
+        "name": "get_vehicle_info",
+        "description": (
+            "The driver's registered vehicle: type, plate number, vehicle name. "
+            "Use for 'what car am I on', 'my plate number', 'which vehicle is registered'. Not stats or trips."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },

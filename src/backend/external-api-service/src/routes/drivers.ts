@@ -153,7 +153,10 @@ router.get('/me/earnings/summary', async (req: Request, res: Response) => {
   try {
     const driverPhone = req.headers['x-driver-phone'] as string;
     if (!driverPhone) return res.status(400).json({ detail: 'X-Driver-Phone header required' });
-    const period = (req.query.period as 'week' | 'month') || 'week';
+    const period = req.query.period ?? 'week';
+    if (!earningsService.isEarningsPeriod(period)) {
+      return res.status(400).json({ detail: `period must be one of ${earningsService.EARNINGS_PERIODS.join(', ')}` });
+    }
     return res.json(await earningsService.summaryForDriver(driverPhone, period));
   } catch (err) {
     return res.status(500).json({ error: String(err) });

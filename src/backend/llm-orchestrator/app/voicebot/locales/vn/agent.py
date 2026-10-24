@@ -61,6 +61,7 @@ from app.voicebot.locales.vn.tools.get_today_earnings         import get_today_e
 from app.voicebot.locales.vn.tools.get_earnings_summary       import get_earnings_summary
 from app.voicebot.locales.vn.tools.check_trip_history         import check_trip_history
 from app.voicebot.locales.vn.tools.get_driver_stats           import get_driver_stats
+from app.voicebot.locales.vn.tools.get_vehicle_info           import get_vehicle_info
 from app.voicebot.locales.vn.tools.get_active_bonuses         import get_active_bonuses
 from app.voicebot.locales.vn.tools.get_driver_status          import get_driver_status
 from app.voicebot.locales.vn.tools.report_customer_no_show    import report_customer_no_show
@@ -127,6 +128,7 @@ _DRIVER_INBOUND_TOOLS = [
     get_earnings_summary,
     check_trip_history,
     get_driver_stats,
+    get_vehicle_info,
     get_active_bonuses,
     # Availability
     set_driver_status,

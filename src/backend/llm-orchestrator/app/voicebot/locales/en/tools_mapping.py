@@ -30,9 +30,10 @@ check_customer_call_status — is the background call done.
 create_reminder — remind me before pickup.
 request_cancel_trip → confirm_cancel_trip — cancel an accepted trip; always confirm first.
 get_today_earnings — today's earnings.
-get_earnings_summary — week/month earnings (period=week|month). Never invent lifetime totals.
+get_earnings_summary — week/month/yesterday/last-week earnings (period=week|month|yesterday|last_week). Never invent lifetime totals.
 check_trip_history — completed/cancelled today (scope=completed_today|cancelled_today).
 get_driver_stats — rating, stats.
+get_vehicle_info — my car, plate number, vehicle type.
 get_active_bonuses — active bonuses/promotions; say none if none.
 report_customer_no_show — rider didn't show; only ask. A yes records it — do not call the tool again.
 report_trip_issue — report a problem.

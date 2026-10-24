@@ -31,9 +31,10 @@ check_customer_call_status — gọi nền xong chưa.
 create_reminder — nhắc trước giờ đón.
 request_cancel_trip → confirm_cancel_trip — hủy chuyến đã nhận; luôn hỏi xác nhận.
 get_today_earnings — thu nhập hôm nay.
-get_earnings_summary — thu nhập tuần/tháng (period=week|month). Không bịa tổng đời.
+get_earnings_summary — thu nhập tuần/tháng/hôm qua/tuần trước (period=week|month|yesterday|last_week). Không bịa tổng đời.
 check_trip_history — chuyến hoàn thành/hủy hôm nay (scope=completed_today|cancelled_today).
 get_driver_stats — điểm, rating, thống kê.
+get_vehicle_info — xe tôi, biển số, loại xe.
 get_active_bonuses — thưởng/ưu đãi đang áp dụng; không có thì nói không có.
 report_customer_no_show — khách không ra; chỉ hỏi. Câu có mới ghi nhận, đừng gọi lại tool.
 report_trip_issue — báo cáo sự cố.

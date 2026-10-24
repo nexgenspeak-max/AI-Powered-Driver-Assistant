@@ -46,10 +46,46 @@ export async function todayForDriver(driverPhone: string) {
   };
 }
 
-export async function summaryForDriver(driverPhone: string, period: 'week' | 'month' = 'week') {
+export type EarningsPeriod = 'week' | 'month' | 'yesterday' | 'last_week';
+export const EARNINGS_PERIODS: readonly EarningsPeriod[] = ['week', 'month', 'yesterday', 'last_week'];
+
+export function isEarningsPeriod(value: unknown): value is EarningsPeriod {
+  return typeof value === 'string' && (EARNINGS_PERIODS as readonly string[]).includes(value);
+}
+
+function startOfLocalDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+/**
+ * Pure: the [from, to) window a period covers, in the server's local time
+ * (same convention as todayForDriver's setHours(0,0,0,0)).
+ * - week / month: rolling 7 / 30 days ending now ("7 ngày gần đây").
+ * - yesterday: the previous calendar day.
+ * - last_week: the previous calendar week, Monday 00:00 to this Monday 00:00
+ *   ("tuần trước" as a driver means it, not "days 8–14 ago").
+ */
+export function periodRange(period: EarningsPeriod, now: Date = new Date()): { from: Date; to: Date } {
+  if (period === 'yesterday') {
+    const today = startOfLocalDay(now);
+    return { from: new Date(today.getTime() - 86400000), to: today };
+  }
+  if (period === 'last_week') {
+    const today = startOfLocalDay(now);
+    const daysSinceMonday = (today.getDay() + 6) % 7; // Sunday=0 → 6
+    const thisMonday = new Date(today.getTime() - daysSinceMonday * 86400000);
+    return { from: new Date(thisMonday.getTime() - 7 * 86400000), to: thisMonday };
+  }
   const days = period === 'month' ? 30 : 7;
-  const from = new Date(Date.now() - days * 86400000).toISOString();
-  const to = new Date().toISOString();
+  return { from: new Date(now.getTime() - days * 86400000), to: now };
+}
+
+export async function summaryForDriver(driverPhone: string, period: EarningsPeriod = 'week') {
+  const range = periodRange(period);
+  const from = range.from.toISOString();
+  const to = range.to.toISOString();
   const completed = await completedTripsInRange(driverPhone, from, to);
   const total = completed.reduce((sum, t) => sum + tripFare(t), 0);
   return {

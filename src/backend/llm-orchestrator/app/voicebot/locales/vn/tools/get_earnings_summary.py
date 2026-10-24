@@ -1,4 +1,4 @@
-"""Period earnings (week/month) — uses trip-service summary API."""
+"""Period earnings (week/month/yesterday/last_week) — uses trip-service summary API."""
 from __future__ import annotations
 
 import logging
@@ -13,16 +13,21 @@ from app.voicebot.prompts.tool_response import ToolResponse
 
 logger = logging.getLogger("llm-orchestrator.vn.tools.get_earnings_summary")
 
-_PERIOD_LABEL = {"week": "7 ngày gần đây", "month": "30 ngày gần đây"}
+_PERIOD_LABEL = {
+    "week": "7 ngày gần đây",
+    "month": "30 ngày gần đây",
+    "yesterday": "Hôm qua",
+    "last_week": "Tuần trước",
+}
 
 
 @function_tool(raw_schema=raw_schema["get_earnings_summary"])
 async def get_earnings_summary(raw_arguments: dict, context: RunContext) -> str:
     period = (raw_arguments.get("period") or "week").strip().lower()
-    if period not in ("week", "month"):
+    if period not in _PERIOD_LABEL:
         return await context_store.speak_and_stop(
             context.session,
-                "Em chỉ xem được thu nhập hôm nay, tuần này hoặc tháng này. Bạn hỏi lại với một trong các khoảng đó nhé.",
+                "Em chỉ xem được thu nhập hôm nay, hôm qua, tuần này, tuần trước hoặc tháng này. Bạn hỏi lại với một trong các khoảng đó nhé.",
         )
 
     driver_phone = context.userdata.get("driver_phone") or ""
@@ -57,7 +62,7 @@ async def get_earnings_summary(raw_arguments: dict, context: RunContext) -> str:
         response_knowledge=spoken,
         follow_up_knowledge=[
             "Hôm nay: get_today_earnings",
-            "Tuần/tháng khác: get_earnings_summary(period=week|month)",
+            "Khoảng khác: get_earnings_summary(period=week|month|yesterday|last_week)",
         ],
         action_knowledge=[],
     )
