@@ -631,6 +631,28 @@ raw_schema = {
         },
     },
 
+    "get_active_bonuses": {
+        "type": "function",
+        "name": "get_active_bonuses",
+        "description": (
+            "Thưởng/ưu đãi/bonus/khuyến mãi đang áp dụng cho tài xế: mức và hạn. "
+            "Mọi câu có từ thưởng, ưu đãi, bonus, khuyến mãi (kể cả 'ưu đãi gì', 'bonus khu trung tâm') → gọi công cụ này, "
+            "không phải hỏi chuyến. Không có thì nói không có."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_driver_status": {
+        "type": "function",
+        "name": "get_driver_status",
+        "description": (
+            "Cho biết tài xế đang online (nhận chuyến) hay offline. "
+            "Gọi khi tài xế hỏi 'tôi đang online chưa', 'tôi có đang nhận chuyến không', 'trạng thái của tôi'. "
+            "KHÔNG đổi trạng thái — muốn bật/tắt dùng set_driver_status."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_driver_stats": {
         "type": "function",
         "name": "get_driver_stats",

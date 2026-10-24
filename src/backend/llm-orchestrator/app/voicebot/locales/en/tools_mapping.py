@@ -33,10 +33,12 @@ get_today_earnings — today's earnings.
 get_earnings_summary — week/month earnings (period=week|month). Never invent lifetime totals.
 check_trip_history — completed/cancelled today (scope=completed_today|cancelled_today).
 get_driver_stats — rating, stats.
+get_active_bonuses — active bonuses/promotions; say none if none.
 report_customer_no_show — rider didn't show; only ask. A yes records it — do not call the tool again.
 report_trip_issue — report a problem.
 extend_wait_time — wait longer.
 set_driver_status — go online/offline.
+get_driver_status — currently online or offline (read-only).
 answer_app_faq — app how-to / FAQ, not live trip data.
 end_conversation — goodbye, hang up the assistant.
 </KeywordsMappingForToolUsage>

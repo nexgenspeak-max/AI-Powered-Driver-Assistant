@@ -197,6 +197,12 @@ T: Có. Trợ lý AI chính hỗ trợ tiếng Việt; một số cấu hình h�
 **H: Làm sao xem thu nhập hôm nay / tuần / tháng?**  
 T: Hỏi AI: *"Hôm nay kiếm bao nhiêu?"*, *"Tuần này thu nhập?"*, *"Tháng này doanh thu?"*. AI chỉ có 3 khoảng này — chưa có tổng từ trước đến nay.
 
+**H: Hôm nay có thưởng hay ưu đãi gì không?**  
+T: Hỏi AI: *"Hôm nay có thưởng không?"* hoặc *"Đang có ưu đãi gì?"*. AI đọc các khoản thưởng đang áp dụng kèm mức và thời hạn; không có thì AI nói không có.
+
+**H: Làm sao biết tôi đang online hay offline?**  
+T: Hỏi AI: *"Tôi đang online chưa?"*. Muốn đổi thì nói *"Bật nhận chuyến"* hoặc *"Tắt nhận chuyến"*.
+
 **H: Xem chuyến hoàn thành hoặc bị hủy hôm nay?**  
 T: Hỏi *"Chuyến hoàn thành hôm nay"* hoặc *"Chuyến bị hủy hôm nay"*.
 

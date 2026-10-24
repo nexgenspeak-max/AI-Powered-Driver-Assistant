@@ -56,6 +56,8 @@ from app.voicebot.locales.en.tools.get_today_earnings         import get_today_e
 from app.voicebot.locales.en.tools.get_earnings_summary       import get_earnings_summary
 from app.voicebot.locales.en.tools.check_trip_history         import check_trip_history
 from app.voicebot.locales.en.tools.get_driver_stats           import get_driver_stats
+from app.voicebot.locales.en.tools.get_active_bonuses         import get_active_bonuses
+from app.voicebot.locales.en.tools.get_driver_status          import get_driver_status
 from app.voicebot.locales.en.tools.report_customer_no_show    import report_customer_no_show
 from app.voicebot.locales.en.tools.report_trip_issue          import report_trip_issue
 from app.voicebot.locales.en.tools.extend_wait_time           import extend_wait_time
@@ -108,8 +110,10 @@ _DRIVER_INBOUND_TOOLS = [
     get_earnings_summary,
     check_trip_history,
     get_driver_stats,
+    get_active_bonuses,
     # Availability
     set_driver_status,
+    get_driver_status,
     # App playbook / FAQ (RAG)
     answer_app_faq,
     # Ending the call

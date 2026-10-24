@@ -34,10 +34,12 @@ get_today_earnings — thu nhập hôm nay.
 get_earnings_summary — thu nhập tuần/tháng (period=week|month). Không bịa tổng đời.
 check_trip_history — chuyến hoàn thành/hủy hôm nay (scope=completed_today|cancelled_today).
 get_driver_stats — điểm, rating, thống kê.
+get_active_bonuses — thưởng/ưu đãi đang áp dụng; không có thì nói không có.
 report_customer_no_show — khách không ra; chỉ hỏi. Câu có mới ghi nhận, đừng gọi lại tool.
 report_trip_issue — báo cáo sự cố.
 extend_wait_time — chờ thêm.
 set_driver_status — bật/tắt nhận chuyến.
+get_driver_status — đang online hay offline (chỉ xem, không đổi).
 answer_app_faq — hướng dẫn app/FAQ, không phải dữ liệu chuyến.
 end_conversation — tạm biệt, tắt trợ lý.
 </KeywordsMappingForToolUsage>

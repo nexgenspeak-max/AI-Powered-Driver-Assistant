@@ -579,6 +579,28 @@ raw_schema = {
         },
     },
 
+    "get_active_bonuses": {
+        "type": "function",
+        "name": "get_active_bonuses",
+        "description": (
+            "List the bonuses / promotions currently active for the driver (amount, expiry). "
+            "Use when the driver asks 'any bonus today', 'what promotions', 'is there a surge bonus'. "
+            "Read-only; if none, say so, never invent one."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
+    "get_driver_status": {
+        "type": "function",
+        "name": "get_driver_status",
+        "description": (
+            "Tell whether the driver is currently online (accepting trips) or offline. "
+            "Use when the driver asks 'am I online', 'am I receiving trips', 'what is my status'. "
+            "Does NOT change the status — use set_driver_status for that."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+
     "get_driver_stats": {
         "type": "function",
         "name": "get_driver_stats",
