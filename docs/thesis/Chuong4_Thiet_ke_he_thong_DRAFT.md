@@ -371,7 +371,7 @@ Tác nhân xác định loại phiên từ tên phòng và metadata, mỗi loạ
 
 | Loại phiên | Nhận biết | Tập công cụ |
 |---|---|---|
-| Tài xế trong ứng dụng | Phòng driver-… không có metadata chuyến | 41 công cụ của tài xế |
+| Tài xế trong ứng dụng | Phòng driver-… không có metadata chuyến | 42 công cụ của tài xế |
 | Mời nhận chuyến | Phòng driver-… có metadata chuyến và sip_identity | confirm_trip, reject_trip |
 | Gọi khách nền | Phòng custcall-… | Tác nhân riêng trao đổi với khách hàng |
 | Khách hàng qua ứng dụng (ngoài phạm vi) | Phòng customer-… | 7 công cụ dành cho ứng dụng khách hàng; có trong mã nguồn nhưng không thuộc mô hình nghiệp vụ của luận văn |
