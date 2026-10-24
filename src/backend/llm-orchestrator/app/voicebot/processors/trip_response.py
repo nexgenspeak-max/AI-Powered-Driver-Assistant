@@ -1,6 +1,8 @@
 """Build ToolResponse objects for trip-related tools."""
 from __future__ import annotations
 
+from app.voicebot.processors.trip_days import speak_pickup_time
+
 from app.voicebot.prompts.tool_response import ToolResponse
 from app.voicebot.processors.tool_reply import trip_actions
 from app.voicebot.processors.trip_format import (
@@ -55,7 +57,7 @@ def _trip_knowledge_rows(trip: dict, index: int, lang: str) -> list[str]:
 def _trip_follow_up_rows(trip: dict, index: int, lang: str) -> list[str]:
     """Labeled follow-up rows — full trip fields for LLM partial answers."""
     customer = trip.get("customer_name") or ("khách" if lang != "en" else "customer")
-    time = (trip.get("pickup_time") or "").strip()
+    time = speak_pickup_time(trip.get("pickup_time"), lang)
     prefix = f"Chuyến {index}" if lang != "en" else f"Trip {index}"
     rows: list[str] = []
 

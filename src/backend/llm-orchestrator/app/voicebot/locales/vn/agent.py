@@ -87,9 +87,15 @@ def _registered_phone_hint(customer_phone: str) -> str:
     return f"\n\nSỐ ĐIỆN THOẠI ĐÃ ĐĂNG KÝ TÀI KHOẢN CỦA KHÁCH: {customer_phone}"
 
 _DRIVER_INBOUND_TOOLS = [
-    # Trip management
-    check_upcoming_trips,
+    # Trip management. create_walkup_trip goes FIRST on purpose: with
+    # reasoning effort "none" the model sometimes "default-calls" whichever
+    # tool is listed first, filling every property with a zero value
+    # (check_upcoming_trips{scope:all, trip_index:0, list_all:false}) for an
+    # unrelated question about bonuses or earnings. A first tool whose
+    # required arguments cannot be invented (phone, pickup, dropoff) breaks
+    # that habit — tool_choice_eval went 102/105 → 105/105 (2026-10-24).
     create_walkup_trip,
+    check_upcoming_trips,
     refresh_latest_data,
     get_current_trip_info,
     suggest_next_stop,

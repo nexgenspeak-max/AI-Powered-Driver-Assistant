@@ -32,7 +32,7 @@ create_reminder — nhắc trước giờ đón.
 request_cancel_trip → confirm_cancel_trip — hủy chuyến đã nhận; luôn hỏi xác nhận.
 get_today_earnings — thu nhập hôm nay.
 get_earnings_summary — thu nhập tuần/tháng/hôm qua/tuần trước (period=week|month|yesterday|last_week). Không bịa tổng đời.
-check_trip_history — chuyến hoàn thành/hủy hôm nay (scope=completed_today|cancelled_today).
+check_trip_history — chuyến hoàn thành/hủy (scope=completed|cancelled, day=today|yesterday|last_7_days).
 get_driver_stats — điểm, rating, thống kê.
 get_vehicle_info — xe tôi, biển số, loại xe.
 get_active_bonuses — thưởng/ưu đãi đang áp dụng; không có thì nói không có.

@@ -22,6 +22,7 @@ from app.config.settings import get_settings
 from app.voicebot.locales.vn.system_instructions import INBOUND_PROMPT
 from app.voicebot.locales.vn.tools_mapping import TOOLS_MAPPING_PROMPT
 from app.voicebot.locales.vn.tools_definition import raw_schema
+from app.voicebot.tool_registry import driver_inbound_tool_names
 
 CONTEXT = (
     "Ngữ cảnh: tài xế đang online, có 1 chuyến đang chạy — đón khách Nguyễn Văn Nam ở Mỹ Đình, "
@@ -32,7 +33,8 @@ GREETING = [
     {"role": "assistant", "content": "Bạn đang có chuyến với Nguyễn Văn Nam, sau đó còn 11 chuyến nữa. Cần gì bạn cứ nói nhé."},
 ]
 
-# (name, user utterance, expected first tool or "none"[, expected arguments])
+# (name, user utterance, expected first tool or "none"[, expected arguments — a subset:
+#  every listed key must match, extra keys the model adds are fine])
 CASES = [
     ("bonus_today", "Hôm nay có thưởng gì không?", "get_active_bonuses"),
     ("bonus_promo", "Đang có ưu đãi gì cho tài xế không?", "get_active_bonuses"),
@@ -49,11 +51,20 @@ CASES = [
     ("earnings_yesterday", "Hôm qua tôi kiếm được bao nhiêu?", "get_earnings_summary", {"period": "yesterday"}),
     ("earnings_last_week", "Tuần trước thu nhập bao nhiêu?", "get_earnings_summary", {"period": "last_week"}),
     ("earnings_this_week", "Tuần này kiếm được bao nhiêu rồi?", "get_earnings_summary", {"period": "week"}),
+    ("trips_tomorrow", "Ngày mai tôi có chuyến nào không?", "check_upcoming_trips", {"day": "tomorrow"}),
+    ("history_yesterday", "Hôm qua tôi hoàn thành mấy chuyến?", "check_trip_history", {"scope": "completed", "day": "yesterday"}),
+    ("history_week_not_earnings", "Bảy ngày qua tôi chạy được bao nhiêu chuyến?", "check_trip_history", {"scope": "completed", "day": "last_7_days"}),
+    ("cancelled_today", "Hôm nay có chuyến nào bị hủy không?", "check_trip_history", {"scope": "cancelled"}),
+    ("trip_index_name", "Khách ở chuyến thứ ba tên gì?", "check_upcoming_trips", {"trip_index": 3}),
+    ("trip_index_pickup", "Chuyến thứ hai đón ở đâu?", "check_upcoming_trips", {"trip_index": 2}),
 ]
 
 
 def _tools() -> list[dict]:
-    return [dict(v) for v in raw_schema.values()]
+    """Same tools in the same ORDER the live agent registers them (agent.py):
+    the model's rare default-call goes to whichever tool is listed first."""
+    order = driver_inbound_tool_names("vn")
+    return [dict(raw_schema[name]) for name in order if name in raw_schema]
 
 
 def _first_tool(client: OpenAI, model: str, utterance: str) -> str:
@@ -95,9 +106,10 @@ def main() -> int:
             if want_args is None:
                 return True
             try:
-                return json.loads("{" + args) == want_args
+                got_args = json.loads("{" + args)
             except ValueError:
                 return False
+            return all(got_args.get(k) == v for k, v in want_args.items())
 
         hits = sum(1 for g in got if _hit(g))
         total += runs; ok += hits

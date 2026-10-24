@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.voicebot.processors import context_store
+from app.voicebot.processors.trip_days import in_day_window
 from app.voicebot.processors.trip_response import (
     build_trip_count_response,
     build_trip_detail_response,
@@ -29,6 +30,12 @@ _SCOPE_LABELS_EN = {
     "awaiting_confirmation": "awaiting confirmation",
     "new": "new",
 }
+_DAY_LABELS = {"vi": {"today": "hôm nay", "tomorrow": "ngày mai"}, "en": {"today": "today", "tomorrow": "tomorrow"}}
+
+
+def _day_arg(raw_arguments: dict) -> str:
+    day = (raw_arguments.get("day") or "all").strip().lower()
+    return day if day in ("today", "tomorrow") else "all"
 
 
 def _awaiting_note(all_trips: list[dict], scope: str, lang: str) -> str:
@@ -81,17 +88,28 @@ def format_schedule_reply(userdata: dict, raw_arguments: dict, *, lang: str) -> 
         trips = [t for t in all_trips if t.get("status") in AWAITING_CONFIRMATION_STATUSES]
     elif scope == "new":
         trips = [t for t in all_trips if t.get("status") in NEW_STATUSES]
+    # Day filter on the scheduled pickup time. Undated pickup_time (walk-ups,
+    # "đi ngay" bookings) counts as today — see trip_days.in_day_window.
+    day = _day_arg(raw_arguments)
+    if day != "all":
+        trips = [t for t in trips if in_day_window(t.get("pickup_time"), day)]
+    day_label = _DAY_LABELS["en" if lang == "en" else "vi"].get(day)
     if not trips:
         labels = _SCOPE_LABELS_EN if lang == "en" else _SCOPE_LABELS_VI
         label = labels.get(scope)
+        if day_label and not label:
+            return (f"You don't have any trips {day_label}." if lang == "en"
+                    else f"{day_label.capitalize()} bạn không có chuyến nào.")
         if label:
             if lang == "en":
-                return f"You don't have any {label} trips."
-            return f"Bạn không có chuyến nào {label}."
+                return f"You don't have any {label} trips" + (f" {day_label}." if day_label else ".")
+            return f"Bạn không có chuyến nào {label}" + (f" {day_label}." if day_label else ".")
         return err_no_upcoming
 
     note = _awaiting_note(all_trips, scope, lang)
-    trip_index = raw_arguments.get("trip_index")
+    # Models sometimes fill every property with a default (trip_index=0,
+    # list_all=false); 0 is not a choice, so treat it as "not provided".
+    trip_index = raw_arguments.get("trip_index") or None
     if trip_index is not None:
         idx = int(trip_index)
         if idx < 1 or idx > len(trips):
@@ -107,6 +125,8 @@ def format_schedule_reply(userdata: dict, raw_arguments: dict, *, lang: str) -> 
 
     labels = _SCOPE_LABELS_EN if lang == "en" else _SCOPE_LABELS_VI
     scope_label = labels.get(scope) if scope != "all" else None
+    if day_label:
+        scope_label = f"{scope_label} {day_label}" if scope_label else day_label
     if trips:
         context_store.set_target_trip(userdata, trips[0])
     return build_trip_count_response(trips, lang, scope_label=scope_label)

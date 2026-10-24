@@ -1,5 +1,5 @@
 """check_trip_history speaks from context and stops the LLM rewrite."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 from livekit.agents import StopResponse
@@ -89,3 +89,61 @@ async def test_cancelled_today_empty_and_with_rows():
     context.session.say = AsyncMock()
     await _run(context, {"scope": "cancelled_today"})
     assert "Bình" in context.session.say.await_args.args[0]
+
+
+def _days_ago_iso(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+
+async def test_yesterday_and_last_7_days_windows():
+    userdata: dict = {"driver_phone": "0900000001"}
+    context_store.load_driver_context(
+        userdata,
+        {
+            "completed_trips": [
+                {"trip_id": "a", "status": "completed", "customer_name": "An", "updated_at": _today_iso()},
+                {"trip_id": "b", "status": "completed", "customer_name": "Bình", "updated_at": _days_ago_iso(1)},
+                {"trip_id": "c", "status": "completed", "customer_name": "Cúc", "updated_at": _days_ago_iso(3)},
+                {"trip_id": "d", "status": "completed", "customer_name": "Dũng", "updated_at": _days_ago_iso(9)},
+            ]
+        },
+    )
+    context = MagicMock()
+    context.userdata = userdata
+
+    context.session.say = AsyncMock()
+    await _run(context, {"scope": "completed", "day": "yesterday"})
+    spoken = context.session.say.await_args.args[0]
+    assert spoken.startswith("Hôm qua") and "1 chuyến" in spoken and "Bình" in spoken
+
+    context.session.say = AsyncMock()
+    await _run(context, {"scope": "completed", "day": "last_7_days"})
+    spoken = context.session.say.await_args.args[0]
+    assert spoken.startswith("Bảy ngày qua") and "3 chuyến" in spoken  # a, b, c — not d
+
+    # Legacy scope values from older prompts still resolve to today.
+    context.session.say = AsyncMock()
+    await _run(context, {"scope": "completed_today"})
+    assert "Hôm nay" in context.session.say.await_args.args[0]
+
+
+async def test_en_twin_and_capped_note():
+    from app.voicebot.locales.en.tools.check_trip_history import check_trip_history as en_tool
+    from app.voicebot.processors.trip_history_reply import CONTEXT_TRIP_CAP
+
+    rows = [
+        {"trip_id": f"t{i}", "status": "completed", "customer_name": "X", "updated_at": _days_ago_iso(i % 5)}
+        for i in range(CONTEXT_TRIP_CAP)
+    ]
+    userdata: dict = {"driver_phone": "0900000001"}
+    context_store.load_driver_context(userdata, {"completed_trips": rows})
+    context = MagicMock()
+    context.userdata = userdata
+    context.session.say = AsyncMock()
+    try:
+        await en_tool.__wrapped__({"scope": "completed", "day": "last_7_days"}, context)
+    except StopResponse:
+        pass
+    spoken = context.session.say.await_args.args[0]
+    assert spoken.startswith("In the last 7 days") and f"{CONTEXT_TRIP_CAP} trips" in spoken
+    assert "most recent trips only" in spoken

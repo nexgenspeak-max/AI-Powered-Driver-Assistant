@@ -200,8 +200,11 @@ A: Ask the AI: *"How much did I make today?"*, *"Yesterday's earnings?"*, *"This
 **Q: How do I see my registered vehicle and plate?**  
 A: Ask the AI: *"What car am I on?"* or *"My plate number?"*. The AI reads the vehicle type, plate and name from your profile; to change them, open Profile in the app.
 
-**Q: How do I see completed or cancelled trips today?**  
-A: Ask *"Completed trips today"* or *"Cancelled trips today"*.
+**Q: Do I have any trips tomorrow?**  
+A: Ask the AI *"Do I have any trips tomorrow?"*. It counts trips with a scheduled pickup tomorrow; trips without a pickup time (walk-ups, ride-now bookings) count as today.
+
+**Q: How do I see completed or cancelled trips today / yesterday / this week?**  
+A: Ask *"How many trips did I finish today?"*, *"How many trips yesterday?"*, *"How many trips in the last 7 days?"* or *"Any cancelled trips?"*. The 7-day figure counts only the most recent trips the app has loaded.
 
 **Q: How do I go online to accept trips?**  
 A: Select Online in the app, or tell the AI: *"Go online"* / *"I'm ready"*.

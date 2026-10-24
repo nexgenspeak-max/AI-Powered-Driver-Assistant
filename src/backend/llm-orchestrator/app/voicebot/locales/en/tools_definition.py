@@ -35,6 +35,11 @@ raw_schema = {
                     "type": "boolean",
                     "description": "true only when the driver asks to hear every trip listed aloud.",
                 },
+                "day": {
+                    "type": "string",
+                    "enum": ["today", "tomorrow"],
+                    "description": "Only when the driver says 'today' or 'tomorrow'; omit = any day.",
+                },
             },
             "required": ["scope"],
         },
@@ -563,17 +568,22 @@ raw_schema = {
         "type": "function",
         "name": "check_trip_history",
         "description": (
-            "Count completed or cancelled trips today from loaded context. "
-            "Use for 'how many trips did I finish today' or 'any cancellations today'."
+            "Count completed or cancelled trips by day: today, yesterday, last 7 days. "
+            "Use for 'how many trips did I finish today/yesterday', 'trips this week', 'any cancellations'."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "scope": {
                     "type": "string",
-                    "enum": ["completed_today", "cancelled_today"],
-                    "description": "completed_today or cancelled_today.",
-                }
+                    "enum": ["completed", "cancelled"],
+                    "description": "completed or cancelled.",
+                },
+                "day": {
+                    "type": "string",
+                    "enum": ["today", "yesterday", "last_7_days"],
+                    "description": "today (default); yesterday; last_7_days = this week / last 7 days.",
+                },
             },
             "required": ["scope"],
         },

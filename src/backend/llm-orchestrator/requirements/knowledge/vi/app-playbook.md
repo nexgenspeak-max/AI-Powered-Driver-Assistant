@@ -206,8 +206,11 @@ T: Hỏi AI: *"Hôm nay có thưởng không?"* hoặc *"Đang có ưu đãi gì
 **H: Làm sao biết tôi đang online hay offline?**  
 T: Hỏi AI: *"Tôi đang online chưa?"*. Muốn đổi thì nói *"Bật nhận chuyến"* hoặc *"Tắt nhận chuyến"*.
 
-**H: Xem chuyến hoàn thành hoặc bị hủy hôm nay?**  
-T: Hỏi *"Chuyến hoàn thành hôm nay"* hoặc *"Chuyến bị hủy hôm nay"*.
+**H: Xem chuyến hoàn thành hoặc bị hủy hôm nay / hôm qua / tuần này?**  
+T: Hỏi *"Hôm nay hoàn thành mấy chuyến?"*, *"Hôm qua chạy được bao nhiêu chuyến?"*, *"Bảy ngày qua hoàn thành bao nhiêu chuyến?"* hoặc *"Có chuyến nào bị hủy không?"*. Con số 7 ngày chỉ tính các chuyến gần đây nhất mà ứng dụng đã tải.
+
+**H: Ngày mai tôi có chuyến nào không?**  
+T: Hỏi AI *"Ngày mai tôi có chuyến nào không?"*. AI đếm các chuyến đã đặt lịch đón vào ngày mai; chuyến không ghi giờ đón (đón đường, đi ngay) được tính là hôm nay.
 
 **H: Làm sao bật nhận chuyến?**  
 T: Trong app chọn Online, hoặc nói với AI: *"Bật nhận chuyến"* / *"Tôi sẵn sàng"*.

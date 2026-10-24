@@ -179,3 +179,51 @@ def test_format_schedule_out_of_range_index():
     userdata = _userdata()
     msg = format_schedule_reply(userdata, {"scope": "all", "trip_index": 9}, lang="vi")
     assert "chỉ có" in msg
+
+
+def _pickup_iso(days: int, hour: int = 8) -> str:
+    from datetime import datetime, timedelta, timezone
+    local = datetime.now(timezone.utc).astimezone().replace(hour=hour, minute=0, second=0, microsecond=0)
+    return (local + timedelta(days=days)).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _day_userdata():
+    userdata: dict = {"driver_phone": "0900000001"}
+    context_store.load_driver_context(
+        userdata,
+        {
+            "current_trip": None,
+            "upcoming_trips": [
+                {"trip_id": "now", "status": "confirmed", "customer_name": "Nam", "pickup_address": "Mỹ Đình", "pickup_time": ""},
+                {"trip_id": "tmr1", "status": "confirmed", "customer_name": "Hà", "pickup_address": "Cầu Giấy", "pickup_time": _pickup_iso(1, 7)},
+                {"trip_id": "tmr2", "status": "notified", "customer_name": "Long", "pickup_address": "Hà Đông", "pickup_time": _pickup_iso(1, 15)},
+            ],
+        },
+    )
+    return userdata
+
+
+def test_day_tomorrow_filters_by_pickup_date_and_labels_count():
+    reply = format_schedule_reply(_day_userdata(), {"scope": "all", "day": "tomorrow"}, lang="vi")
+    assert reply.response_knowledge == "Bạn có 2 chuyến ngày mai."
+    reply_en = format_schedule_reply(_day_userdata(), {"scope": "all", "day": "tomorrow"}, lang="en")
+    assert reply_en.response_knowledge == "You have 2 trips tomorrow."
+
+
+def test_day_today_counts_undated_trip_and_speaks_time_for_single():
+    reply = format_schedule_reply(_day_userdata(), {"scope": "all", "day": "today"}, lang="vi")
+    assert reply.response_knowledge.startswith("Bạn có 1 chuyến hôm nay: đón Nam")
+    only_tmr = format_schedule_reply(_day_userdata(), {"scope": "in_progress", "day": "tomorrow"}, lang="vi")
+    assert only_tmr.response_knowledge.startswith("Bạn có 1 chuyến đang chạy ngày mai: đón Hà lúc 07:00 ngày mai")
+
+
+def test_day_tomorrow_empty_message():
+    userdata = _userdata()  # one undated notified trip → nothing tomorrow
+    assert format_schedule_reply(userdata, {"scope": "all", "day": "tomorrow"}, lang="vi") == "Ngày mai bạn không có chuyến nào."
+    assert format_schedule_reply(userdata, {"scope": "all", "day": "tomorrow"}, lang="en") == "You don't have any trips tomorrow."
+    assert format_schedule_reply(userdata, {"scope": "picked_up", "day": "tomorrow"}, lang="vi") == "Bạn không có chuyến nào đã đón khách ngày mai."
+
+
+def test_trip_index_zero_means_not_provided():
+    reply = format_schedule_reply(_day_userdata(), {"scope": "all", "trip_index": 0, "list_all": False}, lang="vi")
+    assert reply.response_knowledge == "Bạn có 3 chuyến sắp tới."

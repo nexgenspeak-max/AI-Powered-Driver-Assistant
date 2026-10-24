@@ -1,6 +1,8 @@
 """Format trip data for voice responses — short addresses, fare, list/detail."""
 from __future__ import annotations
 
+from app.voicebot.processors.trip_days import speak_pickup_time
+
 BASE_FARE = 15_000
 FARE_PER_KM = 12_000
 MAX_LIST = 5
@@ -367,7 +369,7 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
     """One-line trip pick — customer + pickup; fare/phone/status in FollowUpKnowledge."""
     pickup = short_address(trip.get("pickup_address", ""), 36)
     customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
-    time = (trip.get("pickup_time") or "").strip()
+    time = speak_pickup_time(trip.get("pickup_time"), lang)
     if lang == "en":
         msg = f"Trip {index} with {customer}, pickup at {pickup}."
         if time:
@@ -391,7 +393,7 @@ def format_trip_detail(trip: dict, index: int, lang: str = "vi") -> str:
 
 def format_trip_brief(trip: dict, index: int, lang: str = "vi") -> str:
     """Compact list row — name (+ optional pickup time) for FollowUpKnowledge."""
-    time = (trip.get("pickup_time") or "").strip()
+    time = speak_pickup_time(trip.get("pickup_time"), lang)
     customer = trip.get("customer_name", "khách" if lang == "vi" else "customer")
     if lang == "en":
         msg = f"{index}. {customer}"
@@ -419,7 +421,7 @@ def format_trip_count_summary(
         # get only "Bạn có chuyến với Hà.").
         trip = trips[0]
         customer = trip.get("customer_name") or ("customer" if lang == "en" else "khách")
-        time = (trip.get("pickup_time") or "").strip()
+        time = speak_pickup_time(trip.get("pickup_time"), lang)
         scope = f" {scope_label}" if scope_label else ""
         if lang == "en":
             return f"You have 1 trip{scope}: pick up {customer}" + (f" at {time}." if time else ".")

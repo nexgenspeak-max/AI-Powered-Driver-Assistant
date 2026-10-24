@@ -31,7 +31,7 @@ create_reminder — remind me before pickup.
 request_cancel_trip → confirm_cancel_trip — cancel an accepted trip; always confirm first.
 get_today_earnings — today's earnings.
 get_earnings_summary — week/month/yesterday/last-week earnings (period=week|month|yesterday|last_week). Never invent lifetime totals.
-check_trip_history — completed/cancelled today (scope=completed_today|cancelled_today).
+check_trip_history — completed/cancelled trips (scope=completed|cancelled, day=today|yesterday|last_7_days).
 get_driver_stats — rating, stats.
 get_vehicle_info — my car, plate number, vehicle type.
 get_active_bonuses — active bonuses/promotions; say none if none.

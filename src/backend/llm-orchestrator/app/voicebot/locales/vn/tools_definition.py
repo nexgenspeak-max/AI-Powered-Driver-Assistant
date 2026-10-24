@@ -35,6 +35,11 @@ raw_schema = {
                     "type": "boolean",
                     "description": "true chỉ khi tài xế yêu cầu đọc hết từng chuyến trong danh sách.",
                 },
+                "day": {
+                    "type": "string",
+                    "enum": ["today", "tomorrow"],
+                    "description": "Chỉ truyền khi tài xế nói 'hôm nay' hoặc 'ngày mai'; bỏ trống = mọi ngày.",
+                },
             },
             "required": ["scope"],
         },
@@ -614,17 +619,22 @@ raw_schema = {
         "type": "function",
         "name": "check_trip_history",
         "description": (
-            "Xem chuyến đã hoàn thành hôm nay hoặc chuyến bị hủy hôm nay. "
-            "Gọi khi hỏi 'hôm nay hoàn thành mấy chuyến', 'có chuyến nào bị hủy không'."
+            "Đếm chuyến đã hoàn thành hoặc bị hủy theo ngày: hôm nay, hôm qua, 7 ngày qua. "
+            "Hỏi 'hôm qua hoàn thành mấy chuyến', 'tuần này chạy bao nhiêu chuyến', 'có chuyến nào bị hủy'."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "scope": {
                     "type": "string",
-                    "enum": ["completed_today", "cancelled_today"],
-                    "description": "completed_today hoặc cancelled_today.",
-                }
+                    "enum": ["completed", "cancelled"],
+                    "description": "completed = đã hoàn thành; cancelled = bị hủy.",
+                },
+                "day": {
+                    "type": "string",
+                    "enum": ["today", "yesterday", "last_7_days"],
+                    "description": "today=hôm nay (mặc định); yesterday=hôm qua; last_7_days=7 ngày qua / tuần này.",
+                },
             },
             "required": ["scope"],
         },
