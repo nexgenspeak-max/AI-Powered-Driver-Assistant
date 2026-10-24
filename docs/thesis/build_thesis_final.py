@@ -90,7 +90,7 @@ APPENDIX_A_INTRO = (
 )
 
 APPENDIX_A_TOOLS = [
-    ("check_upcoming_trips", "Đếm/liệt kê chuyến theo phạm vi; mặc định chỉ nói số chuyến rồi hỏi chi tiết chuyến nào."),
+    ("check_upcoming_trips", "Đếm/liệt kê chuyến theo phạm vi và theo ngày (hôm nay, ngày mai); mặc định chỉ nói số chuyến rồi hỏi chi tiết chuyến nào."),
     ("create_walkup_trip", "Tài xế tạo chuyến cho khách vãng lai; chuyến được tạo ở trạng thái đã xác nhận."),
     ("refresh_latest_data", "Lấy dữ liệu trực tiếp cho chủ đề vừa trả lời (lịch, thu nhập, chuyến hiện tại…)."),
     ("get_current_trip_info", "Thông tin chuyến đang chạy: khách, số điện thoại, điểm đón – trả, giá, thời gian dự kiến, trạng thái."),
@@ -119,7 +119,7 @@ APPENDIX_A_TOOLS = [
     ("confirm_cancel_trip", "Bước 2: thực hiện hủy chuyến sau khi tài xế xác nhận."),
     ("get_today_earnings", "Xem tổng thu nhập hôm nay: doanh thu, số chuyến, thưởng, giờ online."),
     ("get_earnings_summary", "Xem thu nhập theo khoảng: 7 ngày gần đây, 30 ngày gần đây, hôm qua hoặc tuần lịch trước (thứ Hai đến Chủ nhật)."),
-    ("check_trip_history", "Xem chuyến đã hoàn thành hoặc bị hủy trong hôm nay."),
+    ("check_trip_history", "Đếm chuyến đã hoàn thành hoặc bị hủy trong hôm nay, hôm qua hoặc 7 ngày qua (từ ngữ cảnh tải sẵn)."),
     ("get_driver_stats", "Xem thống kê tài xế: điểm đánh giá, tỷ lệ nhận, tỷ lệ hoàn thành, tổng số chuyến."),
     ("get_active_bonuses", "Đọc các khoản thưởng, ưu đãi đang áp dụng (mức, thời hạn) từ ngữ cảnh tải sẵn; không có thì nói không có."),
     ("get_driver_status", "Cho biết tài xế đang online hay offline; chỉ xem, không đổi trạng thái."),
