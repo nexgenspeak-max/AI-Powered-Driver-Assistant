@@ -34,7 +34,8 @@ GREETING = [
 ]
 
 # (name, user utterance, expected first tool or "none"[, expected arguments — a subset:
-#  every listed key must match, extra keys the model adds are fine])
+#  every listed key must match, extra keys the model adds are fine; a tuple lists the
+#  acceptable values and None inside it means "key absent"])
 CASES = [
     ("bonus_today", "Hôm nay có thưởng gì không?", "get_active_bonuses"),
     ("bonus_promo", "Đang có ưu đãi gì cho tài xế không?", "get_active_bonuses"),
@@ -55,8 +56,12 @@ CASES = [
     ("history_yesterday", "Hôm qua tôi hoàn thành mấy chuyến?", "check_trip_history", {"scope": "completed", "day": "yesterday"}),
     ("history_week_not_earnings", "Bảy ngày qua tôi chạy được bao nhiêu chuyến?", "check_trip_history", {"scope": "completed", "day": "last_7_days"}),
     ("cancelled_today", "Hôm nay có chuyến nào bị hủy không?", "check_trip_history", {"scope": "cancelled"}),
-    ("trip_index_name", "Khách ở chuyến thứ ba tên gì?", "check_upcoming_trips", {"trip_index": 3}),
-    ("trip_index_pickup", "Chuyến thứ hai đón ở đâu?", "check_upcoming_trips", {"trip_index": 2}),
+    # Ordinals count over the whole list the greeting announced (all days), so the
+    # model must not narrow to today on its own: day absent or "all".
+    ("trip_index_name", "Khách ở chuyến thứ ba tên gì?", "check_upcoming_trips", {"trip_index": 3, "day": (None, "all")}),
+    ("trip_index_pickup", "Chuyến thứ hai đón ở đâu?", "check_upcoming_trips", {"trip_index": 2, "day": (None, "all")}),
+    ("trips_count_all_days", "Tôi còn mấy chuyến nữa?", "check_upcoming_trips", {"day": (None, "all")}),
+    ("trips_today", "Hôm nay tôi có mấy chuyến?", "check_upcoming_trips", {"day": "today"}),
 ]
 
 
@@ -109,12 +114,15 @@ def main() -> int:
                 got_args = json.loads("{" + args)
             except ValueError:
                 return False
-            return all(got_args.get(k) == v for k, v in want_args.items())
+            return all(
+                (got_args.get(k) in v) if isinstance(v, tuple) else got_args.get(k) == v
+                for k, v in want_args.items()
+            )
 
         hits = sum(1 for g in got if _hit(g))
         total += runs; ok += hits
         flag = "ok " if hits == runs else "BAD"
-        label = expected + (json.dumps(want_args, sort_keys=True) if want_args else "")
+        label = expected + (json.dumps(want_args, sort_keys=True, default=str) if want_args else "")
         print(f"{flag} {name:24s} expected={label:40s} got={json.dumps(got, ensure_ascii=False)}")
     print(f"{ok}/{total} correct")
     return 0 if ok == total else 1

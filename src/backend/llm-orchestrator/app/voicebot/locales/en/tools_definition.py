@@ -37,8 +37,8 @@ raw_schema = {
                 },
                 "day": {
                     "type": "string",
-                    "enum": ["today", "tomorrow"],
-                    "description": "Only when the driver says 'today' or 'tomorrow'; omit = any day.",
+                    "enum": ["all", "today", "tomorrow"],
+                    "description": "all=any day (default, use for 'trip number N'); today only when the driver says 'today'; tomorrow='tomorrow'.",
                 },
             },
             "required": ["scope"],

@@ -37,8 +37,8 @@ raw_schema = {
                 },
                 "day": {
                     "type": "string",
-                    "enum": ["today", "tomorrow"],
-                    "description": "Chỉ truyền khi tài xế nói 'hôm nay' hoặc 'ngày mai'; bỏ trống = mọi ngày.",
+                    "enum": ["all", "today", "tomorrow"],
+                    "description": "all=mọi ngày (mặc định, dùng cho 'chuyến thứ N'); today chỉ khi tài xế nói 'hôm nay'; tomorrow='ngày mai'.",
                 },
             },
             "required": ["scope"],

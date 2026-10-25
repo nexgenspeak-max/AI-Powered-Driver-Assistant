@@ -227,3 +227,25 @@ def test_day_tomorrow_empty_message():
 def test_trip_index_zero_means_not_provided():
     reply = format_schedule_reply(_day_userdata(), {"scope": "all", "trip_index": 0, "list_all": False}, lang="vi")
     assert reply.response_knowledge == "Bạn có 3 chuyến sắp tới."
+
+
+def test_day_all_means_no_filter_and_ordinals_count_every_day():
+    # The greeting counts trips of every day, so "chuyến thứ ba" must index the
+    # same list: day="all" (the schema default the model fills in) is a no-op.
+    userdata = _day_userdata()
+    all_days = format_schedule_reply(userdata, {"scope": "all", "day": "all"}, lang="vi")
+    no_day = format_schedule_reply(userdata, {"scope": "all"}, lang="vi")
+    assert all_days.response_knowledge == no_day.response_knowledge == "Bạn có 3 chuyến sắp tới."
+    third = format_schedule_reply(userdata, {"scope": "all", "day": "all", "trip_index": 3}, lang="vi")
+    assert third.response_knowledge.startswith("Chuyến 3 với Long, đón tại Hà Đông. Giờ đón 15:00 ngày mai.")
+    # The bug this guards against: a self-filled day="today" shrinks the list to 1 trip.
+    narrowed = format_schedule_reply(userdata, {"scope": "all", "day": "today", "trip_index": 3}, lang="vi")
+    assert narrowed == "Bạn chỉ có 1 chuyến. Vui lòng chọn từ 1 đến 1."
+
+
+def test_day_enum_has_all_first_in_both_locales():
+    from app.voicebot.locales.vn.tools_definition import raw_schema as vn
+    from app.voicebot.locales.en.tools_definition import raw_schema as en
+    for schema in (vn, en):
+        day = schema["check_upcoming_trips"]["parameters"]["properties"]["day"]
+        assert day["enum"] == ["all", "today", "tomorrow"]
