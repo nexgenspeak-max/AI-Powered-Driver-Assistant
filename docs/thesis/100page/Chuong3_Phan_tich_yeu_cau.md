@@ -22,8 +22,8 @@ Hệ thống có bốn lớp người dùng (mục 2.4.1, Bảng 3.1), trong đ�
 
 | Chân dung | Mục tiêu chính | Bối cảnh | Kênh tương tác |
 |---|---|---|---|
-| Tài xế | Hoàn thành chuyến, liên lạc khách, xem thu nhập không cần nhìn, chạm màn hình | Mắt nhìn đường, tay giữ vô-lăng, xe ồn | Giọng nói trong ứng dụng (WebRTC); cuộc gọi mời (SIP) |
-| Khách hàng | Đặt xe, liên lạc với tài xế | Không cài ứng dụng; đặt qua điện thoại, Zalo | Cuộc gọi điện thoại (PSTN), SMS |
+| Tài xế | Hoàn thành chuyến, liên lạc khách, xem thu nhập không cần nhìn hay chạm màn hình | Mắt nhìn đường, tay giữ vô-lăng, xe ồn | Giọng nói trong ứng dụng (WebRTC); cuộc gọi mời (SIP) |
+| Khách hàng | Đặt xe, liên lạc với tài xế | Không cài ứng dụng; đặt qua điện thoại hoặc Zalo | Cuộc gọi điện thoại (PSTN), SMS |
 | Điều phối viên | Điều phối chuyến; quản lý tài xế, khách, cuộc gọi | Nhân viên vận hành | Trang quản trị điều hành |
 | Quản trị viên hệ thống | Giữ hệ thống ổn định; theo dõi chất lượng trợ lý | Người vận hành kỹ thuật | Trang giám sát hệ thống |
 
@@ -35,7 +35,7 @@ Yêu cầu chức năng được viết theo góc nhìn người dùng (việc p
 
 ### 3.3.1. Yêu cầu chức năng của tài xế
 
-Tài xế mở trợ lý bằng nút bấm hoặc từ khóa đánh thức; cuộc gọi mời nhận chuyến mở một phiên chỉ cho phép nhận hoặc từ chối. Bảng 3.2 chia yêu cầu thành bốn nhóm: chuyến đi (FR-T), liên lạc khách (FR-C, FR-A02), chờ đón – sự cố – thu nhập – hỗ trợ (FR-W, FR-I, FR-E, FR-F) và phiên hội thoại (FR-A01, FR-L). Gọi khách có ba chế độ: *tác nhân gọi thay* (tác nhân trao đổi với khách, tài xế nghe và có thể can thiệp), *nói trực tiếp* (tài xế nói với khách, kết thúc bằng cụm từ quy định) và *gọi nền* (tác nhân gọi trong phòng riêng, tài xế nghe tóm tắt sau).
+Tài xế mở trợ lý bằng nút bấm hoặc từ khóa đánh thức; cuộc gọi mời nhận chuyến mở một phiên chỉ cho phép nhận hoặc từ chối. Bảng 3.2 chia yêu cầu thành bốn nhóm: chuyến đi (FR-T), liên lạc khách (FR-C, FR-A02), chờ đón – sự cố – thu nhập – hỗ trợ (FR-W, FR-I, FR-E, FR-F) và phiên hội thoại (FR-A01, FR-L). Gọi khách có ba chế độ: *tác nhân gọi thay* (tác nhân hội thoại trao đổi với khách, tài xế nghe và có thể can thiệp), *nói trực tiếp* (tài xế nói với khách, kết thúc bằng cụm từ quy định) và *gọi nền* (tác nhân hội thoại gọi trong phòng riêng, tài xế nghe tóm tắt sau).
 
 **Bảng 3.2.** Yêu cầu chức năng của tài xế
 
@@ -68,7 +68,7 @@ Tài xế mở trợ lý bằng nút bấm hoặc từ khóa đánh thức; cu�
 
 ### 3.3.2. Yêu cầu chức năng của khách hàng
 
-Khách đặt xe qua điện thoại hoặc Zalo, điều phối viên tạo chuyến (FR-Q02), sau đó khách tương tác qua điện thoại thường (Bảng 3.3). Trợ lý chỉ trả lời khách dựa trên dữ liệu chuyến và sổ tay, và tóm tắt yêu cầu của khách gửi về tài xế.
+Khách đặt xe qua điện thoại hoặc Zalo, điều phối viên tạo chuyến (FR-Q02); sau đó khách tương tác qua điện thoại thường (Bảng 3.3). Trợ lý chỉ trả lời khách dựa trên dữ liệu chuyến và sổ tay, và tóm tắt yêu cầu của khách gửi về tài xế.
 
 **Bảng 3.3.** Yêu cầu chức năng của khách hàng
 
@@ -109,7 +109,7 @@ Quản trị viên hệ thống theo dõi tình trạng kỹ thuật và chất 
 
 ### 3.3.5. Mô hình use case
 
-Các yêu cầu được tổ chức thành 18 use case: 12 của tài xế (Hình 3.1) và hai cho mỗi chân dung còn lại (Hình 3.2); đặc tả đầy đủ theo mẫu của Cockburn (2001) cho năm use case tiêu biểu nằm trong kho mã nguồn (tệp docs/thesis/Chuong3_Phan_tich_yeu_cau_DRAFT.md). Ở đây "tác nhân" (actor) là người hoặc hệ thống bên ngoài, khác với "tác nhân hội thoại"; hai tác nhân hỗ trợ là hệ thống thoại và bộ hẹn giờ lập báo cáo ngày.
+Các yêu cầu được tổ chức thành 18 use case: 12 của tài xế (Hình 3.1) và hai của mỗi chân dung còn lại (Hình 3.2); đặc tả đầy đủ theo mẫu của Cockburn (2001) cho năm use case tiêu biểu nằm trong kho mã nguồn (tệp docs/thesis/Chuong3_Phan_tich_yeu_cau_DRAFT.md). Ở đây "tác nhân" (actor) là người hoặc hệ thống bên ngoài, khác với "tác nhân hội thoại"; hai tác nhân hỗ trợ là hệ thống thoại và bộ hẹn giờ lập báo cáo ngày.
 
 ![Hình 3.1|h=11](../diagrams/H3_1_usecase_driver.png)
 
@@ -154,7 +154,7 @@ Năm use case tiêu biểu gồm chuỗi nghiệp vụ chính của một chuy�
 
 **UC12 – Nhận cuộc gọi từ trợ lý hoặc tài xế.** Trợ lý tự giới thiệu là trợ lý của tài xế, nêu mục đích cuộc gọi, ghi nhận và xác nhận lại yêu cầu của khách rồi gửi tóm tắt cho tài xế. Khách không nghe máy thì tài xế được báo. Khi thiếu dữ liệu về giá hoặc giờ đến, trợ lý không tự đưa ra con số (FR-K01, FR-K02, FR-K04).
 
-**UC11 – Xem báo cáo vận hành ngày.** Lúc 00:15 giờ Việt Nam, bộ hẹn giờ lập báo cáo ngày hôm trước (chỉ số ở mục 3.3.4) và chấm một mẫu câu trả lời; quản trị viên chọn ngày để xem báo cáo và xu hướng 7 ngày. Không có khóa truy cập mô hình chấm thì báo cáo ghi chưa chấm mẫu; ngày chưa có báo cáo thì hệ thống lập từ bản ghi (FR-O01, FR-O02).
+**UC11 – Xem báo cáo vận hành ngày.** Lúc 00:15 giờ Việt Nam, bộ hẹn giờ lập báo cáo ngày hôm trước (chỉ số ở mục 3.3.4) và chấm một mẫu câu trả lời; quản trị viên chọn ngày để xem báo cáo và xu hướng 7 ngày. Không có khóa API của mô hình chấm thì báo cáo ghi chưa chấm mẫu; ngày chưa có báo cáo thì hệ thống lập từ bản ghi (FR-O01, FR-O02).
 
 Use case chưa nói hệ thống phải làm tốt đến mức nào: UC02, UC04 cần phản hồi đủ nhanh; mọi use case phải tiếp tục được khi dịch vụ phụ trợ lỗi; dữ liệu khách ở UC12, UC14 phải được bảo vệ. Các yêu cầu chất lượng này được đặc tả ở mục 3.4.
 
@@ -166,7 +166,7 @@ Năm yêu cầu phi chức năng được phân loại theo ISO/IEC 25010 (ISO/I
 
 ### 3.4.2. Ràng buộc kiến trúc
 
-Bảng 3.7 nêu bốn ràng buộc thiết kế bắt buộc rút ra từ yêu cầu, dùng để kiểm tra mã nguồn có tuân thủ thiết kế.
+Bảng 3.7 nêu bốn ràng buộc thiết kế bắt buộc rút ra từ yêu cầu, dùng để kiểm tra mã nguồn có tuân thủ thiết kế hay không.
 
 **Bảng 3.7.** Ràng buộc kiến trúc
 
@@ -200,14 +200,14 @@ Chiến thuật kiến trúc (Bass et al., 2021; mục 2.5) cho từng NFR đư�
 | AC-13 | FR-O01, FR-O02 | Có bản ghi một ngày | Đến 00:15 hoặc yêu cầu lập lại | Báo cáo đủ chỉ số, ghi cỡ mẫu, hiển thị được |
 | AC-14 | NFR-01. Hỗ trợ người dùng: hủy bỏ; duy trì mô hình tác vụ, người dùng, hệ thống | Tài xế đang lái, UC01–UC06, UC09 | Thao tác rủi ro | 100% có xác nhận; đạt mọi mục kiểm tra hành vi khi lái |
 | AC-15 | NFR-02. Kiểm soát nhu cầu: giảm chi phí phụ trội (tải trước ngữ cảnh), giới hạn thời gian thực thi. Quản lý tài nguyên: xử lý đồng thời (câu đệm), nhiều bản sao dữ liệu (trạng thái phiên), tăng tài nguyên (container riêng) | UC01, UC03, UC04, UC07 | Kết thúc phát ngôn | P95 ≤ 2 giây; phát câu đệm sau khoảng 2 giây |
-| AC-16 | NFR-03. Quản lý tài nguyên: tăng tài nguyên, nhiều bản sao tác nhân độc lập với API | Mô phỏng; SC-01, SC-02 (phiên); SC-03 (API, bổ trợ) | Số phiên 1 → 20 | P95 tăng ≤ 20%; phiên lỗi < 1% |
+| AC-16 | NFR-03. Quản lý tài nguyên: tăng tài nguyên, nhiều bản sao tác nhân độc lập với API | Mô phỏng; SC-01, SC-02 (phiên); SC-03 (API, chỉ tham khảo) | Số phiên 1 → 20 | P95 tăng ≤ 20%; phiên lỗi < 1% |
 | AC-17 | NFR-04. Phát hiện lỗi: giám sát, nhịp tim, ngoại lệ. Khôi phục: dự phòng (nhà cung cấp AI, bản sao), thử lại, suy giảm có kiểm soát | Phiên đang chạy; RS-01–RS-05 | Tiêm lỗi API, phụ trợ, nhà cung cấp AI; dừng một bản sao | 100% phiên không kết thúc bất thường; báo rõ thao tác lỗi; ghi thời gian khôi phục |
-| AC-18 | NFR-05. Chống tấn công: nhận diện, xác thực, phân quyền; giới hạn phơi lộ, mã hóa. Khôi phục: lưu vết (audit) | Mã nguồn, cấu hình, nhật ký | Kiểm tra danh mục bảo mật | 100% mục đạt: chỉ dịch vụ định danh phát hành JWT đăng nhập; không bí mật trong mã; nhật ký không có số điện thoại đầy đủ, token |
-| AC-19 | Nhận dạng giọng nói (RQ3) | Bộ câu tham chiếu cố định | Đọc khi yên tĩnh và có nhiễu khoang xe | So sánh tỷ lệ lỗi từ hai điều kiện |
+| AC-18 | NFR-05. Chống tấn công: nhận diện, xác thực, phân quyền; giới hạn phơi lộ, mã hóa. Khôi phục: lưu vết (audit) | Mã nguồn, cấu hình, nhật ký | Kiểm tra danh mục bảo mật | 100% mục đạt: chỉ dịch vụ định danh phát hành JWT đăng nhập; không có bí mật trong mã; nhật ký không có số điện thoại đầy đủ, token |
+| AC-19 | Nhận dạng giọng nói (RQ3) | Bộ câu tham chiếu cố định | Đọc khi yên tĩnh và có nhiễu khoang xe | So sánh tỷ lệ lỗi từ giữa hai điều kiện |
 
 ### 3.4.4. Tiêu chí chấp nhận
 
-Mỗi tiêu chí lấy use case làm bối cảnh (Given), hành động của chân dung làm kích thích (When) và yêu cầu làm kết quả quan sát được (Then) (mục 2.4.4). Trong Bảng 3.8, AC-01 đến AC-09 thuộc tài xế (AC-07 gồm cả FR-K04 của khách hàng), AC-10 và AC-11 thuộc khách hàng, AC-12 thuộc điều phối viên, AC-13 thuộc quản trị viên hệ thống, AC-14 đến AC-18 ứng với năm NFR và AC-19 với nhận dạng giọng nói. Với AC-01 đến AC-08, Chương 6 báo cáo gộp độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ trên mẫu lượt được chấm (RQ4, mục 6.6) thay vì kết luận từng tiêu chí; AC-09 và AC-12 chưa được đánh giá riêng (Bảng 6.16). Mười tám yêu cầu chức năng không có tiêu chí riêng: FR-T06, FR-T07, FR-C03 đến FR-C05, FR-W01, FR-W02, FR-I02, FR-K02, FR-L01, FR-A02, FR-Q01, FR-Q03 đến FR-Q05 và FR-S01 đến FR-S03; chúng được hiện thực nhưng không được đánh giá định lượng, trừ FR-C03 kiểm thử cùng AC-11 (Bảng 6.14) và FR-T07 được đo thêm (Bảng 6.15).
+Mỗi tiêu chí lấy use case làm bối cảnh (Given), hành động của chân dung làm kích thích (When) và yêu cầu làm kết quả quan sát được (Then) (mục 2.4.4). Trong Bảng 3.8, AC-01 đến AC-09 thuộc tài xế (AC-07 gồm cả FR-K04 của khách hàng), AC-10 và AC-11 thuộc khách hàng, AC-12 thuộc điều phối viên, AC-13 thuộc quản trị viên hệ thống, AC-14 đến AC-18 ứng với năm NFR và AC-19 với nhận dạng giọng nói. Với AC-01 đến AC-08, Chương 6 báo cáo gộp độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ trên mẫu lượt được chấm (RQ4, mục 6.6) thay vì kết luận từng tiêu chí; AC-09 và AC-12 chưa được đánh giá riêng (Bảng 6.16). Mười tám yêu cầu chức năng không có tiêu chí riêng: FR-T06, FR-T07, FR-C03 đến FR-C05, FR-W01, FR-W02, FR-I02, FR-K02, FR-L01, FR-A02, FR-Q01, FR-Q03 đến FR-Q05 và FR-S01 đến FR-S03; chúng được hiện thực nhưng không được đánh giá định lượng, trừ FR-C03 được kiểm thử cùng AC-11 (Bảng 6.14) và FR-T07 được đo thêm (Bảng 6.15).
 
 ## 3.5. Phạm vi yêu cầu
 

@@ -25,17 +25,17 @@ Mã nguồn nằm trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered
 
 ### 5.3.1. Khởi tạo phiên và phân loại phòng
 
-Tác nhân phân loại phiên theo tên phòng và metadata như Bảng 4.7 và nạp tập công cụ tương ứng ở cả hai gói ngôn ngữ; tiền tố trip cũ vẫn được chấp nhận để tương thích. Với phiên tài xế, tác nhân đăng ký phiên, phát lời chào cố định, tải trước ngữ cảnh rồi hỏi tài xế cần gì (sequence S2).
+Tác nhân phân loại phiên theo tên phòng và metadata như Bảng 4.7 và nạp tập công cụ tương ứng ở cả hai gói ngôn ngữ; tiền tố trip cũ vẫn được chấp nhận để tương thích. Với phiên tài xế, tác nhân đăng ký phiên, phát lời chào cố định, tải trước ngữ cảnh rồi hỏi tài xế cần gì (biểu đồ tuần tự S2).
 
 ### 5.3.2. Xử lý lượt hội thoại và câu đệm
 
 Mọi phát ngôn đều qua mô hình ngôn ngữ cùng các công cụ được phép của loại phiên. Mô-đun nhận dạng ý định chỉ gán nhãn để bỏ mảnh chữ thừa cuối câu và nhận ra câu đồng ý với hành động đang chờ, không gọi công cụ; nhánh rút gọn theo ý định (gọi thẳng công cụ), dùng trong đợt đo 05–06/09/2026, đã bị loại khỏi mã nguồn. Câu đệm (mục 4.6.1) được phát sau 2,0 giây kể từ khi tài xế dứt câu, tối đa một lần mỗi lượt.
 
-Vì gọi khách không hoàn tác được, ngoài xác nhận hai bước còn có một lớp chặn, thêm sau khi câu "Ok." dành cho chủ đề khác đã khởi động cuộc gọi trong phiên thử ngày 18/10/2026: công cụ gọi khách chỉ chạy khi tài xế vừa nói rõ ý định hoặc vừa đồng ý; hành động đang chờ bị hủy sau 30 giây hoặc khi đổi chủ đề. Tài xế hủy cuộc gọi bằng nút Czen; ở chế độ tác nhân gọi thay, lệnh hủy đi qua kênh dữ liệu riêng.
+Vì gọi khách không hoàn tác được, ngoài xác nhận hai bước còn có một lớp chặn, được thêm sau khi câu "Ok." dành cho chủ đề khác đã kích hoạt cuộc gọi trong phiên thử ngày 18/10/2026: công cụ gọi khách chỉ chạy khi tài xế vừa nói rõ ý định hoặc vừa đồng ý; hành động đang chờ bị hủy sau 30 giây hoặc khi đổi chủ đề. Tài xế hủy cuộc gọi bằng nút Czen; ở chế độ tác nhân gọi thay, lệnh hủy đi qua kênh dữ liệu riêng.
 
 ### 5.3.3. Gọi API nghiệp vụ
 
-Mọi thao tác dữ liệu đi qua một mô-đun gọi API duy nhất, áp thời gian chờ theo Bảng 4.8, gắn token dịch vụ và ghi nhật ký thời gian. Tác nhân chỉ xác nhận sau khi API thành công và không kết nối cơ sở dữ liệu (CON-01). Bảng 5.2 minh họa một lượt ngày 06/09/2026: gửi SMS lỗi nhưng phiên không dừng; lượt chậm chủ yếu do thời gian sinh token đầu.
+Mọi thao tác dữ liệu đi qua một mô-đun gọi API duy nhất, áp thời gian chờ theo Bảng 4.8, gắn token dịch vụ và ghi nhật ký thời gian. Tác nhân chỉ xác nhận sau khi API thành công và không kết nối cơ sở dữ liệu (CON-01). Bảng 5.2 minh họa một lượt ngày 06/09/2026: gửi SMS lỗi nhưng phiên không dừng; lượt này chậm chủ yếu do thời gian sinh token đầu.
 
 **Bảng 5.2.** Một lượt thực tế: tài xế nhờ nhắn tin cho khách khi dịch vụ gửi SMS gặp lỗi
 
@@ -43,7 +43,7 @@ Mọi thao tác dữ liệu đi qua một mô-đun gọi API duy nhất, áp th�
 |---|---|
 | Nhận dạng giọng nói | "Nhắn cho khách là 15 phút nữa tôi đến đón."; phát hiện kết thúc phát ngôn sau 1,54 giây |
 | Mô hình ngôn ngữ | Chọn công cụ gửi SMS; token đầu sau 3,48 giây |
-| Gọi API nghiệp vụ | Không chuyển tiếp được SMS, trả 503 sau 1,31 giây |
+| Gọi API nghiệp vụ | Không chuyển tiếp được SMS, trả mã 503 sau 1,31 giây |
 | Xử lý lỗi trong công cụ | Bắt lỗi HTTP, ghi nhật ký, trả câu soạn sẵn |
 | Tổng hợp giọng nói, tiếp tục phiên | "Không thể gửi tin nhắn lúc này. Vui lòng thử lại."; âm thanh đầu sau 0,17 giây |
 
@@ -51,15 +51,15 @@ Câu hỏi về cách dùng ứng dụng được trả lời bằng công cụ 
 
 ### 5.3.4. Lớp trừu tượng và dự phòng nhà cung cấp AI
 
-Nhà cung cấp STT, LLM, TTS được tạo theo cấu hình qua một hàm khởi tạo chung (factory); khi có nhà cung cấp dự phòng, chuỗi được bọc bằng FallbackAdapter của LiveKit Agents. Mỗi lần thử STT và LLM chờ tối đa 5 giây; nhà cung cấp lỗi bị đánh dấu không khả dụng, yêu cầu chuyển sang nhà cung cấp kế tiếp và sự kiện được ghi nhật ký.
+Nhà cung cấp STT, LLM, TTS được tạo theo cấu hình qua một hàm khởi tạo chung (factory); khi có nhà cung cấp dự phòng, chuỗi nhà cung cấp được bọc bằng FallbackAdapter của LiveKit Agents. Mỗi lần thử STT và LLM chờ tối đa 5 giây; nhà cung cấp lỗi bị đánh dấu không khả dụng, yêu cầu chuyển sang nhà cung cấp kế tiếp và sự kiện được ghi nhật ký.
 
 ### 5.3.5. Xử lý im lặng và kết thúc phiên
 
-Xử lý im lặng theo Bảng 4.8; ngưỡng 15 giây tăng lên 60 giây khi tài xế tắt micro và gõ chữ. Bản ghi và tóm tắt được gửi tới Dịch vụ Nhật ký cuộc gọi với thời gian chờ 10 giây và số lần thử lại có giới hạn; lỗi không làm hỏng phiên (sequence S6).
+Tác nhân xử lý im lặng theo Bảng 4.8; ngưỡng 15 giây tăng lên 60 giây khi tài xế tắt micro và gõ chữ. Bản ghi và tóm tắt được gửi tới Dịch vụ Nhật ký cuộc gọi với thời gian chờ 10 giây và số lần thử lại có giới hạn; lỗi khi gửi không làm hỏng phiên (biểu đồ tuần tự S6).
 
 ### 5.3.6. Chỉ số chất lượng của phiên
 
-Mỗi phiên có bộ thu chỉ số riêng cho báo cáo vận hành ngày (FR-O01), ghi độ trễ từng lượt, lời gọi HTTP, câu đệm, lần chuyển dự phòng, lỗi và kết quả công cụ. Bản tổng hợp (số lượt, trung bình, P50, P95, công cụ và lỗi theo tên, số lần dự phòng) và độ trễ từng lượt được gửi kèm bản ghi, nên P95 cả ngày tính từ mọi lượt.
+Mỗi phiên có bộ thu chỉ số riêng cho báo cáo vận hành ngày (FR-O01), ghi độ trễ từng lượt, lời gọi HTTP, câu đệm, lần chuyển dự phòng, lỗi và kết quả công cụ. Bản tổng hợp (số lượt, trung bình, P50, P95, công cụ và lỗi theo tên, số lần dự phòng) và độ trễ từng lượt được gửi kèm bản ghi, nên P95 cả ngày được tính từ mọi lượt.
 
 ## 5.4. Hiện thực các dịch vụ backend
 
@@ -76,7 +76,7 @@ Dịch vụ này giữ bản chính thức của dữ liệu chuyến đi và kh
 | Cuộc gọi, tin nhắn | Gọi khách, kết thúc gọi nền, cuộc gọi mới nhất, gửi SMS |
 | Thu nhập, trạng thái, nhắc việc | Thu nhập hôm nay và theo kỳ; bật/tắt nhận chuyến; tạo nhắc việc |
 
-Các trạng thái đòi hỏi tài xế có mặt (đã đến điểm đón, đã đón, hoàn thành) chỉ được ghi khi tài xế cách điểm đón không quá 200 m (trạng thái hoàn thành tính theo điểm trả), kể cả khi tác nhân cập nhật thay bằng vị trí GPS mới nhất. Ngoài bán kính, API trả mã 409 kèm khoảng cách còn lại; gọi khách vẫn được phép.
+Các trạng thái đòi hỏi tài xế có mặt (đã đến điểm đón, đã đón, hoàn thành) chỉ được ghi khi tài xế cách điểm đón không quá 200 m (trạng thái hoàn thành tính theo điểm trả), kể cả khi tác nhân cập nhật thay (dựa trên vị trí GPS mới nhất). Ngoài bán kính, API trả mã 409 kèm khoảng cách còn lại; gọi khách vẫn được phép.
 
 Dịch vụ còn nhắc khách khi tài xế sắp đến: nếu tài xế bật tùy chọn này và vừa vào bán kính đã chọn (500 m đến 3 km, mặc định 1 km) quanh điểm dừng đầu tiên của lộ trình tối ưu, dịch vụ mở cuộc gọi nền tới khách, mỗi chuyến một lần, gọi lại tối đa hai lần cách nhau 60 giây nếu không ai nghe.
 
@@ -84,11 +84,11 @@ Cuộc gọi thoại đi qua SIP của LiveKit Cloud và SIP trunk Twilio. Tại
 
 ### 5.4.2. Dịch vụ Định danh
 
-Dịch vụ hiện thực sequence S1 (mục 4.5.1). Cài đặt tài xế, gồm chế độ gọi khách mặc định, được lưu ở bảng riêng và đưa vào ngữ cảnh phiên.
+Dịch vụ hiện thực biểu đồ tuần tự S1 (mục 4.5.1). Cài đặt tài xế, gồm chế độ gọi khách mặc định, được lưu ở bảng riêng và đưa vào ngữ cảnh phiên.
 
 ### 5.4.3. Dịch vụ Liên lạc bằng tin nhắn, Dịch vụ Nhật ký cuộc gọi và Dịch vụ Giám sát vận hành
 
-Dịch vụ Liên lạc bằng tin nhắn gửi SMS qua Twilio và nhận webhook trạng thái, tin nhắn đến; webhook không yêu cầu JWT, các API khác thì có. Sự kiện được ghi xong trước khi trả lời webhook vì trên Lambda, tác vụ chạy sau khi trả lời có thể bị dừng.
+Dịch vụ Liên lạc bằng tin nhắn gửi SMS qua Twilio và nhận webhook trạng thái và tin nhắn đến; webhook không yêu cầu JWT, còn các API khác thì có. Sự kiện được ghi xong trước khi trả lời webhook vì trên Lambda, tác vụ chạy sau khi trả lời có thể bị dừng.
 
 Dịch vụ Nhật ký cuộc gọi lưu bản ghi trong một bảng DynamoDB riêng (Bảng 5.4); truy vấn theo ngày dùng chỉ mục phụ và phân trang.
 
@@ -103,25 +103,25 @@ Dịch vụ Nhật ký cuộc gọi lưu bản ghi trong một bảng DynamoDB r
 | stt_provider, llm_provider, llm_model | Nhà cung cấp và mô hình đã dùng |
 | mode, metrics; ttl | Loại phiên, chỉ số phiên (mục 5.3.6); thời hạn tự xóa |
 
-Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, thăm dò tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân, báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực sequence S7 (mục 4.5.7), chấm bằng LLM trên một mẫu ngẫu nhiên cố định theo ngày và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi chứ không từ CloudWatch Logs.
+Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, thăm dò tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân, báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực biểu đồ tuần tự S7 (mục 4.5.7), chấm bằng LLM trên một mẫu ngẫu nhiên cố định theo ngày và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi chứ không phải từ CloudWatch Logs.
 
 ### 5.4.4. Tích hợp dịch vụ bản đồ
 
-Chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1); ứng dụng chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng 4.4), còn tìm địa chỉ, chỉ đường và ma trận khoảng cách đều qua backend (luồng ㉓), với bộ điều hợp (adapter) cho Goong và Google Maps Platform; thực nghiệm dùng Goong.
+Chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1); ứng dụng chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng 4.4), còn tìm địa chỉ, chỉ đường và ma trận khoảng cách đều đi qua backend (luồng ㉓), với bộ điều hợp (adapter) cho Goong và Google Maps Platform; thực nghiệm dùng Goong.
 
-Tích hợp bản đồ phục vụ bốn chức năng: (1) tìm và chuẩn hóa địa chỉ; (2) lấy lộ trình và tình trạng giao thông khi tạo chuyến, lưu cùng chuyến cho công cụ get_trip_traffic (FR-T07); (3) sắp xếp thứ tự ghé điểm dừng theo ma trận khoảng cách đường bộ bằng heuristic láng giềng gần nhất rồi cải tiến 2-opt, với ràng buộc điểm đón đứng trước điểm trả của cùng chuyến; kết quả được lưu đệm, cập nhật theo GPS và dùng chung cho thẻ điểm dừng, tab Chuyến và trợ lý (get_optimal_route, suggest_next_stop, UC16); (4) hiển thị bản đồ và chỉ đường trong ứng dụng (Hình 5.1c), trợ lý không đọc chỉ dẫn rẽ (mục 3.5).
+Tích hợp bản đồ phục vụ bốn chức năng: (1) tìm và chuẩn hóa địa chỉ; (2) lấy lộ trình và tình trạng giao thông khi tạo chuyến, lưu cùng chuyến cho công cụ get_trip_traffic (FR-T07); (3) sắp xếp thứ tự ghé điểm dừng theo ma trận khoảng cách đường bộ bằng heuristic láng giềng gần nhất rồi cải tiến 2-opt, với ràng buộc điểm đón đứng trước điểm trả của cùng chuyến; kết quả được lưu đệm, cập nhật theo GPS và dùng chung cho thẻ điểm dừng, tab Chuyến và trợ lý (get_optimal_route, suggest_next_stop, UC16); (4) hiển thị bản đồ và chỉ đường trong ứng dụng (Hình 5.1c), còn trợ lý không đọc chỉ dẫn rẽ (mục 3.5).
 
-Lỗi dịch vụ bản đồ không làm dừng nghiệp vụ (NFR-04): thiếu ma trận thì thứ tự ghé tính theo đường chim bay với tốc độ giả định 25 km/h và gắn nhãn ước lượng; thiếu chỉ đường thì API điều hướng trả mã 502 nhưng chuyến vẫn được tạo. Chất lượng thứ tự ghé được đánh giá ở Bảng 6.15; thời gian đến dự kiến trên đường thật chưa được đo.
+Lỗi dịch vụ bản đồ không làm dừng nghiệp vụ (NFR-04): thiếu ma trận thì thứ tự ghé tính theo đường chim bay với tốc độ giả định 25 km/h và gắn nhãn ước lượng; thiếu chỉ đường thì API điều hướng trả mã 502 nhưng chuyến vẫn được tạo. Chất lượng thứ tự ghé được đánh giá ở Bảng 6.15; độ chính xác của thời gian đến dự kiến trên đường thật chưa được đo.
 
 ## 5.5. Hiện thực ứng dụng tài xế
 
-Ứng dụng tài xế hiện thực thiết kế ở mục 4.8 dưới thương hiệu Czen, với bộ 57 biểu tượng SVG riêng và nhãn chữ cho cả năm mục điều hướng. Màn hình chào, đăng nhập và màn hình bản đồ với lộ trình tối ưu, thẻ điểm dừng kế tiếp được trình bày ở Hình 5.1.
+Ứng dụng tài xế hiện thực thiết kế ở mục 4.8 dưới thương hiệu Czen, với bộ 57 biểu tượng SVG riêng và nhãn chữ cho cả năm mục điều hướng. Màn hình chào, đăng nhập và màn hình bản đồ với lộ trình tối ưu và thẻ điểm dừng kế tiếp được trình bày ở Hình 5.1.
 
 ![Hình 5.1|row=4.6](thesis_screenshots/landing.jpg;thesis_screenshots/login.jpg;thesis_screenshots/map.jpg)
 
 **Hình 5.1.** Ứng dụng tài xế: (a) màn hình chào, (b) đăng nhập, (c) bản đồ sau khi bật trạng thái hoạt động
 
-Bảng mời nhận chuyến toàn màn hình có cước ước tính, vòng đếm ngược 30 giây và hai nút Từ chối, Nhận chuyến (Hình C.2); thời hạn được nâng từ 20 lên 30 giây vì việc vào phòng thoại trước khi trợ lý đọc chuyến có lúc mất 10–16 giây. Khung trò chuyện có một thanh nhập với nút micro và nút Czen; chạm nút Czen để kết nối hoặc kết thúc phiên. Câu gợi ý nhanh và bản ghi hội thoại được minh họa ở Hình 5.2.
+Bảng mời nhận chuyến toàn màn hình có cước ước tính, vòng đếm ngược 30 giây và hai nút Từ chối và Nhận chuyến (Hình C.2); thời hạn được nâng từ 20 lên 30 giây vì việc vào phòng thoại trước khi trợ lý đọc chuyến có lúc mất 10–16 giây. Khung trò chuyện có một thanh nhập với nút micro và nút Czen; chạm nút Czen để kết nối hoặc kết thúc phiên. Câu gợi ý nhanh và bản ghi hội thoại được minh họa ở Hình 5.2.
 
 ![Hình 5.2|row=4.6](thesis_screenshots/trolyczen1.jpg;thesis_screenshots/trolyaidangketnoi.jpg)
 
@@ -137,13 +137,13 @@ Trang "Báo cáo ngày" của trang giám sát hiển thị các nhóm chỉ s�
 
 **Hình 5.4.** Trang báo cáo vận hành ngày: câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 18/10/2026)
 
-Trang cài đặt trợ lý cho phép chọn ngôn ngữ, chế độ gọi khách mặc định và bán kính nhắc khách. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk rồi mở phiên như khi bấm nút. Các ảnh giao diện khác ở Phụ lục C.
+Trang cài đặt trợ lý cho phép chọn ngôn ngữ, chế độ gọi khách mặc định và bán kính nhắc khách. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk; khi nhận ra, ứng dụng mở phiên như khi chạm nút Czen. Các ảnh giao diện khác ở Phụ lục C.
 
 ## 5.6. Triển khai trên AWS
 
 ### 5.6.1. Hạ tầng dạng mã
 
-Mỗi dịch vụ có một stack hạ tầng dạng mã riêng trong thư mục infra, triển khai độc lập (Bảng 5.5). API Gateway chuyển mọi đường dẫn tới ứng dụng Express nên thêm API không cần sửa template; tham số bí mật được nạp từ tệp môi trường ngoài kho mã (NFR-05).
+Mỗi dịch vụ có một stack hạ tầng dạng mã riêng trong thư mục infra, triển khai độc lập (Bảng 5.5). API Gateway chuyển mọi đường dẫn tới ứng dụng Express nên khi thêm API không cần sửa template; tham số bí mật được nạp từ tệp môi trường ngoài kho mã (NFR-05).
 
 **Bảng 5.5.** Tài nguyên AWS theo stack
 
@@ -161,7 +161,7 @@ Mỗi dịch vụ có một stack hạ tầng dạng mã riêng trong thư mục
 
 ### 5.6.2. Môi trường phát triển và thử nghiệm
 
-Khi thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express trên các bảng DynamoDB của môi trường phát triển; tác nhân chạy cục bộ và kết nối LiveKit Cloud. Khóa bí mật nằm trong tệp .env ngoài kho mã, kèm tệp mẫu để tái lập (Phụ lục D). Chạy đầu cuối tối thiểu cần Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối, tác nhân và ứng dụng tài xế; SIP trunk Twilio chỉ cần khi gọi điện.
+Khi thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express trên các bảng DynamoDB của môi trường phát triển; tác nhân chạy cục bộ và kết nối LiveKit Cloud. Khóa bí mật nằm trong tệp .env ngoài kho mã, kèm tệp mẫu để tái lập (Phụ lục D). Để chạy đầu cuối, tối thiểu cần Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối, tác nhân và ứng dụng tài xế; SIP trunk Twilio chỉ cần khi gọi điện.
 
 ## 5.7. Đối chiếu thiết kế và hiện thực
 
