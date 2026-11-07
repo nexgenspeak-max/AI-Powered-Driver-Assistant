@@ -71,29 +71,30 @@ def figure_width_cm(img_path: Path, max_w: float = FIG_MAX_W_CM, max_h: float = 
 
 
 CONCLUSION_PARAS = [
-    "Luận văn đã đi hết các bước của nghiên cứu khoa học thiết kế cho một trợ lý AI bằng giọng nói hỗ trợ tài xế xe công nghệ: xác định yêu cầu theo bốn nhóm người sử dụng, lập luận kiến trúc từ năm yêu cầu phi chức năng qua các chiến thuật kiến trúc, hiện thực nguyên mẫu trên WebRTC và SIP, và đánh giá theo 19 tiêu chí chấp nhận.",
-    "Trả lời các câu hỏi nghiên cứu:",
-    "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần: 200/200 lượt tiêm lỗi vào dịch vụ phụ trợ, API nghiệp vụ, kênh tin nhắn, kênh thoại và nhà cung cấp LLM đều không làm hỏng luồng hội thoại; khi dừng một bản sao tác nhân, phiên mới được bản sao khác phục vụ nhưng phiên đang chạy bị mất. Trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; bộ nhớ (khoảng 225 MB mỗi phiên) là tài nguyên giới hạn.",
-    "- RQ2: Luồng xử lý qua LLM có P95 độ trễ phản hồi 3,75 giây, không đạt ngưỡng 2 giây; thành phần chi phối là thời gian mô hình ngôn ngữ sinh token đầu.",
-    "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (một người đọc, 22 câu).",
-    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ và 32/43 lượt (74,4%) hoàn thành đúng ngay lần đầu; lỗi chủ yếu do phát ngôn không rõ ý định và sai phạm vi tham số.",
-    "Đóng góp chính là một kiến trúc tham chiếu có lập luận từ yêu cầu phi chức năng, một nguyên mẫu mã nguồn công khai, một khung đánh giá gắn với tiêu chí chấp nhận, và bằng chứng rằng độ trễ của chuỗi xử lý theo tầng bị chi phối bởi thời gian sinh token đầu của mô hình ngôn ngữ bên ngoài, còn phần kiến trúc gần như không thêm độ trễ khi số phiên tăng.",
-    "Hạn chế và hướng phát triển tương ứng:",
-    "- Độ trễ chưa đạt ngưỡng (NFR-02): đo lại với ít nhất 200 lượt; thử mô hình sinh token đầu nhanh hơn, rút gọn lời nhắc hệ thống, giảm số vòng gọi công cụ.",
-    "- Khả năng mở rộng mới đo trong mô phỏng (NFR-03): lặp lại SC-01, SC-02 trên LiveKit Cloud và Fargate với nhà cung cấp AI thật; tự mở rộng theo bộ nhớ hoặc số phiên.",
-    "- Lỗi dạng treo làm tài xế chờ 6–8 giây và phiên đang chạy bị mất khi bản sao tác nhân dừng (NFR-04): rút ngắn thời gian chờ cho thao tác đọc, giữ tối thiểu hai bản sao, cho ứng dụng tự xin token lại và đo đường khôi phục đầu cuối.",
-    "- Hai lỗi hiện thực phát hiện khi đánh giá (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi chứa thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.9, Bảng 6.13); còn phải xóa nhật ký cũ và đưa phép quét nhật ký vào kiểm thử tự động.",
-    "- Hệ thống chưa chạy trên kiến trúc AWS đầy đủ (mục 5.6.1): triển khai các stack rồi đo lại độ trễ và khả năng phục hồi trên Lambda, API Gateway và Fargate.",
-    "- Cỡ mẫu nhỏ và một người chấm (RQ3, RQ4): mở rộng bộ câu tham chiếu với nhiều người đọc và mức nhiễu; hai người chấm độc lập và báo cáo hệ số đồng thuận.",
-    "- SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin qua Twilio, gửi thử thật và đo tỷ lệ giao tin; xác thực chữ ký X-Twilio-Signature để chặn sự kiện giả (mục 6.13).",
-    "- Chưa có nghiên cứu người dùng: thử nghiệm có kiểm soát với tài xế trên kịch bản lái mô phỏng, đo thời gian tác vụ, số lần nhìn màn hình và tải nhận thức.",
+    "Luận văn đã thực hiện đủ các bước của nghiên cứu khoa học thiết kế để xây dựng một trợ lý AI bằng giọng nói hỗ trợ tài xế xe công nghệ: xác định yêu cầu cho bốn nhóm người sử dụng, lập luận lựa chọn kiến trúc từ năm yêu cầu phi chức năng thông qua các chiến thuật kiến trúc, hiện thực nguyên mẫu trên WebRTC và SIP, rồi đánh giá theo 19 tiêu chí chấp nhận. Trong đó, 17 tiêu chí đã có kết quả; AC-09 và AC-12 đã được hiện thực nhưng chưa được đánh giá riêng.",
+    "Kết quả trả lời các câu hỏi nghiên cứu như sau:",
+    "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần: 200/200 lượt tiêm lỗi vào dịch vụ phụ trợ, API nghiệp vụ, kênh tin nhắn, kênh thoại và nhà cung cấp LLM đều không làm hỏng luồng hội thoại. Khi dừng một bản sao tác nhân, phiên mới được bản sao khác phục vụ, nhưng phiên đang chạy bị mất. Trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; tài nguyên giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên.",
+    "- RQ2: P95 độ trễ phản hồi của luồng xử lý qua LLM là 3,75 giây, không đạt ngưỡng 2 giây; yếu tố chi phối là thời gian sinh token đầu của mô hình ngôn ngữ.",
+    "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi thêm nhiễu mô phỏng khoang xe (một người đọc, 22 câu).",
+    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ và 32/43 lượt (74,4%) hoàn thành đúng ngay lần đầu. Lỗi chủ yếu do phát ngôn không rõ ý định và sai phạm vi tham số.",
+    "Các đóng góp chính của luận văn gồm một kiến trúc tham chiếu được lập luận từ yêu cầu phi chức năng, một nguyên mẫu có mã nguồn công khai và một khung đánh giá gắn với tiêu chí chấp nhận. Đóng góp còn lại là bằng chứng cho thấy độ trễ của chuỗi xử lý theo tầng do thời gian sinh token đầu của mô hình ngôn ngữ bên ngoài chi phối, còn phần kiến trúc gần như không làm tăng độ trễ khi số phiên tăng.",
+    "Các hạn chế và hướng phát triển tương ứng như sau:",
+    "- Độ trễ chưa đạt ngưỡng (NFR-02): đo lại với ít nhất 200 lượt; thử mô hình có thời gian sinh token đầu ngắn hơn, rút gọn lời nhắc hệ thống và giảm số vòng gọi công cụ.",
+    "- Khả năng mở rộng mới chỉ được đo trong môi trường mô phỏng (NFR-03): lặp lại SC-01 và SC-02 trên LiveKit Cloud và Fargate với nhà cung cấp AI thật; cấu hình tự động mở rộng theo bộ nhớ hoặc số phiên.",
+    "- Lỗi dạng treo khiến tài xế phải chờ 6–8 giây, và phiên đang chạy bị mất khi bản sao tác nhân dừng (NFR-04): rút ngắn thời gian chờ tối đa của thao tác đọc, giữ tối thiểu hai bản sao, cho ứng dụng tự xin lại token và đo toàn bộ đường khôi phục từ đầu đến cuối.",
+    "- Hai lỗi hiện thực phát hiện trong quá trình đánh giá (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi chứa thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.9, Bảng 6.13). Việc còn lại là xóa nhật ký cũ và đưa bước quét nhật ký vào bộ kiểm thử tự động.",
+    "- Hệ thống chưa được chạy trên kiến trúc AWS đầy đủ (mục 5.6.1): triển khai các stack, sau đó đo lại độ trễ và khả năng phục hồi trên Lambda, API Gateway và Fargate.",
+    "- Cỡ mẫu nhỏ và chỉ có một người chấm (RQ3, RQ4): mở rộng bộ câu tham chiếu với nhiều người đọc và nhiều mức nhiễu; dùng hai người chấm độc lập và báo cáo hệ số đồng thuận.",
+    "- Tin nhắn SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin qua Twilio, gửi thử thật và đo tỷ lệ giao tin; xác thực chữ ký X-Twilio-Signature để chặn sự kiện giả mạo (mục 6.13).",
+    "- Chưa có nghiên cứu người dùng: tiến hành thử nghiệm có kiểm soát với tài xế trong kịch bản lái xe mô phỏng, đo thời gian hoàn thành tác vụ, số lần nhìn màn hình và tải nhận thức.",
 ]
 
 APPENDIX_A_INTRO = (
-    "Bảng A.1 liệt kê 48 công cụ (function tool) của gói ngôn ngữ tiếng Việt: 42 công cụ cho phiên tài xế "
-    "trong ứng dụng (confirm_trip và reject_trip trong số đó cũng là hai công cụ duy nhất của phiên mời nhận chuyến) và "
-    "7 công cụ cho phiên của ứng dụng khách hàng (answer_app_faq dùng chung; phiên này có trong mã nguồn nhưng ngoài phạm vi luận văn, mục 3.5). Gói tiếng Anh có cùng 42 công cụ cho tài xế. "
-    "Bảng gom theo nhóm chức năng; tên công cụ giữ nguyên như trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
+    "Bảng A.1 liệt kê 48 công cụ (function tool) của gói ngôn ngữ tiếng Việt, gồm 42 công cụ cho phiên tài xế "
+    "trong ứng dụng và 7 công cụ cho phiên của ứng dụng khách hàng. Hai công cụ confirm_trip và reject_trip thuộc nhóm của tài xế, "
+    "đồng thời là hai công cụ duy nhất của phiên mời nhận chuyến. Công cụ answer_app_faq được dùng chung cho cả hai phiên. "
+    "Phiên của ứng dụng khách hàng có trong mã nguồn nhưng nằm ngoài phạm vi luận văn (mục 3.5). Gói tiếng Anh có cùng 42 công cụ cho tài xế. "
+    "Bảng gom công cụ theo nhóm chức năng; tên công cụ giữ nguyên như trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
 )
 
 APPENDIX_A_TOOLS = [
@@ -148,12 +149,12 @@ APPENDIX_A_TOOLS = [
 ]
 
 APPENDIX_B_INTRO = (
-    "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh), "
-    "minh họa một đường STT → LLM kèm công cụ → TTS cho câu quen thuộc, xử lý im lặng và kết "
-    "thúc phiên lịch sự. Nhãn thời gian là độ trễ cảm nhận (user_stop_to_agent_speak); khi "
+    "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh) để minh họa "
+    "đường xử lý STT → LLM kèm công cụ → TTS cho câu quen thuộc, cách xử lý im lặng và cách kết "
+    "thúc phiên lịch sự. Nhãn thời gian ghi độ trễ cảm nhận (user_stop_to_agent_speak). Khi "
     "phản hồi chậm hơn khoảng hai giây, hệ thống có thể phát một câu đệm ngắn trước câu trả lời thật. "
-    "Phần trong ngoặc vuông là ghi chú lấy từ nhật ký: khâu xử lý (LLM, công cụ được gọi), nhãn của mô-đun nhận dạng ý định "
-    "(FollowUpKnowledge: câu hỏi tiếp về chuyến vừa nhắc; conversational_ack: câu đáp lễ) và độ trễ cảm nhận của lượt đó."
+    "Phần trong ngoặc vuông là ghi chú lấy từ nhật ký, gồm khâu xử lý (LLM, công cụ được gọi), nhãn của mô-đun nhận dạng ý định "
+    "và độ trễ cảm nhận của lượt đó. Nhãn FollowUpKnowledge chỉ câu hỏi tiếp về chuyến vừa nhắc; nhãn conversational_ack chỉ câu đáp lễ."
 )
 
 APPENDIX_B_DIALOGUES = [
@@ -189,9 +190,9 @@ APPENDIX_B_DIALOGUES = [
 
 APPENDIX_D_INTRO = (
     "Bảng D.1 tóm tắt cấu hình chính của tác nhân hội thoại. Cấu hình không bí mật nằm trong tệp "
-    "envs/config.<môi trường>.toml, khóa bí mật nằm trong tệp .env không đưa vào kho mã nguồn; tệp mẫu "
+    "envs/config.<môi trường>.toml; các khóa bí mật nằm trong tệp .env và không được đưa vào kho mã nguồn. Các tệp mẫu "
     "envs/config.example.toml và envs/.env.example được cung cấp để tái lập môi trường. Cột cuối ghi giá trị "
-    "dùng cho số liệu Chương 6."
+    "đã dùng khi thu thập số liệu ở Chương 6."
 )
 
 APPENDIX_D_ENV = [
@@ -219,7 +220,7 @@ APPENDIX_C_FIGURES = [
     ("thesis_screenshots/trolyczen_goiy.jpg", "Hình C.4. Câu gợi ý nhanh dưới lời chào của trợ lý."),
     ("thesis_screenshots/caidattroly.jpg", "Hình C.5. Cài đặt trợ lý: ngôn ngữ, chế độ gọi khách, rảnh tay."),
     ("thesis_screenshots/caidattroly2.jpg", "Hình C.6. Cài đặt bán kính nhắc khách và gợi ý điểm dừng."),
-    ("thesis_screenshots/mapdetails.jpg", "Hình C.7. Dẫn đường trên bản đồ (chức năng bản đồ)."),
+    ("thesis_screenshots/mapdetails.jpg", "Hình C.7. Màn hình dẫn đường trên bản đồ."),
     ("thesis_screenshots/chuyendidangchay.jpg", "Hình C.8. Tab Chuyến: lộ trình tối ưu và thẻ chuyến (số khách đã làm mờ)."),
     ("thesis_screenshots/themchuyen2.jpg", "Hình C.9. Tài xế tự tạo chuyến cho khách vãng lai."),
     ("thesis_screenshots/profile.jpg", "Hình C.10. Hồ sơ tài xế và chỉ số vận hành."),
@@ -231,7 +232,7 @@ APPENDIX_C_FIGURES = [
     ("thesis_screenshots/admin/nhatkicuocgoi.png", "Hình C.16. Trang quản trị: nhật ký cuộc gọi kèm tóm tắt."),
     ("thesis_screenshots/superadmin/tongquan2.png", "Hình C.17. Trang giám sát: tình trạng các dịch vụ backend (6/6)."),
     ("thesis_screenshots/superadmin/config.png", "Hình C.18. Trang giám sát: cấu hình chuỗi STT – LLM – TTS theo gói ngôn ngữ."),
-    ("thesis_screenshots/superadmin/logs.png", "Hình C.19. Trang giám sát: nhật ký thời gian thực, đọc độ trễ TTFB."),
+    ("thesis_screenshots/superadmin/logs.png", "Hình C.19. Trang giám sát: nhật ký thời gian thực, kèm độ trễ TTFB."),
     ("thesis_screenshots/superadmin/cuocgoi.png", "Hình C.20. Trang giám sát: bản ghi và tóm tắt cuộc gọi."),
 ]
 APPENDIX_A_GROUPS = [
@@ -255,8 +256,8 @@ assert sorted(n for _, ns in APPENDIX_A_GROUPS for n in ns) == sorted(n for n, _
 APPENDIX_C_PHONE = [(p, c) for p, c in APPENDIX_C_FIGURES if p.endswith(".jpg")]
 APPENDIX_C_WEB = [(p, c) for p, c in APPENDIX_C_FIGURES if not p.endswith(".jpg")]
 APPENDIX_C_BACKUP_LINK = (
-    "Bộ ảnh ở độ phân giải gốc được lưu dự phòng trong kho mã nguồn tại docs/thesis/thesis_screenshots/ "
-    "(và bản sao trên Google Drive của tác giả); bản in này đã đủ để đối chiếu, đường dẫn chỉ phục vụ xem phóng to."
+    "Bộ ảnh ở độ phân giải gốc được lưu dự phòng trong kho mã nguồn tại docs/thesis/thesis_screenshots/, "
+    "kèm một bản sao trên Google Drive của tác giả. Bản in này đã đủ để đối chiếu; đường dẫn trên chỉ dùng khi cần xem ảnh phóng to."
 )
 
 # Phụ lục E — ma trận đối chiếu yêu cầu (Requirements Traceability Matrix)
@@ -302,9 +303,9 @@ APPENDIX_E_RTM = [
 # Phụ lục F — tái lập số liệu thực nghiệm
 APPENDIX_F_INTRO = (
     "Bảng F.1 liệt kê script và lệnh để tạo lại từng nhóm số liệu ở Chương 6. Các script nằm trong thư mục "
-    "docs/thesis và docs/thesis/experiments của kho mã nguồn (mục 5.2). Thí nghiệm thử tải và tiêm lỗi chạy "
-    "trên môi trường cô lập: cơ sở dữ liệu giả lập, thông tin đăng nhập AWS giả, số điện thoại trong dải "
-    "giả lập; không thí nghiệm nào gọi tới tài nguyên AWS hoặc nhà cung cấp bên ngoài."
+    "docs/thesis và docs/thesis/experiments của kho mã nguồn (mục 5.2). Các thí nghiệm thử tải và tiêm lỗi chạy "
+    "trong môi trường cô lập, gồm cơ sở dữ liệu giả lập, thông tin đăng nhập AWS giả và số điện thoại thuộc dải "
+    "giả lập. Không thí nghiệm nào gọi tới tài nguyên AWS hoặc nhà cung cấp bên ngoài."
 )
 APPENDIX_F_ROWS = [
     ("Độ trễ phản hồi và phân tích điểm nghẽn (Bảng 6.3, 6.4)",
@@ -321,7 +322,7 @@ APPENDIX_F_ROWS = [
      "P50, P95 theo số người dùng ảo; tỷ lệ lỗi"),
     ("RS-01, RS-02, RS-04 – tiêm lỗi mức thành phần (Bảng 6.12)",
      "PYTHONPATH=. .venv/bin/python docs/thesis/experiments/rs_component_faults.py --trials 20 (chạy trong src/backend/llm-orchestrator)",
-     "Máy chủ tiêm lỗi trả 503, treo, hoặc từ chối kết nối",
+     "Máy chủ tiêm lỗi trả mã 503, treo hoặc từ chối kết nối",
      "Tỷ lệ lượt đạt; thời gian đến khi tác nhân báo lỗi"),
     ("RS-05 – dự phòng nhà cung cấp LLM (Bảng 6.12)",
      ".venv/bin/python docs/thesis/experiments/rs05_provider_fallback.py --trials 30 (chạy trong src/backend/llm-orchestrator)",
@@ -342,7 +343,7 @@ APPENDIX_F_ROWS = [
     ("Sắp xếp thứ tự ghé (Bảng 6.15)",
      "node docs/thesis/experiments/route_opt_quality.js (chạy trong src/backend/external-api-service)",
      "600 bộ điểm dừng sinh ngẫu nhiên, hạt giống 20261013",
-     "Tỷ lệ đúng tối ưu; chênh lệch quãng đường so với tối ưu và với thứ tự theo danh sách"),
+     "Tỷ lệ đạt lời giải tối ưu; chênh lệch quãng đường so với tối ưu và với thứ tự theo danh sách"),
     ("Luồng khách hàng và báo cáo ngày (Bảng 6.14)",
      "pytest trong src/backend/llm-orchestrator (662 ca, gồm test_send_sms_flow); npm run verify:ops; npm run verify:records; npm run verify:sms (hai dịch vụ); npm run verify:logger",
      "Bộ kiểm thử tự động",
@@ -786,9 +787,9 @@ def soft_breaks(text: str, width_cm: float) -> str:
     return " ".join(out)
 
 ABSTRACT_PARAS = [
-    "Tài xế xe công nghệ thường phải thao tác trên điện thoại trong lúc lái để xem chuyến, cập nhật trạng thái và liên lạc với khách hàng. Luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các nghiệp vụ này mà không cần dùng tay, theo phương pháp nghiên cứu khoa học thiết kế.",
-    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống); năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả dưới dạng kịch bản thuộc tính chất lượng, kèm 19 tiêu chí chấp nhận dạng Given–When–Then. Từ các chiến thuật kiến trúc đáp ứng những yêu cầu này, luận văn lập luận lựa chọn kiến trúc microservices trên AWS: Dịch vụ Liên lạc hội thoại thời gian thực xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm (câu ngắn báo hệ thống đang xử lý khi câu trả lời chưa sẵn sàng), tách khỏi các dịch vụ nghiệp vụ. Nguyên mẫu hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
-    "Kết quả đánh giá như sau. Toàn bộ 200/200 lượt tiêm lỗi (cố ý làm một thành phần bị lỗi) ở mức thành phần đều không làm hỏng luồng hội thoại; khi dừng đột ngột một bản sao tác nhân, phiên mới vẫn được phục vụ nhưng phiên đang chạy bị mất (0/10). Trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. P95 độ trễ phản hồi của luồng qua mô hình ngôn ngữ là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian mô hình bắt đầu sinh câu trả lời. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt được chấm, 37 lượt (86,0%) chọn đúng công cụ. Đánh giá cũng phát hiện hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật); cả hai đã được sửa và đạt khi kiểm tra lại. Thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3% trên dữ liệu mô phỏng. Mỗi kết quả được báo cáo kèm cỡ mẫu và giới hạn; các phép đo chưa thực hiện được nêu rõ.",
+    "Tài xế xe công nghệ thường phải thao tác trên điện thoại trong lúc lái để xem chuyến, cập nhật trạng thái chuyến và liên lạc với khách hàng. Theo phương pháp nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các nghiệp vụ này mà không cần dùng tay.",
+    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả dưới dạng kịch bản thuộc tính chất lượng và đi kèm 19 tiêu chí chấp nhận dạng Given–When–Then. Từ các chiến thuật kiến trúc đáp ứng những yêu cầu này, luận văn lập luận cho lựa chọn kiến trúc microservices trên AWS. Trong kiến trúc này, Dịch vụ Liên lạc hội thoại thời gian thực được tách khỏi các dịch vụ nghiệp vụ và xử lý mỗi lượt thoại theo chuỗi STT – LLM kèm gọi công cụ – TTS. Chuỗi này có nhà cung cấp dự phòng và câu đệm, tức câu ngắn báo rằng hệ thống đang xử lý khi câu trả lời chưa sẵn sàng. Nguyên mẫu hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
+    "Kết quả đánh giá cho thấy toàn bộ 200/200 lượt tiêm lỗi ở mức thành phần (cố ý làm một thành phần bị lỗi) đều không làm hỏng luồng hội thoại. Khi dừng đột ngột một bản sao tác nhân, phiên mới vẫn được phục vụ, nhưng phiên đang chạy bị mất (0/10). Trong môi trường mô phỏng, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; tài nguyên giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Với các lượt đi qua mô hình ngôn ngữ, P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây; nguyên nhân chủ yếu là thời gian mô hình bắt đầu sinh câu trả lời. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt được chấm, 37 lượt (86,0%) chọn đúng công cụ. Đánh giá cũng phát hiện hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật); cả hai đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất có quãng đường dài hơn lời giải tối ưu trung bình 1,2–6,3%. Mỗi kết quả được báo cáo kèm cỡ mẫu và giới hạn; những phép đo chưa thực hiện cũng được nêu rõ.",
     "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, chiến thuật kiến trúc, ISO/IEC 25010, gọi công cụ, nghiên cứu khoa học thiết kế.",
 ]
 
@@ -885,15 +886,15 @@ def _supervisors_phrase() -> str:
 THANKS_PARAS = [
     "Trước hết, tôi xin bày tỏ lòng biết ơn sâu sắc tới "
     f"{_supervisors_phrase()}, "
-    "giảng viên hướng dẫn đã tận tình chỉ bảo, định hướng chuyên môn và góp ý trong suốt quá trình thực hiện luận văn.",
+    "giảng viên hướng dẫn đã tận tình chỉ bảo, định hướng chuyên môn và góp ý cho tôi trong suốt quá trình thực hiện luận văn.",
     "Tôi xin chân thành cảm ơn Ban Giám hiệu, quý thầy cô và toàn thể cán bộ của "
     "FPT School of Business & Technology (FSB) đã tạo điều kiện học tập và nghiên cứu thuận lợi.",
-    "Tôi cũng xin gửi lời cảm ơn đến đồng nghiệp, bạn bè đã sẵn sàng chia sẻ kinh nghiệm, "
-    "hỗ trợ chuyên môn và động viên trong quá trình triển khai hệ thống nguyên mẫu.",
-    "Đặc biệt, tôi xin bày tỏ lòng biết ơn sâu sắc đến gia đình — chỗ dựa vững chắc, "
-    "luôn động viên và tạo điều kiện để tôi hoàn thành luận văn này.",
-    "Dù đã dành nhiều thời gian và nỗ lực, luận văn khó tránh khỏi thiếu sót. "
-    "Tôi rất mong nhận được ý kiến đóng góp của quý thầy cô và bạn đọc để hoàn thiện hơn.",
+    "Tôi cũng xin cảm ơn các đồng nghiệp và bạn bè đã luôn sẵn sàng chia sẻ kinh nghiệm, "
+    "hỗ trợ chuyên môn và động viên tôi trong quá trình xây dựng hệ thống nguyên mẫu.",
+    "Đặc biệt, tôi xin gửi lời tri ân đến gia đình — chỗ dựa vững chắc đã luôn động viên "
+    "và tạo điều kiện để tôi hoàn thành luận văn này.",
+    "Dù tôi đã dành nhiều thời gian và nỗ lực, luận văn khó tránh khỏi những thiếu sót. "
+    "Tôi rất mong nhận được ý kiến đóng góp của quý thầy cô và bạn đọc để luận văn được hoàn thiện hơn.",
     "Xin trân trọng cảm ơn!",
 ]
 
@@ -1665,8 +1666,8 @@ def build() -> Path:
     # Danh mục viết tắt (sau DS bảng, trước Mục lục) — theo hướng dẫn luận văn VN (UEH/CTU/…)
     add_heading1_new_page("Danh mục từ viết tắt", bookmark="ds_viet_tat")
     add_styled(
-        "Luận văn chỉ viết tắt các thuật ngữ dùng nhiều lần. Lần xuất hiện đầu trong thân bài "
-        "vẫn viết đầy đủ kèm chữ viết tắt trong ngoặc đơn. Bảng dưới xếp theo thứ tự ABC.",
+        "Luận văn chỉ viết tắt những thuật ngữ được dùng nhiều lần. Ở lần xuất hiện đầu tiên trong thân bài, "
+        "thuật ngữ vẫn được viết đầy đủ, kèm chữ viết tắt trong ngoặc đơn. Bảng dưới đây xếp theo thứ tự ABC.",
         "Normal",
         first_line_indent=True,
     )
@@ -1800,7 +1801,7 @@ def build() -> Path:
 
     add_heading1_new_page("Tài liệu tham khảo", bookmark="tai_lieu_tham_khao")
     add_styled(
-        "Danh mục dưới đây gồm các nguồn được trích dẫn trong luận văn, xếp theo thứ tự chữ cái của tác giả.",
+        "Danh mục dưới đây gồm các nguồn được trích dẫn trong luận văn, xếp theo thứ tự chữ cái của tên tác giả.",
         "Normal",
         first_line_indent=True,
     )
@@ -1834,7 +1835,7 @@ def build() -> Path:
     add_styled(
         "Phụ lục gồm: A — danh mục công cụ; B — kịch bản hội thoại mẫu; C — ảnh giao diện; "
         "D — cấu hình môi trường (không chứa bí mật); E — tái lập số liệu thực nghiệm; "
-        "F — bảng thuật ngữ Anh – Việt. Ma trận đối chiếu yêu cầu đầy đủ không in lại vì đã có ở "
+        "F — bảng thuật ngữ Anh – Việt. Ma trận đối chiếu yêu cầu đầy đủ không được in lại vì đã có trong "
         "Bảng 4.10 (yêu cầu – thiết kế) và Bảng 5.6 (thiết kế – hiện thực).",
         "Normal",
         first_line_indent=True,
@@ -1849,8 +1850,8 @@ def build() -> Path:
         + [[g, str(len(ns)), ", ".join(ns)] for g, ns in APPENDIX_A_GROUPS]
     )
     add_styled(
-        "Các công cụ có tiền tố find_/select_/confirm_ là các bước của một quy trình xác nhận hai bước trước khi gọi "
-        "hoặc nhắn tin thật; mô tả đầy đủ từng công cụ nằm trong lược đồ công cụ của mã nguồn (mục 5.2).",
+        "Các công cụ có tiền tố find_/select_/confirm_ là các bước của quy trình xác nhận hai bước trước khi thực hiện "
+        "cuộc gọi hoặc gửi tin nhắn thật. Mô tả đầy đủ của từng công cụ nằm trong lược đồ công cụ của mã nguồn (mục 5.2).",
         "Normal", first_line_indent=True,
     )
     add_styled("", "Normal", first_line_indent=False, space_after=6)
@@ -1867,9 +1868,9 @@ def build() -> Path:
     # ---- Phụ lục C: ảnh giao diện ----
     add_styled("Phụ lục C. Ảnh màn hình ứng dụng và trang quản trị", "Heading 2", first_line_indent=False)
     add_styled(
-        "Các ảnh dưới đây minh họa giao diện nguyên mẫu ở thời điểm chụp. Thông tin định danh "
-        "trong ảnh (số điện thoại, thư điện tử, biển số…) thuộc tài khoản thử nghiệm nội bộ; "
-        "khi in ấn có thể che trực tiếp trên bản DOCX.",
+        "Các ảnh dưới đây minh họa giao diện nguyên mẫu tại thời điểm chụp. Thông tin định danh "
+        "trong ảnh (số điện thoại, thư điện tử, biển số xe…) thuộc các tài khoản thử nghiệm nội bộ "
+        "và có thể được che trực tiếp trên bản DOCX trước khi in.",
         "Normal",
         first_line_indent=True,
     )
@@ -1889,7 +1890,7 @@ def build() -> Path:
         [["Biến", "Ý nghĩa", "Giá trị"]] + [list(row) for row in APPENDIX_D_ENV]
     )
     add_styled(
-        "Không đưa khóa API, token LiveKit, mật khẩu hay đường dẫn credential vào luận văn.",
+        "Luận văn không công bố khóa API, token LiveKit, mật khẩu hay đường dẫn tới tệp thông tin xác thực.",
         "Normal",
         first_line_indent=True,
         italic=True,
@@ -1908,8 +1909,8 @@ def build() -> Path:
     # ---- Phụ lục G: thuật ngữ ----
     add_styled("Phụ lục F. Bảng thuật ngữ Anh – Việt", "Heading 2", first_line_indent=False)
     add_styled(
-        "Bảng F.1 liệt kê các thuật ngữ chuyên môn xuất hiện trong luận văn và cách dịch sang tiếng Việt; nguồn "
-        "định nghĩa được dẫn tại lần dùng đầu trong thân bài, nơi ghi tiếng Việt kèm thuật ngữ gốc trong ngoặc đơn.",
+        "Bảng F.1 liệt kê các thuật ngữ chuyên môn xuất hiện trong luận văn cùng cách dịch sang tiếng Việt. Nguồn "
+        "định nghĩa được dẫn ở lần dùng đầu tiên trong thân bài; tại đó, thuật ngữ tiếng Việt được ghi kèm thuật ngữ gốc trong ngoặc đơn.",
         "Normal",
         first_line_indent=True,
     )
