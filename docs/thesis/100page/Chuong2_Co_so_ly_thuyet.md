@@ -4,7 +4,7 @@ Chương này trình bày nền tảng kỹ thuật của trợ lý giọng nói
 
 ## 2.1. Kiến trúc chuỗi xử lý của trợ lý giọng nói
 
-Một lượt hội thoại đi qua ba khâu nối tiếp. Khâu nhận dạng giọng nói (STT) chuyển âm thanh thành văn bản; mô hình ngôn ngữ lớn (LLM) hiểu văn bản, rồi sinh câu trả lời hoặc chọn hành động nghiệp vụ; khâu tổng hợp giọng nói (TTS) chuyển câu trả lời thành âm thanh. Chuỗi theo tầng này cho phép thay thế từng khâu độc lập, nhưng độ trễ của các khâu cộng dồn lại. Tổng độ trễ gồm thời gian để nhận dạng xong phát ngôn, thời gian sinh token đầu tiên (time to first token; token là đơn vị văn bản nhỏ nhất mà mô hình sinh ra) và thời gian tổng hợp đoạn âm thanh đầu tiên. Các đánh giá trước đây chủ yếu dùng giọng nói sạch (Chen et al., 2024), trong khi tài xế nói trong tiếng ồn của khoang xe và cần câu trả lời khớp với dữ liệu thật, không bịa thông tin (hallucination).
+Một lượt hội thoại đi qua ba khâu nối tiếp. Khâu nhận dạng giọng nói (STT) chuyển âm thanh thành văn bản; mô hình ngôn ngữ lớn (LLM) hiểu văn bản, rồi sinh câu trả lời hoặc chọn hành động nghiệp vụ; khâu tổng hợp giọng nói (TTS) chuyển câu trả lời thành âm thanh. Chuỗi theo tầng này cho phép thay thế từng khâu độc lập, nhưng độ trễ của các khâu cộng dồn lại. Tổng độ trễ gồm thời gian phát hiện kết thúc phát ngôn, thời gian sinh token đầu tiên (time to first token; token là đơn vị văn bản nhỏ nhất mà mô hình sinh ra) và thời gian tổng hợp đoạn âm thanh đầu tiên. Các đánh giá trước đây chủ yếu dùng giọng nói sạch (Chen et al., 2024), trong khi tài xế nói trong tiếng ồn của khoang xe và cần câu trả lời khớp với dữ liệu thật, không bịa thông tin (hallucination).
 
 ## 2.2. Mô hình ngôn ngữ lớn có khả năng gọi công cụ
 
@@ -12,7 +12,7 @@ Cơ chế gọi công cụ (function calling) cho phép mô hình chọn một c
 
 ## 2.3. Truyền thông thời gian thực: WebRTC và SIP
 
-WebRTC là bộ giao thức chuẩn cho thoại và video thời gian thực trên trình duyệt và ứng dụng (Alvestrand, 2021). Trong hệ thống của luận văn, tài xế và tác nhân hội thoại cùng tham gia một phòng hội thoại (room) trên máy chủ truyền thông. Khi cần kết nối với mạng điện thoại công cộng (PSTN), hệ thống dùng giao thức khởi tạo phiên (Session Initiation Protocol – SIP) qua một đường trung kế SIP (SIP trunk); hai kênh dùng chung một logic nghiệp vụ. LiveKit Agents cung cấp khung để tác nhân tham gia phòng và tích hợp STT, LLM, TTS (LiveKit Inc., n.d.); luận văn tái sử dụng phần truyền âm thanh này.
+WebRTC là bộ giao thức chuẩn cho thoại và video thời gian thực trên trình duyệt và ứng dụng (Alvestrand, 2021). Trong hệ thống của luận văn, tài xế và tác nhân hội thoại cùng tham gia một phòng hội thoại (room) trên máy chủ truyền thông. Khi cần kết nối với mạng điện thoại công cộng (PSTN), hệ thống dùng SIP qua một đường trung kế SIP (SIP trunk); hai kênh dùng chung một logic nghiệp vụ. LiveKit Agents cung cấp khung để tác nhân tham gia phòng và tích hợp STT, LLM, TTS (LiveKit Inc., n.d.); luận văn dùng khung này cho phần truyền âm thanh và cho việc tích hợp, dự phòng các nhà cung cấp STT, LLM, TTS (mục 5.3.4).
 
 ## 2.4. Yêu cầu phần mềm và mô hình chất lượng
 
@@ -22,7 +22,7 @@ Yêu cầu người dùng được viết theo góc nhìn của người dùng, 
 
 ### 2.4.2. Yêu cầu chức năng, yêu cầu phi chức năng và mô hình ISO/IEC 25010
 
-Yêu cầu chức năng mô tả hệ thống phải làm gì; yêu cầu phi chức năng (NFR) mô tả hệ thống phải làm tốt đến mức nào. Luận văn phân loại NFR theo mô hình chất lượng sản phẩm ISO/IEC 25010:2023, gồm chín đặc tính: phù hợp chức năng, hiệu quả hiệu năng, tương thích, năng lực tương tác, độ tin cậy, bảo mật, khả năng bảo trì, tính linh hoạt và tính an toàn (ISO/IEC, 2023). Luận văn dùng các quy ước sau. **Hiệu năng** là cách gọi tắt của "hiệu quả hiệu năng", và độ trễ thuộc đặc tính con hành vi thời gian. **Tính khả dụng (usability)** được dùng tương đương với "năng lực tương tác". **Khả năng phục hồi (resilience)** gồm tính sẵn sàng, khả năng chịu lỗi và khả năng khôi phục; mục tiêu của nó là ngăn lỗi bên trong trở thành sự cố quan sát được (Bass et al., 2021).
+Yêu cầu chức năng mô tả hệ thống phải làm gì; yêu cầu phi chức năng (NFR) mô tả hệ thống phải làm tốt đến mức nào. Luận văn phân loại NFR theo mô hình chất lượng sản phẩm ISO/IEC 25010:2023, gồm chín đặc tính: phù hợp chức năng, hiệu quả hiệu năng, tương thích, năng lực tương tác, độ tin cậy, bảo mật, khả năng bảo trì, tính linh hoạt và tính an toàn (ISO/IEC, 2023). Luận văn dùng các quy ước sau. **Hiệu năng** là cách gọi tắt của "hiệu quả hiệu năng", và độ trễ thuộc đặc tính con hành vi thời gian. **Tính khả dụng (usability)** được dùng tương đương với "năng lực tương tác". **Khả năng mở rộng (scalability)** là đặc tính con của tính linh hoạt. **Khả năng phục hồi (resilience)** gồm ba đặc tính con của độ tin cậy là tính sẵn sàng, khả năng chịu lỗi và khả năng khôi phục; mục tiêu của khả năng phục hồi là ngăn lỗi bên trong trở thành sự cố quan sát được (Bass et al., 2021).
 
 ### 2.4.3. Kịch bản thuộc tính chất lượng
 
@@ -34,23 +34,23 @@ Tiêu chí chấp nhận là các điều kiện mà sản phẩm phải thỏa 
 
 ## 2.5. Chiến thuật kiến trúc
 
-Chiến thuật kiến trúc là một quyết định thiết kế tác động trực tiếp đến phản ứng của hệ thống đối với một thuộc tính chất lượng. Chiến thuật có phạm vi nhỏ hơn mẫu kiến trúc, và một mẫu thường gói nhiều chiến thuật (Bass et al., 2021). Luận văn đi từ kịch bản chất lượng đến chiến thuật, rồi đến mẫu kiến trúc. Bảng 2.1 liệt kê các chiến thuật cho những thuộc tính chất lượng gắn với năm NFR (mục 3.3.5) và cho khả năng bảo trì, kèm tính chất microservices hiện thực hóa các chiến thuật đó.
+Chiến thuật kiến trúc là một quyết định thiết kế tác động trực tiếp đến phản ứng của hệ thống đối với một thuộc tính chất lượng. Chiến thuật có phạm vi nhỏ hơn mẫu kiến trúc, và một mẫu thường gói nhiều chiến thuật (Bass et al., 2021). Luận văn đi từ kịch bản chất lượng đến chiến thuật, rồi đến mẫu kiến trúc. Bảng 2.1 liệt kê các chiến thuật cho những thuộc tính chất lượng gắn với năm NFR (mục 3.4.1), kèm tính chất microservices hiện thực hóa các chiến thuật đó; khả năng bảo trì được nêu thêm để đối chiếu dù không có NFR riêng.
 
 **Bảng 2.1.** Các chiến thuật kiến trúc được sử dụng và tính chất microservices tương ứng
 
 | Thuộc tính (chương trong Bass et al., 2021) | Chiến thuật sử dụng | Tính chất microservices hiện thực hóa |
 |---|---|---|
-| Hiệu năng (chương 9) | Giảm chi phí phụ trội; giới hạn thời gian thực thi; tăng tài nguyên; xử lý đồng thời; nhiều bản sao | Mở rộng độc lập từng dịch vụ (Newman, 2021) |
+| Hiệu năng (chương 9) | Kiểm soát nhu cầu: giảm chi phí phụ trội, giới hạn thời gian thực thi. Quản lý tài nguyên: tăng tài nguyên, xử lý đồng thời, nhiều bản sao | Mở rộng độc lập từng dịch vụ (Newman, 2021) |
 | Khả năng phục hồi – tính sẵn sàng (chương 4) | Phát hiện: giám sát, nhịp tim, ngoại lệ. Khôi phục: dự phòng, thử lại, suy giảm có kiểm soát | Thiết kế cho lỗi (Lewis & Fowler, 2014); cô lập lỗi một dịch vụ (Newman, 2021) |
 | Bảo mật (chương 11) | Nhận diện, xác thực, phân quyền đối tượng truy cập; giới hạn truy cập và mức phơi lộ; mã hóa; lưu vết để kiểm tra lại (audit) | Mỗi dịch vụ sở hữu dữ liệu riêng (Lewis & Fowler, 2014) |
 | Tính khả dụng (chương 13) | Hủy bỏ; duy trì mô hình tác vụ, mô hình người dùng và mô hình hệ thống | Hiện thực trong tác nhân hội thoại và ứng dụng tài xế (mục 4.8) |
-| Khả năng bảo trì | Không có chiến thuật riêng | Tổ chức theo năng lực nghiệp vụ, tự động hóa hạ tầng (Lewis & Fowler, 2014); triển khai độc lập (Newman, 2021) |
+| Khả năng bảo trì | Không đặt NFR riêng nên không chọn chiến thuật riêng | Tổ chức theo năng lực nghiệp vụ, tự động hóa hạ tầng (Lewis & Fowler, 2014); triển khai độc lập (Newman, 2021) |
 
-Khả năng mở rộng được đáp ứng bằng các chiến thuật tăng tài nguyên và nhiều bản sao tính toán. Tính khả dụng được bổ sung bằng 10 nguyên tắc của Nielsen (Nielsen, 1994), được áp dụng ở mục 4.8.
+Khả năng mở rộng được đáp ứng bằng các chiến thuật tăng tài nguyên và nhiều bản sao tính toán; trong luận văn, chiến thuật sau được hiện thực bằng nhiều bản sao tác nhân (AC-16, Bảng 3.8). Tính khả dụng được bổ sung bằng 10 nguyên tắc của Nielsen (Nielsen, 1994), được áp dụng ở mục 4.8.
 
 ## 2.6. Kiến trúc microservices
 
-Kiến trúc microservices tổ chức ứng dụng thành các dịch vụ nhỏ; mỗi dịch vụ chạy trong tiến trình riêng, giao tiếp qua cơ chế nhẹ như HTTP, được xây dựng quanh một năng lực nghiệp vụ và triển khai độc lập (Lewis & Fowler, 2014) (Dragoni et al., 2017). Ranh giới dịch vụ được vạch theo miền nghiệp vụ: mỗi dịch vụ ứng với một ngữ cảnh giới hạn (bounded context) và ẩn dữ liệu của mình (Newman, 2021). Đi kèm là các mẫu "mỗi dịch vụ một cơ sở dữ liệu" và "cổng API" (Richardson, 2018). Tuy nhiên, microservices có chi phí: vận hành phức tạp, khó kiểm thử và giám sát xuyên dịch vụ, khó bảo đảm nhất quán dữ liệu (Soldani et al., 2018). Vì vậy, lựa chọn kiến trúc này phải được lập luận từ yêu cầu; Chương 4 trình bày lập luận đó dưới dạng bản ghi quyết định kiến trúc (Architecture Decision Record – ADR).
+Kiến trúc microservices tổ chức ứng dụng thành các dịch vụ nhỏ; mỗi dịch vụ chạy trong tiến trình riêng, giao tiếp qua cơ chế nhẹ như HTTP, được xây dựng quanh một năng lực nghiệp vụ và triển khai độc lập (Dragoni et al., 2017; Lewis & Fowler, 2014). Ranh giới dịch vụ được vạch theo miền nghiệp vụ: mỗi dịch vụ ứng với một ngữ cảnh giới hạn (bounded context) và ẩn dữ liệu của mình (Newman, 2021). Đi kèm là các mẫu "mỗi dịch vụ một cơ sở dữ liệu" và "cổng API" (Richardson, 2018). Tuy nhiên, microservices có chi phí: vận hành phức tạp, khó kiểm thử và giám sát xuyên dịch vụ, khó bảo đảm nhất quán dữ liệu (Soldani et al., 2018). Vì vậy, lựa chọn kiến trúc này phải được lập luận từ yêu cầu; Chương 4 trình bày lập luận đó dưới dạng bản ghi quyết định kiến trúc (Architecture Decision Record – ADR).
 
 ## 2.7. Điện toán đám mây: serverless và container
 
@@ -58,7 +58,7 @@ Kiến trúc microservices tổ chức ứng dụng thành các dịch vụ nh�
 
 ## 2.8. An toàn khi lái và cơ sở lựa chọn ngưỡng độ trễ
 
-Hướng dẫn của NHTSA (Cục An toàn Giao thông Đường cao tốc Hoa Kỳ) đặt tiêu chí cho các tác vụ đòi hỏi vừa nhìn vừa thao tác tay: mỗi lần rời mắt khỏi mặt đường kéo dài trung bình không quá 2,0 giây, không quá 15% số lần rời mắt dài hơn 2,0 giây, và tổng thời gian rời mắt không quá 12 giây (National Highway Traffic Safety Administration, 2013). Tương tác bằng giọng nói giảm được phần lớn các lần rời mắt đó. Trong hội thoại tự nhiên, khoảng lặng chuyển lượt phổ biến nhất ở mức 0–200 mili-giây (Stivers et al., 2009); chuỗi STT – LLM – TTS chạy qua mạng khó đạt mức này. Luận văn chọn ngưỡng P95 ≤ 2 giây làm ràng buộc kỹ thuật thực dụng, kết hợp với câu đệm ngắn khi phản hồi chậm. Ngưỡng này là một lựa chọn thiết kế, không được rút ra trực tiếp từ các tài liệu trên.
+Hướng dẫn của Cục Quản lý An toàn Giao thông Đường cao tốc Quốc gia Hoa Kỳ (National Highway Traffic Safety Administration – NHTSA) đặt tiêu chí cho các tác vụ đòi hỏi vừa nhìn vừa thao tác tay: mỗi lần rời mắt khỏi mặt đường kéo dài trung bình không quá 2,0 giây, không quá 15% số lần rời mắt dài hơn 2,0 giây, và tổng thời gian rời mắt không quá 12 giây (National Highway Traffic Safety Administration, 2013). Tương tác bằng giọng nói có thể giảm các lần rời mắt này, nhưng không loại bỏ tải nhận thức (mục 2.9.1). Trong hội thoại tự nhiên, khoảng lặng chuyển lượt phổ biến nhất ở mức 0–200 mili-giây (Stivers et al., 2009); chuỗi STT – LLM – TTS chạy qua mạng khó đạt mức này. Luận văn chọn ngưỡng P95 ≤ 2 giây làm ràng buộc kỹ thuật thực dụng, kết hợp với câu đệm ngắn khi phản hồi chậm. Ngưỡng này là một lựa chọn thiết kế, không được rút ra trực tiếp từ các tài liệu trên.
 
 ## 2.9. Nghiên cứu liên quan
 
@@ -66,7 +66,7 @@ Mỗi hướng nghiên cứu dưới đây được trình bày kèm hệ quả 
 
 ### 2.9.1. Tương tác giọng nói trên xe và xao nhãng nhận thức
 
-Kết quả đo tải thị giác và tải nhận thức khi người lái dùng hệ thống thông tin trên xe cho thấy nhiều chức năng gây xao nhãng đến mức không nên dùng khi lái; giọng nói giảm thao tác nhìn và chạm nhưng không loại bỏ tải nhận thức (Strayer et al., 2019). Vì vậy, luận văn giới hạn tập chức năng theo loại phiên (FR-L03), yêu cầu mỗi lượt trả lời mang một ý chính (NFR-01), và coi an toàn trên thực địa là một giới hạn của phép đánh giá (mục 6.13).
+Kết quả đo tải thị giác và tải nhận thức khi người lái dùng hệ thống thông tin trên xe cho thấy nhiều chức năng gây xao nhãng đến mức không nên dùng khi lái; giọng nói giảm thao tác nhìn và chạm nhưng không loại bỏ tải nhận thức (Strayer et al., 2019). Vì vậy, luận văn giới hạn tập chức năng theo loại phiên (FR-L03), yêu cầu mỗi lượt trả lời mang một ý chính (NFR-01, mục 4.8), và coi an toàn trên thực địa là một giới hạn của phép đánh giá (mục 6.13).
 
 ### 2.9.2. Mô hình ngôn ngữ gọi công cụ và cách đánh giá
 
@@ -92,7 +92,7 @@ Bảng 2.2 so sánh luận văn với các công trình liên quan theo năm ti�
 
 | Công trình | Giọng nói thời gian thực | Gọi công cụ | Đối tượng tài xế | Kênh điện thoại | Đánh giá hệ thống phân tán |
 |---|---|---|---|---|---|
-| Strayer et al. (2019) | Có | Không | Có (người lái) | Không | Không |
+| Strayer et al. (2019) | Một phần | Không | Có (người lái) | Không | Không |
 | Patil et al. (2023) – Gorilla | Không | Có | Không | Không | Không |
 | Yao et al. (2024) – τ-bench | Không (văn bản) | Có | Không | Không | Không |
 | Chen et al. (2024) – VoiceBench | Một phần | Không | Không | Không | Không |
@@ -108,9 +108,9 @@ Luận văn dùng sáu chỉ số, mỗi chỉ số gắn với một câu hỏi
 
 ## 2.11. Khoảng trống nghiên cứu và định hướng luận văn
 
-Từ Bảng 2.2, luận văn xác định ba khoảng trống. (1) Còn thiếu giải pháp tích hợp đồng thời hội thoại thời gian thực, gọi công cụ, nghiệp vụ của tài xế gọi xe và mục tiêu giảm thao tác khi lái. (2) Nghiên cứu AI trong lĩnh vực gọi xe nghiêng về phía nền tảng hoặc hành khách, chưa tập trung vào trợ lý thực thi nghiệp vụ cho tài xế. (3) Các công trình về trợ lý giọng nói ít lập luận kiến trúc từ NFR và ít đánh giá khả năng mở rộng, khả năng phục hồi của hệ thống phân tán. Các chương tiếp theo giải quyết các khoảng trống này.
+Từ Bảng 2.2 và mục 2.9.5, luận văn xác định ba khoảng trống. (1) Còn thiếu giải pháp tích hợp đồng thời hội thoại thời gian thực, gọi công cụ, nghiệp vụ của tài xế gọi xe và mục tiêu giảm thao tác khi lái. (2) Nghiên cứu AI trong lĩnh vực gọi xe nghiêng về phía nền tảng hoặc hành khách, chưa tập trung vào trợ lý thực thi nghiệp vụ cho tài xế. (3) Các công trình về trợ lý giọng nói ít lập luận kiến trúc từ NFR và ít đánh giá khả năng mở rộng, khả năng phục hồi của hệ thống phân tán. Các chương tiếp theo hướng tới các khoảng trống này trong phạm vi nêu ở mục 1.5.
 
 ## Kết luận chương
 
-Chương 2 đã trình bày nền tảng kỹ thuật của trợ lý giọng nói, gồm chuỗi STT – LLM – TTS, cơ chế gọi công cụ, WebRTC và SIP. Chương cũng trình bày nền tảng kỹ nghệ phần mềm: mô hình chất lượng ISO/IEC 25010, kịch bản thuộc tính chất lượng, tiêu chí chấp nhận dạng Given – When – Then, chiến thuật kiến trúc và microservices như một mẫu gói nhiều chiến thuật. Tổng quan các công trình liên quan cho thấy ba khoảng trống mà luận văn hướng tới. Chương 3 vận dụng các khái niệm này để phân tích yêu cầu của hệ thống.
+Chương 2 đã trình bày nền tảng kỹ thuật của trợ lý giọng nói, gồm chuỗi STT – LLM – TTS, cơ chế gọi công cụ, WebRTC và SIP, cùng nền tảng điện toán đám mây và cơ sở chọn ngưỡng độ trễ. Chương cũng trình bày nền tảng kỹ nghệ phần mềm: mô hình chất lượng ISO/IEC 25010, kịch bản thuộc tính chất lượng, tiêu chí chấp nhận dạng Given – When – Then, chiến thuật kiến trúc và microservices như một mẫu gói nhiều chiến thuật, cùng sáu chỉ số đánh giá gắn với bốn câu hỏi nghiên cứu. Tổng quan các công trình liên quan cho thấy ba khoảng trống mà luận văn hướng tới. Chương 3 vận dụng các khái niệm này để phân tích yêu cầu của hệ thống.
 

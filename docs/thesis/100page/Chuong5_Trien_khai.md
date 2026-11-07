@@ -15,7 +15,7 @@ Công nghệ được chọn theo vai trò của từng lớp kiến trúc (Bả
 | Microservices | Node.js 20, TypeScript, Express, serverless-http | Dịch vụ nghiệp vụ, chạy cục bộ và trên Lambda |
 | Truyền thông thời gian thực | LiveKit Cloud (WebRTC, SIP); Twilio (SIP trunk, SMS) | Phòng hội thoại; gọi ra mạng điện thoại |
 | Bản đồ | Goong Maps API; Google Maps Platform | Địa chỉ, lộ trình, ETA, ma trận khoảng cách |
-| Dữ liệu | Amazon DynamoDB; Redis (tùy chọn) | Dữ liệu nghiệp vụ; trạng thái phiên |
+| Dữ liệu | Amazon DynamoDB; Redis (tùy chọn) | Dữ liệu nghiệp vụ; bộ nhớ đệm ngắn hạn của Dịch vụ Chuyến đi và Điều phối |
 | Truy xuất tri thức | LlamaIndex, sổ tay Markdown | Trả lời cách dùng ứng dụng |
 | Hạ tầng dạng mã | AWS SAM, CloudFormation, Docker | Định nghĩa và triển khai tài nguyên AWS |
 
@@ -27,23 +27,23 @@ Mã nguồn nằm trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered
 
 ### 5.3.1. Khởi tạo phiên và phân loại phòng
 
-Điểm vào của tác nhân phân loại phiên theo tên phòng và metadata (Bảng 4.7). Phòng có tiền tố driver là phiên tài xế; nếu phòng kèm metadata chuyến thì đó là phiên mời nhận chuyến. Tiền tố custcall ứng với cuộc gọi khách nền, còn customer ứng với phiên của ứng dụng khách hàng (ngoài phạm vi, mục 3.5). Mỗi loại phiên có tập công cụ riêng ở cả hai gói ngôn ngữ. Với phiên tài xế, tác nhân đăng ký phiên, phát lời chào cố định, tải trước ngữ cảnh rồi hỏi tài xế cần gì (sequence S2).
+Điểm vào của tác nhân phân loại phiên theo tên phòng và metadata (Bảng 4.7). Phòng có tiền tố driver là phiên tài xế. Nếu phòng driver mang metadata chuyến (mã chuyến), đó là phiên mời nhận chuyến; Dịch vụ Chuyến đi và Điều phối gắn thêm sip_identity khi mời qua cuộc gọi SIP ra. Mã nguồn vẫn chấp nhận tiền tố trip cũ để tương thích. Tiền tố custcall ứng với cuộc gọi khách nền, còn customer ứng với phiên của ứng dụng khách hàng (ngoài phạm vi, mục 3.5). Mỗi loại phiên có tập công cụ riêng ở cả hai gói ngôn ngữ. Với phiên tài xế, tác nhân đăng ký phiên, phát lời chào cố định, tải trước ngữ cảnh rồi hỏi tài xế cần gì (sequence S2).
 
 ### 5.3.2. Xử lý lượt hội thoại và câu đệm
 
-Mọi phát ngôn đều được đưa qua mô hình ngôn ngữ cùng danh sách công cụ mà loại phiên đó được phép dùng. Mô-đun nhận dạng ý định chỉ gán nhãn để bỏ mảnh chữ thừa ở cuối câu và nhận ra câu đồng ý với hành động đang chờ; mô-đun này không gọi công cụ. Nhánh gọi thẳng công cụ theo ý định, từng được dùng trong đợt đo 05–06/09/2026, đã bị loại khỏi mã nguồn.
+Mọi phát ngôn đều được đưa qua mô hình ngôn ngữ cùng danh sách công cụ mà loại phiên đó được phép dùng. Mô-đun nhận dạng ý định chỉ gán nhãn để bỏ mảnh chữ thừa ở cuối câu và nhận ra câu đồng ý với hành động đang chờ; mô-đun này không gọi công cụ. Nhánh rút gọn theo ý định (gọi thẳng công cụ, không qua mô hình ngôn ngữ), từng được dùng trong đợt đo 05–06/09/2026, đã bị loại khỏi mã nguồn. Câu đệm được phát sau 2,0 giây kể từ lúc tài xế dứt câu, tối đa một lần mỗi lượt, và bị hủy nếu câu trả lời thật đã bắt đầu.
 
-Gọi khách là thao tác không hoàn tác được. Vì vậy, ngoài xác nhận hai bước, hệ thống còn có một lớp chặn bổ sung. Lớp này được thêm sau phiên thử ngày 18/10/2026, trong đó câu "Ok." dành cho một chủ đề khác đã khởi động cuộc gọi. Công cụ gọi khách chỉ chạy khi tài xế vừa nói rõ ý định hoặc vừa đồng ý với câu hỏi của trợ lý. Hành động đang chờ bị hủy sau 30 giây hoặc khi tài xế đổi chủ đề. Tài xế cũng có thể hủy cuộc gọi bằng nút Czen; ở chế độ tác nhân gọi thay, lệnh hủy đi qua một kênh dữ liệu riêng. Câu đệm được phát sau 2,0 giây kể từ lúc tài xế dứt câu, tối đa một lần mỗi lượt, và bị hủy nếu câu trả lời thật đã bắt đầu.
+Gọi khách là thao tác không hoàn tác được. Vì vậy, ngoài xác nhận hai bước, hệ thống còn có một lớp chặn bổ sung. Lớp này được thêm sau phiên thử ngày 18/10/2026, trong đó câu "Ok." dành cho một chủ đề khác đã khởi động cuộc gọi. Công cụ gọi khách chỉ chạy khi tài xế vừa nói rõ ý định hoặc vừa đồng ý với câu hỏi của trợ lý. Hành động đang chờ bị hủy sau 30 giây hoặc khi tài xế đổi chủ đề. Tài xế cũng có thể hủy cuộc gọi bằng nút Czen; ở chế độ tác nhân gọi thay, lệnh hủy đi qua một kênh dữ liệu riêng.
 
 ### 5.3.3. Gọi API nghiệp vụ
 
-Mọi thao tác dữ liệu đều đi qua một mô-đun gọi API duy nhất. Mô-đun này đặt thời gian chờ riêng cho từng lời gọi (8 giây với API chuyến đi, 25 giây với khởi tạo cuộc gọi), gắn token dịch vụ và ghi nhật ký thời gian. Lỗi API được chuyển thành câu thông báo ngắn. Tác nhân chỉ xác nhận sau khi API thành công; bản thân tác nhân không có kết nối cơ sở dữ liệu (CON-01). Bảng 5.2 minh họa một lượt ngày 06/09/2026: việc gửi SMS bị lỗi nhưng phiên không dừng. Lượt này chậm (khoảng 5 giây), chủ yếu do thời gian sinh token đầu.
+Mọi thao tác dữ liệu đều đi qua một mô-đun gọi API duy nhất. Mô-đun này đặt thời gian chờ riêng cho từng lời gọi (chẳng hạn 8 giây với phần lớn API chuyến đi, 25 giây với khởi tạo cuộc gọi), gắn token dịch vụ và ghi nhật ký thời gian. Lỗi API được chuyển thành câu thông báo ngắn. Tác nhân chỉ xác nhận sau khi API thành công; bản thân tác nhân không có kết nối cơ sở dữ liệu (CON-01). Bảng 5.2 minh họa một lượt ngày 06/09/2026: việc gửi SMS bị lỗi nhưng phiên không dừng. Lượt này chậm, chủ yếu do thời gian sinh token đầu (3,48 giây).
 
 **Bảng 5.2.** Một lượt thực tế: tài xế nhờ nhắn tin cho khách khi dịch vụ gửi SMS gặp lỗi
 
 | Khâu | Dữ liệu trong nhật ký |
 |---|---|
-| Nhận dạng giọng nói | "Nhắn cho khách là 15 phút nữa tôi đến đón."; dứt câu sau 1,54 giây |
+| Nhận dạng giọng nói | "Nhắn cho khách là 15 phút nữa tôi đến đón."; phát hiện kết thúc phát ngôn sau 1,54 giây |
 | Mô hình ngôn ngữ | Chọn công cụ gửi SMS; token đầu sau 3,48 giây |
 | Gọi API nghiệp vụ | Không chuyển tiếp được SMS, trả 503 sau 1,31 giây |
 | Xử lý lỗi trong công cụ | Bắt lỗi HTTP, ghi nhật ký, trả câu soạn sẵn |
@@ -105,7 +105,7 @@ Dịch vụ Nhật ký cuộc gọi lưu bản ghi hội thoại trong một b�
 | stt_provider, llm_provider, llm_model | Nhà cung cấp và mô hình đã dùng |
 | mode, metrics; ttl | Loại phiên, chỉ số phiên (mục 5.3.6); thời hạn tự xóa |
 
-Dịch vụ Giám sát vận hành thăm dò tình trạng các dịch vụ, đồng thời cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Chỉ quản trị viên hệ thống được truy cập dịch vụ này. Mô-đun báo cáo gồm hàm tổng hợp, bộ chấm bằng LLM chạy trên một mẫu ngẫu nhiên cố định theo ngày, và API để đọc hoặc dựng lại báo cáo. Trên AWS, hàm Lambda được EventBridge Scheduler kích hoạt theo lịch và đọc dữ liệu từ CloudWatch Logs.
+Dịch vụ Giám sát vận hành thăm dò tình trạng các dịch vụ, đồng thời cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Chỉ quản trị viên hệ thống được truy cập dịch vụ này. Mô-đun báo cáo gồm hàm tổng hợp, bộ chấm bằng LLM chạy trên một mẫu ngẫu nhiên cố định theo ngày, và API để đọc hoặc dựng lại báo cáo. Trên AWS, hàm Lambda báo cáo được EventBridge Scheduler kích hoạt theo lịch và đọc các bản ghi cuộc gọi trong ngày từ Dịch vụ Nhật ký cuộc gọi; CloudWatch Logs chỉ là nguồn dữ liệu cho trang nhật ký và trang tổng quan.
 
 ### 5.4.4. Tích hợp dịch vụ bản đồ
 
@@ -117,7 +117,7 @@ Lỗi của dịch vụ bản đồ không làm dừng nghiệp vụ (suy giảm
 
 ## 5.5. Hiện thực ứng dụng tài xế
 
-Ứng dụng tài xế hiện thực các yêu cầu ở mục 4.8 dưới thương hiệu Czen, dùng bộ 57 biểu tượng SVG riêng; cả năm mục điều hướng đều có nhãn chữ. Màn hình chào có hai lối vào là đăng nhập và đăng ký (Hình 5.1a). Tài xế đăng nhập bằng số điện thoại và mật khẩu (Hình 5.1b). Màn hình chính hiển thị bản đồ, vị trí xe, lộ trình tối ưu và thẻ điểm dừng kế tiếp kèm nút chỉ đường và nút gọi (Hình 5.1c).
+Ứng dụng tài xế hiện thực thiết kế tính khả dụng ở mục 4.8 dưới thương hiệu Czen, dùng bộ 57 biểu tượng SVG riêng; cả năm mục điều hướng đều có nhãn chữ. Màn hình chào có hai lối vào là đăng nhập và đăng ký (Hình 5.1a). Tài xế đăng nhập bằng số điện thoại và mật khẩu (Hình 5.1b). Màn hình chính hiển thị bản đồ, vị trí xe, lộ trình tối ưu và thẻ điểm dừng kế tiếp kèm nút chỉ đường và nút gọi (Hình 5.1c).
 
 ![Hình 5.1|row=4.6](thesis_screenshots/landing.jpg;thesis_screenshots/login.jpg;thesis_screenshots/map.jpg)
 
@@ -174,7 +174,7 @@ Bảng 5.6 đối chiếu các quyết định thiết kế ở Chương 4 với
 | Quyết định thiết kế | Hiện thực (đường dẫn trong kho mã) |
 |---|---|
 | Tác nhân chỉ gọi API (CON-01) | llm-orchestrator/app/services/backend_api.py |
-| Khởi tạo phiên, lời chào, tải trước; cấp token, tái sử dụng phòng (S2) | llm-orchestrator/app/agent/session.py, processors/prefetch.py; external-api-service/src/routes/voice.ts |
+| Khởi tạo phiên, lời chào, tải trước; cấp token, tái sử dụng phòng (S2) | llm-orchestrator/app/agent/session.py, voicebot/processors/prefetch.py; external-api-service/src/routes/voice.ts |
 | Một luồng LLM duy nhất (ADR-02); câu đệm 2 giây | llm-orchestrator/app/voicebot/processors/spoken_intent.py, intent_classify.py, turn_filler.py |
 | Dự phòng nhà cung cấp AI | llm-orchestrator/app/providers/__init__.py, fallback.py |
 | Phân loại phiên và tập công cụ | session.py; voicebot/locales/{vn,en}/agent.py |
@@ -182,7 +182,7 @@ Bảng 5.6 đối chiếu các quyết định thiết kế ở Chương 4 với
 | Nhật ký cuộc gọi (S6); truy vấn theo ngày | llm-orchestrator/app/services/conversation_service.py; call-records-service/src/services/recordService.ts |
 | Đăng nhập, JWT (S1) | identity-service/src/routes/auth.ts |
 | Từ khóa đánh thức | driver-app/src/features/assistant-wakeword/wakeWordService.ts |
-| Trả lời câu hỏi thường gặp | Công cụ answer_app_faq; llm-orchestrator/app/rag/; requirements/knowledge/ |
+| Trả lời câu hỏi thường gặp | Công cụ answer_app_faq; llm-orchestrator/app/rag/, llm-orchestrator/requirements/knowledge/ |
 | Chỉ số phiên; sự kiện nhà cung cấp thoại | llm-orchestrator/app/services/session_metrics.py; external-channel-service/src/services/events/ |
 | Báo cáo vận hành ngày (S7) | ops-service/src/services/reports/; super-admin-panel/src/pages/ReportsPage.tsx |
 | Hạ tầng AWS | infra/<dịch vụ>/sam.yaml, infra/llm-orchestrator/cfn.yaml, infra/deploy-all.sh |
