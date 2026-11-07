@@ -34,6 +34,13 @@ async def test_speaks_name_type_and_plate():
     assert "Toyota Innova" in spoken and "7 chỗ" in spoken and "30A-123.45" in spoken
 
 
+async def test_sign_up_type_code_is_spoken_as_label():
+    spoken = await _run(get_vehicle_info, _ctx({"vehicle_type": "car_7", "vehicle_name": "Hyundai Palisade"}))
+    assert "ô tô 7 chỗ" in spoken and "car_7" not in spoken
+    spoken_en = await _run(get_vehicle_info_en, _ctx({"vehicle_type": "car_7"}))
+    assert "7-seat car" in spoken_en
+
+
 async def test_partial_record_skips_missing_fields():
     spoken = await _run(get_vehicle_info, _ctx({"vehicle_plate": "29B-678.90"}))
     assert "29B-678.90" in spoken

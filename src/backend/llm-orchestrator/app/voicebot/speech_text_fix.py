@@ -293,8 +293,50 @@ class SpeechTextFixMixin:
         Vietnamese-only and never override this."""
         return "vn"
 
+    def _allow_audio_tags(self) -> bool:
+        """Override to True where expressive cues ([chuckles], [warmly]) fit.
+
+        Off by default: customer-facing and bridge agents must not joke or
+        laugh, so any tag the LLM writes there is dropped before TTS. Even
+        when True, a TTS that cannot perform tags strips them itself
+        (``app.providers.tts.markup.guard_tts``).
+        """
+        return False
+
     def tts_node(self, text, model_settings):
         from livekit.agents import Agent
 
-        fixed = _buffered_fix(text, self._speech_pronunciations(), self._speech_lang())
+        from app.providers.tts.markup import render_markup_stream
+
+        rendered = render_markup_stream(text, allow_tags=self._allow_audio_tags())
+        fixed = _buffered_fix(rendered, self._speech_pronunciations(), self._speech_lang())
         return Agent.default.tts_node(self, fixed, model_settings)
+
+    def transcription_node(self, text, model_settings):
+        """Keep audio tags and pauses out of the app transcript and chat history."""
+        from livekit.agents import Agent
+
+        return Agent.default.transcription_node(
+            self, _strip_markup_for_transcript(text), model_settings
+        )
+
+
+async def _strip_markup_for_transcript(text: AsyncIterable) -> AsyncIterator:
+    """Plain str chunks are filtered; TTS-aligned TimedString words (one word
+    each, timing attached) that carry a tag or break fragment are dropped,
+    others pass through unchanged."""
+    from app.providers.tts.markup import MarkupStreamFilter
+
+    stream_filter = MarkupStreamFilter(allow_tags=False)
+    async for chunk in text:
+        if type(chunk) is not str:
+            if any(ch in chunk for ch in "[]<>"):
+                continue
+            yield chunk
+            continue
+        out = stream_filter.feed(chunk)
+        if out:
+            yield out
+    rest = stream_filter.flush()
+    if rest:
+        yield rest

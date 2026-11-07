@@ -47,7 +47,7 @@ Parameters:
 
   ElevenLabsModel:
     Type: String
-    Default: eleven_flash_v2_5
+    Default: eleven_v4_turbo
 
   DeepgramApiKey:
     Type: String

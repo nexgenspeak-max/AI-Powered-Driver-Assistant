@@ -9,10 +9,17 @@ from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.processors import context_store
 from app.voicebot.prompts.tool_response import ToolResponse
 
+# Codes the driver app stores at sign-up (VehicleTypeSelect); older records hold free text.
+VEHICLE_TYPE_LABELS = {
+    "vi": {"motorbike": "xe máy", "car_4": "ô tô 4 chỗ", "car_7": "ô tô 7 chỗ", "truck": "xe tải"},
+    "en": {"motorbike": "motorbike", "car_4": "4-seat car", "car_7": "7-seat car", "truck": "truck"},
+}
+
 
 def build_vehicle_response(driver: dict, lang: str = "vi") -> ToolResponse:
     driver = driver if isinstance(driver, dict) else {}
     vtype = str(driver.get("vehicle_type") or "").strip()
+    vtype = VEHICLE_TYPE_LABELS["en" if lang == "en" else "vi"].get(vtype, vtype)
     plate = str(driver.get("vehicle_plate") or "").strip()
     vname = str(driver.get("vehicle_name") or "").strip()
     if not (vtype or plate or vname):

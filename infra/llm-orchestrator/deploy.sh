@@ -68,7 +68,7 @@ aws cloudformation deploy \
     OpenaiApiKey="$OPENAI_API_KEY" \
     ElevenLabsApiKey="${ELEVENLABS_API_KEY:-}" \
     ElevenLabsVoiceId="${ELEVENLABS_VOICE_ID:-}" \
-    ElevenLabsModel="${ELEVENLABS_MODEL:-eleven_flash_v2_5}" \
+    ElevenLabsModel="${ELEVENLABS_MODEL:-eleven_v4_turbo}" \
     DeepgramApiKey="${DEEPGRAM_API_KEY:-}" \
     GoogleCredentialsJson="${GOOGLE_CREDENTIALS_JSON:-}" \
     SttProvider="${STT_PROVIDER:-openai}" \

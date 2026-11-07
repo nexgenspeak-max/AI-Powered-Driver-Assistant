@@ -16,6 +16,11 @@ _BASE_DIR = Path(__file__).resolve().parents[2]
 _ENV = os.getenv("ENV", "local")
 _ENV_FILE = _BASE_DIR / "envs" / f".env.{_ENV}"
 
+# "Ninh Đôn" — ElevenLabs Voice Library, native Northern-Vietnamese young male
+# voice tagged "conversational". Lowest word errors of the voices tested on
+# eleven_v4_turbo (scripted comparison, 2026-11).
+DEFAULT_ELEVENLABS_VOICE_ID = "aN7cv9yXNrfIR87bDmyD"
+
 
 class Settings(BaseSettings):
     # ── LiveKit ───────────────────────────────────────────────────────────────
@@ -84,9 +89,25 @@ class Settings(BaseSettings):
     gemini_tts_instructions: str = ""     # empty = Northern vi-VN driver-assistant default
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────
+    # Voice and model chosen by measurement — see app/providers/tts/elevenlabs.py.
+    # eleven_v3 / eleven_v4* perform audio tags ([chuckles], [warmly], ...);
+    # older models (eleven_flash_v2_5, eleven_turbo_v2_5) get tags stripped.
     elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "pNInz6obpgDQGcFmaJgB"   # Adam multilingual
-    elevenlabs_model: str = "eleven_flash_v2_5"
+    elevenlabs_voice_id: str = DEFAULT_ELEVENLABS_VOICE_ID
+    elevenlabs_model: str = "eleven_v4_turbo"
+    elevenlabs_language: str = "vi"          # empty = let the model detect
+    # v3/v4 (text-to-dialogue) use stability only: 0 creative, 0.5 natural, 1 robust.
+    elevenlabs_stability: float = 0.5
+    # Used by the older v2/v2.5 models only.
+    elevenlabs_similarity_boost: float = 0.75
+    elevenlabs_style: float = 0.0
+    elevenlabs_speed: float = 1.0
+
+    # ── Expressive speech ─────────────────────────────────────────────────────
+    # Warmer Czen persona (fillers "dạ/nhé", light humour) plus audio tags when
+    # the TTS can perform them. Applied only when TTS_PROVIDER=elevenlabs, so a
+    # Google-voiced session keeps the plain persona. false = plain persona.
+    tts_expressive: bool = True
 
     # ── Downstream services (dual-read: new names preferred, old aliases OK) ─
     call_logger_url: str = Field(

@@ -40,6 +40,7 @@ from app.providers.tts.openai import OpenAITTS
 from app.providers.tts.elevenlabs import ElevenLabsTTS
 from app.providers.tts.google import GoogleTTS
 from app.providers.tts.gemini import GeminiTTS
+from app.providers.tts.markup import guard_tts
 
 logger = logging.getLogger("llm-orchestrator.providers")
 
@@ -116,6 +117,9 @@ def get_tts():
     s = get_settings()
     names = provider_chain(s.tts_provider, s.tts_fallback)
     instances = _create_chain("tts", names, _TTS, s, {"tts_voice": ""})
+    # A TTS that cannot perform audio tags ([chuckles]) strips them itself, so
+    # a fallback switch mid-turn never reads a tag aloud.
+    instances = [guard_tts(inst) for inst in instances]
     wrapped = with_fallback(
         instances,
         tts_mod.FallbackAdapter,

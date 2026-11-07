@@ -1,36 +1,62 @@
+import logging
+
 from livekit.plugins import elevenlabs as elevenlabs_plugin
+
+from app.config.settings import DEFAULT_ELEVENLABS_VOICE_ID, Settings
 from app.providers.tts.base import BaseTTS
-from app.config.settings import Settings
+from app.providers.tts.markup import model_supports_audio_tags
+
+logger = logging.getLogger("llm-orchestrator.providers.elevenlabs_tts")
+
+
+def voice_settings_for(settings: Settings) -> "elevenlabs_plugin.VoiceSettings":
+    """Pinned voice settings so every turn keeps the same timbre.
+
+    Leaving them unset falls back to the voice's dashboard settings, which can
+    drift between turns. eleven_v3/v4 go through ElevenLabs' text-to-dialogue
+    API, which only accepts ``stability`` (0 creative, 0.5 natural, 1 robust);
+    sending the other fields there only logs a warning, so they are omitted.
+    """
+    if model_supports_audio_tags("elevenlabs", settings.elevenlabs_model):
+        # similarity_boost is a required dataclass field; None is dropped by
+        # the plugin before the request, like the unset optional fields.
+        return elevenlabs_plugin.VoiceSettings(
+            stability=settings.elevenlabs_stability,
+            similarity_boost=None,  # type: ignore[arg-type]
+        )
+    return elevenlabs_plugin.VoiceSettings(
+        stability=settings.elevenlabs_stability,
+        similarity_boost=settings.elevenlabs_similarity_boost,
+        style=settings.elevenlabs_style,
+        speed=settings.elevenlabs_speed,
+    )
 
 
 class ElevenLabsTTS(BaseTTS):
-    """ElevenLabs — expressive, natural-sounding voice; good Vietnamese quality."""
+    """ElevenLabs — native Vietnamese Voice Library voice on eleven_v4_turbo.
+
+    eleven_v4_turbo was picked by measurement (warm websocket, 2026-11):
+    time to first audio ~360 ms, same as eleven_flash_v2_5, but clearly
+    better Vietnamese (flash dropped/misread words) and it performs audio
+    tags such as [chuckles]; see app/providers/tts/markup.py.
+    """
 
     @classmethod
     def create(cls, settings: Settings):
-        return elevenlabs_plugin.TTS(
-            api_key=settings.elevenlabs_api_key,
-            model=settings.elevenlabs_model,
-            voice_id=settings.tts_voice or settings.elevenlabs_voice_id,
-            # Pinned so every turn renders with the same timbre — leaving this
-            # unset falls back to the voice's stored ElevenLabs dashboard
-            # settings, which can drift (sound like a different voice) across
-            # turns on expressive models like eleven_flash_v2_5. stability
-            # nudged up (0.5 -> 0.8) for steadier tone. speed reset to 1.0
-            # (ElevenLabs' normal pace) — the earlier 0.85 (slowed for
-            # clearer enunciation on dense/number-heavy turns) read as
-            # noticeably too slow/unnatural overall; revisit a smaller nudge
-            # down only if enunciation complaints come back.
-            # Note this only tunes pacing/steadiness, not accent: "Adam" is a
-            # Western multilingual voice reading Vietnamese text, not a
-            # native Vietnamese voice, so it can't be made to sound
-            # authentically Vietnamese (let alone Northern-accented) through
-            # these settings alone — see GoogleTTS (app/providers/tts/google.py)
-            # for a genuine vi-VN Neural2 voice already wired up and ready
-            # once real Google Cloud credentials are available.
-            voice_settings=elevenlabs_plugin.VoiceSettings(
-                stability=0.8,
-                similarity_boost=0.75,
-                speed=1.0,
-            ),
+        voice_id = settings.tts_voice or settings.elevenlabs_voice_id or DEFAULT_ELEVENLABS_VOICE_ID
+        kwargs: dict = {
+            "api_key": settings.elevenlabs_api_key,
+            "model": settings.elevenlabs_model,
+            "voice_id": voice_id,
+            "voice_settings": voice_settings_for(settings),
+        }
+        if settings.elevenlabs_language:
+            kwargs["language"] = settings.elevenlabs_language
+        logger.info(
+            "ElevenLabs TTS | voice=%s model=%s stability=%s audio_tags=%s",
+            voice_id,
+            settings.elevenlabs_model,
+            settings.elevenlabs_stability,
+            model_supports_audio_tags("elevenlabs", settings.elevenlabs_model),
         )
+        return elevenlabs_plugin.TTS(**kwargs)

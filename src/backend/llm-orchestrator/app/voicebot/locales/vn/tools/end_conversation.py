@@ -6,6 +6,7 @@ from app.voicebot.processors import context_store
 from app.services.session_control import end_room_session
 from app.voicebot.locales.vn.tools_definition import raw_schema
 from app.voicebot.processors.tool_reply import call_follow_up_actions
+from app.voicebot.prompts.expressive import with_tag
 from app.voicebot.processors.tool_response_builders import build_mutation_response
 
 logger = logging.getLogger("llm-orchestrator.vn.tools.end_conversation")
@@ -42,7 +43,10 @@ async def end_conversation(raw_arguments: dict, context: RunContext) -> str:
             ),
         )
 
-    await context.session.say("Vâng, tạm biệt bạn! Hẹn gặp lại.", allow_interruptions=False)
+    # [warmly] is performed by eleven_v3/v4 voices and stripped everywhere else.
+    await context.session.say(
+        with_tag("[warmly]", "Vâng, tạm biệt bạn! Hẹn gặp lại."), allow_interruptions=False
+    )
 
     tracker = context.userdata.get("_silence_tracker")
     if tracker:

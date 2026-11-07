@@ -21,6 +21,7 @@ from app.voicebot.processors import context_store
 from app.voicebot.processors.prompt_trace_mixin import PromptTraceMixin
 from app.voicebot.processors.spoken_intent import SpokenIntentMixin
 from app.voicebot.prompts.outbound import build_outbound_prompt
+from app.voicebot.prompts.expressive import expressive_enabled, expressive_prompt_vn, with_tag
 
 from app.voicebot.locales.vn.tools.check_upcoming_trips       import check_upcoming_trips
 from app.voicebot.locales.vn.tools.create_walkup_trip         import create_walkup_trip
@@ -162,6 +163,9 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return PRONUNCIATIONS
 
+    def _allow_audio_tags(self) -> bool:
+        return expressive_enabled()
+
     def __init__(
         self,
         trip: dict | None = None,
@@ -190,7 +194,10 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
             # suggest-next-stop, ...) still need the FULL inbound toolset —
             # only `trip` truthy switches to the 2-tool outbound set above.
             hint = f"\n\n{context_hint}" if context_hint else ""
-            instructions = INBOUND_PROMPT + hint + "\n" + TOOLS_MAPPING_PROMPT
+            # Warmer persona + audio tags only with an ElevenLabs voice (TTS_EXPRESSIVE).
+            instructions = (
+                INBOUND_PROMPT + expressive_prompt_vn() + hint + "\n" + TOOLS_MAPPING_PROMPT
+            )
             tools        = _DRIVER_INBOUND_TOOLS
 
         super().__init__(instructions=instructions, tools=tools)
@@ -241,7 +248,7 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
         from app.voicebot.processors.driver_greeting import build_inbound_context_greeting
         from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
 
-        await speak_after_sip_pickup(self.session, GREETING_CONNECT_FILLER)
+        await speak_after_sip_pickup(self.session, with_tag("[warmly]", GREETING_CONNECT_FILLER))
 
         userdata = self.session.userdata
         if self._driver_phone and not context_store.has_prefetched_context(userdata):

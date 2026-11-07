@@ -22,8 +22,9 @@ llm_provider = "openai"          # openai | gemini | kimi
 llm_fallback = ""
 llm_model = "gpt-5.6-luna"       # gpt-5.6-luna | gpt-4o | gpt-4o-mini | moonshotai/kimi-k2.6
 
-tts_provider = "google"          # google | elevenlabs | gemini | openai
-tts_fallback = ""
+tts_provider = "elevenlabs"      # google | elevenlabs | gemini | openai
+tts_fallback = "google"          # used only if ElevenLabs fails
+tts_expressive = true            # warmer persona + audio tags (ElevenLabs only)
 tts_voice = ""                   # empty = provider default below
 
 kimi_base_url = "https://api.moonshot.ai/v1"
@@ -41,8 +42,10 @@ gemini_tts_voice = "Kore"
 gemini_tts_location = "us-central1"
 gemini_tts_use_vertexai = true
 
-elevenlabs_voice_id = "s6W2NupNY6TykGJoDtWy"
-elevenlabs_model = "eleven_flash_v2_5"
+elevenlabs_voice_id = "aN7cv9yXNrfIR87bDmyD"   # Ninh Đôn, Northern vi-VN, conversational
+elevenlabs_model = "eleven_v4_turbo"           # v3/v4 perform [chuckles] etc.; flash/turbo v2.5 strip them
+elevenlabs_language = "vi"
+elevenlabs_stability = 0.5                     # v3/v4: 0 creative, 0.5 natural, 1 robust
 cartesia_voice_id = ""
 
 # external-api-service (trips, driver context, LiveKit token)
