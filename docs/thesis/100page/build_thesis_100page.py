@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Build docs/thesis/100page/LUAN_VAN_THAC_SI_FINAL_100Page.docx — bản rút gọn ~100 trang.
 
 Copy của build_thesis_final.py (2026-10-30) với: chapter md trong thư mục này, ảnh lấy từ docs/thesis,
@@ -71,31 +72,31 @@ def figure_width_cm(img_path: Path, max_w: float = FIG_MAX_W_CM, max_h: float = 
 
 
 CONCLUSION_PARAS = [
-    "Luận văn đã thực hiện đủ các bước của nghiên cứu khoa học thiết kế để xây dựng một trợ lý AI bằng giọng nói hỗ trợ tài xế xe công nghệ: xác định yêu cầu cho bốn nhóm người sử dụng, lập luận lựa chọn kiến trúc từ năm yêu cầu phi chức năng thông qua các chiến thuật kiến trúc, hiện thực nguyên mẫu trên WebRTC và SIP, rồi đánh giá theo 19 tiêu chí chấp nhận. Trong đó, 17 tiêu chí đã có kết quả; AC-09 và AC-12 đã được hiện thực nhưng chưa được đánh giá riêng.",
-    "Kết quả trả lời các câu hỏi nghiên cứu như sau:",
-    "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần: 200/200 lượt tiêm lỗi vào dịch vụ phụ trợ, API nghiệp vụ, kênh tin nhắn, kênh thoại và nhà cung cấp LLM đều không làm hỏng luồng hội thoại. Khi dừng một bản sao tác nhân, phiên mới được bản sao khác phục vụ, nhưng phiên đang chạy bị mất. Trong môi trường mô phỏng với nhà cung cấp AI giả lập, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; tài nguyên giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Vì vậy, AC-16 đạt trong môi trường mô phỏng; kiến trúc chưa được kiểm chứng trên AWS với nhà cung cấp AI thật.",
-    "- RQ2: Trên 174 lượt qua LLM của đợt đo 05–06/09/2026, P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây; yếu tố chi phối là thời gian sinh token đầu của mô hình ngôn ngữ (P95 2,49 giây). Thiết kế hiện hành, trong đó mọi lượt đều qua LLM và có câu đệm, mới có bốn lượt đo nên chưa đủ để kết luận.",
-    "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi thêm nhiễu mô phỏng khoang xe; vì chỉ có một người đọc và 22 câu, kết quả này chỉ cho thấy xu hướng.",
-    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ và 32/43 lượt (74,4%) hoàn thành đúng ngay lần đầu; khoảng tin cậy rộng do cỡ mẫu nhỏ và chỉ có một người chấm. Lỗi chủ yếu do phát ngôn không rõ ý định (phát sinh từ nhánh rút gọn nay đã loại bỏ), sai phạm vi tham số và đáp lời nhưng chưa thực hiện thao tác. Về tính khả dụng (AC-14), 100% thao tác rủi ro có bước xác nhận, và danh mục hành vi khi lái đạt 6/6 sau một vòng sửa.",
-    "Các đóng góp chính của luận văn gồm một kiến trúc tham chiếu được lập luận từ yêu cầu phi chức năng, một nguyên mẫu có mã nguồn công khai và một khung đánh giá gắn với tiêu chí chấp nhận. Đóng góp còn lại là bằng chứng cho thấy, trong cấu hình đã đo, thời gian sinh token đầu của mô hình ngôn ngữ bên ngoài là thành phần lớn nhất trong độ trễ của chuỗi xử lý theo tầng, còn phần kiến trúc gần như không làm tăng độ trễ khi số phiên tăng (trong môi trường mô phỏng).",
-    "Các hạn chế và hướng phát triển tương ứng như sau:",
-    "- Độ trễ chưa đạt ngưỡng (NFR-02): đo lại với ít nhất 200 lượt; thử mô hình có thời gian sinh token đầu ngắn hơn, rút gọn lời nhắc hệ thống và giảm số vòng gọi công cụ.",
-    "- Khả năng mở rộng mới chỉ được đo trong môi trường mô phỏng (NFR-03): lặp lại SC-01 và SC-02 trên LiveKit Cloud và Fargate với nhà cung cấp AI thật; cấu hình tự động mở rộng theo bộ nhớ hoặc số phiên.",
-    "- Lỗi dạng treo khiến tài xế phải chờ 6–8 giây, và phiên đang chạy bị mất khi bản sao tác nhân dừng (NFR-04): rút ngắn thời gian chờ tối đa của thao tác đọc, giữ tối thiểu hai bản sao, cho ứng dụng tự xin lại token và đo toàn bộ đường khôi phục từ đầu đến cuối.",
-    "- Hai lỗi hiện thực phát hiện trong quá trình đánh giá (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi chứa thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.9, Bảng 6.13). Việc còn lại là xóa các tệp nhật ký ghi trước ngày sửa và đưa bước quét nhật ký vào bộ kiểm thử tự động.",
-    "- Hệ thống chưa được chạy trên kiến trúc AWS đầy đủ (mục 5.6.1): triển khai các stack, sau đó đo lại độ trễ và khả năng phục hồi trên Lambda, API Gateway và Fargate.",
-    "- Cỡ mẫu nhỏ và chỉ có một người chấm (RQ3, RQ4): mở rộng bộ câu tham chiếu với nhiều người đọc và nhiều mức nhiễu; dùng hai người chấm độc lập và báo cáo hệ số đồng thuận.",
-    "- Tin nhắn SMS chưa giao được tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi và mẫu tin qua Twilio, gửi thử thật và đo tỷ lệ giao tin; xác thực chữ ký X-Twilio-Signature để chặn sự kiện giả mạo (mục 6.13).",
-    "- AC-09 (từ khóa đánh thức), AC-12 (điều phối viên mời tài xế) và hội thoại tiếng Anh chưa được đánh giá định lượng: đo tỷ lệ đánh thức đúng và đánh thức nhầm, kiểm chứng đầu cuối luồng mời tài xế, và đo tỷ lệ lỗi từ, độ trễ cho tiếng Anh.",
-    "- Chưa có nghiên cứu người dùng: tiến hành thử nghiệm có kiểm soát với tài xế trong kịch bản lái xe mô phỏng, đo thời gian hoàn thành tác vụ, số lần nhìn màn hình và tải nhận thức.",
+    "Luận văn đã thực hiện đủ các bước của nghiên cứu khoa học thiết kế: xác định yêu cầu cho bốn nhóm người sử dụng, lập luận kiến trúc từ năm yêu cầu phi chức năng qua chiến thuật kiến trúc, hiện thực nguyên mẫu trên WebRTC và SIP, đánh giá theo 19 tiêu chí chấp nhận (17 đã có kết quả; AC-09, AC-12 đã hiện thực nhưng chưa đánh giá riêng).",
+    "Trả lời các câu hỏi nghiên cứu (chi tiết ở mục 6.12):",
+    "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần (200/200 lượt tiêm lỗi không làm hỏng luồng hội thoại), nhưng phiên đang chạy bị mất khi dừng một bản sao tác nhân. Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; giới hạn là bộ nhớ (khoảng 225 MB mỗi phiên). AC-16 đạt trong môi trường mô phỏng, chưa kiểm chứng trên AWS với nhà cung cấp AI thật.",
+    "- RQ2: Trên 174 lượt qua LLM (05–06/09/2026), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, do thời gian sinh token đầu chi phối (P95 2,49 giây); thiết kế hiện hành (có câu đệm) mới có bốn lượt đo.",
+    "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi thêm nhiễu mô phỏng khoang xe; với một người đọc và 22 câu, đây chỉ là xu hướng.",
+    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ, 32/43 (74,4%) hoàn thành đúng ngay lần đầu; khoảng tin cậy rộng do cỡ mẫu nhỏ, một người chấm. Lỗi chủ yếu do phát ngôn không rõ ý định (từ nhánh rút gọn nay đã loại bỏ), sai phạm vi tham số và đáp lời mà chưa thao tác. Về tính khả dụng (AC-14), 100% thao tác rủi ro có bước xác nhận; danh mục hành vi khi lái đạt 6/6 sau một vòng sửa.",
+    "Đóng góp chính: kiến trúc tham chiếu lập luận từ yêu cầu phi chức năng; nguyên mẫu mã nguồn công khai; khung đánh giá gắn với tiêu chí chấp nhận; bằng chứng rằng độ trễ do mô hình ngôn ngữ bên ngoài chi phối, còn kiến trúc gần như không làm tăng độ trễ khi số phiên tăng (trong môi trường mô phỏng).",
+    "Hạn chế và hướng phát triển:",
+    "- Độ trễ chưa đạt (NFR-02): đo lại ít nhất 200 lượt; thử mô hình nhanh hơn, rút gọn lời nhắc, giảm vòng gọi công cụ.",
+    "- Khả năng mở rộng mới đo trong mô phỏng (NFR-03): lặp lại SC-01, SC-02 trên LiveKit Cloud và Fargate với AI thật; tự mở rộng theo bộ nhớ hoặc số phiên.",
+    "- Lỗi treo gây chờ 6–8 giây, mất phiên đang chạy khi bản sao dừng (NFR-04): rút ngắn thời gian chờ, giữ tối thiểu hai bản sao, tự xin lại token và đo đường khôi phục đầu cuối.",
+    "- Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã sửa và đạt khi kiểm tra lại (Bảng 6.9, Bảng 6.13); cần xóa nhật ký cũ và tự động hóa bước quét nhật ký.",
+    "- Chưa chạy trên AWS đầy đủ (mục 5.6.1): triển khai các stack, đo lại trên Lambda, API Gateway, Fargate.",
+    "- Cỡ mẫu nhỏ, một người chấm (RQ3, RQ4): thêm người đọc, mức nhiễu; hai người chấm độc lập, báo cáo hệ số đồng thuận.",
+    "- SMS chưa giao tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi qua Twilio; xác thực X-Twilio-Signature (mục 6.13).",
+    "- AC-09 (từ khóa đánh thức), AC-12 (mời tài xế) và tiếng Anh chưa đánh giá định lượng: đo tỷ lệ đánh thức đúng/nhầm, luồng mời tài xế, lỗi từ và độ trễ tiếng Anh.",
+    "- Chưa có nghiên cứu người dùng: thử nghiệm có kiểm soát với tài xế trong kịch bản lái mô phỏng, đo thời gian tác vụ, số lần nhìn màn hình, tải nhận thức.",
 ]
 
 APPENDIX_A_INTRO = (
-    "Bảng A.1 liệt kê 48 công cụ (function tool) của gói ngôn ngữ tiếng Việt, gồm 42 công cụ cho phiên tài xế "
-    "trong ứng dụng và 7 công cụ cho phiên của ứng dụng khách hàng. Hai công cụ confirm_trip và reject_trip thuộc nhóm của tài xế, "
-    "đồng thời là hai công cụ duy nhất của phiên mời nhận chuyến. Công cụ answer_app_faq được dùng chung cho cả hai phiên. "
-    "Phiên của ứng dụng khách hàng có trong mã nguồn nhưng nằm ngoài phạm vi luận văn (mục 3.5). Gói tiếng Anh có cùng 42 công cụ cho tài xế. "
-    "Bảng gom công cụ theo nhóm chức năng; tên công cụ giữ nguyên như trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
+    "Bảng A.1 liệt kê 48 công cụ (function tool) của gói tiếng Việt: 42 công cụ cho phiên tài xế trong ứng "
+    "dụng và 7 công cụ cho phiên ứng dụng khách hàng (answer_app_faq dùng chung cho cả hai; confirm_trip và "
+    "reject_trip thuộc nhóm tài xế và là hai công cụ duy nhất của phiên mời nhận chuyến). Phiên ứng dụng khách "
+    "hàng nằm ngoài phạm vi luận văn (mục 3.5). Gói tiếng Anh có cùng 42 công cụ cho tài xế. Tên công cụ giữ "
+    "nguyên như trong mã nguồn (voicebot/locales/vn/tools_definition.py)."
 )
 
 APPENDIX_A_TOOLS = [
@@ -150,11 +151,11 @@ APPENDIX_A_TOOLS = [
 ]
 
 APPENDIX_B_INTRO = (
-    "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh) để minh họa "
-    "luồng STT → LLM gọi công cụ → TTS, cách xử lý im lặng và cách kết thúc phiên. Kịch bản B.1 thuộc đợt đo "
-    "05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn theo ý định (mục 5.3.2). "
-    "Phần trong ngoặc vuông là ghi chú lấy từ nhật ký, gồm khâu xử lý (LLM, công cụ được gọi), nhãn của mô-đun nhận dạng ý định "
-    "và độ trễ cảm nhận của lượt đó (user_stop_to_agent_speak). Nhãn FollowUpKnowledge chỉ câu hỏi tiếp về chuyến vừa nhắc; nhãn conversational_ack chỉ câu đáp lễ."
+    "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh) minh họa luồng "
+    "STT → LLM gọi công cụ → TTS, xử lý im lặng và kết thúc phiên. Kịch bản B.1 thuộc đợt đo 05–06/09/2026, "
+    "khi còn nhánh rút gọn theo ý định (mục 5.3.2). Ghi chú trong ngoặc vuông lấy từ nhật ký: khâu xử lý, nhãn "
+    "ý định (FollowUpKnowledge: hỏi tiếp về chuyến vừa nhắc; conversational_ack: đáp lễ) và độ trễ cảm nhận "
+    "(user_stop_to_agent_speak)."
 )
 
 APPENDIX_B_DIALOGUES = [
@@ -189,10 +190,10 @@ APPENDIX_B_DIALOGUES = [
 ]
 
 APPENDIX_D_INTRO = (
-    "Bảng D.1 tóm tắt cấu hình chính của tác nhân hội thoại. Cấu hình không bí mật nằm trong tệp "
-    "envs/config.<môi trường>.toml; các khóa bí mật nằm trong tệp .env và không được đưa vào kho mã nguồn. Các tệp mẫu "
-    "envs/config.example.toml và envs/.env.example được cung cấp để tái lập môi trường. Cột cuối ghi giá trị "
-    "đã dùng khi đo các phiên hội thoại thật ở Chương 6 (mục 6.2.1); thử tải và tiêm lỗi dùng nhà cung cấp AI giả lập (mục 6.2.2)."
+    "Bảng D.1 tóm tắt cấu hình chính của tác nhân hội thoại. Cấu hình không bí mật nằm trong envs/config.<môi "
+    "trường>.toml; khóa bí mật nằm trong .env, không đưa vào kho mã nguồn (tệp mẫu: envs/config.example.toml, "
+    "envs/.env.example). Cột cuối ghi giá trị dùng khi đo phiên hội thoại thật (mục 6.2.1); thử tải và tiêm "
+    "lỗi dùng nhà cung cấp AI giả lập (mục 6.2.2)."
 )
 
 APPENDIX_D_ENV = [
@@ -302,10 +303,9 @@ APPENDIX_E_RTM = [
 
 # Phụ lục F — tái lập số liệu thực nghiệm
 APPENDIX_F_INTRO = (
-    "Bảng F.1 liệt kê script và lệnh để tạo lại các nhóm số liệu chính ở Chương 6. Các script nằm trong thư mục "
-    "docs/thesis và docs/thesis/experiments của kho mã nguồn (mục 5.2). Các thí nghiệm thử tải và tiêm lỗi chạy "
-    "trong môi trường cô lập, gồm cơ sở dữ liệu giả lập, thông tin đăng nhập AWS giả và số điện thoại thuộc dải "
-    "giả lập; các thí nghiệm này không gọi tới tài nguyên AWS hoặc nhà cung cấp bên ngoài."
+    "Bảng F.1 liệt kê script và lệnh tạo lại các nhóm số liệu chính ở Chương 6; script nằm trong docs/thesis "
+    "và docs/thesis/experiments (mục 5.2). Thử tải và tiêm lỗi chạy trong môi trường cô lập (cơ sở dữ liệu giả "
+    "lập, thông tin đăng nhập AWS giả, số điện thoại giả lập), không gọi tới AWS hay nhà cung cấp bên ngoài."
 )
 APPENDIX_F_ROWS = [
     ("Độ trễ phản hồi và phân tích điểm nghẽn (Bảng 6.3, 6.4)",
@@ -787,16 +787,16 @@ def soft_breaks(text: str, width_cm: float) -> str:
     return " ".join(out)
 
 ABSTRACT_PARAS = [
-    "Tài xế xe công nghệ thường phải thao tác trên điện thoại trong lúc lái để xem chuyến, cập nhật trạng thái chuyến và liên lạc với khách hàng. Theo phương pháp nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các nghiệp vụ này mà không cần dùng tay.",
-    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả dưới dạng kịch bản thuộc tính chất lượng và đi kèm 19 tiêu chí chấp nhận dạng Given–When–Then. Từ các chiến thuật kiến trúc đáp ứng những yêu cầu này, luận văn lập luận cho lựa chọn kiến trúc microservices trên AWS. Trong kiến trúc này, Dịch vụ Liên lạc hội thoại thời gian thực được tách khỏi các dịch vụ nghiệp vụ và xử lý mỗi lượt thoại theo chuỗi STT – LLM kèm gọi công cụ – TTS. Chuỗi này có nhà cung cấp dự phòng và câu đệm, tức câu ngắn báo rằng hệ thống đang xử lý khi câu trả lời chưa sẵn sàng. Nguyên mẫu hoạt động trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
-    "Kết quả đánh giá cho thấy cả 200 lượt tiêm lỗi ở mức thành phần (cố ý làm một thành phần bị lỗi) đều không làm hỏng luồng hội thoại, nhưng lỗi dạng treo khiến tài xế phải chờ 6–8 giây. Khi dừng đột ngột một bản sao tác nhân, phiên mới vẫn được phục vụ, nhưng phiên đang chạy bị mất (0/10). Trong môi trường mô phỏng với nhà cung cấp AI giả lập, độ trễ phản hồi không tăng khi số phiên đồng thời tăng từ 1 lên 40; tài nguyên giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Với 174 lượt đi qua mô hình ngôn ngữ trong đợt đo 05–06/09/2026 (khi nguyên mẫu còn nhánh rút gọn, nay đã loại bỏ), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây; nguyên nhân chủ yếu là thời gian mô hình bắt đầu sinh câu trả lời. Với thiết kế hiện hành (có câu đệm), mới có bốn lượt đo, chưa đủ để tính P95. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt do một người chấm, 37 lượt (86,0%) chọn đúng công cụ và 32 lượt (74,4%) hoàn thành đúng nghiệp vụ ngay lần đầu. Đánh giá cũng phát hiện hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, một câu báo lỗi chứa thông tin kỹ thuật); cả hai đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất có quãng đường dài hơn lời giải tối ưu trung bình 1,2–6,3%. Hệ thống chưa được thử nghiệm với tài xế thật; mỗi kết quả được báo cáo kèm cỡ mẫu và giới hạn, và những phép đo chưa thực hiện cũng được nêu rõ.",
+    "Tài xế xe công nghệ thường phải thao tác điện thoại khi lái để xem chuyến, cập nhật trạng thái và liên lạc với khách. Theo nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế làm các việc này mà không cần dùng tay.",
+    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả bằng kịch bản thuộc tính chất lượng và 19 tiêu chí chấp nhận dạng Given–When–Then. Từ các chiến thuật kiến trúc, luận văn chọn kiến trúc microservices trên AWS; Dịch vụ Liên lạc hội thoại thời gian thực tách khỏi dịch vụ nghiệp vụ, xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm (câu ngắn báo đang xử lý). Nguyên mẫu chạy trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
+    "Cả 200 lượt tiêm lỗi ở mức thành phần đều không làm hỏng luồng hội thoại, nhưng lỗi treo khiến tài xế chờ 6–8 giây; khi dừng đột ngột một bản sao tác nhân, phiên mới vẫn được phục vụ nhưng phiên đang chạy bị mất (0/10). Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Trên 174 lượt qua mô hình ngôn ngữ (05–06/09/2026, khi còn nhánh rút gọn nay đã loại bỏ), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu; thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ tính P95. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt (một người chấm), 37 (86,0%) chọn đúng công cụ, 32 (74,4%) hoàn thành đúng ngay lần đầu. Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn tối ưu trung bình 1,2–6,3%. Hệ thống chưa được thử với tài xế thật; mọi kết quả kèm cỡ mẫu và giới hạn.",
     "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, chiến thuật kiến trúc, ISO/IEC 25010, gọi công cụ, nghiên cứu khoa học thiết kế.",
 ]
 
 ABSTRACT_EN_PARAS = [
     "Ride-hailing drivers often operate their phones while driving to check trips, update trip status and contact passengers. Following design science research, this thesis designs, implements and evaluates a voice-based AI assistant that lets drivers perform these tasks hands-free.",
-    "Functional requirements are specified for four user personas (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010, written as quality attribute scenarios and paired with 19 acceptance criteria in Given–When–Then form. From the architectural tactics that address these requirements, the thesis argues for a microservices architecture on AWS: a real-time conversational service processes each turn through an STT – LLM with tool calling – TTS pipeline with provider fallback and filler utterances, separated from the business services. The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
-    "In the evaluation, all 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was killed, new sessions were still served but in-progress sessions were lost (0/10). In a simulated environment with mock AI providers, response latency did not increase as concurrent sessions grew from 1 to 40; memory, at about 225 MB per session, was the limiting resource. Over 174 turns that went through the language model in the 5–6 September 2026 measurement (when the prototype still had a shortcut branch, since removed), the P95 response latency was 3.75 seconds, above the 2-second target, and was dominated by the model's time to first token. The current design with filler utterances has only four measured turns, too few to compute a P95. The word error rate rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 turns scored by one rater, 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. The evaluation also revealed two implementation defects (full phone numbers in logs, one error message exposing technical details); both were fixed and passed re-testing. On simulated data, the stop ordering proposed by the system was on average 1.2–6.3% longer than the optimal route. The system has not yet been tested with real drivers; each result is reported with its sample size and limitations, and measurements not yet performed are stated explicitly.",
+    "Functional requirements are specified for four user personas (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010 and specified as quality attribute scenarios and 19 Given–When–Then acceptance criteria. From the architectural tactics, the thesis selects a microservices architecture on AWS; a real-time conversational service, separated from the business services, processes each turn through an STT – LLM with tool calling – TTS pipeline with provider fallback and filler utterances (short phrases signalling that processing is under way). The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
+    "All 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was killed, new sessions were still served but in-progress sessions were lost (0/10). With mock AI providers, latency did not increase as concurrent sessions grew from 1 to 40; memory, at about 225 MB per session, was the limit. Over 174 turns through the language model (5–6 September 2026, when the prototype still had a since-removed shortcut branch), P95 response latency was 3.75 seconds, above the 2-second target, mainly due to time to first token; the current design (with filler utterances) has only four measured turns, too few to compute a P95. Word error rate rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 turns (one rater), 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. Two implementation defects (full phone numbers in logs, an error message exposing technical details) were fixed and passed re-testing. On simulated data, the stop ordering proposed by the system was on average 1.2–6.3% longer than optimal. The system has not yet been tested with real drivers; every result is reported with its sample size and limitations.",
     "Keywords: voice AI assistant, ride-hailing driver, microservices architecture, architectural tactics, ISO/IEC 25010, tool calling, design science research.",
 ]
 
