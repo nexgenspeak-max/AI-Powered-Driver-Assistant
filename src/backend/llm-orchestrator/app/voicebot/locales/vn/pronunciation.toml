@@ -1,0 +1,196 @@
+# Vietnamese pronunciation lexicon for Czen's voice.
+#
+# Applied to a copy of every spoken reply right before TTS
+# (`SpeechTextFixMixin.tts_node`); the chat transcript keeps the original text.
+# It runs in front of every TTS provider, so ElevenLabs and the Google fallback
+# say the same thing.
+#
+# Order of application:
+#   1. [[pattern]]       regex rules, top to bottom, case-insensitive
+#   2. numbers           phone numbers, plates, money, lot addresses (code)
+#   3. [words]           whole words, case-sensitive, longest first
+#   4. [words_any_case]  whole words, any case, longest first
+#
+# Add an entry only when the voice gets a word wrong. Preview the spoken form:
+#   .venv/bin/python scripts/preview_pronunciation.py "câu thử"
+# Spoken forms use Vietnamese spelling so any voice reads them the same way.
+
+# ── Regex rules ──────────────────────────────────────────────────────────────
+# `match` is a Python regex, `say` may use \1, \2 for captured groups.
+# Specific rules come before general ones.
+
+[[pattern]]
+match = '\bTP\.?\s*HCM\b'
+say = "thành phố Hồ Chí Minh"
+
+[[pattern]]
+match = '\bTP\.?\s*HN\b'
+say = "thành phố Hà Nội"
+
+[[pattern]]
+match = '\bTP\.\s*'
+say = "thành phố "
+
+[[pattern]]
+match = '\bHCM\b'
+say = "Hồ Chí Minh"
+
+[[pattern]]
+match = '\bHN\b'
+say = "Hà Nội"
+
+[[pattern]]
+match = '\bSG\b'
+say = "Sài Gòn"
+
+[[pattern]]
+match = '\bQu?\.?\s*(\d+)\b'
+say = 'quận \1'
+
+[[pattern]]
+match = '\bP\.?\s*(\d+)\b'
+say = 'phường \1'
+
+[[pattern]]
+match = '\bQL\.?\s*(\d+)([A-Z]?)\b'
+say = 'quốc lộ \1 \2'
+
+# Times: 14:30 / 14h30 -> "14 giờ 30", 14:00 / 14h -> "14 giờ"
+[[pattern]]
+match = '\b(\d{1,2})[:h]00\b'
+say = '\1 giờ'
+
+[[pattern]]
+match = '\b(\d{1,2})[:h](\d{2})\b'
+say = '\1 giờ \2'
+
+[[pattern]]
+match = '\b(\d{1,2})h\b'
+say = '\1 giờ'
+
+# Units after a number
+[[pattern]]
+match = '(\d)\s*km/h\b'
+say = '\1 cây số một giờ'
+
+[[pattern]]
+match = '(\d)\s*km\b'
+say = '\1 cây số'
+
+[[pattern]]
+match = '(\d)\s*m\b'
+say = '\1 mét'
+
+[[pattern]]
+match = '(\d)\s*(?:ph|p)\b'
+say = '\1 phút'
+
+[[pattern]]
+match = '(\d)\s*%'
+say = '\1 phần trăm'
+
+# Shorthand money: 150k, 2tr, 1.5tr
+[[pattern]]
+match = '\b(\d+(?:[.,]\d+)?)\s*k\b'
+say = '\1 nghìn'
+
+[[pattern]]
+match = '\b(\d+(?:[.,]\d+)?)\s*tr\b'
+say = '\1 triệu'
+
+[[pattern]]
+match = '\bVNĐ\b|\bVND\b'
+say = "đồng"
+
+# Decimals: "2,5 km" -> "2 phẩy 5". Only 1-2 digits after the separator, so
+# thousands groups like "150,000đ" and "157.800đ" are left to the money rule.
+[[pattern]]
+match = '\b(\d+),(\d{1,2})\b(?![.,]?\d)'
+say = '\1 phẩy \2'
+
+[[pattern]]
+match = '\b(\d+)\.(\d)\b(?![.,]?\d)'
+say = '\1 phẩy \2'
+
+# ── Whole words, case-sensitive ──────────────────────────────────────────────
+
+[words]
+# Product name: "Czen" alone is read "Sen"; it is said "Zen".
+Czen = "Zen"
+CZEN = "Zen"
+
+# Standalone digits (phone numbers are spelled out separately).
+"0" = "không"
+"1" = "một"
+"2" = "hai"
+"3" = "ba"
+"4" = "bốn"
+"5" = "năm"
+"6" = "sáu"
+"7" = "bảy"
+"8" = "tám"
+"9" = "chín"
+
+# Units written without a number
+km = "cây số"
+KM = "cây số"
+"km/h" = "cây số một giờ"
+
+# Acronyms, read with Vietnamese letter names
+AI = "ây ai"
+ETA = "giờ đến dự kiến"
+SMS = "ét em ét"
+SIP = "síp"
+GPS = "gi pi ét"
+OTP = "ô tê pê"
+QR = "kiu a"
+ID = "ai đi"
+VAT = "vê a tê"
+APP = "áp"
+
+# Vietnamese abbreviations
+"SĐT" = "số điện thoại"
+"KĐT" = "khu đô thị"
+KCN = "khu công nghiệp"
+BV = "bệnh viện"
+"ĐH" = "đại học"
+THPT = "trung học phổ thông"
+THCS = "trung học cơ sở"
+UBND = "ủy ban nhân dân"
+TTTM = "trung tâm thương mại"
+CCCD = "căn cước công dân"
+CMND = "chứng minh nhân dân"
+GPLX = "giấy phép lái xe"
+
+# ── Whole words, any case ────────────────────────────────────────────────────
+
+[words_any_case]
+czen = "Zen"
+
+# ── Licence plates ───────────────────────────────────────────────────────────
+# "30A-123.45" -> "ba mươi A, một hai ba, bốn năm": the province number is read
+# as a number, series letters by these names, the serial digit by digit.
+
+[letters]
+A = "a"
+B = "bê"
+C = "xê"
+D = "đê"
+"Đ" = "đê"
+E = "e"
+F = "ép"
+G = "giê"
+H = "hát"
+K = "ca"
+L = "lờ"
+M = "mờ"
+N = "nờ"
+P = "pê"
+R = "e rờ"
+S = "ét"
+T = "tê"
+U = "u"
+V = "vê"
+X = "ích"
+Y = "i"
+Z = "dét"

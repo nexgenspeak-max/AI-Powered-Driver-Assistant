@@ -2,53 +2,39 @@
 Vietnamese TTS pronunciation — display text stays as-is; `SpeechTextFixMixin.tts_node`
 transforms a copy right before synthesis.
 
-Sections:
-  PRONUNCIATIONS       — whole-word replacements (word boundaries)
-  ABBREVIATION_PATTERNS — regex for VN abbreviations (Q1, TP.HCM, …)
+The data lives in `pronunciation.toml` next to this file (edit that, not this):
+  PRONUNCIATIONS        — whole-word replacements, case-sensitive, longest first
+  ANY_CASE_WORDS        — whole-word replacements, any case, longest first
+  ABBREVIATION_PATTERNS — regex rules (Q1, TP.HCM, 14:30, 5km, …), in file order
+  PLATE_LETTERS         — spoken names of licence-plate series letters
 """
 from __future__ import annotations
 
-PRONUNCIATIONS: list[tuple[str, str]] = [
-    # Standalone digits → Vietnamese words (phone digits already comma-spelled).
-    ("0", "không"),
-    ("1", "một"),
-    ("2", "hai"),
-    ("3", "ba"),
-    ("4", "bốn"),
-    ("5", "năm"),
-    ("6", "sáu"),
-    ("7", "bảy"),
-    ("8", "tám"),
-    ("9", "chín"),
+import tomllib
+from pathlib import Path
 
-    # Units
-    ("km", "cây số"),
-    ("KM", "cây số"),
-    ("km/h", "cây số trên giờ"),
+LEXICON_PATH = Path(__file__).with_name("pronunciation.toml")
 
-    # English acronyms
-    ("ETA", "ê tê a"),
-    ("SMS", "ét em ét"),
-    ("AI", "ây ai"),
-    ("SIP", "síp"),
-    ("GPS", "gi pi ét"),
-    ("APP", "ép"),
-]
 
-# Regex → spoken form. Longer / more specific patterns first.
-ABBREVIATION_PATTERNS: list[tuple[str, str]] = [
-    (r"\bTP\.?\s*HCM\b", "thành phố Hồ Chí Minh"),
-    (r"\bTP\.?\s*HN\b", "thành phố Hà Nội"),
-    (r"\bHCM\b", "Hồ Chí Minh"),
-    (r"\bHN\b", "Hà Nội"),
-    (r"\bSG\b", "Sài Gòn"),
-    (r"\bQ\.?\s*(\d+)\b", r"quận \1"),
-    (r"\bP\.?\s*(\d+)\b", r"phường \1"),
-    (r"\bQu\.?\s*(\d+)\b", r"quận \1"),
-    # Shorthand money: 150k, 2tr, 1.5tr
-    (r"\b(\d+(?:[.,]\d+)?)\s*k\b", r"\1 nghìn"),
-    (r"\b(\d+(?:[.,]\d+)?)\s*tr\b", r"\1 triệu"),
-    (r"\b(\d+(?:[.,]\d+)?)\s*tỷ\b", r"\1 tỷ"),
-    (r"\bVNĐ\b", "đồng"),
-    (r"\bVND\b", "đồng"),
-]
+def _by_length(table: dict[str, str]) -> list[tuple[str, str]]:
+    # Longest first so "km/h" wins over "km".
+    return sorted(table.items(), key=lambda item: len(item[0]), reverse=True)
+
+
+def load_lexicon(path: Path = LEXICON_PATH) -> dict:
+    with path.open("rb") as f:
+        data = tomllib.load(f)
+    return {
+        "words": _by_length(data.get("words", {})),
+        "any_case": _by_length(data.get("words_any_case", {})),
+        "patterns": [(rule["match"], rule["say"]) for rule in data.get("pattern", [])],
+        "letters": dict(data.get("letters", {})),
+    }
+
+
+_LEXICON = load_lexicon()
+
+PRONUNCIATIONS: list[tuple[str, str]] = _LEXICON["words"]
+ANY_CASE_WORDS: list[tuple[str, str]] = _LEXICON["any_case"]
+ABBREVIATION_PATTERNS: list[tuple[str, str]] = _LEXICON["patterns"]
+PLATE_LETTERS: dict[str, str] = _LEXICON["letters"]

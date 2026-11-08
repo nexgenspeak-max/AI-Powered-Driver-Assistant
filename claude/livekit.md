@@ -242,8 +242,8 @@ tts = google.TTS(
 # ElevenLabs (low latency, natural)
 from livekit.plugins import elevenlabs
 tts = elevenlabs.TTS(
-    model="eleven_flash_v2_5",
-    voice_id="ogNNNeChcgBhHAgSoX0V",
+    model="eleven_v4_turbo",
+    voice_id="qByVAGjXwGlkcRDJoiHg",  # Kiều Linh (Southern female)
     streaming_latency=0,
 )
 

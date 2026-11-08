@@ -130,8 +130,8 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 
 ELEVENLABS_API_KEY=
-ELEVENLABS_VOICE_ID=pNInz6obpgDQGcFmaJgB
-ELEVENLABS_MODEL=eleven_flash_v2_5
+ELEVENLABS_VOICE_ID=qByVAGjXwGlkcRDJoiHg   # Kiều Linh (Southern female); empty = same default
+ELEVENLABS_MODEL=eleven_v4_turbo
 
 STT_PROVIDER=openai
 LLM_PROVIDER=openai

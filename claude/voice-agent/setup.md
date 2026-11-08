@@ -53,7 +53,8 @@ sip:5on4wixbq.sip.livekit.cloud
 ### 2.3 ElevenLabs
 
 - Generate API key → `ELEVENLABS_API_KEY`
-- Pick a Vietnamese voice → copy Voice ID → `ELEVENLABS_VOICE_ID`
+- Pick a Vietnamese voice → copy Voice ID → `ELEVENLABS_VOICE_ID` (default: "Kiều Linh", `qByVAGjXwGlkcRDJoiHg`, young Southern female)
+- After changing the voice, regenerate the app fillers: `ENV=local .venv/bin/python scripts/generate_czen_fillers.py`
 
 > ⚠️ The `livekit-plugins-elevenlabs` plugin reads `ELEVEN_API_KEY`, **not** `ELEVENLABS_API_KEY`.
 > Always pass `api_key=` explicitly in `providers.py`:
@@ -94,8 +95,8 @@ DEEPGRAM_API_KEY=...
 
 # ElevenLabs
 ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...
-ELEVENLABS_MODEL=eleven_multilingual_v2
+ELEVENLABS_VOICE_ID=qByVAGjXwGlkcRDJoiHg   # Kiều Linh (Southern female), the default
+ELEVENLABS_MODEL=eleven_v4_turbo
 
 # Twilio
 TWILIO_ACCOUNT_SID=ACxxxxxxxx

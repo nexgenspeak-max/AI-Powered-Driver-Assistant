@@ -53,6 +53,8 @@ Câu hỏi về cách dùng ứng dụng được trả lời bằng công cụ 
 
 Nhà cung cấp STT, LLM, TTS được tạo theo cấu hình qua một hàm khởi tạo chung (factory); khi có nhà cung cấp dự phòng, chuỗi nhà cung cấp được bọc bằng FallbackAdapter của LiveKit Agents. Mỗi lần thử STT và LLM chờ tối đa 5 giây; nhà cung cấp lỗi bị đánh dấu không khả dụng, yêu cầu được chuyển sang nhà cung cấp kế tiếp và sự kiện được ghi nhật ký.
 
+Trước khi tới TTS, câu trả lời do LLM sinh ra được chuẩn hóa thành dạng đọc, còn bản hiển thị trên ứng dụng giữ nguyên. Số điện thoại được đọc từng chữ số, số tiền và số nhà dạng 5/9/36 được đổi sang chữ, còn từ viết tắt, đơn vị, giờ và biển số xe được đổi theo một tệp từ điển phát âm (pronunciation.toml). Ví dụ, "30A-123.45" được đọc là "ba mươi a, một hai ba, bốn năm", còn "14:30" là "14 giờ 30". Bước này đặt trước mọi nhà cung cấp TTS nên giọng chính và giọng dự phòng đọc giống nhau. Khi câu trả lời được truyền theo luồng, từ cuối của mỗi đoạn được giữ lại chờ đoạn kế tiếp, để một từ bị cắt giữa hai đoạn vẫn được nhận ra. Sau đợt đo ở Chương 6 (TTS Google, Bảng 6.2), cấu hình mặc định chuyển sang ElevenLabs eleven_v4_turbo với giọng nữ miền Nam và giữ Google làm dự phòng; các số liệu ở Chương 6 không đo lại với cấu hình này.
+
 ### 5.3.5. Xử lý im lặng và kết thúc phiên
 
 Tác nhân xử lý im lặng theo Bảng 4.8; ngưỡng 15 giây được nâng lên 60 giây khi tài xế tắt micro và gõ chữ. Bản ghi và tóm tắt được gửi tới Dịch vụ Nhật ký cuộc gọi với thời gian chờ 10 giây và số lần thử lại có giới hạn; lỗi khi gửi không làm gián đoạn phiên (biểu đồ tuần tự S6).

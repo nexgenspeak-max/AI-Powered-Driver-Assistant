@@ -7,7 +7,7 @@ Python worker that runs a Vietnamese AI voice assistant. When a driver calls `+1
 - Python · livekit-agents 1.5.9
 - STT: OpenAI Whisper (`whisper-1`) or Deepgram Nova-2
 - LLM: OpenAI gpt-5.6-luna
-- TTS: ElevenLabs Flash v2.5
+- TTS: ElevenLabs `eleven_v4_turbo`, voice "Kiều Linh" (young Southern female, `qByVAGjXwGlkcRDJoiHg`), with expressive tags (short laughs, pauses); Google Chirp3 as fallback
 - Deployed as: AWS ECS Fargate
 
 ---
@@ -84,6 +84,21 @@ Change `stt_provider`, `llm_provider`, and `tts_provider` in `envs/config.local.
 | `stt_provider` | `openai` (Whisper) · `deepgram` (Nova-2) · `google` · `inference` |
 | `llm_provider` | `openai` (gpt-5.6-luna) · `gemini` · `kimi` |
 | `tts_provider` | `google` · `elevenlabs` · `openai` · `gemini` |
+
+ElevenLabs voice and model are `elevenlabs_voice_id` (default "Kiều Linh", `qByVAGjXwGlkcRDJoiHg`) and `elevenlabs_model` (default `eleven_v4_turbo`). Set `tts_expressive = false` to turn off laughs and pauses. After changing the voice, regenerate the driver-app connect/disconnect fillers with `ENV=local .venv/bin/python scripts/generate_czen_fillers.py`.
+
+### Pronunciation
+
+Every spoken reply, including free-form LLM text, is rewritten into its spoken form right before TTS; the app transcript keeps the original. Phone numbers, money and lot addresses are handled in `app/voicebot/speech_text_fix.py`. Everything else (product name, abbreviations, units, times, licence plates) comes from the lexicon `app/voicebot/locales/vn/pronunciation.toml`, which runs in front of every TTS provider so the fallback voice reads the same text.
+
+To fix a word the voice gets wrong, add it to the lexicon and preview the result:
+
+```bash
+.venv/bin/python scripts/preview_pronunciation.py "Xe 30A-123.45 đến lúc 14:30"
+# Xe ba mươi a, một hai ba, bốn năm đến lúc 14 giờ 30
+```
+
+Then run `pytest tests/test_pronunciation_lexicon.py`.
 
 ---
 

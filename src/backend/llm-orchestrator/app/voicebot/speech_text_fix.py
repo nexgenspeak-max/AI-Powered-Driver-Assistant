@@ -52,12 +52,14 @@ _CURRENCY_RE = re.compile(
 # e.g. "5/9/36", "58/10" — a bare TTS tends to read the "/" as a date or a
 # fraction ("5 trên 9 trên 36") instead of "năm, chín, ba mươi sáu".
 _SLASH_ADDRESS_RE = re.compile(r"\b\d{1,4}(?:/\d{1,4}){1,3}\b")
-# Holds back a trailing run that might still be an in-progress phone number,
-# money amount, or slash-address for _buffered_fix — digits plus the ".", "/",
-# "+" that can appear mid-pattern. Without this, a chunk boundary landing
-# inside "2.373" (before ".000đ" streams in) would let _CURRENCY_RE match
-# and convert the truncated "2.373" on its own instead of the real 2,373,000.
-_TRAILING_PARTIAL_RE = re.compile(r"[\d./]+$|\+$")
+# Vietnamese licence plates: "30A-123.45", "51G1-678.90", "29A-1234".
+_PLATE_RE = re.compile(r"\b(\d{2})([A-ZĐ]{1,2})(\d?)\s*[-–]\s*(\d{3}\.\d{2}|\d{4,5})\b")
+# Holds back the last, possibly unfinished word for _buffered_fix. LLM output
+# streams in token deltas, so a chunk can end inside a phone number ("2.373"
+# before ".000đ"), a plate, or a lexicon word ("Cz" before "en"); fixing the
+# fragment alone would read it wrong. Everything after the last whitespace
+# waits for the next chunk.
+_TRAILING_PARTIAL_RE = re.compile(r"\S+$")
 
 
 def _spell_out_phone(match: re.Match[str]) -> str:
@@ -186,6 +188,21 @@ def _fix_slash_address(match: re.Match[str]) -> str:
     return ", ".join(_vietnamese_number_to_words(int(s)) for s in segments)
 
 
+def _fix_plate(match: re.Match[str]) -> str:
+    """'30A-123.45' -> 'ba mươi a, một hai ba, bốn năm' — province number as a
+    number, series letters by their Vietnamese names (pronunciation.toml
+    [letters]), serial digit by digit."""
+    from app.voicebot.locales.vn.pronunciations import PLATE_LETTERS
+
+    province, letters, series_digit, serial = match.groups()
+    series = " ".join(PLATE_LETTERS.get(ch, ch) for ch in letters)
+    if series_digit:
+        series += " " + _DIGIT_WORDS[int(series_digit)]
+    groups = serial.split(".")
+    spoken_serial = ", ".join(" ".join(_DIGIT_WORDS[int(d)] for d in g) for g in groups)
+    return f"{_vietnamese_number_to_words(int(province))} {series}, {spoken_serial}"
+
+
 def _strip_spoken_markup(text: str) -> str:
     """LLMs often emit markdown — TTS reads asterisks aloud."""
     text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
@@ -227,11 +244,21 @@ def _vn_abbreviations(text: str) -> str:
     return text
 
 
+def _vn_any_case_words(text: str) -> str:
+    from app.voicebot.locales.vn.pronunciations import ANY_CASE_WORDS
+
+    for word, replacement in ANY_CASE_WORDS:
+        text = re.sub(rf"\b{re.escape(word)}\b", replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def fix_speech_text(text: str, pronunciations: list[tuple[str, str]], lang: str = "vn") -> str:
     text = _strip_spoken_markup(text)
     if lang != "en":
         text = _vn_spoken_tone(text)
         text = _vn_spoken_terms(text)
+        # Plates before the regex rules: "51P-…" would otherwise hit "5 phút".
+        text = _PLATE_RE.sub(_fix_plate, text)
         text = _vn_abbreviations(text)
     text = _PHONE_RE.sub(_spell_out_phone, text)
     # Vietnamese-words conversion only — an EN agent reading the same
@@ -244,18 +271,31 @@ def fix_speech_text(text: str, pronunciations: list[tuple[str, str]], lang: str 
         text = _SLASH_ADDRESS_RE.sub(_fix_slash_address, text)
     text = _DIGIT_RUN_RE.sub(_group_digits, text)
     for pattern, replacement in pronunciations:
-        text = re.sub(rf"\b{re.escape(pattern)}\b", replacement, text)
+        text = re.sub(rf"(?<![\w/]){re.escape(pattern)}(?![\w/])", replacement, text)
+    if lang != "en":
+        text = _vn_any_case_words(text)
     return text
+
+
+def _fix_chunk(text: str, pronunciations: list[tuple[str, str]], lang: str) -> str:
+    """fix_speech_text for one streamed chunk, keeping the whitespace at its
+    edges — fix_speech_text trims, which would glue words across chunks."""
+    core = text.strip()
+    if not core:
+        return text
+    lead = text[: len(text) - len(text.lstrip())]
+    trail = text[len(text.rstrip()) :]
+    return lead + fix_speech_text(core, pronunciations, lang) + trail
 
 
 async def _buffered_fix(
     text: AsyncIterable[str], pronunciations: list[tuple[str, str]], lang: str = "vn"
 ) -> AsyncIterator[str]:
     """
-    Streamed variant of fix_speech_text — holds back a trailing digit/./+
-    run at the end of each chunk since it may continue in the next chunk
-    (LLM output streams in small token deltas, which can split a phone
-    number, money amount, or slash-address mid-run).
+    Streamed variant of fix_speech_text — holds back the trailing word of each
+    chunk since it may continue in the next chunk (LLM output streams in
+    small token deltas, which can split a phone number, money amount, plate,
+    slash-address or lexicon word mid-run).
     """
     pending = ""
     async for chunk in text:
@@ -263,10 +303,10 @@ async def _buffered_fix(
         m = _TRAILING_PARTIAL_RE.search(pending)
         safe, held = (pending[: m.start()], pending[m.start() :]) if m else (pending, "")
         if safe:
-            yield fix_speech_text(safe, pronunciations, lang)
+            yield _fix_chunk(safe, pronunciations, lang)
         pending = held
     if pending:
-        yield fix_speech_text(pending, pronunciations, lang)
+        yield _fix_chunk(pending, pronunciations, lang)
 
 
 def pronunciations_for_lang(lang: str) -> list[tuple[str, str]]:

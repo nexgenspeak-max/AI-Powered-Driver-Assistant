@@ -42,7 +42,7 @@ gemini_tts_voice = "Kore"
 gemini_tts_location = "us-central1"
 gemini_tts_use_vertexai = true
 
-elevenlabs_voice_id = "aN7cv9yXNrfIR87bDmyD"   # Ninh Đôn, Northern vi-VN, conversational
+elevenlabs_voice_id = "qByVAGjXwGlkcRDJoiHg"   # Kiều Linh, Southern (HCMC) vi-VN female, warm
 elevenlabs_model = "eleven_v4_turbo"           # v3/v4 perform [chuckles] etc.; flash/turbo v2.5 strip them
 elevenlabs_language = "vi"
 elevenlabs_stability = 0.5                     # v3/v4: 0 creative, 0.5 natural, 1 robust

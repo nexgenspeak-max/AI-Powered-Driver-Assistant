@@ -16,10 +16,11 @@ _BASE_DIR = Path(__file__).resolve().parents[2]
 _ENV = os.getenv("ENV", "local")
 _ENV_FILE = _BASE_DIR / "envs" / f".env.{_ENV}"
 
-# "Ninh Đôn" — ElevenLabs Voice Library, native Northern-Vietnamese young male
-# voice tagged "conversational". Lowest word errors of the voices tested on
-# eleven_v4_turbo (scripted comparison, 2026-11).
-DEFAULT_ELEVENLABS_VOICE_ID = "aN7cv9yXNrfIR87bDmyD"
+# "Kiều Linh" — ElevenLabs Voice Library, young female voice with a natural
+# Southern (Ho Chi Minh City) accent; chosen for a warm, friendly assistant tone
+# on eleven_v4_turbo (2026-11). Previous default: "Ninh Đôn" (Northern male,
+# aN7cv9yXNrfIR87bDmyD).
+DEFAULT_ELEVENLABS_VOICE_ID = "qByVAGjXwGlkcRDJoiHg"
 
 
 class Settings(BaseSettings):
