@@ -19,6 +19,9 @@ import { getErrorDetail } from '../utils/errors'
 import { isoFromDatetimeLocalValue, minDatetimeLocalValue, toDatetimeLocalValue } from '../utils/datetimeLocal'
 import type { Driver } from '../types'
 
+// How the customer reached the dispatcher; customer web/app bookings arrive on their own.
+const CHANNELS = ['hotline', 'zalo', 'facebook', 'admin'] as const
+
 const formGridSx = {
   display: 'grid',
   gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
@@ -30,7 +33,7 @@ export default function CreateTripPage() {
   const navigate = useNavigate()
   const { data: drivers = [] } = useDrivers()
   const { mutate: createTrip, isPending, error } = useCreateTrip()
-  const { c, accountStatusLabel } = useAdminContent()
+  const { c, accountStatusLabel, bookedViaLabel } = useAdminContent()
   const f = c.createTrip
 
   const [form, setForm] = useState({
@@ -40,6 +43,8 @@ export default function CreateTripPage() {
     pickup_address:  '',
     dropoff_address: '',
     pickup_time:     '',
+    booked_via:      'hotline',
+    note:            '',
   })
 
   const set = (k: keyof typeof form) =>
@@ -48,7 +53,7 @@ export default function CreateTripPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createTrip({ ...form, booked_via: 'admin' }, {
+    createTrip({ ...form, note: form.note.trim() || undefined }, {
       onSuccess: () => navigate(ROUTES.TRIP_BOARD),
     })
   }
@@ -72,6 +77,9 @@ export default function CreateTripPage() {
             {section(<PersonOutlineIcon sx={{ fontSize: 18 }} />, f.sections.customer)}
             <TextField label={f.customerName} value={form.customer_name} onChange={set('customer_name')} placeholder={f.ph.customerName} required fullWidth />
             <TextField label={f.customerPhone} value={form.customer_phone} onChange={set('customer_phone')} placeholder={f.ph.customerPhone} required fullWidth />
+            <TextField select label={f.channel} value={form.booked_via} onChange={set('booked_via')} fullWidth>
+              {CHANNELS.map(code => <MenuItem key={code} value={code}>{bookedViaLabel(code)}</MenuItem>)}
+            </TextField>
           </Box>
         </Box>
         <Box sx={sectionSx}>
@@ -79,6 +87,8 @@ export default function CreateTripPage() {
             {section(<RouteOutlinedIcon sx={{ fontSize: 18 }} />, f.sections.route)}
             <TextField label={f.pickupAddress} value={form.pickup_address} onChange={set('pickup_address')} placeholder={f.ph.pickup} required fullWidth />
             <TextField label={f.dropoffAddress} value={form.dropoff_address} onChange={set('dropoff_address')} placeholder={f.ph.dropoff} required fullWidth />
+            <TextField label={f.note} value={form.note} onChange={set('note')} placeholder={f.ph.note}
+              multiline minRows={2} fullWidth sx={{ gridColumn: '1 / -1' }} />
           </Box>
         </Box>
         <Box sx={sectionSx}>
@@ -112,6 +122,7 @@ export default function CreateTripPage() {
               <Typography variant="caption" color="text.secondary">{f.sections.customer}</Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>{form.customer_name || '—'}</Typography>
               <Typography variant="caption" color="text.secondary">{form.customer_phone}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{f.channel}: {bookedViaLabel(form.booked_via)}</Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">{f.sections.route}</Typography>
@@ -121,6 +132,7 @@ export default function CreateTripPage() {
                   <Typography variant="body2">{text || '—'}</Typography>
                 </Box>
               ))}
+              {form.note.trim() ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>{form.note}</Typography> : null}
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">{f.sections.assignment}</Typography>

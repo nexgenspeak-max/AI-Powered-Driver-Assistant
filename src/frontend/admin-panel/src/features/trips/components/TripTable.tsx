@@ -70,7 +70,7 @@ export function TripTable({ trips, drivers, customers, loading, statusFilter, on
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
-  const { c, tripStatusLabel } = useAdminContent()
+  const { c, tripStatusLabel, bookedViaLabel } = useAdminContent()
   const cols = c.table.trip
 
   const counts = useMemo(() => {
@@ -168,8 +168,13 @@ export function TripTable({ trips, drivers, customers, loading, statusFilter, on
                         #{trip.trip_id.slice(0, 8)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {shortDateTime(trip.created_at)}{trip.booked_via ? ` · ${trip.booked_via}` : ''}
+                        {shortDateTime(trip.created_at)}
                       </Typography>
+                      {trip.booked_via ? (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          {bookedViaLabel(trip.booked_via)}
+                        </Typography>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>

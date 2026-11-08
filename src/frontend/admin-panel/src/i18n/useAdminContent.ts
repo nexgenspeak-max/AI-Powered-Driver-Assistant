@@ -26,7 +26,12 @@ export function useAdminContent() {
     [c.common],
   )
 
-  return { t, c, locale, setLocale, tripStatusLabel, accountStatusLabel }
+  const bookedViaLabel = useCallback(
+    (code: string) => c.channels[code] ?? code,
+    [c.channels],
+  )
+
+  return { t, c, locale, setLocale, tripStatusLabel, accountStatusLabel, bookedViaLabel }
 }
 
 export function getTripStatusLabel(locale: 'en' | 'vi', status: TripStatus): string {

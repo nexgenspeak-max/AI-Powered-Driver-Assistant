@@ -131,10 +131,28 @@ export async function setCoords(tripId: string, coords: Record<string, number>):
   }));
 }
 
+/** The `limit` newest trips by created_at. */
+export function newestTrips(items: Trip[], limit: number): Trip[] {
+  return [...items]
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .slice(0, limit);
+}
+
+// Unfiltered dispatcher board. A Scan page is in hash order, not by time, so a
+// single `Limit: N` page missed the newest trips once the table held more than
+// N items. Read every page, then keep the newest N.
 export async function listRecent(limit = 50): Promise<Trip[]> {
-  const result = await docClient.send(new ScanCommand({ TableName: config.dynamodbTable, Limit: limit }));
-  const items = (result.Items as Trip[]) ?? [];
-  return items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const items: Trip[] = [];
+  let startKey: Record<string, unknown> | undefined;
+  do {
+    const page = await docClient.send(new ScanCommand({
+      TableName: config.dynamodbTable,
+      ExclusiveStartKey: startKey,
+    }));
+    items.push(...((page.Items as Trip[]) ?? []));
+    startKey = page.LastEvaluatedKey;
+  } while (startKey);
+  return newestTrips(items, limit);
 }
 
 export async function listByStatus(status: string, limit = 50): Promise<Trip[]> {

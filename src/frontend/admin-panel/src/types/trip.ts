@@ -48,4 +48,5 @@ export interface CreateTripPayload {
   dropoff_address: string
   pickup_time?: string
   booked_via?: string
+  note?: string
 }

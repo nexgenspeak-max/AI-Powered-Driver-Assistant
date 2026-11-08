@@ -20,7 +20,8 @@
     "verify:profile-stats": "ts-node --transpile-only src/services/profileStats.selfcheck.ts",
     "verify:earnings-period": "ts-node --transpile-only src/services/earningsPeriod.selfcheck.ts",
     "verify:jwt-cross": "ts-node --transpile-only -P tsconfig.json ../cross-checks/jwt_cross.selfcheck.ts",
-    "verify:live-first-leg": "ts-node --transpile-only src/services/liveFirstLeg.selfcheck.ts"
+    "verify:live-first-leg": "ts-node --transpile-only src/services/liveFirstLeg.selfcheck.ts",
+    "verify:list-recent": "ts-node --transpile-only src/services/listRecent.selfcheck.ts"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1101.0",

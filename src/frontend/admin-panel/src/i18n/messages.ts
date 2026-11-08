@@ -28,6 +28,8 @@ export type AdminContentMessages = {
     noMatches: string
   }
   tripStatus: Record<TripStatus, string>
+  /** booked_via code -> label; unknown codes are shown as-is. */
+  channels: Record<string, string>
   stats: {
     pending: string
     active: string
@@ -79,6 +81,8 @@ export type AdminContentMessages = {
     pickupAddress: string
     dropoffAddress: string
     pickupTime: string
+    channel: string
+    note: string
     cancel: string
     submit: string
     submitting: string
@@ -91,6 +95,7 @@ export type AdminContentMessages = {
       customerPhone: string
       pickup: string
       dropoff: string
+      note: string
     }
   }
   detail: {
@@ -226,6 +231,15 @@ const CONTENT_EN: AdminContentMessages = {
     noMatches: 'Nothing matches this search',
   },
   tripStatus: TRIP_STATUS_EN,
+  channels: {
+    hotline: 'Hotline call',
+    zalo: 'Zalo',
+    facebook: 'Facebook',
+    admin: 'Dispatcher',
+    app: 'Customer web / app',
+    voice: 'Voice assistant',
+    driver: 'Driver walk-up',
+  },
   stats: {
     pending: 'Pending',
     active: 'Active',
@@ -277,6 +291,8 @@ const CONTENT_EN: AdminContentMessages = {
     pickupAddress: 'Pickup address',
     dropoffAddress: 'Dropoff address',
     pickupTime: 'Pickup date & time',
+    channel: 'Booked via',
+    note: 'Note for driver',
     cancel: 'Cancel',
     submit: 'Create & notify driver',
     submitting: 'Creating…',
@@ -289,6 +305,7 @@ const CONTENT_EN: AdminContentMessages = {
       customerPhone: '+84901234567',
       pickup: '123 Lê Lợi, District 1',
       dropoff: '45 Nguyễn Huệ, District 1',
+      note: 'e.g. 2 suitcases, pick up at the main gate',
     },
   },
   detail: {
@@ -360,6 +377,15 @@ const CONTENT_VI: AdminContentMessages = {
     noMatches: 'Không có kết quả phù hợp',
   },
   tripStatus: TRIP_STATUS_VI,
+  channels: {
+    hotline: 'Gọi tổng đài',
+    zalo: 'Zalo',
+    facebook: 'Facebook',
+    admin: 'Điều phối',
+    app: 'Web / app khách',
+    voice: 'Trợ lý giọng nói',
+    driver: 'Tài xế tạo',
+  },
   stats: {
     pending: 'Chờ xử lý',
     active: 'Đang chạy',
@@ -411,6 +437,8 @@ const CONTENT_VI: AdminContentMessages = {
     pickupAddress: 'Điểm đón',
     dropoffAddress: 'Điểm trả',
     pickupTime: 'Ngày giờ đón',
+    channel: 'Kênh đặt',
+    note: 'Ghi chú cho tài xế',
     cancel: 'Hủy',
     submit: 'Tạo & thông báo tài xế',
     submitting: 'Đang tạo…',
@@ -423,6 +451,7 @@ const CONTENT_VI: AdminContentMessages = {
       customerPhone: '+84901234567',
       pickup: '123 Lê Lợi, Quận 1',
       dropoff: '45 Nguyễn Huệ, Quận 1',
+      note: 'VD: 2 vali, đón ở cửa chính',
     },
   },
   detail: {

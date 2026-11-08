@@ -41,7 +41,7 @@ type Props = {
 
 /** Everything about one trip plus the two actions a dispatcher needs: send to a driver, cancel. */
 export function TripDetailDrawer({ trip, drivers, onClose, onDispatch, onCancel, busy }: Props) {
-  const { c } = useAdminContent()
+  const { c, bookedViaLabel } = useAdminContent()
   const d = c.detail
   const [driverPhone, setDriverPhone] = useState('')
   if (!trip) return <Drawer anchor="right" open={false} onClose={onClose} />
@@ -104,7 +104,7 @@ export function TripDetailDrawer({ trip, drivers, onClose, onDispatch, onCancel,
           <Field label={d.fare}><Typography variant="body2" sx={{ fontWeight: 700 }}>{trip.estimated_fare.toLocaleString('vi-VN')} ₫</Typography></Field>
         ) : null}
         {extras ? <Field label={d.notes}><Typography variant="body2">{extras}</Typography></Field> : null}
-        <Field label={d.bookedVia}><Typography variant="body2">{trip.booked_via || '—'}</Typography></Field>
+        <Field label={d.bookedVia}><Typography variant="body2">{trip.booked_via ? bookedViaLabel(trip.booked_via) : '—'}</Typography></Field>
         <Field label={d.created}><Typography variant="body2">{dt(trip.created_at)}</Typography></Field>
         <Field label={d.updated}><Typography variant="body2">{dt(trip.updated_at)}</Typography></Field>
 
