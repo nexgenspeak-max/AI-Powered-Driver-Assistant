@@ -203,8 +203,15 @@ def _fix_plate(match: re.Match[str]) -> str:
     return f"{_vietnamese_number_to_words(int(province))} {series}, {spoken_serial}"
 
 
+# Emoji and pictographs: a TTS either reads their names ("car") or stalls on them.
+_EMOJI_RE = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF\uFE0F\u200D]+"
+)
+
+
 def _strip_spoken_markup(text: str) -> str:
-    """LLMs often emit markdown — TTS reads asterisks aloud."""
+    """LLMs often emit markdown and emoji — TTS reads them aloud."""
+    text = _EMOJI_RE.sub("", text)
     text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
     text = re.sub(r"\*([^*]+)\*", r"\1", text)
     text = re.sub(r"`([^`]+)`", r"\1", text)

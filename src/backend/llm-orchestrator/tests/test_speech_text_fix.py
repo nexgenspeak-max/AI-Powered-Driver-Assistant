@@ -66,3 +66,8 @@ def test_display_abbrev_preserved_until_tts():
     spoken = fix_speech_text(raw, [], lang="vn")
     assert raw != spoken
     assert "150.000" in raw or "đ" in raw
+
+
+def test_emoji_are_not_spoken():
+    out = fix_speech_text("Chào bạn, bắt đầu ngày mới thuận lợi nha! 🚗✨", [], lang="vn")
+    assert out == "Chào bạn, bắt đầu ngày mới thuận lợi nha!"

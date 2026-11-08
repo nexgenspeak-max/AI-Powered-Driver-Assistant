@@ -248,7 +248,7 @@ class DriverAgent(PromptTraceMixin, SpokenIntentMixin, SpeechTextFixMixin, Agent
         from app.voicebot.processors.driver_greeting import build_inbound_context_greeting
         from app.voicebot.processors.sip_call_watch import speak_after_sip_pickup
 
-        await speak_after_sip_pickup(self.session, with_tag("[warmly]", GREETING_CONNECT_FILLER))
+        await speak_after_sip_pickup(self.session, with_tag("[cheerfully]", GREETING_CONNECT_FILLER))
 
         userdata = self.session.userdata
         if self._driver_phone and not context_store.has_prefetched_context(userdata):

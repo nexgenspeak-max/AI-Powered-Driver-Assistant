@@ -22,9 +22,10 @@ from typing import Any, AsyncIterable, AsyncIterator, Callable
 
 # Tags tested on eleven_v4_turbo with Vietnamese text: performed as sound,
 # never read as words, and the Vietnamese words around them stay intact.
-# "[cheerfully]" was dropped: it changed the spoken words in testing.
+# "[cheerfully]" changed the words with the old "Ninh Đôn" voice; with "Kiều
+# Linh" it, "[excited]" and "[happy]" keep every word (ASR round trip, 2026-11).
 AUDIO_TAGS: frozenset[str] = frozenset(
-    {"chuckles", "laughs", "sighs", "warmly", "short pause"}
+    {"chuckles", "laughs", "sighs", "warmly", "short pause", "cheerfully", "excited", "happy"}
 )
 
 # ElevenLabs models that go through text-to-dialogue and perform audio tags.

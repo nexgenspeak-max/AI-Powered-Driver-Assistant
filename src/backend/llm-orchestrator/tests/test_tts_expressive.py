@@ -79,7 +79,7 @@ def test_render_keeps_whitelisted_tags_when_allowed():
 
 
 def test_render_drops_unknown_tags_even_when_allowed():
-    out = render_markup("[cheerfully] Dạ, [shouts] xong rồi.", allow_tags=True)
+    out = render_markup("[sarcastically] Dạ, [shouts] xong rồi.", allow_tags=True)
     assert out == "Dạ, xong rồi."
 
 
@@ -353,3 +353,8 @@ async def test_tts_node_keeps_tags_for_expressive_agent(monkeypatch):
 async def test_tts_node_strips_tags_for_customer_facing_agent(monkeypatch):
     out = await _tts_node_text(monkeypatch, False, ["[laughs] Dạ, xong rồi."])
     assert out == "Dạ, xong rồi."
+
+
+def test_cheerful_tags_kept_for_the_southern_voice():
+    out = render_markup("[cheerfully] Dạ, [excited] có chuyến mới nè! [happy] Chúc bạn chạy vui nha.", allow_tags=True)
+    assert out == "[cheerfully] Dạ, [excited] có chuyến mới nè! [happy] Chúc bạn chạy vui nha."
