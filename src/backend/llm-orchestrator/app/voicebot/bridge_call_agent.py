@@ -31,6 +31,9 @@ class BridgeCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     def _speech_lang(self) -> str:
         return self._lang
 
+    def _speech_honorific(self) -> str:
+        return "anh chị"
+
     async def on_enter(self) -> None:
         from app.voicebot.processors.sip_call_watch import (
             cancel_no_answer_watch,

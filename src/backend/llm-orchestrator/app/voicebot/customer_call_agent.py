@@ -66,6 +66,9 @@ class CustomerCallAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     def _speech_lang(self) -> str:
         return self._lang
 
+    def _speech_honorific(self) -> str:
+        return "anh chị"
+
     async def on_enter(self) -> None:
         logger.info("CustomerCallAgent active | lang=%s isolated=%s", self._lang, self._isolated)
         if self._isolated:

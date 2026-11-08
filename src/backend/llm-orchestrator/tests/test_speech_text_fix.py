@@ -71,3 +71,19 @@ def test_display_abbrev_preserved_until_tts():
 def test_emoji_are_not_spoken():
     out = fix_speech_text("Chào bạn, bắt đầu ngày mới thuận lợi nha! 🚗✨", [], lang="vn")
     assert out == "Chào bạn, bắt đầu ngày mới thuận lợi nha!"
+
+
+def test_customer_calls_keep_formal_honorific():
+    out = fix_speech_text("Dạ em chào anh chị Bá Chính ạ, Anh/chị ra điểm đón giúp tài xế nhé.", [], lang="vn", honorific="anh chị")
+    assert out == "Dạ em chào anh chị Bá Chính ạ, anh chị ra điểm đón giúp tài xế nhé."
+
+
+def test_customer_facing_agents_use_formal_honorific():
+    from app.voicebot.bridge_call_agent import BridgeCallAgent
+    from app.voicebot.customer_bridge_call_agent import CustomerBridgeCallAgent
+    from app.voicebot.customer_call_agent import CustomerCallAgent
+    from app.voicebot.locales.vn.agent import CustomerAgent, DriverAgent
+
+    for cls in (BridgeCallAgent, CustomerBridgeCallAgent, CustomerCallAgent, CustomerAgent):
+        assert cls._speech_honorific(None) == "anh chị", cls.__name__
+    assert DriverAgent._speech_honorific(None) == "bạn"

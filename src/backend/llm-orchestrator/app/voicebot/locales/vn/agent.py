@@ -296,6 +296,9 @@ class CustomerAgent(PromptTraceMixin, SpeechTextFixMixin, Agent):
     def _speech_pronunciations(self) -> list[tuple[str, str]]:
         return PRONUNCIATIONS
 
+    def _speech_honorific(self) -> str:
+        return "anh chị"
+
     def __init__(self, customer_phone: str = "", resume_summary: str = "") -> None:
         self._customer_phone = customer_phone
         self._resume_summary = resume_summary

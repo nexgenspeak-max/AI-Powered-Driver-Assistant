@@ -225,11 +225,15 @@ _VN_MODE_TERMS = (
 )
 
 
-def _vn_spoken_tone(text: str) -> str:
-    """Honorifics and punctuation that TTS reads literally, not as speech."""
-    text = re.sub(r"[Aa]nh\s*/\s*[Cc]hị", "bạn", text)
-    text = re.sub(r"\banh/chị\b", "bạn", text, flags=re.IGNORECASE)
-    text = re.sub(r"\banh chị\b", "bạn", text, flags=re.IGNORECASE)
+def _vn_spoken_tone(text: str, honorific: str = "bạn") -> str:
+    """Honorifics and punctuation that TTS reads literally, not as speech.
+
+    "anh/chị" becomes `honorific`: "bạn" for the driver, "anh chị" for
+    customer-facing calls, where Czen stays formal.
+    """
+    text = re.sub(r"[Aa]nh\s*/\s*[Cc]hị", honorific, text)
+    if honorific != "anh chị":
+        text = re.sub(r"\banh chị\b", honorific, text, flags=re.IGNORECASE)
     text = text.replace("—", ", ")
     text = text.replace("–", ", ")
     text = text.replace("→", ",")
@@ -259,10 +263,12 @@ def _vn_any_case_words(text: str) -> str:
     return text
 
 
-def fix_speech_text(text: str, pronunciations: list[tuple[str, str]], lang: str = "vn") -> str:
+def fix_speech_text(
+    text: str, pronunciations: list[tuple[str, str]], lang: str = "vn", honorific: str = "bạn"
+) -> str:
     text = _strip_spoken_markup(text)
     if lang != "en":
-        text = _vn_spoken_tone(text)
+        text = _vn_spoken_tone(text, honorific)
         text = _vn_spoken_terms(text)
         # Plates before the regex rules: "51P-…" would otherwise hit "5 phút".
         text = _PLATE_RE.sub(_fix_plate, text)
@@ -284,7 +290,7 @@ def fix_speech_text(text: str, pronunciations: list[tuple[str, str]], lang: str 
     return text
 
 
-def _fix_chunk(text: str, pronunciations: list[tuple[str, str]], lang: str) -> str:
+def _fix_chunk(text: str, pronunciations: list[tuple[str, str]], lang: str, honorific: str = "bạn") -> str:
     """fix_speech_text for one streamed chunk, keeping the whitespace at its
     edges — fix_speech_text trims, which would glue words across chunks."""
     core = text.strip()
@@ -292,11 +298,11 @@ def _fix_chunk(text: str, pronunciations: list[tuple[str, str]], lang: str) -> s
         return text
     lead = text[: len(text) - len(text.lstrip())]
     trail = text[len(text.rstrip()) :]
-    return lead + fix_speech_text(core, pronunciations, lang) + trail
+    return lead + fix_speech_text(core, pronunciations, lang, honorific) + trail
 
 
 async def _buffered_fix(
-    text: AsyncIterable[str], pronunciations: list[tuple[str, str]], lang: str = "vn"
+    text: AsyncIterable[str], pronunciations: list[tuple[str, str]], lang: str = "vn", honorific: str = "bạn"
 ) -> AsyncIterator[str]:
     """
     Streamed variant of fix_speech_text — holds back the trailing word of each
@@ -310,10 +316,10 @@ async def _buffered_fix(
         m = _TRAILING_PARTIAL_RE.search(pending)
         safe, held = (pending[: m.start()], pending[m.start() :]) if m else (pending, "")
         if safe:
-            yield _fix_chunk(safe, pronunciations, lang)
+            yield _fix_chunk(safe, pronunciations, lang, honorific)
         pending = held
     if pending:
-        yield _fix_chunk(pending, pronunciations, lang)
+        yield _fix_chunk(pending, pronunciations, lang, honorific)
 
 
 def pronunciations_for_lang(lang: str) -> list[tuple[str, str]]:
@@ -340,6 +346,11 @@ class SpeechTextFixMixin:
         Vietnamese-only and never override this."""
         return "vn"
 
+    def _speech_honorific(self) -> str:
+        """How spoken "anh/chị" is rendered: "bạn" for the driver; customer-facing
+        agents override to keep the formal "anh chị"."""
+        return "bạn"
+
     def _allow_audio_tags(self) -> bool:
         """Override to True where expressive cues ([chuckles], [warmly]) fit.
 
@@ -356,7 +367,9 @@ class SpeechTextFixMixin:
         from app.providers.tts.markup import render_markup_stream
 
         rendered = render_markup_stream(text, allow_tags=self._allow_audio_tags())
-        fixed = _buffered_fix(rendered, self._speech_pronunciations(), self._speech_lang())
+        fixed = _buffered_fix(
+            rendered, self._speech_pronunciations(), self._speech_lang(), self._speech_honorific()
+        )
         return Agent.default.tts_node(self, fixed, model_settings)
 
     def transcription_node(self, text, model_settings):
