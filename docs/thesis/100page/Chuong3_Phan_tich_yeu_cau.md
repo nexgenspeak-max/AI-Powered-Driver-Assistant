@@ -146,7 +146,7 @@ Bảng 3.6 không liệt kê FR-L01 (song ngữ) vì yêu cầu này áp dụng 
 
 Năm use case tiêu biểu được tóm tắt dưới đây gồm các use case thuộc chuỗi nghiệp vụ chính của một chuyến (UC14, UC02, UC04, UC12) và UC11; lời thoại mẫu ở Phụ lục B.
 
-**UC14 – Tạo chuyến và mời tài xế.** Điều phối viên nhập điểm đón, điểm trả, thời gian và số khách; hệ thống lưu chuyến ở trạng thái chờ rồi gọi mời tài xế được chọn (UC02). Nếu tài xế nhận, chuyến chuyển sang trạng thái đã xác nhận; nếu tài xế ngoại tuyến hoặc không nghe máy, chuyến giữ trạng thái chờ. Chuyến còn chờ hoặc bị từ chối (UC02) có thể được gán cho tài xế khác (FR-Q01, FR-Q02, FR-T04).
+**UC14 – Tạo chuyến và mời tài xế.** Điều phối viên nhập tên và số điện thoại khách, kênh khách đã dùng để đặt (tổng đài, Zalo, Facebook), điểm đón, điểm trả, ghi chú cho tài xế, tài xế được chọn và giờ đón; hệ thống lưu chuyến ở trạng thái chờ rồi gọi mời tài xế được chọn (UC02). Nếu tài xế nhận, chuyến chuyển sang trạng thái đã xác nhận; nếu tài xế ngoại tuyến hoặc không nghe máy, chuyến giữ trạng thái chờ. Chuyến còn chờ hoặc bị từ chối (UC02) có thể được gán cho tài xế khác (FR-Q01, FR-Q02, FR-T04).
 
 **UC02 – Nhận hoặc từ chối chuyến khi được gọi mời.** Trợ lý đọc điểm đón và hỏi tài xế có nhận không. Nếu tài xế nhận, chuyến chuyển sang trạng thái đã xác nhận, trợ lý xác nhận bằng lời rồi kết thúc phiên; nếu tài xế từ chối, chuyến chuyển sang trạng thái bị từ chối. Phiên chỉ có hai thao tác này (FR-T04, FR-L03).
 
