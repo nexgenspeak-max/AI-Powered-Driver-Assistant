@@ -2,11 +2,11 @@
 
 ## 1.1. Bối cảnh và động lực nghiên cứu
 
-Tài xế xe công nghệ vẫn phải dùng điện thoại khi đang lái để xác nhận chuyến, cập nhật trạng thái đón trả, liên lạc với khách và tra lộ trình, khiến họ rời mắt khỏi đường và tay khỏi vô lăng. Luận văn hướng tới các hãng xe nhận đặt chuyến qua điện thoại và nhóm Zalo, nơi điều phối viên xếp chuyến cho tài xế; tài xế là nhóm duy nhất thao tác khi đang lái nên chịu rủi ro an toàn lớn nhất.
+Tài xế xe công nghệ vẫn phải dùng điện thoại khi đang lái để xác nhận chuyến, cập nhật trạng thái đón trả, liên lạc với khách và tra lộ trình, khiến họ rời mắt khỏi đường và tay khỏi vô lăng. Luận văn hướng tới các hãng xe nhận đặt chuyến qua hotline, Zalo hoặc Facebook, nơi điều phối viên tạo và xếp chuyến cho tài xế; tài xế là nhóm duy nhất thao tác trong lúc lái nên chịu rủi ro an toàn lớn nhất.
 
 Nghiên cứu SHRP 2 trên hơn 900 vụ va chạm của hơn 3.500 người lái cho thấy yếu tố người lái có mặt trong gần 90% số vụ và thao tác thiết bị cầm tay làm tăng đáng kể nguy cơ (Dingus et al., 2016). Theo Viện Bảo hiểm An toàn Đường cao tốc Hoa Kỳ (Insurance Institute for Highway Safety – IIHS), thao tác trên điện thoại khi lái làm nguy cơ va chạm cao gấp khoảng hai đến sáu lần (Insurance Institute for Highway Safety, n.d.). Tương tác bằng giọng nói giúp giảm thời gian nhìn và chạm vào màn hình (xem giới hạn ở mục 2.9.1).
 
-Về kỹ thuật, nhận dạng giọng nói (Speech-to-Text – STT), mô hình ngôn ngữ lớn (Large Language Model – LLM) và tổng hợp giọng nói (Text-to-Speech – TTS) đều có sẵn dưới dạng dịch vụ trí tuệ nhân tạo (Artificial Intelligence – AI), có thể ghép thành chuỗi xử lý thời gian thực. Gọi công cụ (function calling) cho phép mô hình chọn chức năng và tham số để phần mềm thực thi qua giao diện lập trình ứng dụng (Application Programming Interface – API) (Schick et al., 2023). Giao thức truyền thông thời gian thực trên web (Web Real-Time Communication – WebRTC) nối ứng dụng với máy chủ, còn giao thức khởi tạo phiên (Session Initiation Protocol – SIP) nối với mạng điện thoại (LiveKit Inc., n.d.). Hệ thống cần phản hồi nhanh, phục vụ nhiều phiên đồng thời, chịu được sự cố của một dịch vụ hoặc nhà cung cấp AI và bảo vệ dữ liệu cá nhân. Chính các yêu cầu phi chức năng (Non-Functional Requirement – NFR) này đưa luận văn đến lựa chọn kiến trúc microservices (Microservices Architecture) trên điện toán đám mây.
+Về kỹ thuật, nhận dạng giọng nói (Speech-to-Text – STT), mô hình ngôn ngữ lớn (Large Language Model – LLM) và tổng hợp giọng nói (Text-to-Speech – TTS) đều có sẵn dưới dạng dịch vụ trí tuệ nhân tạo (Artificial Intelligence – AI), có thể ghép thành chuỗi xử lý thời gian thực. Gọi công cụ (function calling) cho phép mô hình chọn chức năng và tham số để phần mềm thực thi qua giao diện lập trình ứng dụng (Application Programming Interface – API) (Schick et al., 2023). Giao thức truyền thông thời gian thực trên web (Web Real-Time Communication – WebRTC) kết nối ứng dụng với máy chủ, còn giao thức khởi tạo phiên (Session Initiation Protocol – SIP) kết nối với mạng điện thoại (LiveKit Inc., n.d.). Hệ thống cần phản hồi nhanh, phục vụ nhiều phiên đồng thời, chịu được sự cố của một dịch vụ hoặc nhà cung cấp AI và bảo vệ dữ liệu cá nhân. Chính các yêu cầu phi chức năng (Non-Functional Requirement – NFR) này đưa luận văn đến lựa chọn kiến trúc microservices (Microservices Architecture) trên điện toán đám mây.
 
 ## 1.2. Phát biểu bài toán
 
@@ -23,7 +23,7 @@ Mục tiêu tổng quát là xây dựng trợ lý AI bằng giọng nói nhằm
 3. Triển khai nguyên mẫu trên WebRTC và SIP: ứng dụng di động cho tài xế, dịch vụ backend và hạ tầng dạng mã (infrastructure as code) cho Amazon Web Services (AWS).
 4. Đánh giá nguyên mẫu theo từng yêu cầu: độ trễ, độ chính xác nhận dạng giọng nói và gọi công cụ, tỷ lệ hoàn thành nghiệp vụ, khả năng mở rộng và phục hồi; đánh giá tính khả dụng và bảo mật theo danh mục kiểm tra.
 
-Ngưỡng định hướng cho độ trễ phản hồi (từ khi tài xế dứt lời đến khi hệ thống bắt đầu trả lời) là P95 ≤ 2 giây, tức tối đa 5 trong 100 lượt phải chờ quá 2 giây (mục 2.8); tỷ lệ lỗi từ (Word Error Rate – WER) được so sánh giữa điều kiện yên tĩnh và có nhiễu. Các ngưỡng khác được nêu ở Bảng 3.8, cách đo ở mục 6.3.
+Ngưỡng định hướng cho độ trễ phản hồi (từ khi tài xế dứt lời đến khi hệ thống bắt đầu trả lời) là P95 ≤ 2 giây, tức không quá 5 trong 100 lượt phải chờ lâu hơn 2 giây (mục 2.8); tỷ lệ lỗi từ (Word Error Rate – WER) được so sánh giữa điều kiện yên tĩnh và có nhiễu. Các ngưỡng khác được nêu ở Bảng 3.8, cách đo ở mục 6.3.
 
 ## 1.4. Câu hỏi nghiên cứu
 
@@ -61,21 +61,21 @@ Luận văn không huấn luyện lại mô hình STT, LLM, TTS mà dùng mô h�
 
 Luận văn áp dụng nghiên cứu khoa học thiết kế (design science research – DSR): xây dựng sản phẩm thiết kế (kiến trúc và nguyên mẫu) cho bài toán thực tiễn rồi đánh giá chặt chẽ (Hevner et al., 2004). Sáu hoạt động DSR (Peffers et al., 2007) – xác định vấn đề, xác định mục tiêu, thiết kế và phát triển, minh họa, đánh giá, truyền đạt – lần lượt ứng với: mục 1.1–1.2 và Chương 2; mục 1.3–1.4 và Chương 3; Chương 4–5; Chương 5 và Phụ lục B; Chương 6; toàn văn luận văn cùng mã nguồn công khai (mục 5.2).
 
-Chiến lược đánh giá tuân theo khung FEDS (Venable et al., 2016): do rủi ro chính là rủi ro kỹ thuật, nguyên mẫu được đánh giá trong điều kiện nhân tạo trước, với người dùng thật sau. Luận văn mới thực hiện giai đoạn đầu, gồm: nhật ký phiên của tác giả, bộ câu tham chiếu, chấm thủ công một mẫu lượt, thử tải và tiêm lỗi mô phỏng. Mỗi yêu cầu có mã (ví dụ FR-T01, NFR-02) để truy vết tới thiết kế, hiện thực và đánh giá (mục 4.9, 5.7 và Bảng 6.16). Mối đe dọa đối với độ tin cậy được phân tích ở mục 6.13 theo bốn loại: nội tại, bên ngoài, cấu trúc và kết luận (Wohlin et al., 2012).
+Chiến lược đánh giá tuân theo khung FEDS (Venable et al., 2016): do rủi ro chính là rủi ro kỹ thuật, nguyên mẫu được đánh giá trong điều kiện nhân tạo trước, với người dùng thật sau. Luận văn mới thực hiện giai đoạn đầu, gồm nhật ký phiên của tác giả, bộ câu tham chiếu, chấm thủ công một mẫu lượt, thử tải và tiêm lỗi mô phỏng. Mỗi yêu cầu có mã (ví dụ FR-T01, NFR-02) để truy vết tới thiết kế, hiện thực và đánh giá (mục 4.9, 5.7 và Bảng 6.16). Mối đe dọa đối với độ tin cậy được phân tích ở mục 6.13 theo bốn loại: nội tại, bên ngoài, cấu trúc và kết luận (Wohlin et al., 2012).
 
 ## 1.7. Những đóng góp của luận văn
 
 Bốn đóng góp dưới đây được đối chiếu với công trình liên quan ở Bảng 2.2.
 
 1. **Kiến trúc tham chiếu cho trợ lý giọng nói thực thi nghiệp vụ:** microservices hướng tới AWS, được lập luận từ năm NFR, kèm phân tích đánh đổi và rủi ro (Chương 3, 4).
-2. **Nguyên mẫu đầu cuối, mã nguồn công khai:** chuỗi STT – LLM gọi công cụ – TTS, có câu đệm (phát khi sau 2 giây chưa có câu trả lời) và nhà cung cấp dự phòng, chạy trên WebRTC và SIP (Chương 5).
+2. **Nguyên mẫu đầu cuối, mã nguồn công khai:** chuỗi STT – LLM gọi công cụ – TTS, có câu đệm (phát khi sau 2 giây vẫn chưa có câu trả lời) và nhà cung cấp dự phòng, chạy trên WebRTC và SIP (Chương 5).
 3. **Khung đánh giá gắn với tiêu chí chấp nhận:** 19 tiêu chí Given – When – Then cùng khả năng truy vết từ yêu cầu đến kết quả (Chương 3, 6).
-4. **Bằng chứng thực nghiệm về giới hạn của chuỗi xử lý theo tầng:** trong cấu hình đã đo, thời gian sinh token đầu tiên của mô hình là thành phần lớn nhất của độ trễ, nên việc đạt ngưỡng 2 giây phụ thuộc vào nhà cung cấp mô hình hơn là cách chia dịch vụ (Chương 6).
+4. **Bằng chứng thực nghiệm về giới hạn của chuỗi xử lý theo tầng:** trong cấu hình đã đo, P95 độ trễ của luồng qua LLM là 3,75 giây, chưa đạt ngưỡng 2 giây; thời gian sinh token đầu tiên của mô hình là thành phần lớn nhất của độ trễ, nên việc đạt ngưỡng 2 giây phụ thuộc vào nhà cung cấp mô hình hơn là cách chia dịch vụ (Chương 6).
 
 ## 1.8. Cấu trúc luận văn
 
-Chương 2: cơ sở lý thuyết; Chương 3: phân tích yêu cầu; Chương 4: thiết kế; Chương 5: triển khai; Chương 6: thực nghiệm và đánh giá. Kết luận nêu hạn chế và hướng phát triển; Phụ lục chứa tài liệu bổ trợ.
+Chương 2: cơ sở lý thuyết và nghiên cứu liên quan; Chương 3: phân tích yêu cầu; Chương 4: thiết kế hệ thống; Chương 5: triển khai; Chương 6: thực nghiệm và đánh giá. Kết luận nêu hạn chế và hướng phát triển; Phụ lục chứa tài liệu bổ trợ.
 
 ## Kết luận chương
 
-Chương 1 đã xác lập bài toán, mục tiêu, RQ, phương pháp và đóng góp; Chương 2 tiếp theo trình bày cơ sở lý thuyết.
+Chương 1 đã xác lập bài toán, mục tiêu, câu hỏi nghiên cứu, phương pháp và đóng góp; Chương 2 tiếp theo trình bày cơ sở lý thuyết.

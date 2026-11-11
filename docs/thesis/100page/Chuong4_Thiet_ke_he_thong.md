@@ -2,7 +2,7 @@
 
 ## 4.1. Động lực kiến trúc
 
-Động lực kiến trúc là tập yêu cầu và ràng buộc ảnh hưởng quyết định đến cấu trúc hệ thống (Bass et al., 2021). Bảng 4.1 tổng hợp các động lực rút ra từ Chương 3; chiến thuật tương ứng với từng NFR (Bảng 3.8) được ghi trong ngoặc đơn.
+Động lực kiến trúc là tập yêu cầu và ràng buộc có ảnh hưởng quyết định đến cấu trúc hệ thống (Bass et al., 2021). Bảng 4.1 tổng hợp các động lực rút ra từ Chương 3; chiến thuật tương ứng với từng NFR (Bảng 3.8) được ghi trong ngoặc đơn.
 
 **Bảng 4.1.** Động lực kiến trúc
 
@@ -10,10 +10,10 @@
 |---|---|---|---|
 | Chức năng | FR-T, FR-C, FR-K | Thực hiện nghiệp vụ bằng lời gọi công cụ qua WebRTC và SIP | Tách nghiệp vụ khỏi tác nhân; mọi kênh dùng chung |
 | Chức năng | FR-Q, FR-S, FR-O | Điều phối; giám sát, báo cáo ngày | Trang quản trị dùng chung API; dịch vụ giám sát riêng, chỉ đọc |
-| Phi chức năng | NFR-02 | P95 độ trễ ≤ 2 giây | Tác nhân dài hạn; tải trước ngữ cảnh (kiểm soát nhu cầu) |
+| Phi chức năng | NFR-02 | P95 độ trễ ≤ 2 giây | Tác nhân chạy dài hạn; tải trước ngữ cảnh (kiểm soát nhu cầu) |
 | Phi chức năng | NFR-03 | Mở rộng theo số phiên | Tác nhân và API mở rộng độc lập (tăng tài nguyên, nhiều bản sao) |
 | Phi chức năng | NFR-04 | Phiên không dừng khi phụ trợ hoặc AI lỗi | Cô lập lỗi (suy giảm có kiểm soát); dự phòng nhà cung cấp (dự phòng thay thế) |
-| Phi chức năng | NFR-05 | Định danh tập trung, bảo vệ bí mật | Một dịch vụ định danh; quyền riêng từng dịch vụ (xác thực đối tượng truy cập) |
+| Phi chức năng | NFR-05 | Định danh tập trung, bảo vệ bí mật | Một dịch vụ định danh; quyền riêng cho từng dịch vụ (xác thực đối tượng truy cập) |
 | Phi chức năng | NFR-01 | Xác nhận thao tác rủi ro; công cụ theo loại phiên | Phân loại và trạng thái phiên (mô hình tác vụ, mô hình hệ thống) |
 | Ràng buộc | CON-01 đến CON-04 | Tác nhân chỉ gọi API; dữ liệu riêng; JWT do Định danh phát hành; nhật ký gắn mã phòng | Ranh giới dịch vụ bắt buộc |
 | Môi trường | Bối cảnh dự án | STT, LLM, TTS, truyền thông bên ngoài; nhóm nhỏ, chi phí thấp | Dịch vụ đám mây quản lý, trả theo mức dùng |
@@ -22,7 +22,7 @@
 
 ### 4.2.1. Lựa chọn kiểu kiến trúc (ADR-01)
 
-**Bối cảnh.** Hệ thống có hai loại tải: tác nhân hội thoại chạy dài hạn, giữ kết nối âm thanh, dùng thư viện AI của Python; và các API nghiệp vụ nhanh, không trạng thái, do ứng dụng, trang quản trị và tác nhân cùng gọi.
+**Bối cảnh.** Hệ thống có hai loại tải: tác nhân hội thoại chạy dài hạn, giữ kết nối âm thanh và dùng các thư viện AI viết bằng Python; và các API nghiệp vụ nhanh, không trạng thái, do ứng dụng, trang quản trị và tác nhân cùng gọi.
 
 **Các phương án.** (A) nguyên khối; (B) nguyên khối phân mô-đun; (C) microservices, trong đó tác nhân và mỗi năng lực nghiệp vụ là một dịch vụ riêng; (D) thuần serverless trên FaaS. Bảng 4.2 đánh giá bốn phương án; bảng không xét NFR-01 vì chiến thuật của yêu cầu này nằm trong tác nhân, không phụ thuộc kiểu kiến trúc (mục 3.4.3).
 
@@ -30,8 +30,8 @@
 
 | Yêu cầu | (A) Nguyên khối | (B) Phân mô-đun | (C) Microservices | (D) Thuần serverless |
 |---|---|---|---|---|
-| NFR-02 Hiệu năng | Một phần: tranh chấp tài nguyên | Một phần | Đáp ứng: tác nhân container, API riêng | Không: giới hạn thời gian chạy, khởi động nguội |
-| NFR-03 Mở rộng | Không: nhân bản cả ứng dụng | Không | Đáp ứng: nhân bản độc lập | Một phần: tác nhân dài hạn không hợp FaaS |
+| NFR-02 Hiệu năng | Một phần: tranh chấp tài nguyên | Một phần | Đáp ứng: tác nhân chạy trong container, API tách riêng | Không: giới hạn thời gian chạy, khởi động nguội |
+| NFR-03 Mở rộng | Không: nhân bản cả ứng dụng | Không | Đáp ứng: nhân bản độc lập | Một phần: tác nhân chạy dài hạn không phù hợp với FaaS |
 | NFR-04 Phục hồi | Không: một lỗi dừng tất cả | Một phần: cô lập mức mã | Đáp ứng: lỗi phụ trợ không lan | Một phần |
 | NFR-05 Bảo mật | Một phần: dùng chung quyền | Một phần | Đáp ứng: quyền riêng | Đáp ứng |
 | Độ phức tạp vận hành | Thấp | Thấp | Cao | Trung bình |
@@ -49,7 +49,7 @@
 | Phương án | Ưu điểm | Nhược điểm | Kết luận |
 |---|---|---|---|
 | Mọi câu qua LLM, không câu đệm | Một luồng duy nhất | Khoảng lặng chờ token đầu | Không chọn |
-| Nhánh rút gọn theo ý định, kết hợp LLM | Nhanh với câu khớp mẫu (Bảng 6.3, đợt đo 05–06/09/2026) | Dễ chọn sai công cụ; khó bảo trì mẫu câu | Không chọn; đã loại bỏ (mục 5.3.2) |
+| Nhánh rút gọn theo ý định, kết hợp LLM | Nhanh với câu khớp mẫu (Bảng 6.3, đợt đo 05–06/09/2026) | Dễ chọn sai công cụ; khó bảo trì mẫu câu | Không chọn; đã dùng thử rồi loại bỏ (mục 5.3.2) |
 | Mọi câu qua LLM gọi công cụ; câu đệm sau 2 giây; tải trước ngữ cảnh | Một luồng; chỉ trả lời khi có kết quả thật | Độ trễ vẫn phụ thuộc token đầu | **Chọn** |
 
 **Quyết định và hệ quả.** Chọn phương án thứ ba để trợ lý chỉ xác nhận khi có kết quả thật; đổi lại, độ trễ phụ thuộc vào thời gian sinh token đầu và chỉ được bù một phần bằng câu đệm (TP-1, mục 4.10).
@@ -66,9 +66,9 @@ Hình 4.1 được vẽ theo quy ước sơ đồ kiến trúc AWS: năm lớp x
 
 **Hình 4.1.** Kiến trúc tổng thể của hệ thống trên AWS theo microservices
 
-**Lớp máy khách** gồm ứng dụng tài xế, trang quản trị và trang giám sát (tệp tĩnh trên Amazon S3); khách hàng dùng điện thoại thường. Ở **lớp truyền thông thời gian thực và hội thoại AI**, LiveKit Cloud truyền âm thanh (WebRTC) và quay số (SIP); Dịch vụ Liên lạc hội thoại thời gian thực chạy trên ECS Fargate và gọi STT, LLM, TTS, mỗi khâu có nhà cung cấp chính và dự phòng. Ở **lớp cổng API**, API Gateway là cửa vào duy nhất, kèm cổng WebSocket để đẩy thông báo. **Lớp microservices** gồm năm dịch vụ nghiệp vụ chạy trên Lambda; tính cả dịch vụ hội thoại, hệ thống có sáu dịch vụ (Bảng 4.5). **Lớp dữ liệu** gồm bảng DynamoDB riêng của từng dịch vụ và Redis (tùy chọn) làm bộ nhớ đệm ngắn hạn của Dịch vụ Chuyến đi và Điều phối giữa các lần chạy Lambda (phiên đang mở, thông báo chờ phát, ngữ cảnh); trạng thái phiên của tác nhân (mục 4.6.2) không nằm ở Redis. Dải xuyên suốt gồm CloudWatch Logs, IAM và JWT, EventBridge Scheduler và CloudFormation.
+**Lớp máy khách** gồm ứng dụng tài xế, trang quản trị và trang giám sát (tệp tĩnh trên Amazon S3); khách hàng dùng điện thoại thường. Ở **lớp truyền thông thời gian thực và hội thoại AI**, LiveKit Cloud truyền âm thanh (WebRTC) và quay số (SIP); Dịch vụ Liên lạc hội thoại thời gian thực chạy trên ECS Fargate và gọi STT, LLM, TTS, mỗi khâu có nhà cung cấp chính và dự phòng. Ở **lớp cổng API**, API Gateway là cửa vào duy nhất, kèm cổng WebSocket để đẩy thông báo. **Lớp microservices** gồm năm dịch vụ nghiệp vụ chạy trên Lambda; tính cả dịch vụ hội thoại, hệ thống có sáu dịch vụ (Bảng 4.5). **Lớp dữ liệu** gồm bảng DynamoDB riêng của từng dịch vụ và Redis (tùy chọn) làm bộ nhớ đệm ngắn hạn của Dịch vụ Chuyến đi và Điều phối giữa các lần chạy Lambda (phiên đang mở, thông báo chờ phát, ngữ cảnh); trạng thái phiên của tác nhân (mục 4.6.2) không nằm ở Redis. Dải Cross-cutting Concerns gồm CloudWatch Logs, IAM và JWT, EventBridge Scheduler và CloudFormation.
 
-**Giao thức kết nối.** Lời gọi giữa các dịch vụ cũng đi qua API Gateway kèm JWT dịch vụ và được xác thực giống như lời gọi từ người dùng. Tài nguyên AWS đặt tại vùng ap-southeast-1; tác nhân chỉ được kết nối chiều ra. Vì Lambda không giữ trạng thái, bảng ws-connections lưu cặp mã kết nối WebSocket và định danh người dùng.
+**Giao thức kết nối.** Lời gọi giữa các dịch vụ cũng đi qua API Gateway kèm JWT dịch vụ và được xác thực giống như lời gọi từ người dùng. Tài nguyên AWS đặt tại vùng ap-southeast-1; tác nhân chỉ mở kết nối chiều ra. Vì Lambda không giữ trạng thái, bảng ws-connections lưu cặp mã kết nối WebSocket và định danh người dùng.
 
 ### 4.3.2. Mô hình luồng hành vi theo nhóm người sử dụng
 
@@ -89,7 +89,7 @@ Các luồng trên Hình 4.2 đến Hình 4.5 được đánh số ① đến �
 
 **Hình 4.2.** Mô hình luồng hành vi: nhóm chức năng của tài xế
 
-**Luồng của khách hàng.** Khách đặt xe với điều phối viên bên ngoài hệ thống, sau đó chỉ tương tác qua điện thoại thường; ở chế độ tác nhân gọi thay hoặc gọi nền, tác nhân trao đổi với khách qua Twilio và lưu bản ghi.
+**Luồng của khách hàng.** Khách đặt xe qua tổng đài, Zalo hoặc Facebook và điều phối viên tạo chuyến trên trang quản trị; sau đó, khách chỉ tương tác qua điện thoại thường; ở chế độ tác nhân gọi thay hoặc gọi nền, tác nhân trao đổi với khách qua Twilio và lưu bản ghi.
 
 ![Hình 4.3](../diagrams/H4_1_aws_architecture_customer.png)
 
@@ -122,7 +122,7 @@ Ranh giới dịch vụ được xác định theo năng lực nghiệp vụ (Ne
 | Giám sát vận hành | Tình trạng dịch vụ, cấu hình tác nhân, nhật ký, báo cáo ngày | daily-reports | Lambda; EventBridge Scheduler | FR-S01 đến FR-S03, FR-O01, FR-O02; CON-04 |
 | Liên lạc hội thoại thời gian thực | STT – LLM gọi công cụ – TTS | Chỉ trạng thái phiên | ECS Fargate | FR-T, FR-C, FR-W, FR-I, FR-E, FR-F, FR-L, FR-K, FR-A02; NFR-01 đến NFR-04; CON-01 |
 
-FR-A01 (từ khóa đánh thức) không thuộc dịch vụ nào: ứng dụng nhận dạng từ khóa trên thiết bị rồi mở phiên như khi bấm nút (mục 5.5).
+FR-A01 (từ khóa đánh thức) không thuộc dịch vụ nào: ứng dụng nhận dạng từ khóa ngay trên thiết bị rồi mở phiên như khi chạm nút Czen (mục 5.5).
 
 ## 4.5. Biểu đồ tuần tự cho các luồng chính
 
@@ -150,7 +150,7 @@ Khi ứng dụng yêu cầu token thoại, dịch vụ dùng lại phiên đang 
 
 **Hình 4.8.** Biểu đồ tuần tự S3: một lượt hội thoại có gọi công cụ, câu đệm và dự phòng
 
-Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại và danh sách công cụ tới LLM (quá 2 giây chưa có phản hồi thì phát câu đệm, mục 4.6.1), và mô hình chọn công cụ update_trip_status. Dịch vụ kiểm tra vị trí GPS cách điểm cần đến không quá 200 m rồi mới ghi vào bảng trips; tác nhân chỉ xác nhận khi có kết quả thật. Nếu STT hoặc LLM lỗi, tác nhân chuyển sang nhà cung cấp dự phòng; nếu API lỗi, tác nhân báo không cập nhật được và phiên tiếp tục.
+Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại và danh sách công cụ tới LLM; nếu sau 2 giây chưa có phản hồi, tác nhân phát câu đệm (mục 4.6.1). Mô hình chọn công cụ update_trip_status; dịch vụ kiểm tra vị trí GPS của tài xế cách điểm đón không quá 200 m rồi mới ghi vào bảng trips; tác nhân chỉ xác nhận khi có kết quả thật. Nếu STT, LLM hoặc TTS lỗi, tác nhân chuyển sang nhà cung cấp dự phòng; nếu API lỗi, tác nhân báo không cập nhật được và phiên tiếp tục.
 
 ### 4.5.4. S4 — Mời nhận chuyến qua cuộc gọi điện thoại (Dịch vụ Chuyến đi và Điều phối)
 
@@ -158,7 +158,7 @@ Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại
 
 **Hình 4.9.** Biểu đồ tuần tự S4: mời tài xế nhận chuyến qua cuộc gọi điện thoại
 
-Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuyến mới được báo vào phòng hiện có. Nếu không, dịch vụ tạo phòng mang metadata chuyến, phân công tác nhân và tạo người tham gia SIP để LiveKit quay số qua Twilio. Tác nhân đọc điểm đón và hỏi tài xế có nhận không; phiên này chỉ có hai công cụ confirm_trip và reject_trip; kết quả được ghi vào chuyến và đẩy tới ứng dụng.
+Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuyến mới được báo vào phòng hiện có. Nếu không, dịch vụ tạo phòng mang metadata chuyến, phân công tác nhân và tạo người tham gia SIP để LiveKit quay số qua Twilio. Tác nhân đọc điểm đón và hỏi tài xế có nhận chuyến không. Phiên này chỉ có hai công cụ confirm_trip và reject_trip; kết quả được ghi vào chuyến và đẩy tới ứng dụng.
 
 ### 4.5.5. S5 — Gọi khách hàng và gửi tin nhắn (Dịch vụ Chuyến đi và Điều phối, Dịch vụ Liên lạc bằng tin nhắn)
 
@@ -166,7 +166,7 @@ Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuy
 
 **Hình 4.10.** Biểu đồ tuần tự S5: gọi khách hàng theo ba chế độ và gửi tin nhắn SMS
 
-Ở hai chế độ tác nhân gọi thay và nói trực tiếp, khách được nối vào phòng của tài xế; ở chế độ gọi nền, cuộc gọi dùng phòng riêng và tóm tắt được gửi về khi kết thúc. Tin nhắn đi qua Dịch vụ Liên lạc bằng tin nhắn tới Twilio, trạng thái giao tin trả về qua webhook; số điện thoại ngoài chuyến phải được xác nhận trước. Khi gửi SMS thất bại, dịch vụ trả lỗi kèm mã Twilio (nếu có) và tác nhân báo không gửi được (Bảng 5.2 minh họa một lần trả về mã 503).
+Ở hai chế độ *tác nhân gọi thay* và *nói trực tiếp*, khách được nối vào phòng của tài xế; ở chế độ *gọi nền*, cuộc gọi dùng phòng riêng và tóm tắt được gửi về khi kết thúc. Tin nhắn đi qua Dịch vụ Liên lạc bằng tin nhắn tới Twilio, trạng thái giao tin trả về qua webhook; số điện thoại ngoài chuyến phải được tài xế xác nhận trước. Khi gửi SMS thất bại, dịch vụ trả lỗi kèm mã Twilio (nếu có) và tác nhân báo không gửi được (Bảng 5.2 minh họa một lần trả về mã 503).
 
 ### 4.5.6. S6 — Ghi nhật ký và tóm tắt cuộc gọi (Dịch vụ Nhật ký cuộc gọi)
 
@@ -174,7 +174,7 @@ Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuy
 
 **Hình 4.11.** Biểu đồ tuần tự S6: lưu bản ghi hội thoại và tra cứu tóm tắt cuộc gọi
 
-Khi phiên kết thúc, tác nhân gửi bản ghi, tóm tắt do LLM sinh và chỉ số phiên (mục 5.3.6) tới Dịch vụ Nhật ký cuộc gọi để lưu vào bảng call-records theo giờ Việt Nam. Truy vấn tóm tắt chỉ lấy bản ghi mới nhất của chính tài xế. Nếu dịch vụ lỗi, bản ghi được ghi vào nhật ký của tác nhân và phiên không bị ảnh hưởng.
+Khi phiên kết thúc, tác nhân gửi bản ghi, tóm tắt do LLM sinh và chỉ số phiên (mục 5.3.6) tới Dịch vụ Nhật ký cuộc gọi để lưu vào bảng call-records, với ngày ghi theo giờ Việt Nam. Truy vấn tóm tắt chỉ lấy bản ghi mới nhất của chính tài xế đó. Nếu dịch vụ lỗi, bản ghi được ghi vào nhật ký của tác nhân và phiên không bị ảnh hưởng.
 
 ### 4.5.7. S7 — Lập báo cáo vận hành ngày (Dịch vụ Giám sát vận hành)
 
@@ -182,7 +182,7 @@ Khi phiên kết thúc, tác nhân gửi bản ghi, tóm tắt do LLM sinh và c
 
 **Hình 4.12.** Biểu đồ tuần tự S7: lập báo cáo vận hành ngày từ bản ghi và chỉ số phiên
 
-EventBridge Scheduler kích hoạt dịch vụ hằng ngày lúc 00:15 giờ Việt Nam (quản trị viên cũng có thể yêu cầu lập lại). Dịch vụ tổng hợp số phiên, độ trễ trung bình, P50, P95, tỷ lệ gọi công cụ thành công và lỗi theo loại; một mẫu các cặp câu hỏi – trả lời được mô hình chấm gán nhãn correct, incorrect hoặc unclear. Báo cáo lưu theo khóa report_date; trang giám sát hiển thị báo cáo và xu hướng 7 ngày (Hình 5.3, Hình 5.4). Nếu thiếu khóa API của mô hình chấm thì phần chấm được bỏ qua và ghi chú trong báo cáo.
+EventBridge Scheduler kích hoạt dịch vụ hằng ngày lúc 00:15 giờ Việt Nam (quản trị viên cũng có thể yêu cầu lập lại). Dịch vụ tổng hợp số phiên, độ trễ trung bình, P50, P95, tỷ lệ gọi công cụ thành công và lỗi theo loại; một mẫu các cặp câu hỏi – trả lời được mô hình chấm (LLM) gán nhãn correct, incorrect hoặc unclear. Báo cáo lưu theo khóa report_date; trang giám sát hiển thị báo cáo và xu hướng 7 ngày (Hình 5.3, Hình 5.4). Nếu thiếu khóa API của mô hình chấm thì phần chấm được bỏ qua và ghi chú trong báo cáo.
 
 ## 4.6. Thiết kế Dịch vụ Liên lạc hội thoại thời gian thực
 
@@ -202,10 +202,10 @@ Trạng thái phiên (session state) là dữ liệu tác nhân giữ trong bộ
 
 | Nhóm | Nội dung | Mục đích |
 |---|---|---|
-| Hồ sơ và cài đặt | Chế độ gọi mặc định, nhắc khách gần điểm đón | Cá nhân hóa |
+| Hồ sơ và cài đặt | Chế độ gọi mặc định, nhắc khách khi gần điểm đón | Cá nhân hóa |
 | Chuyến đi | Chuyến sắp tới, hiện tại, lịch sử gần đây | Trả lời, cập nhật chuyến |
 | Thu nhập | Trong ngày, theo kỳ | Trả lời về thu nhập |
-| Cuộc gọi | Đang diễn ra, gần nhất | Tránh gọi chồng; tóm tắt |
+| Cuộc gọi | Đang diễn ra, gần nhất | Tránh gọi chồng; đọc tóm tắt |
 | Hành động chờ xác nhận | Hủy chuyến, số điện thoại chờ xác nhận | Xác nhận hai bước |
 
 ### 4.6.3. Phân loại phiên và tập công cụ
@@ -231,14 +231,14 @@ Bảng 4.8 tổng hợp các cơ chế đáp ứng NFR-04, NFR-05, CON-03, CON-0
 
 | Cơ chế | Mô tả | Chiến thuật | Yêu cầu |
 |---|---|---|---|
-| Thời gian chờ khi gọi API | 8 giây với phần lớn API chuyến đi, 25 giây với API khởi tạo cuộc gọi; lỗi được chuyển thành câu báo ngắn | Giới hạn thời gian thực thi | NFR-04 |
+| Thời gian chờ khi gọi API | 8 giây với phần lớn API chuyến đi, 25 giây với API khởi tạo cuộc gọi; lỗi được chuyển thành câu thông báo ngắn | Giới hạn thời gian thực thi | NFR-04 |
 | Dự phòng nhà cung cấp AI | STT, LLM, TTS có chuỗi dự phòng; lỗi thì chuyển và ghi nhật ký | Dự phòng thay thế | NFR-04 |
 | Cô lập dịch vụ phụ trợ | Lỗi bản ghi, tin nhắn, phân công tác nhân không dừng hội thoại | Suy giảm có kiểm soát | NFR-04 |
 | Tự khôi phục bản sao tác nhân | ECS duy trì số bản sao; phòng mất tác nhân được phân công lại khi xin lại token (S2); chưa đo đầu cuối (mục 6.9) | Nhịp tim; dự phòng | NFR-04 |
-| Xử lý im lặng | Sau 15 giây im lặng thì hỏi lại một lần; nếu vẫn im lặng thì kết thúc phiên | Giám sát phiên | FR-L02, NFR-04 |
+| Xử lý im lặng | Sau 15 giây im lặng, tác nhân hỏi lại một lần; nếu vẫn im lặng thì kết thúc phiên | Giám sát phiên | FR-L02, NFR-04 |
 | Định danh tập trung | Chỉ Định danh phát hành JWT đăng nhập; xác minh bằng khóa dùng chung; gọi nội bộ bằng token dịch vụ ngắn hạn | Xác thực, phân quyền đối tượng truy cập | NFR-05, CON-03 |
 | Bảo vệ bí mật | Ẩn tham số bí mật trong hạ tầng dạng mã; IAM riêng từng dịch vụ | Giới hạn truy cập, giới hạn phơi lộ | NFR-05 |
-| Nhật ký gắn mã phòng | Mọi dòng gắn mã phòng; che dữ liệu cá nhân (mục 6.10) | Lưu vết để kiểm tra lại | CON-04, NFR-05 |
+| Nhật ký gắn mã phòng | Mọi dòng nhật ký gắn mã phòng; che dữ liệu cá nhân (mục 6.10) | Lưu vết để kiểm tra lại | CON-04, NFR-05 |
 | Chỉ số phiên và báo cáo ngày | Chỉ số phiên gửi kèm bản ghi, tổng hợp theo ngày | Giám sát | NFR-04, FR-O01 |
 
 ## 4.8. Thiết kế cho tính khả dụng
@@ -250,14 +250,14 @@ Tính khả dụng (NFR-01) được thiết kế ở hai mức: mức kiến tr
 | STT | Nguyên tắc | Thiết kế tương ứng |
 |---|---|---|
 | 1 | Hiển thị trạng thái hệ thống | Biểu tượng trạng thái (Hình 4.14a); câu đệm sau 2 giây |
-| 2 | Tương thích với thế giới thực | Từ ngữ của tài xế; tiếng Việt hoặc tiếng Anh (Hình 4.14c) |
-| 3 | Quyền kiểm soát và tự do | Từ chối khi xác nhận; kết thúc phiên bằng lời; thoát nói trực tiếp bằng cụm từ kết thúc |
+| 2 | Tương thích với thế giới thực | Dùng từ ngữ quen thuộc với tài xế; tiếng Việt hoặc tiếng Anh (Hình 4.14c) |
+| 3 | Quyền kiểm soát và tự do | Có thể từ chối ở bước xác nhận; kết thúc phiên bằng lời; thoát nói trực tiếp bằng cụm từ kết thúc |
 | 4 | Nhất quán và tuân theo chuẩn | Cùng nghiệp vụ trên WebRTC, SIP và ở hai ngôn ngữ; cùng mẫu xác nhận |
 | 5 | Ngăn ngừa lỗi | Xác nhận hai bước khi hủy chuyến, báo khách vắng, liên lạc số ngoài chuyến; công cụ theo loại phiên |
 | 6 | Nhận biết thay vì phải nhớ | Trạng thái phiên giữ sẵn chuyến, khách; hiện lời thoại (Hình 4.14b) |
 | 7 | Linh hoạt và hiệu quả | Từ khóa đánh thức (Hình 4.14d); chế độ gọi mặc định (Hình 4.14c) |
-| 8 | Thẩm mỹ và tối giản | Mỗi lượt một ý; tra lịch chỉ nói số chuyến trước |
-| 9 | Nhận biết, chẩn đoán, khôi phục lỗi | API lỗi thì báo ngắn; nghe không rõ thì hỏi lại |
+| 8 | Thẩm mỹ và tối giản | Mỗi lượt một ý; khi tra lịch, chỉ nói số chuyến trước |
+| 9 | Nhận biết, chẩn đoán, khôi phục lỗi | API lỗi thì thông báo ngắn; nghe không rõ thì hỏi lại |
 | 10 | Trợ giúp và tài liệu | Hỏi cách dùng bằng lời; trả lời theo sổ tay |
 
 ![Hình 4.14|h=7](thesis_screenshots/H4_ux_usability.png)
@@ -281,7 +281,7 @@ Bảng 4.10 liên kết từng yêu cầu phi chức năng và FR-O01, FR-O02 v�
 
 ## 4.10. Đánh giá kiến trúc theo ATAM rút gọn
 
-Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng rút gọn (Kazman et al., 2000; Bass et al., 2021), với ba sản phẩm: cây tiện ích (utility tree) xếp hạng kịch bản theo mức quan trọng và mức khó đạt (C – cao, T – trung bình, Th – thấp); các điểm nhạy (sensitivity point) và điểm đánh đổi (tradeoff point); các rủi ro (risk) và không rủi ro (non-risk). Do không tổ chức các buổi làm việc với các bên liên quan, kịch bản và xếp hạng chỉ phản ánh đánh giá của tác giả. Bảng 4.11 trình bày kết quả; kịch bản và ngưỡng lấy từ Bảng 3.8.
+Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng rút gọn (Kazman et al., 2000; Bass et al., 2021), gồm ba sản phẩm: cây tiện ích (utility tree) xếp hạng kịch bản theo mức quan trọng và mức khó đạt (C – cao, T – trung bình, Th – thấp); các điểm nhạy (sensitivity point) và điểm đánh đổi (tradeoff point); các rủi ro (risk) và không rủi ro (non-risk). Do không tổ chức các buổi làm việc với các bên liên quan, kịch bản và xếp hạng chỉ phản ánh đánh giá của tác giả. Bảng 4.11 trình bày kết quả; kịch bản và ngưỡng lấy từ Bảng 3.8.
 
 **Bảng 4.11.** Cây tiện ích, điểm nhạy, điểm đánh đổi, rủi ro và không rủi ro
 
@@ -299,15 +299,15 @@ Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng r
 | TP-2 | Đánh đổi | Thời gian chờ API (8–25 giây) | Phục hồi ↔ hiệu năng | Tránh báo lỗi giả khi mạng chậm |
 | TP-3 | Đánh đổi | AI dự phòng (STT, LLM chờ tối đa 5 giây/lần thử) | Phục hồi ↔ chi phí, hiệu năng | Chấp nhận chi phí; đo RS-05 |
 | TP-4 | Đánh đổi | API nghiệp vụ trên FaaS | Mở rộng ↔ khởi động nguội | Tải trước ngữ cảnh khi mở phiên |
-| R-1 | Rủi ro | Token đầu của LLM vượt 2 giây | Hiệu năng | Đã xảy ra trong đợt đo 05–06/09/2026 (mục 6.4) |
+| R-1 | Rủi ro | Token đầu của LLM vượt 2 giây | Hiệu năng | Đã xảy ra trong đợt đo 05–06/09/2026: P95 3,75 giây so với ngưỡng 2 giây (mục 6.4) |
 | R-2 | Rủi ro | Một khóa bí mật JWT dùng chung | Bảo mật | Khóa bất đối xứng (hướng phát triển) |
 | R-3 | Rủi ro | Một nhà cung cấp truyền thông | Phục hồi | Ngoài phạm vi nguyên mẫu |
 | R-4 | Rủi ro | Chỉ một vùng AWS | Phục hồi | Chấp nhận ở nguyên mẫu |
 | NR-1 | Không rủi ro | Dữ liệu riêng; tác nhân chỉ gọi API | Phục hồi, bảo trì | Lỗi không lan (RS-01, RS-02, RS-04) |
 | NR-2 | Không rủi ro | Tác nhân chỉ kết nối chiều ra | Bảo mật | Không nhận kết nối vào |
 
-Rủi ro lớn nhất (R-1) nằm ở thành phần bên ngoài: thời gian sinh token đầu của LLM. Lớp trừu tượng nhà cung cấp (mục 5.3.4) cho phép thay LLM mà không ảnh hưởng dịch vụ khác, nhưng kiến trúc không rút ngắn được thời gian này. Chương 6 kiểm chứng U-1 đến U-6, SP-1, TP-2, TP-3, R-1 và NR-1; các mục còn lại (SP-2, TP-1, TP-4, R-2 đến R-4, NR-2) chưa được kiểm chứng riêng.
+Rủi ro lớn nhất (R-1) nằm ở thành phần bên ngoài: thời gian sinh token đầu của LLM. Lớp trừu tượng nhà cung cấp (mục 5.3.4) cho phép thay LLM mà không ảnh hưởng đến dịch vụ khác, nhưng kiến trúc không rút ngắn được thời gian này. Chương 6 kiểm chứng U-1 đến U-6, SP-1, TP-2, TP-3, R-1 và NR-1; các mục còn lại (SP-2, TP-1, TP-4, R-2 đến R-4, NR-2) chưa được kiểm chứng riêng.
 
 ## Kết luận chương
 
-Kiến trúc microservices được chọn dựa trên các yêu cầu phi chức năng; đánh giá ATAM cho thấy rủi ro lớn nhất (R-1) là thời gian sinh token đầu của LLM, nằm ngoài hệ thống. Chương 5 trình bày phần hiện thực.
+Kiến trúc microservices được chọn dựa trên các yêu cầu phi chức năng; đánh giá ATAM cho thấy rủi ro lớn nhất (R-1) là thời gian sinh token đầu của LLM, một thành phần nằm ngoài hệ thống. Chương 5 trình bày phần hiện thực của thiết kế này.

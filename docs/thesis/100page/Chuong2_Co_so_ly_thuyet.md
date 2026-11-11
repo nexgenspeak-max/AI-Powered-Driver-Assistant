@@ -10,7 +10,7 @@ Gọi công cụ (function calling) cho phép mô hình chọn một công cụ 
 
 ## 2.3. Truyền thông thời gian thực: WebRTC và SIP
 
-WebRTC là bộ giao thức chuẩn cho thoại và video thời gian thực (Alvestrand, 2021). Tài xế và tác nhân hội thoại cùng tham gia một phòng hội thoại (room) trên máy chủ truyền thông; cuộc gọi từ mạng điện thoại công cộng (PSTN) vào phòng qua SIP trunk và dùng chung logic nghiệp vụ với kênh ứng dụng. Luận văn dùng khung LiveKit Agents (LiveKit Inc., n.d.) để truyền âm thanh, tích hợp các nhà cung cấp STT, LLM, TTS và dự phòng khi một nhà cung cấp lỗi (mục 5.3.4).
+WebRTC là bộ giao thức chuẩn cho thoại và video thời gian thực (Alvestrand, 2021). Tài xế và tác nhân hội thoại cùng tham gia một phòng hội thoại (room) trên máy chủ truyền thông; cuộc gọi từ mạng điện thoại chuyển mạch công cộng (PSTN) được đưa vào phòng qua SIP trunk và dùng chung logic nghiệp vụ với kênh ứng dụng. Luận văn dùng khung LiveKit Agents (LiveKit Inc., n.d.) để truyền âm thanh, tích hợp các nhà cung cấp STT, LLM, TTS và dự phòng khi một nhà cung cấp lỗi (mục 5.3.4).
 
 ## 2.4. Yêu cầu phần mềm và mô hình chất lượng
 
@@ -44,15 +44,15 @@ Chiến thuật kiến trúc là quyết định thiết kế tác động trự
 | Tính khả dụng (chương 13) | Hủy bỏ; duy trì mô hình tác vụ, người dùng và hệ thống | Hiện thực trong tác nhân hội thoại và ứng dụng tài xế (mục 4.8) |
 | Khả năng bảo trì | Không có NFR riêng nên không chọn chiến thuật riêng | Tổ chức theo năng lực nghiệp vụ, tự động hóa hạ tầng (Lewis & Fowler, 2014); triển khai độc lập (Newman, 2021) |
 
-Khả năng mở rộng dùng chiến thuật tăng tài nguyên và nhiều bản sao, hiện thực bằng nhiều bản sao tác nhân (AC-16, Bảng 3.8). Ngoài các chiến thuật trên, tính khả dụng còn được bổ sung bằng 10 nguyên tắc của Nielsen (Nielsen, 1994), áp dụng ở mục 4.8.
+Khả năng mở rộng dùng chiến thuật tăng tài nguyên và nhiều bản sao, được hiện thực bằng cách chạy nhiều bản sao tác nhân (AC-16, Bảng 3.8). Ngoài các chiến thuật trên, tính khả dụng còn được bổ sung bằng 10 nguyên tắc của Nielsen (Nielsen, 1994), áp dụng ở mục 4.8.
 
 ## 2.6. Kiến trúc microservices
 
-Microservices tổ chức ứng dụng thành các dịch vụ nhỏ; mỗi dịch vụ chạy trong tiến trình riêng, giao tiếp qua cơ chế nhẹ như HTTP, được xây dựng quanh một năng lực nghiệp vụ và triển khai độc lập (Dragoni et al., 2017; Lewis & Fowler, 2014). Mỗi dịch vụ ứng với một ngữ cảnh giới hạn (bounded context) và ẩn dữ liệu của mình (Newman, 2021), thường đi kèm các mẫu "mỗi dịch vụ một cơ sở dữ liệu" và "cổng API" (Richardson, 2018). Đổi lại, kiến trúc này khiến vận hành phức tạp, khó kiểm thử và giám sát xuyên dịch vụ, khó bảo đảm nhất quán dữ liệu (Soldani et al., 2018), nên việc chọn microservices phải được lập luận từ yêu cầu và ghi lại trong bản ghi quyết định kiến trúc (Architecture Decision Record – ADR) ở Chương 4.
+Microservices tổ chức ứng dụng thành các dịch vụ nhỏ; mỗi dịch vụ chạy trong tiến trình riêng, giao tiếp qua cơ chế nhẹ như HTTP, được xây dựng quanh một năng lực nghiệp vụ và triển khai độc lập (Dragoni et al., 2017; Lewis & Fowler, 2014). Mỗi dịch vụ ứng với một ngữ cảnh giới hạn (bounded context) và ẩn dữ liệu của mình (Newman, 2021), thường đi kèm các mẫu "mỗi dịch vụ một cơ sở dữ liệu" và "cổng API" (Richardson, 2018). Đổi lại, kiến trúc này làm vận hành phức tạp hơn và khiến việc kiểm thử, giám sát xuyên dịch vụ cũng như bảo đảm nhất quán dữ liệu trở nên khó khăn (Soldani et al., 2018), nên việc chọn microservices phải được lập luận từ yêu cầu và ghi lại trong bản ghi quyết định kiến trúc (Architecture Decision Record – ADR) ở Chương 4.
 
 ## 2.7. Điện toán đám mây: serverless và container
 
-Điện toán không máy chủ (serverless) giao việc quản trị hạ tầng cho nhà cung cấp: nền tảng tự cấp phát, mở rộng theo số yêu cầu và tính phí theo mức dùng (Jonas et al., 2019). Hàm như dịch vụ (Function as a Service – FaaS), điển hình là AWS Lambda, phù hợp với API nhanh, phi trạng thái, nhưng bị giới hạn thời gian chạy và độ trễ khởi động nguội (cold start: lần gọi đầu sau thời gian nhàn rỗi phải chờ khởi tạo hàm), nên không phù hợp với tác nhân hội thoại vốn giữ kết nối dài. Vì vậy, tác nhân chạy trên container được quản lý (Amazon ECS trên AWS Fargate), mở rộng ngang bằng cách tăng số bản sao. Hai trụ cột độ tin cậy và hiệu quả hiệu năng của AWS Well-Architected Framework (Amazon Web Services, 2024) tương ứng với các yêu cầu về khả năng phục hồi, khả năng mở rộng và hiệu năng.
+Điện toán không máy chủ (serverless) giao việc quản trị hạ tầng cho nhà cung cấp: nền tảng tự cấp phát, mở rộng theo số yêu cầu và tính phí theo mức dùng (Jonas et al., 2019). Hàm dưới dạng dịch vụ (Function as a Service – FaaS), điển hình là AWS Lambda, phù hợp với các API xử lý nhanh, phi trạng thái, nhưng bị giới hạn thời gian chạy và độ trễ khởi động nguội (cold start: lần gọi đầu sau thời gian nhàn rỗi phải chờ khởi tạo hàm), nên không phù hợp với tác nhân hội thoại vốn giữ kết nối dài. Vì vậy, tác nhân chạy trên container được quản lý (Amazon ECS trên AWS Fargate), mở rộng ngang bằng cách tăng số bản sao. Hai trụ cột độ tin cậy và hiệu quả hiệu năng của AWS Well-Architected Framework (Amazon Web Services, 2024) tương ứng với các yêu cầu về khả năng phục hồi, khả năng mở rộng và hiệu năng.
 
 ## 2.8. An toàn khi lái và cơ sở lựa chọn ngưỡng độ trễ
 
@@ -66,11 +66,11 @@ Các phép đo tải thị giác và nhận thức khi dùng hệ thống thông
 
 ### 2.9.2. Mô hình ngôn ngữ gọi công cụ và cách đánh giá
 
-Mô hình ngôn ngữ có thể học cách gọi công cụ (Schick et al., 2023). Gorilla (Patil et al., 2023) và ToolLLM (Qin et al., 2023) đánh giá độ chính xác gọi API ở quy mô hàng nghìn API. BFCL (Patil et al., 2025) chấm điểm bằng so khớp cây cú pháp trừu tượng và cho thấy mô hình mạnh đã làm tốt lời gọi đơn lượt, còn ghi nhớ, quyết định nhiều bước và suy luận dài vẫn là thách thức. Gần luận văn nhất là τ-bench (Yao et al., 2024): tác nhân trao đổi với người dùng giả lập theo chính sách nghiệp vụ, nhiệm vụ chỉ thành công khi trạng thái cuối của cơ sở dữ liệu khớp với trạng thái mong đợi; mô hình tốt nhất khi công bố (GPT-4o) hoàn thành dưới 50% nhiệm vụ. Từ đó, luận văn định nghĩa "tỷ lệ hoàn thành nghiệp vụ" theo trạng thái dữ liệu backend (mục 6.3) và áp dụng xác nhận hai bước cho thao tác rủi ro.
+Mô hình ngôn ngữ có thể học cách gọi công cụ (Schick et al., 2023). Gorilla (Patil et al., 2023) và ToolLLM (Qin et al., 2023) đánh giá độ chính xác gọi API ở quy mô hàng nghìn API. BFCL (Patil et al., 2025) chấm điểm bằng so khớp cây cú pháp trừu tượng và cho thấy mô hình mạnh đã làm tốt lời gọi đơn lượt, còn ghi nhớ, quyết định nhiều bước và suy luận dài hạn vẫn là thách thức. Gần luận văn nhất là τ-bench (Yao et al., 2024): tác nhân trao đổi với người dùng giả lập theo chính sách nghiệp vụ, nhiệm vụ chỉ thành công khi trạng thái cuối của cơ sở dữ liệu khớp với trạng thái mong đợi; mô hình tốt nhất khi công bố (GPT-4o) hoàn thành dưới 50% nhiệm vụ. Từ đó, luận văn định nghĩa "tỷ lệ hoàn thành nghiệp vụ" theo trạng thái dữ liệu backend (mục 6.3) và áp dụng xác nhận hai bước cho thao tác rủi ro.
 
 ### 2.9.3. Độ trễ và chuyển lượt trong hệ thống hội thoại
 
-Nhiều hệ thống dùng ngưỡng im lặng để xác định người dùng đã nói xong, gây khoảng chờ không tự nhiên hoặc ngắt lời (Skantze, 2021). Mô hình đầu cuối song công như Moshi (Défossez et al., 2024) đạt độ trễ khoảng 200 mili-giây, so với vài giây của chuỗi theo tầng, nhưng chưa hỗ trợ gọi công cụ. Vì vậy, luận văn giữ chuỗi theo tầng, bù độ trễ bằng câu đệm và tách riêng thời gian phát hiện kết thúc phát ngôn khi phân tích điểm nghẽn (Bảng 6.4).
+Nhiều hệ thống dùng ngưỡng im lặng để xác định người dùng đã nói xong, gây khoảng chờ không tự nhiên hoặc ngắt lời (Skantze, 2021). Các mô hình đầu cuối song công như Moshi (Défossez et al., 2024) đạt độ trễ khoảng 200 mili-giây, so với vài giây của chuỗi theo tầng, nhưng chưa hỗ trợ gọi công cụ. Vì vậy, luận văn giữ chuỗi theo tầng, bù độ trễ bằng câu đệm và tách riêng thời gian phát hiện kết thúc phát ngôn khi phân tích điểm nghẽn (Bảng 6.4).
 
 ### 2.9.4. Trí tuệ nhân tạo trong dịch vụ gọi xe
 
@@ -104,8 +104,8 @@ Luận văn dùng sáu chỉ số đánh giá, gắn với các câu hỏi nghi�
 
 ## 2.11. Khoảng trống nghiên cứu và định hướng luận văn
 
-Từ Bảng 2.2 và mục 2.9.5, có ba khoảng trống: (1) thiếu giải pháp tích hợp đồng thời hội thoại thời gian thực, gọi công cụ, nghiệp vụ của tài xế gọi xe và mục tiêu giảm thao tác khi lái; (2) nghiên cứu AI trong gọi xe nghiêng về nền tảng hoặc hành khách, chưa tập trung vào trợ lý thực thi nghiệp vụ cho tài xế; (3) các công trình về trợ lý giọng nói ít lập luận kiến trúc từ NFR và ít đánh giá khả năng mở rộng, khả năng phục hồi của hệ thống phân tán. Các chương sau giải quyết các khoảng trống này trong phạm vi mục 1.5.
+Từ Bảng 2.2 và mục 2.9.5, có ba khoảng trống: (1) thiếu giải pháp tích hợp đồng thời hội thoại thời gian thực, gọi công cụ, nghiệp vụ của tài xế gọi xe và mục tiêu giảm thao tác khi lái; (2) nghiên cứu AI trong gọi xe nghiêng về nền tảng hoặc hành khách, chưa tập trung vào trợ lý thực thi nghiệp vụ cho tài xế; (3) các công trình về trợ lý giọng nói ít lập luận kiến trúc từ NFR và ít đánh giá khả năng mở rộng, khả năng phục hồi của hệ thống phân tán. Các chương sau giải quyết ba khoảng trống này trong phạm vi nêu ở mục 1.5.
 
 ## Kết luận chương
 
-Chương 2 xác lập nền tảng kỹ thuật và kỹ nghệ phần mềm, sáu chỉ số đánh giá và ba khoảng trống nghiên cứu (mục 2.11). Chương 3 vận dụng các khái niệm này để phân tích yêu cầu.
+Chương 2 đã trình bày nền tảng kỹ thuật và kỹ nghệ phần mềm, sáu chỉ số đánh giá và ba khoảng trống nghiên cứu (mục 2.11). Chương 3 vận dụng các khái niệm này để phân tích yêu cầu.

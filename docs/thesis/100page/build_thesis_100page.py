@@ -77,7 +77,7 @@ CONCLUSION_PARAS = [
     "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần (200/200 lượt tiêm lỗi không làm hỏng luồng hội thoại), nhưng phiên đang chạy bị mất khi một bản sao tác nhân bị dừng. Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ (khoảng 225 MB mỗi phiên). AC-16 đạt trong môi trường mô phỏng, chưa kiểm chứng trên AWS với nhà cung cấp AI thật.",
     "- RQ2: Trên 174 lượt qua LLM (05–06/09/2026), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu (P95 2,49 giây); thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ để tính P95.",
     "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe; với một người đọc và 22 câu, kết quả này chỉ cho thấy xu hướng.",
-    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ, 32/43 (74,4%) hoàn thành đúng ngay lần đầu; khoảng tin cậy rộng do cỡ mẫu nhỏ, và chỉ có một người chấm. Lỗi chủ yếu là chọn sai thao tác (do nhánh rút gọn nay đã loại bỏ), sai tham số và đáp lời nhưng chưa thực hiện. Về tính khả dụng (AC-14), 100% thao tác rủi ro có bước xác nhận; danh mục hành vi khi lái đạt 6/6 sau một vòng sửa.",
+    "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ, 32/43 (74,4%) hoàn thành đúng ngay lần đầu; khoảng tin cậy rộng do cỡ mẫu nhỏ, và chỉ có một người chấm. Lỗi chủ yếu là chọn sai thao tác (phát sinh từ nhánh rút gọn, nay đã loại bỏ), sai tham số và đáp lời nhưng chưa thực hiện. Về tính khả dụng (AC-14), 100% thao tác rủi ro có bước xác nhận; danh mục hành vi khi lái đạt 6/6 sau một vòng sửa.",
     "Đóng góp chính: kiến trúc tham chiếu được lập luận từ yêu cầu phi chức năng; nguyên mẫu mã nguồn công khai; khung đánh giá gắn với tiêu chí chấp nhận; bằng chứng cho thấy độ trễ chủ yếu do mô hình ngôn ngữ bên ngoài chi phối, còn kiến trúc gần như không làm tăng độ trễ khi số phiên tăng (trong môi trường mô phỏng).",
     "Hạn chế và hướng phát triển:",
     "- Độ trễ chưa đạt (NFR-02): đo lại thiết kế hiện hành với ít nhất 200 lượt; thử mô hình nhanh hơn, rút gọn lời nhắc và giảm số vòng gọi công cụ.",
@@ -86,7 +86,7 @@ CONCLUSION_PARAS = [
     "- Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.13, Bảng 6.9); cần xóa nhật ký cũ và tự động hóa bước quét nhật ký.",
     "- Hệ thống chưa được triển khai đầy đủ trên AWS (mục 5.6.1): triển khai toàn bộ các stack và đo lại trên Lambda, API Gateway và Fargate.",
     "- Cỡ mẫu nhỏ, chỉ một người đọc (RQ3) và một người chấm (RQ4): bổ sung người đọc và mức nhiễu; dùng hai người chấm độc lập và báo cáo hệ số đồng thuận.",
-    "- SMS chưa được giao tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi với Twilio; kiểm tra chữ ký X-Twilio-Signature ở webhook (mục 6.13).",
+    "- SMS chưa được giao tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi (sender ID) với Twilio; kiểm tra chữ ký X-Twilio-Signature ở webhook (mục 6.13).",
     "- AC-09 (từ khóa đánh thức), AC-12 (điều phối viên mời tài xế) và gói tiếng Anh chưa được đánh giá định lượng: đo tỷ lệ đánh thức đúng và đánh thức nhầm, đánh giá luồng mời tài xế, đo tỷ lệ lỗi từ và độ trễ với tiếng Anh.",
     "- Chưa có nghiên cứu người dùng: tiến hành thử nghiệm có kiểm soát với tài xế trong kịch bản lái mô phỏng, đo thời gian hoàn thành tác vụ, số lần nhìn màn hình và tải nhận thức.",
 ]
@@ -192,8 +192,8 @@ APPENDIX_B_DIALOGUES = [
 APPENDIX_D_INTRO = (
     "Bảng D.1 tóm tắt cấu hình chính của tác nhân hội thoại. Cấu hình không bí mật nằm trong envs/config.<môi "
     "trường>.toml; khóa bí mật nằm trong .env, không được đưa vào kho mã nguồn (tệp mẫu: envs/config.example.toml, "
-    "envs/.env.example). Cột cuối ghi giá trị dùng khi đo phiên hội thoại thật (mục 6.2.1); còn thử tải và tiêm "
-    "lỗi dùng nhà cung cấp AI giả lập (mục 6.2.2)."
+    "envs/.env.example). Cột cuối ghi giá trị cấu hình hiện hành; giá trị nào khác với lúc đo phiên hội thoại thật (mục 6.2.1) thì "
+    "được ghi kèm. Thử tải và tiêm lỗi dùng nhà cung cấp AI giả lập (mục 6.2.2)."
 )
 
 APPENDIX_D_ENV = [
@@ -203,11 +203,11 @@ APPENDIX_D_ENV = [
     ("STT_LANGUAGE", "Ngôn ngữ nhận dạng (BCP-47)", "vi-VN"),
     ("LLM_PROVIDER", "Nhà cung cấp mô hình ngôn ngữ", "openai (lựa chọn khác: gemini / kimi)"),
     ("LLM_MODEL", "Mô hình ngôn ngữ", "gpt-5.6-luna"),
-    ("TTS_PROVIDER", "Nhà cung cấp tổng hợp giọng nói", "google (lựa chọn khác: elevenlabs / gemini / openai)"),
-    ("GOOGLE_TTS_VOICE", "Giọng đọc tiếng Việt", "vi-VN-Chirp3-HD-Kore"),
+    ("TTS_PROVIDER", "Nhà cung cấp tổng hợp giọng nói", "elevenlabs, mô hình eleven_v4_turbo, giọng Kiều Linh (nữ, miền Nam); đợt đo 05–06/09/2026 dùng google (lựa chọn khác: gemini / openai)"),
+    ("GOOGLE_TTS_VOICE", "Giọng đọc tiếng Việt của Google TTS (dự phòng)", "vi-VN-Chirp3-HD-Kore"),
     ("GOOGLE_TTS_SPEAKING_RATE", "Tốc độ đọc", "0,95"),
     ("GOOGLE_TTS_PITCH", "Cao độ giọng", "-2,0"),
-    ("STT_FALLBACK, LLM_FALLBACK, TTS_FALLBACK", "Nhà cung cấp dự phòng (danh sách, phân cách bằng dấu phẩy)", "Không cấu hình trong đợt đo"),
+    ("STT_FALLBACK, LLM_FALLBACK, TTS_FALLBACK", "Nhà cung cấp dự phòng (danh sách, phân cách bằng dấu phẩy)", "TTS_FALLBACK = google; STT, LLM không cấu hình dự phòng trong đợt đo"),
     ("EXTERNAL_API_SERVICE_URL", "Địa chỉ Dịch vụ Chuyến đi và Điều phối", "http://localhost:8002 (cục bộ)"),
     ("CALL_RECORDS_SERVICE_URL", "Địa chỉ Dịch vụ Nhật ký cuộc gọi", "http://localhost:8001 (cục bộ)"),
     ("LIVEKIT_URL", "Địa chỉ LiveKit Cloud", "wss://<tên-project>.livekit.cloud"),
@@ -463,7 +463,7 @@ REFERENCES = [
     (
         "ref_alvestrand2021",
         "Alvestrand, H. (2021). «Overview: Real-time protocols for browser-based applications» "
-        "(RFC 8825). IETF. https://www.rfc-editor.org/rfc/rfc8825",
+        "(RFC 8825). Internet Engineering Task Force. https://www.rfc-editor.org/rfc/rfc8825",
         "Alvestrand, 2021",
     ),
     (
@@ -694,7 +694,7 @@ REFERENCES = [
     ),
     (
         "ref_soldani2018",
-        "Soldani, J., Tamburri, D. A., & Van Den Heuvel, W.-J. (2018). The pains and gains of microservices: "
+        "Soldani, J., Tamburri, D. A., & van den Heuvel, W.-J. (2018). The pains and gains of microservices: "
         "A systematic grey literature review. «Journal of Systems and Software, 146», 215–232. "
         "https://doi.org/10.1016/j.jss.2018.09.082",
         "Soldani et al., 2018",
@@ -795,16 +795,16 @@ def soft_breaks(text: str, width_cm: float) -> str:
     return " ".join(out)
 
 ABSTRACT_PARAS = [
-    "Tài xế xe công nghệ thường phải thao tác điện thoại khi lái để xem chuyến, cập nhật trạng thái và liên lạc với khách. Theo phương pháp nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế làm các việc này mà không cần dùng tay.",
+    "Tài xế xe công nghệ thường phải thao tác điện thoại khi lái để xem chuyến, cập nhật trạng thái và liên lạc với khách, nhất là ở các hãng xe nhận đặt chuyến qua tổng đài, Zalo hoặc Facebook và do điều phối viên tạo chuyến. Theo phương pháp nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế làm các việc này mà không cần dùng tay.",
     "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả bằng kịch bản thuộc tính chất lượng và 19 tiêu chí chấp nhận dạng Given – When – Then. Dựa trên các chiến thuật kiến trúc, luận văn chọn kiến trúc microservices trên AWS; Dịch vụ Liên lạc hội thoại thời gian thực được tách khỏi các dịch vụ nghiệp vụ và xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm (câu ngắn báo đang xử lý). Nguyên mẫu chạy trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
-    "Cả 200 lượt tiêm lỗi ở mức thành phần đều không làm hỏng luồng hội thoại, nhưng lỗi treo khiến tài xế chờ 6–8 giây; khi một bản sao tác nhân bị dừng đột ngột, phiên mới vẫn được phục vụ nhưng phiên đang chạy bị mất (0/10). Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Trên 174 lượt qua mô hình ngôn ngữ (05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn, nay đã loại bỏ), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu; thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ để tính P95. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt (một người chấm), 37 (86,0%) chọn đúng công cụ, 32 (74,4%) hoàn thành đúng ngay lần đầu. Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3%. Hệ thống chưa được thử với tài xế thật; mọi kết quả đều nêu kèm cỡ mẫu và giới hạn.",
+    "Cả 200 lượt tiêm lỗi ở mức thành phần đều không làm hỏng luồng hội thoại, nhưng lỗi treo khiến tài xế chờ 6–8 giây; khi một bản sao tác nhân bị dừng đột ngột, phiên mới vẫn được phục vụ nhưng phiên đang chạy đều bị mất (0/10 phiên được giữ). Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Trên 174 lượt qua mô hình ngôn ngữ (05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn, nay đã loại bỏ), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu; thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ để tính P95. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt (một người chấm), 37 (86,0%) chọn đúng công cụ, 32 (74,4%) hoàn thành đúng ngay lần đầu. Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3% (2–4 chuyến). Hệ thống chưa được thử với tài xế thật; mọi kết quả đều nêu kèm cỡ mẫu và giới hạn.",
     "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, chiến thuật kiến trúc, ISO/IEC 25010, gọi công cụ, nghiên cứu khoa học thiết kế.",
 ]
 
 ABSTRACT_EN_PARAS = [
-    "Ride-hailing drivers often operate their phones while driving to check trips, update trip status and contact passengers. Following the design science research methodology, this thesis designs, implements and evaluates a voice-based AI assistant that lets drivers perform these tasks hands-free.",
-    "Functional requirements are specified for four user classes (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010 and specified as quality attribute scenarios and 19 Given–When–Then acceptance criteria. Based on architectural tactics, the thesis selects a microservices architecture on AWS; a real-time conversational service, separated from the business services, processes each turn through an STT – LLM with tool calling – TTS pipeline with provider fallback and filler utterances (short phrases signalling that processing is under way). The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
-    "All 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was killed, new sessions were still served but in-progress sessions were lost (0/10). With mock AI providers, latency did not increase as concurrent sessions grew from 1 to 40; memory, at about 225 MB per session, was the limit. Across 174 turns processed by the language model (5–6 September 2026, when the prototype still had a since-removed shortcut branch), P95 response latency was 3.75 seconds, above the 2-second target, mainly due to the time to first token; the current design (with filler utterances) has only four measured turns, too few to compute a P95. Word error rate rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 turns (one rater), 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. Two implementation defects (full phone numbers in logs, an error message exposing technical details) were fixed and passed re-testing. On simulated data, the stop ordering proposed by the system was on average 1.2–6.3% longer than optimal. The system has not yet been tested with real drivers; every result is reported with its sample size and limitations.",
+    "Ride-hailing drivers often operate their phones while driving to check trips, update trip status and contact passengers, especially at operators where customers book by hotline, Zalo or Facebook and a dispatcher creates the trips. Following the design science research methodology, this thesis designs, implements and evaluates a voice-based AI assistant that lets drivers perform these tasks hands-free.",
+    "Functional requirements are specified for four user classes (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010 and specified as quality attribute scenarios and 19 Given–When–Then acceptance criteria. Reasoning from architectural tactics, the thesis adopts a microservices architecture on AWS; a real-time conversational service, separated from the business services, processes each turn through a speech-to-text (STT) – large language model (LLM) with tool calling – text-to-speech (TTS) pipeline, with provider fallback and filler utterances (short phrases signaling that processing is under way). The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
+    "All 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was abruptly killed, new sessions were still served but all in-progress sessions were lost (0/10 retained). With mock AI providers, latency did not increase as concurrent sessions grew from 1 to 40; the limiting factor was memory, at about 225 MB per session. Across 174 turns processed by the language model (5–6 September 2026, when the prototype still had a since-removed shortcut branch), P95 response latency was 3.75 seconds, missing the 2-second target, mainly because of the LLM's time to first token; the current design (with filler utterances) has only four measured turns, too few to compute a P95. Word error rate rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 turns (one rater), 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. Two implementation defects (full phone numbers in logs, an error message exposing technical details) were fixed and passed re-testing. On simulated data, the stop ordering proposed by the system was on average 1.2–6.3% longer than the optimal route for two to four trips. The system has not yet been tested with real drivers; every result is reported with its sample size and limitations.",
     "Keywords: voice AI assistant, ride-hailing driver, microservices architecture, architectural tactics, ISO/IEC 25010, tool calling, design science research.",
 ]
 
@@ -817,7 +817,7 @@ ABBREVIATIONS_EN = [
     ("API", "Application Programming Interface", "Giao diện lập trình ứng dụng"),
     ("AWS", "Amazon Web Services", "Nền tảng điện toán đám mây của Amazon"),
     ("ATAM", "Architecture Tradeoff Analysis Method", "Phương pháp phân tích đánh đổi kiến trúc"),
-    ("BDD", "Behaviour-Driven Development", "Phát triển hướng hành vi"),
+    ("BDD", "Behavior-Driven Development", "Phát triển hướng hành vi"),
     ("BFCL", "Berkeley Function Calling Leaderboard", "Bảng xếp hạng khả năng gọi hàm của Berkeley"),
     ("CPU", "Central Processing Unit", "Bộ xử lý trung tâm"),
     ("DSR", "Design Science Research", "Nghiên cứu khoa học thiết kế"),
@@ -846,7 +846,7 @@ ABBREVIATIONS_EN = [
     ("P50", "50th percentile (median)", "Trung vị: một nửa số lần đo nhanh hơn hoặc bằng mức này"),
     ("P90", "90th percentile", "Mức thời gian mà 90% số lần đo nhanh hơn hoặc bằng"),
     ("P95", "95th percentile", "Mức thời gian mà 95% số lần đo nhanh hơn hoặc bằng; chỉ 5% lần chậm nhất vượt mức này"),
-    ("PSTN", "Public Switched Telephone Network", "Mạng điện thoại công cộng"),
+    ("PSTN", "Public Switched Telephone Network", "Mạng điện thoại chuyển mạch công cộng"),
     ("RAG", "Retrieval-Augmented Generation", "Sinh câu trả lời có truy xuất tri thức"),
     ("REST", "Representational State Transfer", "Chuyển giao trạng thái biểu diễn (kiểu kiến trúc API)"),
     ("RQ", "Research Question", "Câu hỏi nghiên cứu"),
@@ -857,7 +857,7 @@ ABBREVIATIONS_EN = [
     ("STT", "Speech-to-Text", "Chuyển giọng nói thành văn bản"),
     ("TTFB", "Time to First Byte", "Thời gian đến khi nhận byte (âm thanh) đầu tiên"),
     ("TTL", "Time to Live", "Thời hạn tồn tại của bản ghi hoặc token"),
-    ("TTS", "Text-to-Speech", "Tổng hợp giọng nói từ chữ"),
+    ("TTS", "Text-to-Speech", "Tổng hợp giọng nói từ văn bản"),
     ("UC", "Use Case", "Trường hợp sử dụng"),
     ("URL", "Uniform Resource Locator", "Địa chỉ tài nguyên trên mạng"),
     ("UUID", "Universally Unique Identifier", "Mã định danh duy nhất"),
@@ -893,12 +893,12 @@ def _supervisors_phrase() -> str:
 THANKS_PARAS = [
     "Trước hết, tôi xin bày tỏ lòng biết ơn sâu sắc tới "
     f"{_supervisors_phrase()}, "
-    "giảng viên hướng dẫn đã tận tình chỉ bảo, định hướng chuyên môn và góp ý cho tôi trong suốt quá trình thực hiện luận văn.",
+    "giảng viên hướng dẫn, người đã tận tình chỉ bảo, định hướng chuyên môn và góp ý cho tôi trong suốt quá trình thực hiện luận văn.",
     "Tôi xin chân thành cảm ơn Ban Giám hiệu, quý thầy cô và toàn thể cán bộ của "
-    "FPT School of Business & Technology (FSB) đã tạo điều kiện học tập và nghiên cứu thuận lợi.",
+    "FPT School of Business & Technology (FSB) đã tạo điều kiện thuận lợi cho tôi trong quá trình học tập và nghiên cứu.",
     "Tôi cũng xin cảm ơn các đồng nghiệp và bạn bè đã luôn sẵn sàng chia sẻ kinh nghiệm, "
     "hỗ trợ chuyên môn và động viên tôi trong quá trình xây dựng hệ thống nguyên mẫu.",
-    "Đặc biệt, tôi xin gửi lời tri ân đến gia đình, chỗ dựa vững chắc luôn động viên "
+    "Đặc biệt, tôi xin gửi lời tri ân đến gia đình — chỗ dựa vững chắc, luôn động viên "
     "và tạo điều kiện để tôi hoàn thành luận văn này.",
     "Dù tôi đã dành nhiều thời gian và nỗ lực, luận văn vẫn khó tránh khỏi những thiếu sót. "
     "Tôi rất mong nhận được ý kiến đóng góp của quý thầy cô và bạn đọc để luận văn được hoàn thiện hơn.",
@@ -908,11 +908,11 @@ THANKS_PARAS = [
 DECLARATION_PARAS = [
     (
         "Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi, được thực hiện dưới sự hướng dẫn của "
-        f"{_supervisors_phrase()}. Các kết quả nêu trong luận văn là trung thực và chưa được "
-        "công bố trong bất kỳ công trình nào khác để nhận bằng cấp."
+        f"{_supervisors_phrase()}. Các số liệu và kết quả nêu trong luận văn là trung thực, chưa từng được "
+        "công bố trong bất kỳ công trình nào khác để nhận bằng cấp; các tài liệu tham khảo đều được trích dẫn đầy đủ."
     ),
     (
-        "Tôi xin chịu trách nhiệm trước Nhà trường về tính trung thực của luận văn này."
+        "Tôi xin hoàn toàn chịu trách nhiệm trước Nhà trường về tính trung thực của luận văn này."
     ),
 ]
 
