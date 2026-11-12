@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home map strings not already in strings.xml (NavigationHud.tsx / NextStopCard.tsx). -->
+<resources>
+    <string name="nav_continue_for">Tiếp tục %1$s</string>
+    <string name="next_stop_call_fallback">khách</string>
+</resources>

@@ -1,0 +1,5 @@
+# Copy to local.properties (never committed). scripts/seed-local-properties.sh fills it from driver-app/.env.
+sdk.dir=/Users/<you>/Library/Android/sdk
+czen.tripServiceUrl=http://10.0.2.2:8002/api/v1
+czen.authServiceUrl=http://10.0.2.2:8003/api/v1
+czen.goongMapsKey=<goong-maps-key>

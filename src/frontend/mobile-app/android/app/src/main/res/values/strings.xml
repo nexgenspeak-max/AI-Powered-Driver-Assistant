@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copied verbatim from docs/delivery/001-native-driver-apps/parity-map.md (RN driver-app). -->
+<resources>
+    <string name="app_name" translatable="false">Czen</string>
+
+    <!-- Common -->
+    <string name="a11y_back">Quay lại</string>
+    <string name="a11y_clear_search">Xoá tìm kiếm</string>
+    <string name="a11y_show_password">Hiện mật khẩu</string>
+    <string name="a11y_hide_password">Ẩn mật khẩu</string>
+    <string name="common_retry">Thử lại</string>
+    <string name="common_error">Lỗi</string>
+    <string name="common_ok">OK</string>
+    <string name="common_save_changes">Lưu thay đổi</string>
+    <string name="common_saved">Đã lưu</string>
+    <string name="common_coming_soon">Sắp ra mắt</string>
+    <string name="common_cancel">Huỷ</string>
+    <string name="route_pickup">Điểm đón</string>
+    <string name="route_dropoff">Điểm đến</string>
+    <string name="customer_fallback">Khách</string>
+
+    <!-- Landing -->
+    <string name="landing_brand" translatable="false">Czen</string>
+    <string name="landing_tagline">Trợ lý giọng nói cho tài xế</string>
+    <string name="landing_body">Nhận chuyến, gọi khách, xem thu nhập — chỉ cần nói, mắt vẫn trên đường.</string>
+    <string name="auth_login">Đăng nhập</string>
+    <string name="auth_register">Đăng ký</string>
+
+    <!-- Login -->
+    <string name="login_subtitle">Chào mừng trở lại. Đăng nhập để bắt đầu nhận chuyến.</string>
+    <string name="field_phone">Số điện thoại</string>
+    <string name="field_phone_placeholder">0901 234 567</string>
+    <string name="field_phone_error">Số điện thoại chưa hợp lệ</string>
+    <string name="field_password">Mật khẩu</string>
+    <string name="field_password_error">Mật khẩu tối thiểu 6 ký tự</string>
+    <string name="login_failed">Đăng nhập thất bại. Kiểm tra lại thông tin.</string>
+    <string name="login_no_account">Chưa có tài khoản?</string>
+    <string name="login_register_link">Đăng ký</string>
+
+    <!-- Register -->
+    <string name="register_title">Trở thành tài xế Czen</string>
+    <string name="register_subtitle">Vài thông tin về bạn và xe là xong.</string>
+    <string name="field_name">Họ và tên</string>
+    <string name="field_name_placeholder">Nguyễn Văn A</string>
+    <string name="field_name_error">Tên tối thiểu 2 ký tự</string>
+    <string name="field_email">Email</string>
+    <string name="field_email_placeholder">you@example.com</string>
+    <string name="field_email_error">Email chưa hợp lệ</string>
+    <string name="field_vehicle_type">Loại xe</string>
+    <string name="field_vehicle_type_placeholder">Chọn loại xe</string>
+    <string name="field_vehicle_type_error">Chọn loại xe</string>
+    <string name="field_plate">Biển số xe</string>
+    <string name="field_plate_placeholder">36C1-36363</string>
+    <string name="field_plate_error">Biển số chưa hợp lệ</string>
+    <string name="field_vehicle_name">Tên xe</string>
+    <string name="field_vehicle_name_placeholder">Honda Wave</string>
+    <string name="field_vehicle_name_error">Nhập tên xe</string>
+    <string name="register_failed">Đăng ký thất bại. Kiểm tra lại thông tin.</string>
+    <string name="register_have_account">Đã có tài khoản?</string>
+    <string name="register_login_link">Đăng nhập</string>
+    <string name="vehicle_motorbike">Xe máy</string>
+    <string name="vehicle_car_4">Ô tô 4 chỗ</string>
+    <string name="vehicle_car_7">Ô tô 7 chỗ</string>
+    <string name="vehicle_truck">Xe tải</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_trips">Chuyến</string>
+    <string name="tab_assistant">Trợ lý</string>
+    <string name="tab_earnings">Thu nhập</string>
+    <string name="tab_profile">Cá nhân</string>
+    <string name="orb_idle">Trợ lý AI, đang tắt. Nhấn để bắt đầu hội thoại.</string>
+    <string name="orb_connecting">Trợ lý AI đang kết nối, vui lòng chờ.</string>
+    <string name="orb_connected">Trợ lý AI, đang bật. Nhấn để kết thúc phiên.</string>
+    <string name="orb_error">Trợ lý AI, đã xảy ra lỗi. Nhấn để thử lại.</string>
+    <string name="orb_connected_muted">Trợ lý AI đang kết nối, micro tắt. Nhấn để kết thúc phiên.</string>
+    <string name="orb_connected_closed">Trợ lý AI đang kết nối. Nhấn để mở lại hội thoại.</string>
+    <string name="orb_missing_phone">Không tìm thấy số điện thoại tài xế.</string>
+
+    <!-- Home map -->
+    <string name="map_status_online">Đang nhận chuyến</string>
+    <string name="map_status_offline">Đang nghỉ</string>
+    <string name="map_status_trips">· %1$d chuyến</string>
+    <string name="map_recenter">Về vị trí của tôi</string>
+    <string name="next_stop_pickup">Đón khách</string>
+    <string name="next_stop_arrived">Đã đến · chờ khách</string>
+    <string name="next_stop_dropoff">Trả khách</string>
+    <string name="next_stop_index">· 1/%1$d điểm</string>
+    <string name="next_stop_navigate">Chỉ đường</string>
+    <string name="next_stop_call">Gọi %1$s</string>
+    <string name="go_online_today">Hôm nay</string>
+    <string name="go_online_trips">%1$d chuyến</string>
+    <string name="go_online_cta">Bật nhận chuyến</string>
+    <string name="nav_loading">Đang tính đường...</string>
+    <string name="nav_error">Không lấy được chỉ đường</string>
+    <string name="nav_retry">Tính lại đường đi</string>
+    <string name="nav_arrived">Đã đến nơi</string>
+    <string name="nav_in">%1$s trong %2$s</string>
+    <string name="nav_straight_for">Đi thẳng %1$s</string>
+    <string name="nav_uturn">Quay đầu</string>
+    <string name="nav_roundabout">Vào vòng xuyến</string>
+    <string name="nav_merge">Nhập làn</string>
+    <string name="nav_turn_left">Rẽ trái</string>
+    <string name="nav_turn_right">Rẽ phải</string>
+    <string name="nav_straight">Đi thẳng</string>
+    <string name="nav_continue">Tiếp tục</string>
+    <string name="nav_remaining">Còn %1$s</string>
+    <string name="nav_rerouting">Đang tính lại đường...</string>
+    <string name="nav_exit">Thoát chỉ đường</string>
+
+    <!-- Dashboard (Chuyến) -->
+    <string name="dash_hello">Xin chào</string>
+    <string name="dash_today_summary">Hôm nay %1$s · %2$d chuyến xong</string>
+    <string name="dash_online_on">Đang bật</string>
+    <string name="dash_online_off">Đang tắt</string>
+    <string name="dash_online_a11y">Trạng thái sẵn sàng nhận chuyến</string>
+    <string name="dash_search">Tìm theo tên hoặc số điện thoại...</string>
+    <string name="dash_add_trip_a11y">Thêm chuyến tự tạo</string>
+    <string name="dash_seg_waiting">Chờ (%1$d)</string>
+    <string name="dash_seg_active">Đang chạy (%1$d)</string>
+    <string name="dash_seg_done">Xong (%1$d)</string>
+    <string name="dash_error_title">Không thể tải chuyến đi</string>
+    <string name="dash_error_body">Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.</string>
+    <string name="dash_empty_online_title">Chưa có chuyến nào</string>
+    <string name="dash_empty_online_body">Đang chờ chuyến mới được giao...</string>
+    <string name="dash_empty_offline_title">Bạn đang offline</string>
+    <string name="dash_empty_offline_body">Bật \"Đang bật\" để bắt đầu nhận chuyến</string>
+    <string name="dash_no_match">Không tìm thấy chuyến đi phù hợp</string>
+    <string name="dash_no_completed">Chưa có chuyến nào hoàn thành</string>
+    <string name="trip_reject">Từ chối</string>
+    <string name="trip_accept">Nhận chuyến</string>
+    <string name="trip_reject_title">Từ chối chuyến này?</string>
+    <string name="trip_reject_body">Bạn sẽ không thể nhận lại chuyến này sau khi từ chối.</string>
+    <string name="trip_reject_keep">Giữ lại</string>
+    <string name="trip_step_accepted">Đã nhận</string>
+    <string name="trip_step_arrived">Đã đến</string>
+    <string name="trip_step_picked">Đã đón</string>
+    <string name="trip_flag_bulky">Hàng cồng kềnh</string>
+    <string name="trip_flag_children">Có trẻ em</string>
+    <string name="trip_action_arrived">Đã đến điểm đón</string>
+    <string name="trip_action_picked">Đã đón khách</string>
+    <string name="trip_action_complete">Hoàn thành chuyến</string>
+    <string name="trip_action_done">Đã hoàn thành</string>
+    <string name="trip_call_customer">Gọi khách</string>
+    <string name="trip_cancel">Huỷ chuyến</string>
+    <string name="trip_cancel_title">Huỷ chuyến này?</string>
+    <string name="trip_cancel_body">Khách sẽ được thông báo. Thao tác này không thể hoàn tác.</string>
+    <string name="trip_cancel_keep">Giữ chuyến</string>
+    <string name="trip_confirm_failed_title">Chưa thể xác nhận</string>
+    <string name="trip_confirm_failed_body">Không thể xác nhận, vui lòng thử lại.</string>
+    <string name="trip_traffic_clear_marker" translatable="false">thông thoáng</string>
+    <string name="opt_title">Lộ trình tối ưu</string>
+    <string name="opt_summary">%1$d điểm · %2$s · ~%3$s · %4$s</string>
+    <string name="opt_shortest">ngắn nhất</string>
+    <string name="opt_fastest">nhanh nhất theo giao thông</string>
+    <string name="opt_fallback">Ước tính đường chim bay — chưa có dữ liệu giao thông thực tế</string>
+    <string name="opt_pickup">Đón %1$s</string>
+    <string name="opt_dropoff">Trả %1$s</string>
+    <string name="opt_origin_no_gps">Điểm xuất phát (chưa có GPS)</string>
+    <string name="opt_show_all">Xem cả %1$d điểm</string>
+    <string name="opt_collapse">Thu gọn</string>
+
+    <!-- Trip status labels -->
+    <string name="status_pending">Chờ gán tài xế</string>
+    <string name="status_notified">Chuyến mới</string>
+    <string name="status_calling">Đang gọi bạn</string>
+    <string name="status_confirmed">Đã nhận</string>
+    <string name="status_rejected">Đã từ chối</string>
+    <string name="status_no_answer">Không trả lời</string>
+    <string name="status_arrived_pickup">Đã đến điểm đón</string>
+    <string name="status_picked_up">Đang chở khách</string>
+    <string name="status_completed">Hoàn thành</string>
+    <string name="status_cancelled">Khách đã huỷ</string>
+    <string name="status_cancelled_by_driver">Bạn đã huỷ</string>
+    <string name="status_no_show">Khách vắng mặt</string>
+
+    <!-- Add trip -->
+    <string name="add_trip_title">Thêm chuyến (tự tạo)</string>
+    <string name="add_trip_intro">Chuyến sẽ vào ngay Đang chạy — không hiện banner nhận chuyến.</string>
+    <string name="add_trip_section_customer">Khách hàng</string>
+    <string name="add_trip_phone">Số điện thoại khách</string>
+    <string name="add_trip_phone_placeholder">09xxxxxxxx</string>
+    <string name="add_trip_phone_error">Vui lòng nhập số điện thoại khách</string>
+    <string name="add_trip_name">Tên khách (nếu có)</string>
+    <string name="add_trip_name_placeholder">Anh/chị…</string>
+    <string name="add_trip_section_route">Lộ trình</string>
+    <string name="add_trip_pickup">Điểm đón</string>
+    <string name="add_trip_dropoff">Điểm trả</string>
+    <string name="add_trip_address_placeholder">Số nhà, đường, phường/xã…</string>
+    <string name="add_trip_pickup_error">Vui lòng nhập điểm đón</string>
+    <string name="add_trip_dropoff_error">Vui lòng nhập điểm trả</string>
+    <string name="add_trip_note">Ghi chú (nếu có)</string>
+    <string name="add_trip_section_special">Yêu cầu đặc biệt</string>
+    <string name="add_trip_bulky">Hàng hoá cồng kềnh</string>
+    <string name="add_trip_children">Đi cùng trẻ em</string>
+    <string name="add_trip_submit">Thêm chuyến</string>
+    <string name="add_trip_failed">Không tạo được chuyến</string>
+    <string name="add_trip_failed_body">Vui lòng thử lại.</string>
+
+    <!-- Trip offer sheet -->
+    <string name="offer_title">Chuyến mới</string>
+    <string name="offer_countdown">Còn %1$ds</string>
+    <string name="offer_later">Để sau</string>
+    <string name="offer_fare">Cước ước tính</string>
+
+    <!-- Assistant chat -->
+    <string name="chat_minimize">Thu nhỏ hội thoại</string>
+    <string name="chat_title" translatable="false">Czen</string>
+    <string name="chat_empty_title">Nói với Czen</string>
+    <string name="chat_empty_connected">Czen đang nghe. Hỏi về chuyến, khách hay thu nhập.</string>
+    <string name="chat_empty_idle">Chạm nút Czen cạnh ô nhập rồi nói, hoặc chọn một gợi ý.</string>
+    <string name="chat_customer">Khách</string>
+    <string name="chat_replying">Đang trả lời...</string>
+    <string name="chat_empty_send">Bạn chưa nhập nội dung.</string>
+    <string name="chat_mic_off_a11y">Tắt micro, giữ kết nối</string>
+    <string name="chat_mic_on_a11y">Bật micro</string>
+    <string name="chat_placeholder_connecting">Đang kết nối...</string>
+    <string name="chat_placeholder_connected">Nói gì đó...</string>
+    <string name="chat_placeholder_idle">Kết nối Trợ lý AI để chat...</string>
+    <string name="chat_send">Gửi tin nhắn</string>
+    <string name="chat_voice_connect">Kết nối Czen</string>
+    <string name="chat_voice_end">Kết thúc phiên Czen</string>
+    <string name="call_cancel_title">Đang gọi khách</string>
+    <string name="call_cancel_body">Bạn muốn huỷ cuộc gọi này?</string>
+    <string name="call_cancel_keep">Tiếp tục gọi</string>
+    <string name="call_cancel_confirm">Huỷ cuộc gọi</string>
+    <string-array name="chat_canned_replies">
+        <item>Mình đã ghi nhận yêu cầu của bạn, để mình kiểm tra thêm nhé.</item>
+        <item>Bạn có thể xem chuyến đi hiện tại ở tab Dashboard.</item>
+        <item>Cảm ơn bạn đã chia sẻ, mình sẽ hỗ trợ bạn ngay.</item>
+    </string-array>
+    <string name="chat_canned_empty">Bạn muốn hỏi mình điều gì?</string>
+
+    <!-- Earnings -->
+    <string name="earn_title">Thu nhập</string>
+    <string name="earn_today">Hôm nay</string>
+    <string name="earn_week">7 ngày</string>
+    <string name="earn_month">30 ngày</string>
+    <string name="earn_total">Tổng thu nhập</string>
+    <string name="earn_trips">Chuyến</string>
+    <string name="earn_avg">TB/chuyến</string>
+    <string name="earn_hours">Giờ online</string>
+    <string name="earn_hours_value">%1$s giờ</string>
+    <string name="earn_bonus">Thưởng</string>
+    <string name="earn_error_tap">Không thể tải dữ liệu. Nhấn để thử lại.</string>
+    <string name="earn_chart_title">7 ngày qua</string>
+    <string name="earn_chart_best">Cao nhất %1$s: %2$s</string>
+    <string name="earn_chart_empty">Chưa có chuyến nào trong 7 ngày</string>
+    <string name="earn_search">Tìm theo tên khách hoặc địa chỉ...</string>
+    <string name="earn_history">Lịch sử</string>
+    <string name="earn_yesterday">Hôm qua</string>
+    <string name="earn_caption_match">%1$d/%2$d chuyến khớp “%3$s”</string>
+    <string name="earn_caption_recent">%1$d/%2$d chuyến gần đây</string>
+    <string name="earn_no_match">Không tìm thấy chuyến khớp “%1$s”.</string>
+    <string name="earn_empty_period">Chưa có chuyến hoàn thành trong khoảng thời gian này.</string>
+    <string name="earn_empty_title">Chưa có thu nhập</string>
+    <string name="earn_empty_online">Hoàn thành chuyến đầu tiên để thấy thu nhập ở đây.</string>
+    <string name="earn_empty_offline">Bật nhận chuyến để bắt đầu kiếm tiền hôm nay.</string>
+    <string name="earn_context_error_title">Không thể tải thu nhập</string>
+    <string name="earn_context_error_body">Kiểm tra kết nối rồi thử lại.</string>
+    <string name="weekday_sun">CN</string>
+    <string name="weekday_mon">T2</string>
+    <string name="weekday_tue">T3</string>
+    <string name="weekday_wed">T4</string>
+    <string name="weekday_thu">T5</string>
+    <string name="weekday_fri">T6</string>
+    <string name="weekday_sat">T7</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Cá nhân</string>
+    <string name="profile_badge_online">Đang nhận chuyến</string>
+    <string name="profile_badge_offline">Đang nghỉ</string>
+    <string name="profile_stats">Thống kê</string>
+    <string name="profile_rating">Đánh giá</string>
+    <string name="profile_total_trips">Tổng chuyến</string>
+    <string name="profile_accept_rate">Tỉ lệ nhận</string>
+    <string name="profile_complete_rate">Tỉ lệ hoàn thành</string>
+    <string name="profile_error">Không thể tải thông tin hồ sơ.</string>
+    <string name="profile_section_account">Tài khoản</string>
+    <string name="profile_edit">Chỉnh sửa hồ sơ</string>
+    <string name="profile_vehicle">Quản lý xe</string>
+    <string name="profile_section_payment">Thanh toán &amp; Giấy tờ</string>
+    <string name="profile_bank">Tài khoản ngân hàng</string>
+    <string name="profile_documents">Giấy tờ xác minh</string>
+    <string name="profile_section_support">Hỗ trợ &amp; Pháp lý</string>
+    <string name="profile_safety">Trung tâm an toàn</string>
+    <string name="profile_support">Hỗ trợ</string>
+    <string name="profile_terms">Điều khoản &amp; Chính sách bảo mật</string>
+    <string name="profile_section_settings">Cài đặt</string>
+    <string name="profile_assistant_settings">Cài đặt trợ lý</string>
+    <string name="profile_dark_mode">Chế độ tối</string>
+    <string name="profile_about">Giới thiệu</string>
+    <string name="profile_faq">Câu hỏi thường gặp</string>
+    <string name="profile_logout">Đăng xuất</string>
+    <string name="logout_title">Đăng xuất?</string>
+    <string name="logout_body">Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng ứng dụng.</string>
+    <string name="logout_stay">Ở lại</string>
+    <string name="profile_version">Phiên bản %1$s</string>
+
+    <!-- Edit profile -->
+    <string name="edit_profile_caption">Ảnh đại diện lấy theo chữ cái đầu của tên</string>
+    <string name="edit_profile_name">Tên hiển thị</string>
+    <string name="edit_profile_name_placeholder">Nhập tên của bạn</string>
+    <string name="edit_profile_saved">Hồ sơ của bạn đã được cập nhật.</string>
+    <string name="edit_profile_failed">Không thể lưu hồ sơ, vui lòng thử lại.</string>
+
+    <!-- Vehicle -->
+    <string name="vehicle_name">Tên xe</string>
+    <string name="vehicle_name_placeholder">VD: Toyota Vios</string>
+    <string name="vehicle_plate">Biển số</string>
+    <string name="vehicle_plate_placeholder">VD: 36B6-36363</string>
+    <string name="vehicle_saved">Thông tin xe đã được cập nhật.</string>
+    <string name="vehicle_failed">Không thể lưu thông tin xe, vui lòng thử lại.</string>
+
+    <!-- Assistant settings -->
+    <string name="as_intro">Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.</string>
+    <string name="as_intro_lang">Chọn ngôn ngữ Trợ lý nói và hiểu. Áp dụng từ lần kết nối tiếp theo.</string>
+    <string name="as_lang">Ngôn ngữ trợ lý</string>
+    <string name="as_lang_vn">🇻🇳 Tiếng Việt · Việt Nam</string>
+    <string name="as_lang_en">🇺🇸 English · English-speaking regions</string>
+    <string name="as_call_mode">Gọi khách mặc định</string>
+    <string name="as_call_agent">AI gọi hộ</string>
+    <string name="as_call_agent_desc">AI nói với khách, bạn nghe live và có thể chen vào khi cần</string>
+    <string name="as_call_bridge">Bạn nói trực tiếp</string>
+    <string name="as_call_bridge_desc">AI chỉ quay số, bạn nói trực tiếp với khách</string>
+    <string name="as_hands_free">Chế độ rảnh tay</string>
+    <string name="as_hands_free_desc">Nghe từ khoá đánh thức ở chế độ nền để điều khiển bằng giọng nói</string>
+    <string name="as_notify">Thông báo khách khi gần điểm đón</string>
+    <string name="as_notify_desc">Tự động gọi/nhắn khách khi tài xế còn cách điểm đón dưới %1$s</string>
+    <string name="as_notify_radius">Gọi nhắc khi còn cách</string>
+    <string name="as_suggest">Tự gợi ý điểm dừng tiếp theo</string>
+    <string name="as_suggest_desc">Trợ lý tự đề xuất điểm đón/trả kế tiếp khi còn cách dưới %1$s</string>
+
+    <!-- Static screens -->
+    <string name="bank_empty_title">Chưa liên kết tài khoản ngân hàng</string>
+    <string name="bank_empty_body">Thêm tài khoản ngân hàng để nhận thanh toán tiền cước trực tiếp. Tính năng này đang được phát triển.</string>
+    <string name="bank_add">Thêm tài khoản ngân hàng</string>
+    <string name="docs_intro">Tải lên giấy tờ để được xác minh và tiếp tục nhận chuyến. Tính năng tải ảnh giấy tờ đang được phát triển.</string>
+    <string name="docs_license">Bằng lái xe</string>
+    <string name="docs_registration">Đăng ký xe</string>
+    <string name="docs_insurance">Bảo hiểm xe</string>
+    <string name="docs_not_uploaded">Chưa tải lên</string>
+    <string name="docs_coming_soon">Tính năng tải lên giấy tờ sẽ sớm khả dụng.</string>
+    <string name="safety_emergency">Gọi khẩn cấp</string>
+    <string name="safety_police">Công an</string>
+    <string name="safety_medical">Cấp cứu y tế</string>
+    <string name="safety_fire">Phòng cháy chữa cháy</string>
+    <string name="safety_tips">Mẹo an toàn khi lái xe</string>
+    <string-array name="safety_tip_items">
+        <item>Xác nhận đúng khách hàng và điểm đón trước khi bắt đầu chuyến đi.</item>
+        <item>Nghỉ ngơi đầy đủ, không nhận chuyến khi cảm thấy quá mệt hoặc buồn ngủ.</item>
+        <item>Luôn thắt dây an toàn và tuân thủ luật giao thông trong suốt chuyến đi.</item>
+        <item>Nếu gặp tình huống bất thường với khách, hãy dừng xe ở nơi an toàn và liên hệ khẩn cấp ngay.</item>
+    </string-array>
+    <string name="support_intro">Cần giúp đỡ? Liên hệ với đội ngũ hỗ trợ tài xế qua các kênh bên dưới, hoặc xem câu hỏi thường gặp.</string>
+    <string name="support_hotline">Hotline hỗ trợ tài xế</string>
+    <string name="support_hotline_number" translatable="false">1900 1234</string>
+    <string name="support_email">Email hỗ trợ</string>
+    <string name="support_email_address" translatable="false">driver-support@czen.vn</string>
+    <string name="terms_title">Điều khoản &amp; Bảo mật</string>
+    <string-array name="terms_titles">
+        <item>1. Chấp nhận điều khoản</item>
+        <item>2. Tài khoản tài xế</item>
+        <item>3. Nhận chuyến và thanh toán</item>
+        <item>4. Tiêu chuẩn phục vụ</item>
+        <item>5. Quyền riêng tư</item>
+        <item>6. Thay đổi điều khoản</item>
+    </string-array>
+    <string-array name="terms_bodies">
+        <item>Bằng việc sử dụng ứng dụng tài xế, bạn đồng ý tuân thủ các điều khoản sử dụng này. Nếu không đồng ý, vui lòng ngừng sử dụng dịch vụ.</item>
+        <item>Bạn chịu trách nhiệm bảo mật thông tin đăng nhập, giữ thông tin xe/giấy tờ chính xác và cập nhật, cũng như mọi hoạt động diễn ra dưới tài khoản của mình.</item>
+        <item>Tiền cước mỗi chuyến được tính dựa trên quãng đường và các phụ phí (nếu có), thanh toán theo chu kỳ đối soát của nền tảng.</item>
+        <item>Tài xế cần đảm bảo xe đủ điều kiện an toàn, giấy tờ hợp lệ và thái độ phục vụ khách hàng đúng mực trong suốt quá trình vận hành.</item>
+        <item>Chúng tôi thu thập và sử dụng dữ liệu vị trí, lịch sử chuyến đi và thông tin liên hệ của bạn để cung cấp và cải thiện dịch vụ, theo Chính sách bảo mật.</item>
+        <item>Điều khoản này có thể được cập nhật theo thời gian. Việc tiếp tục sử dụng ứng dụng sau khi có thay đổi đồng nghĩa với việc bạn chấp nhận điều khoản mới.</item>
+    </string-array>
+    <string name="about_title">Czen — trợ lý giọng nói đồng hành cùng tài xế</string>
+    <string-array name="about_paragraphs">
+        <item>Czen là ứng dụng dành cho tài xế, tích hợp trợ lý AI bằng giọng nói giúp bạn nhận chuyến, chỉ đường và xử lý công việc nhanh chóng mà không cần rời tay khỏi vô lăng.</item>
+        <item>Bật \"Chế độ rảnh tay\" trong Cài đặt trợ lý để gọi trợ lý bất cứ lúc nào: xác nhận/từ chối chuyến mới, xem lộ trình tối ưu cho chuyến nhiều điểm giao, chỉ đường từng chặng, gọi hoặc nhắn tin cho khách và người thân, tra cứu thu nhập, thưởng, hay báo cáo sự cố.</item>
+        <item>Khi bạn đến gần điểm đón hoặc trả khách, ứng dụng tự động nhận diện vị trí để nhắc nhở hoặc gợi ý điểm dừng tiếp theo, giúp bạn tập trung lái xe an toàn hơn.</item>
+        <item>Mọi chuyến đi, thu nhập và vị trí của bạn đều được cập nhật theo thời gian thực ngay trên trang tổng quan.</item>
+    </string-array>
+    <string-array name="faq_questions">
+        <item>Làm sao để nhận chuyến mới?</item>
+        <item>Chế độ rảnh tay (trợ lý AI) hoạt động như thế nào?</item>
+        <item>Làm sao để tối ưu lộ trình khi chuyến có nhiều điểm giao?</item>
+        <item>Ứng dụng có chỉ đường từng chặng không?</item>
+        <item>Ứng dụng có tự nhắc khi tôi đến gần điểm đón/trả khách không?</item>
+        <item>Làm sao để liên hệ với khách hàng?</item>
+        <item>Xem thu nhập và tiền thưởng ở đâu?</item>
+        <item>Làm sao để cập nhật thông tin xe, giấy tờ hoặc tài khoản ngân hàng?</item>
+        <item>Gặp sự cố trong lúc chạy chuyến thì làm sao?</item>
+    </string-array>
+    <string-array name="faq_answers">
+        <item>Chuyến mới hiển thị dưới dạng banner kèm âm báo trên trang tổng quan (Dashboard); bạn có thể xác nhận hoặc từ chối ngay tại đó, hoặc nhờ trợ lý AI xác nhận giúp bằng giọng nói.</item>
+        <item>Bật \"Chế độ rảnh tay\" trong mục Cài đặt trợ lý để gọi trợ lý bằng giọng nói mà không cần chạm màn hình. Trợ lý có thể xác nhận/từ chối chuyến, chỉ đường, gọi hoặc nhắn tin cho khách, tra cứu thu nhập và nhiều việc khác.</item>
+        <item>Với chuyến có nhiều điểm dừng, mở tab Chuyến đi → Đang chạy để xem lộ trình tối ưu do hệ thống sắp xếp, hoặc nhờ trợ lý AI đọc thứ tự các điểm giúp bạn đi quãng đường ngắn nhất. Trên bản đồ vẫn thấy đường và số thứ tự điểm.</item>
+        <item>Có. Khi bắt đầu chuyến, màn hình điều hướng hiển thị chỉ dẫn từng chặng (turn-by-turn) và tự động cập nhật theo vị trí thực tế của bạn trong suốt hành trình.</item>
+        <item>Có, nếu bạn bật \"Thông báo khi gần điểm đón\" hoặc \"Tự động gợi ý điểm dừng tiếp theo\" trong Cài đặt trợ lý, ứng dụng sẽ tự nhắc hoặc gợi ý ngay khi bạn vào gần khu vực đó.</item>
+        <item>Bấm vào chuyến đi đang thực hiện để gọi hoặc nhắn tin trực tiếp cho khách, hoặc nhờ trợ lý AI kết nối giúp bằng giọng nói.</item>
+        <item>Vào mục Thu nhập trên trang tổng quan để xem chi tiết, hoặc hỏi trực tiếp trợ lý AI về thu nhập hôm nay, thống kê chuyến đi hay tiền thưởng.</item>
+        <item>Vào trang Hồ sơ để chỉnh sửa thông tin liên hệ, thông tin xe, giấy tờ và tài khoản ngân hàng nhận tiền.</item>
+        <item>Bạn có thể báo sự cố qua mục Hỗ trợ, hoặc nhờ trợ lý AI báo cáo sự cố hay tình trạng khách không có mặt ngay trong lúc chạy xe, không cần dừng xe thao tác thủ công.</item>
+    </string-array>
+
+    <!-- Foreground service / notifications -->
+    <string name="fg_channel_name">Czen Driver</string>
+    <string name="fg_channel_desc">Trạng thái trợ lý AI và cuộc gọi</string>
+    <string name="fg_title" translatable="false">Czen</string>
+    <string name="fg_call_message">Đang trong cuộc gọi với trợ lý AI</string>
+    <string name="fg_wake_message">Đang lắng nghe từ khoá đánh thức trợ lý</string>
+    <string name="fg_location_title">Czen đang theo dõi vị trí</string>
+    <string name="fg_location_message">Giúp báo cho khách hàng khi bạn sắp đến điểm đón.</string>
+
+    <!-- Dev login (debug only) -->
+    <string name="dev_login_progress">Đang đăng nhập...</string>
+    <string name="dev_login_missing">Thiếu phone/password</string>
+    <string name="dev_login_error">Lỗi đăng nhập: %1$s</string>
+</resources>

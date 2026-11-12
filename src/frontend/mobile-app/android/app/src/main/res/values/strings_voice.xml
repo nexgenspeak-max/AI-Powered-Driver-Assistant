@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voice panel copy (AssistantChatPanel.tsx). The EN variants follow the voice language, not the UI locale. -->
+<resources>
+    <string name="voice_caption_idle_vn">Chạm nút Czen cạnh ô nhập để kết nối</string>
+    <string name="voice_caption_connecting_vn">Đang kết nối với Czen…</string>
+    <string name="voice_caption_connected_vn">Đã kết nối — chạm sóng âm để kết thúc</string>
+    <string name="voice_caption_error_vn">Kết nối lỗi — chạm nút Czen để thử lại</string>
+    <string name="voice_caption_in_call_vn">Đang gọi khách — chạm nút Czen để huỷ cuộc gọi</string>
+    <string name="voice_caption_mic_off_vn">Mic đang tắt — phiên vẫn kết nối</string>
+    <string name="voice_caption_idle_en" translatable="false">Tap the Czen button next to the input to connect</string>
+    <string name="voice_caption_connecting_en" translatable="false">Connecting to Czen…</string>
+    <string name="voice_caption_connected_en" translatable="false">Connected to Czen — tap the waveform to end</string>
+    <string name="voice_caption_error_en" translatable="false">Connection failed — tap the Czen button to try again</string>
+    <string name="voice_caption_in_call_en" translatable="false">In a call — can\'t disconnect</string>
+    <string name="voice_caption_mic_off_en" translatable="false">Mic is off — the session is still connected</string>
+
+    <string name="voice_chip_mic_off_vn">Mic tắt</string>
+    <string name="voice_chip_listening_vn">Đang nghe</string>
+    <string name="voice_chip_connecting_vn">Đang kết nối</string>
+    <string name="voice_chip_error_vn">Lỗi</string>
+    <string name="voice_chip_off_vn">Tắt</string>
+    <string name="voice_chip_mic_off_en" translatable="false">Mic off</string>
+    <string name="voice_chip_listening_en" translatable="false">Listening</string>
+    <string name="voice_chip_connecting_en" translatable="false">Connecting</string>
+    <string name="voice_chip_error_en" translatable="false">Error</string>
+    <string name="voice_chip_off_en" translatable="false">Off</string>
+
+    <string-array name="voice_suggestions_vn">
+        <item>Lịch hôm nay</item>
+        <item>Gọi khách</item>
+        <item>Thu nhập hôm nay</item>
+        <item>Nên đi đâu tiếp?</item>
+    </string-array>
+    <string-array name="voice_suggestions_en" translatable="false">
+        <item>Today\'s schedule</item>
+        <item>Call the rider</item>
+        <item>Today\'s earnings</item>
+        <item>Where next?</item>
+    </string-array>
+</resources>
