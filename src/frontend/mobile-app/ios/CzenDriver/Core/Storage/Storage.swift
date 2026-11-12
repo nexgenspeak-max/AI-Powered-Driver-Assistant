@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 
 /// Persists the auth tokens. Live: Keychain (parity with expo-secure-store `driver-auth-tokens`).
@@ -10,6 +11,11 @@ protocol TokenStore: Sendable {
 struct KeychainTokenStore: TokenStore {
     var service = "com.chinhtruongba.driverapp"
     var account = "driver-auth-tokens"
+
+    /// UserDefaults key that marks "this install already ran". UserDefaults go away with the app,
+    /// Keychain items do not — so a missing marker means a fresh (re)install.
+    static let installMarkerKey = "keychain-tokens.install-marker"
+    private static let log = Logger(subsystem: "com.chinhtruongba.driverapp", category: "keychain")
 
     private var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
@@ -27,12 +33,34 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func save(_ tokens: AuthTokens?) {
-        SecItemDelete(query as CFDictionary)
-        guard let tokens, let data = try? JSONEncoder().encode(tokens) else { return }
-        var q = query
-        q[kSecValueData as String] = data
-        q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(q as CFDictionary, nil)
+        let status = write(tokens)
+        // Only the OSStatus is logged — never the token payload.
+        if status != errSecSuccess { Self.log.error("keychain \(tokens == nil ? "delete" : "write", privacy: .public) failed: OSStatus \(status, privacy: .public)") }
+    }
+
+    /// Writes (update in place, add when missing) or deletes the tokens; returns the Keychain status.
+    @discardableResult
+    func write(_ tokens: AuthTokens?) -> OSStatus {
+        guard let tokens else {
+            let status = SecItemDelete(query as CFDictionary)
+            return status == errSecItemNotFound ? errSecSuccess : status
+        }
+        guard let data = try? JSONEncoder().encode(tokens) else { return errSecParam }
+        let attributes: [String: Any] = [kSecValueData as String: data,
+                                         kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(query.merging(attributes) { _, new in new } as CFDictionary, nil)
+        }
+        return status
+    }
+
+    /// First launch after (re)install: drop tokens a previous install left in the Keychain, then
+    /// set the marker so later launches keep the session.
+    func resetIfFreshInstall(defaults: UserDefaults = .standard) {
+        guard !defaults.bool(forKey: Self.installMarkerKey) else { return }
+        save(nil)
+        defaults.set(true, forKey: Self.installMarkerKey)
     }
 }
 

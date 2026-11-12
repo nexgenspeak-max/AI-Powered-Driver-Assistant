@@ -75,9 +75,32 @@ Review fixes (2026-11-12)
 - [x] Accessibility: "Quay lại" back buttons (root titles), "Gọi {khách}" on trip cards, mic label when not
       connected; orb + composer bars static under Reduce Motion. XCUITest `AccessibilityLabelUITests` checks them.
 
+Review fixes, round 3 (2026-11-12)
+- [x] Stale responses after logout: `AppModel.sessionGeneration` (bumped at the start of `logout()` and in
+      `resetToSignedOut()`) is captured before each await in `loadMe` / `updateName` / `updateVehicle` (and
+      `loadContext` / `loadSettings`); a result from an older session never sets `me`, the driver phone, the
+      socket or background tracking.
+- [x] Keychain: tokens left by a previous install are wiped on the first launch after (re)install (UserDefaults
+      marker `keychain-tokens.install-marker`); writes use `SecItemUpdate` → `SecItemAdd` and log the failing
+      OSStatus (never the payload).
+- [x] Mic permission denied on connect → no room is joined; `.error` with `errorReason == .micDenied` and the
+      "Chưa có quyền dùng micro …" caption (chip shows "Lỗi", never "Đang nghe").
+- [x] Release build phase "Require HTTPS backend URLs (Release)" fails the build unless TRIP/AUTH URLs are
+      `https://` (and a non-empty WS URL is `wss://`); Debug skips it; env vars are not echoed in the log.
+- [x] Orb toast: VoiceOver button ("Czen: …", hint, identifier `orb-toast`); it now also fires when a streamed
+      bot reply is finalised (the trigger watched only the text, which does not change on finalisation).
+      `fetch` removed from `UIBackgroundModes` (nothing uses background fetch).
+- [x] Dispatch socket: a handshake rejected with HTTP 401 retries after 3 s → 6 → 12 … ≤ 60 s; a successful
+      open resets it; other closes keep the 3 s reconnect.
+
 Test notes
-- `xcodebuild test` passes on the "Czen Native iOS 26" (iOS 26.1) simulator: 60 Swift Testing tests in 15 suites
-  + 3 XCUITests (demo journey, 2 accessibility-label tests). Wrap runs in a timeout (e.g. a perl `alarm` wrapper;
+- `xcodebuild clean test` passes on the "Czen Native iOS 26" (iOS 26.1) simulator with zero warnings: 69 Swift
+  Testing tests in 19 suites + 4 XCUITests (demo journey, 3 accessibility tests). Round-3 tests
+  (`Round3Tests.swift`): 9 of the 10 failed against the pre-fix sources (the Keychain write-status test passed
+  already); the orb-toast UI test failed before the trigger fix.
+- Release: `xcodebuild -configuration Release` with the local http config fails at the HTTPS check (by design);
+  with https overrides on the command line it builds.
+- Earlier: 60 Swift Testing tests in 15 suites + 3 XCUITests (demo journey, 2 accessibility-label tests). Wrap runs in a timeout (e.g. a perl `alarm` wrapper;
   macOS has no `timeout`). The 13 lifecycle tests (`LifecycleTests.swift`) were first run against the pre-fix
   sources: 11 failed there, all pass now.
 - On the iOS 27.0 simulator runtime the XCTest runner never connects ("test runner hung before establishing

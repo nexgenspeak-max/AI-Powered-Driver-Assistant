@@ -119,7 +119,9 @@ struct AppShellView: View {
             chat.closePanel()
             selection = .home
         }
-        .onChange(of: chat.chats.last?.msg) { showToastIfNeeded() }
+        // Whole message, not just `msg`: a streamed reply is finalised with the same text (only
+        // `streaming` flips), and that is the moment the toast should show.
+        .onChange(of: chat.chats.last) { showToastIfNeeded() }
         .task { applyLaunchOptions() }
     }
 
@@ -140,6 +142,12 @@ struct AppShellView: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .transition(.scale(scale: 0.8, anchor: .bottom).combined(with: .opacity))
                     .onTapGesture { chat.openPanel() }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Czen: \(toast)")
+                    .accessibilityHint("Mở hội thoại với Czen")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { chat.openPanel() }
+                    .accessibilityIdentifier("orb-toast")
             }
             Button(action: orbTapped) {
                 CzenOrb(status: voice.status, level: voice.agentAudioLevel, speaking: voice.agentSpeaking, muted: voice.isMicMuted, size: 60)

@@ -80,7 +80,7 @@ struct TestError: Error {}
 struct VoiceLifecycleTests {
     func makeSession(engine: FakeVoiceEngine, latency: Duration = .zero) -> VoiceSession {
         VoiceSession(engine: engine, api: DemoBackend(latency: latency), prefs: Preferences(defaults: UserDefaults(suiteName: "test-\(UUID())")!),
-                     audio: FillerAudio(enabled: false), settleDelay: .zero, asksMicPermission: false)
+                     audio: FillerAudio(enabled: false), settleDelay: .zero, requestMicPermission: { true })
     }
 
     @Test("hang-up while the room connects cancels it and never leaves a live mic")

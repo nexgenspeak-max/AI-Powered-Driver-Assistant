@@ -39,6 +39,9 @@ final class AppModel {
     @ObservationIgnored private var nudgeTriggered = false
     @ObservationIgnored private var logoutWatcher: Task<Void, Never>?
     @ObservationIgnored private var socketPhone: String?
+    /// Bumped by logout / sign-out. A request captures it before its first await and drops its
+    /// result when it changed (a response that lands after logout must not resurrect the session).
+    @ObservationIgnored private var sessionGeneration = 0
     @ObservationIgnored private let log = Logger(subsystem: "com.chinhtruongba.driverapp", category: "app")
 
     init(config: AppConfig, auth: AuthAPI, api: DriverAPI, session: AuthSession, prefs: Preferences,
@@ -50,7 +53,9 @@ final class AppModel {
         self.prefs = prefs
         self.audio = audio
         self.chat = ChatStore()
-        self.voice = VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio, asksMicPermission: !config.launch.demo)
+        self.voice = config.launch.demo
+            ? VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio, requestMicPermission: { true })
+            : VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio)
         self.location = LocationTracker(api: api, demo: config.launch.demo)
         self.socket = socket
         self.navigation = TurnByTurn(api: api)
@@ -99,7 +104,7 @@ final class AppModel {
     func register(_ input: RegisterInput) async throws {
         let res = try await auth.register(input)
         await session.setTokens(AuthTokens(accessToken: res.accessToken, refreshToken: res.refreshToken))
-        if let user = res.user { await setMe(user) }
+        if let user = res.user { await setMe(user, generation: sessionGeneration) }
         phase = .signedIn
         if me == nil { await loadMe() }
         await loadContext()
@@ -108,12 +113,14 @@ final class AppModel {
 
     /// Offline PATCH (errors ignored), then wipe tokens and caches.
     func logout() async {
+        sessionGeneration += 1 // anything still in flight belongs to the old session
         if let phone { try? await api.setStatus(phone: phone, online: false) }
         await session.clear()
         resetToSignedOut()
     }
 
     private func resetToSignedOut() {
+        sessionGeneration += 1
         voice.disconnect()
         socket.stop()
         socketPhone = nil
@@ -131,14 +138,22 @@ final class AppModel {
         phase = .signedOut
     }
 
-    private func setMe(_ user: AuthUser) async {
+    /// Applies a `/me`-shaped response only if it belongs to the current session (`generation`
+    /// captured before the request); re-checked after the phone write so a logout during it wins.
+    private func setMe(_ user: AuthUser, generation: Int) async {
+        guard generation == sessionGeneration else { return }
         me = user
         await session.setDriverPhone(user.phone)
+        guard generation == sessionGeneration else {
+            await session.setDriverPhone(me?.phone) // undo our write: nil once signed out
+            return
+        }
         syncOnlineSideEffects()
     }
 
     func loadMe() async {
-        do { await setMe(try await auth.me()) } catch { log.notice("me failed") }
+        let generation = sessionGeneration
+        do { await setMe(try await auth.me(), generation: generation) } catch { log.notice("me failed") }
     }
 
     private func startLocation() {
@@ -149,14 +164,17 @@ final class AppModel {
 
     func loadContext(fresh: Bool = false) async {
         guard phase == .signedIn else { return }
+        let generation = sessionGeneration
         contextLoading = true
         defer { contextLoading = false }
         do {
             let ctx = try await api.context(fresh: fresh)
+            guard generation == sessionGeneration else { return }
             contextError = false
             apply(ctx)
         } catch APIError.cancelled {
         } catch {
+            guard generation == sessionGeneration else { return }
             contextError = true
         }
     }
@@ -273,12 +291,15 @@ final class AppModel {
 
     func updateName(_ name: String) async throws {
         guard let id = me?.id else { return }
-        await setMe(try await auth.updateAccount(id: id, name: name))
+        let generation = sessionGeneration
+        await setMe(try await auth.updateAccount(id: id, name: name), generation: generation)
     }
 
     func updateVehicle(type: String, plate: String, name: String) async throws {
         guard let id = me?.id else { return }
-        await setMe(try await auth.updateVehicle(id: id, type: type, plate: plate, name: name))
+        let generation = sessionGeneration
+        await setMe(try await auth.updateVehicle(id: id, type: type, plate: plate, name: name), generation: generation)
+        guard generation == sessionGeneration else { return }
         await loadContext()
     }
 
@@ -286,8 +307,10 @@ final class AppModel {
 
     func loadSettings() async {
         guard let id = me?.id else { return }
+        let generation = sessionGeneration
         do {
             let s = try await auth.settings(accountId: id)
+            guard generation == sessionGeneration else { return }
             settings = s
             settingsError = false
             prefs.wakeWordEnabled = s.handsFreeMode

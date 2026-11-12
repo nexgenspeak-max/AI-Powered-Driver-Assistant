@@ -32,6 +32,8 @@ protocol VoiceEngine: AnyObject {
 @Observable
 final class VoiceSession {
     enum Status: String { case idle, connecting, connected, error }
+    /// Why the last connect ended in `.error` (drives the panel caption).
+    enum ErrorReason: Equatable { case micDenied, failed }
 
     private(set) var status: Status = .idle
     private(set) var agentAudioLevel: Double = 0
@@ -39,6 +41,8 @@ final class VoiceSession {
     private(set) var isCallActive = false
     private(set) var callMode = "" // "" | agent | bridge
     private(set) var isMicMuted = false
+    /// Set only while `status == .error`.
+    private(set) var errorReason: ErrorReason?
     /// Increments on every user-initiated hang-up that finished (drives "close panel and go home").
     private(set) var userHangupCount = 0
 
@@ -60,10 +64,11 @@ final class VoiceSession {
     @ObservationIgnored var onMessage: ((String, ChatMessage.Who, Bool, String?) -> Void)?
     @ObservationIgnored private let log = Logger(subsystem: "com.chinhtruongba.driverapp", category: "voice")
     @ObservationIgnored private let settleDelay: Duration
-    @ObservationIgnored private let asksMicPermission: Bool
+    @ObservationIgnored private let requestMicPermission: @MainActor () async -> Bool
 
-    init(engine: VoiceEngine, api: DriverAPI, prefs: Preferences, audio: FillerAudio, settleDelay: Duration = .milliseconds(350), asksMicPermission: Bool = true) {
-        self.asksMicPermission = asksMicPermission
+    init(engine: VoiceEngine, api: DriverAPI, prefs: Preferences, audio: FillerAudio, settleDelay: Duration = .milliseconds(350),
+         requestMicPermission: @escaping @MainActor () async -> Bool = { await AVAudioApplication.requestRecordPermission() }) {
+        self.requestMicPermission = requestMicPermission
         self.engine = engine
         self.api = api
         self.prefs = prefs
@@ -83,6 +88,7 @@ final class VoiceSession {
         generation += 1
         let gen = generation
         status = .connecting
+        errorReason = nil
         resetState()
         let previous = draining
         let task = Task {
@@ -95,6 +101,7 @@ final class VoiceSession {
     }
 
     private struct Superseded: Error {}
+    private struct MicDenied: Error {}
 
     /// Throws when the attempt was cancelled or replaced while it was suspended.
     private func checkCurrent(_ gen: Int) throws {
@@ -108,8 +115,9 @@ final class VoiceSession {
             try checkCurrent(gen)
             async let token = api.voiceToken(phone: phone, lang: prefs.voiceLang.rawValue)
             await audio.playConnecting()
-            let granted = asksMicPermission ? await AVAudioApplication.requestRecordPermission() : true
-            if !granted { log.notice("mic permission denied") }
+            // No mic = no conversation: fail visibly instead of joining a room that can't hear the driver.
+            guard await requestMicPermission() else { throw MicDenied() }
+            try checkCurrent(gen)
             let tok = try await token
             try checkCurrent(gen)
             await audio.fadeOutConnecting()
@@ -131,20 +139,23 @@ final class VoiceSession {
             startWatchdog()
         } catch {
             let cancelled = error is Superseded || error is CancellationError || (error as? APIError) == .cancelled || Task.isCancelled || gen != generation
-            if !cancelled { log.error("voice connect failed: \(String(describing: error), privacy: .public)") }
-            await teardownAfterFailure(gen: gen, cancelled: cancelled)
+            let reason: ErrorReason = error is MicDenied ? .micDenied : .failed
+            if !cancelled && reason == .micDenied { log.notice("voice connect aborted: mic permission denied") }
+            if !cancelled && reason == .failed { log.error("voice connect failed: \(String(describing: error), privacy: .public)") }
+            await teardownAfterFailure(gen: gen, cancelled: cancelled, reason: reason)
         }
     }
 
     /// Always drops the room (never leave a live mic behind); only the current attempt may
     /// change the visible status.
-    private func teardownAfterFailure(gen: Int, cancelled: Bool) async {
+    private func teardownAfterFailure(gen: Int, cancelled: Bool, reason: ErrorReason) async {
         await engine.disconnect()
         guard gen == generation else { return }
         watchdog?.cancel()
         audio.stopAll()
         resetState()
         status = (cancelled || pendingUserHangup) ? .idle : .error
+        errorReason = status == .error ? reason : nil
         pendingUserHangup = false
     }
 

@@ -44,7 +44,9 @@ enum AppModelFactory {
         }
         let transport = URLSessionTransport()
         let authBase = config.authServiceURL
-        let session = AuthSession(store: KeychainTokenStore()) { refresh in
+        let tokenStore = KeychainTokenStore()
+        tokenStore.resetIfFreshInstall()
+        let session = AuthSession(store: tokenStore) { refresh in
             // Bare call (not through HTTPClient) so a refresh can never recurse into itself.
             var req = URLRequest(url: authBase.appendingPathComponent("auth/refresh"))
             req.httpMethod = "POST"

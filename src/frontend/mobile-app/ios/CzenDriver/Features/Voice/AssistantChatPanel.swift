@@ -100,17 +100,25 @@ struct AssistantChatPanel: View {
     static let captions: [Preferences.VoiceLang: [String: String]] = [
         .vn: ["idle": "Chạm nút Czen cạnh ô nhập để kết nối", "connecting": "Đang kết nối với Czen…",
               "connected": "Đã kết nối — chạm sóng âm để kết thúc", "error": "Kết nối lỗi — chạm nút Czen để thử lại",
+              "micDenied": "Chưa có quyền dùng micro — bật trong Cài đặt rồi chạm nút Czen",
               "inCall": "Đang gọi khách — chạm nút Czen để huỷ cuộc gọi", "micOff": "Mic đang tắt — phiên vẫn kết nối"],
         .en: ["idle": "Tap the Czen button next to the input to connect", "connecting": "Connecting to Czen…",
               "connected": "Connected to Czen — tap the waveform to end", "error": "Connection failed — tap the Czen button to try again",
+              "micDenied": "Microphone access is off — allow it in Settings, then tap the Czen button",
               "inCall": "In a call — can't disconnect", "micOff": "Mic is off — the session is still connected"],
     ]
 
     private var caption: String {
-        let copy = Self.captions[lang] ?? [:]
-        if voice.status == .connected && voice.isCallActive { return copy["inCall"] ?? "" }
-        if voice.status == .connected && voice.isMicMuted { return copy["micOff"] ?? "" }
-        return copy[voice.status.rawValue] ?? ""
+        Self.caption(status: voice.status, isCallActive: voice.isCallActive, isMicMuted: voice.isMicMuted, errorReason: voice.errorReason, lang: lang)
+    }
+
+    static func caption(status: VoiceSession.Status, isCallActive: Bool, isMicMuted: Bool, errorReason: VoiceSession.ErrorReason?,
+                        lang: Preferences.VoiceLang) -> String {
+        let copy = captions[lang] ?? [:]
+        if status == .connected && isCallActive { return copy["inCall"] ?? "" }
+        if status == .connected && isMicMuted { return copy["micOff"] ?? "" }
+        if status == .error && errorReason == .micDenied { return copy["micDenied"] ?? "" }
+        return copy[status.rawValue] ?? ""
     }
 
     // MARK: Content

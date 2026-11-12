@@ -89,6 +89,22 @@ final class AccessibilityLabelUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Gửi tin nhắn"].waitForExistence(timeout: 5))
     }
 
+    /// The last-message toast above the orb is a VoiceOver button that names Czen and opens the chat.
+    @MainActor
+    func testOrbToastIsAButton() throws {
+        // No -uiTesting: the scripted agent then speaks at normal pace, so its replies land after
+        // the panel is closed (that is when the toast shows).
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-theme", "light", "-startTab", "trips", "-openChat", "-connectVoice"]
+        app.launch()
+        app.buttons["chat-close"].tapWhenReady()
+        let toast = app.buttons["orb-toast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 15), "toast exposed as a button")
+        XCTAssertTrue(toast.label.hasPrefix("Czen: "), toast.label)
+        toast.tap()
+        XCTAssertTrue(app.buttons["chat-close"].waitForExistence(timeout: 5), "tapping the toast opens the chat")
+    }
+
     @MainActor
     func testNavigationOfferAndBackLabels() throws {
         var app = launch(["-navigate"])

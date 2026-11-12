@@ -20,6 +20,7 @@
 		39A396992384FB28E9233461 /* LocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2F28542D97A24A715D838BA /* LocationTracker.swift */; };
 		39CACE8D54930418DDA62C8B /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5D1A92477186E406397DC297 /* LiveKit */; };
 		3EB98F204FC4D50D874F7BB6 /* FillerAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5EA7EBEB48C4804AD0F9BB /* FillerAudio.swift */; };
+		3EEBAD27E8B5B2808BF5EBBE /* Round3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D6664F9C14E2C0C9E6BCA78 /* Round3Tests.swift */; };
 		43CEC680F8992B8CA00007F0 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A609E3AFB90D4A6B0F31F29E /* Components.swift */; };
 		5BBD40ED70C8827CF99C819A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51F6700249107F67CCB2C9F /* RootView.swift */; };
 		6D49E707CA122CF76CA787E3 /* DemoJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ED2705DC5267031A0692AB2 /* DemoJourneyUITests.swift */; };
@@ -82,6 +83,7 @@
 		0CBB60C641723ED01CAB21BD /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		13AE47072A36695EF539D7D2 /* demo-data.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "demo-data.json"; sourceTree = "<group>"; };
 		19F42329B44E9050FB5FDF6C /* TurnByTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnByTurn.swift; sourceTree = "<group>"; };
+		1D6664F9C14E2C0C9E6BCA78 /* Round3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round3Tests.swift; sourceTree = "<group>"; };
 		1E4E75533E422CAEAC24D99A /* VoiceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSession.swift; sourceTree = "<group>"; };
 		27D997DE4A572F7ED31E57D0 /* OrbViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbViews.swift; sourceTree = "<group>"; };
 		2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewFixTests.swift; sourceTree = "<group>"; };
@@ -423,6 +425,7 @@
 				C8F4261C420E370422B3B0E5 /* LifecycleTests.swift */,
 				D18A4E29C8B4EDCF6B448DE9 /* LogicTests.swift */,
 				2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */,
+				1D6664F9C14E2C0C9E6BCA78 /* Round3Tests.swift */,
 				0295A8B937C8C9D71007A9EF /* TokenRefreshTests.swift */,
 			);
 			path = CzenDriverTests;
@@ -461,6 +464,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0038F9A4306BB6FFEDC179A4 /* Build configuration list for PBXNativeTarget "CzenDriver" */;
 			buildPhases = (
+				776223B0689F9E1228BC02F1 /* Require HTTPS backend URLs (Release) */,
 				17CC2D20922D879C115F9B08 /* Sources */,
 				DF1FBFBDA77B4708C06CCADF /* Resources */,
 				D78DF63170C25C49252FB9B4 /* Frameworks */,
@@ -562,6 +566,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		776223B0689F9E1228BC02F1 /* Require HTTPS backend URLs (Release) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Require HTTPS backend URLs (Release)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "[ \"${CONFIGURATION}\" = \"Release\" ] || exit 0\nfail=0\ncheck() {\n  name=\"$1\"; value=\"$2\"; scheme=\"$3\"; optional=\"$4\"\n  if [ -z \"$value\" ]; then\n    [ \"$optional\" = 1 ] && return 0\n    echo \"error: ${name} is empty; a Release build needs a ${scheme}:// URL (Config/Local.xcconfig)\"\n    fail=1; return 0\n  fi\n  case \"$value\" in\n    \"${scheme}://\"?*) ;;\n    *) echo \"error: ${name} must be a ${scheme}:// URL in a Release build (value not shown)\"; fail=1 ;;\n  esac\n}\ncheck TRIP_SERVICE_URL \"${TRIP_SERVICE_URL:-}\" https 0\ncheck AUTH_SERVICE_URL \"${AUTH_SERVICE_URL:-}\" https 0\ncheck TRIP_SERVICE_WS_URL \"${TRIP_SERVICE_WS_URL:-}\" wss 1\nexit \"$fail\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		17CC2D20922D879C115F9B08 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -613,6 +640,7 @@
 				173BAF56A6B5BAE718361671 /* LifecycleTests.swift in Sources */,
 				F09C80EAFCA3CFCA8471415B /* LogicTests.swift in Sources */,
 				89194D7ADEC423C6F513382B /* ReviewFixTests.swift in Sources */,
+				3EEBAD27E8B5B2808BF5EBBE /* Round3Tests.swift in Sources */,
 				9122784554E3885923E64E6D /* TokenRefreshTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -39,6 +39,31 @@ targets:
     dependencies:
       - package: LiveKit
       - package: MapLibre
+    preBuildScripts:
+      # Release has no ATS exception, so plain-http backends would fail at runtime: fail the build
+      # instead. Debug (local http backends) skips the check. Values are never echoed.
+      - name: Require HTTPS backend URLs (Release)
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
+        script: |
+          [ "${CONFIGURATION}" = "Release" ] || exit 0
+          fail=0
+          check() {
+            name="$1"; value="$2"; scheme="$3"; optional="$4"
+            if [ -z "$value" ]; then
+              [ "$optional" = 1 ] && return 0
+              echo "error: ${name} is empty; a Release build needs a ${scheme}:// URL (Config/Local.xcconfig)"
+              fail=1; return 0
+            fi
+            case "$value" in
+              "${scheme}://"?*) ;;
+              *) echo "error: ${name} must be a ${scheme}:// URL in a Release build (value not shown)"; fail=1 ;;
+            esac
+          }
+          check TRIP_SERVICE_URL "${TRIP_SERVICE_URL:-}" https 0
+          check AUTH_SERVICE_URL "${AUTH_SERVICE_URL:-}" https 0
+          check TRIP_SERVICE_WS_URL "${TRIP_SERVICE_WS_URL:-}" wss 1
+          exit "$fail"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.chinhtruongba.driverapp

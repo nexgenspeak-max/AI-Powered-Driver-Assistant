@@ -45,7 +45,7 @@ struct TranscriptionFinalityTests {
     func bridgeTranscript() async throws {
         let engine = FakeVoiceEngine()
         let session = VoiceSession(engine: engine, api: DemoBackend(latency: .zero), prefs: Preferences(defaults: UserDefaults(suiteName: "test-\(UUID())")!),
-                                   audio: FillerAudio(enabled: false), settleDelay: .zero, asksMicPermission: false)
+                                   audio: FillerAudio(enabled: false), settleDelay: .zero, requestMicPermission: { true })
         await session.connect(phone: "0901234567")
         engine.onEvent?(.data(topic: "call_state", payload: Data(#"{"type":"call_state","active":true,"mode":"bridge"}"#.utf8)))
         session.emit(text: "Alo", identity: "customer-1", isLocal: false, isFinal: false, segmentId: "c1")

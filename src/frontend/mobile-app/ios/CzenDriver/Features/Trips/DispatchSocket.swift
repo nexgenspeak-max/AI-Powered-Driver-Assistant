@@ -25,10 +25,20 @@ protocol WebSocketConnection: AnyObject, Sendable {
     func close()
 }
 
+/// Waits between reconnects (injectable so tests can record the schedule).
+struct Sleeper: Sendable {
+    let run: @Sendable (Duration) async -> Void
+    static let live = Sleeper { try? await Task.sleep(for: $0) }
+}
+
+/// The server refused the WebSocket upgrade (HTTP 401 on the handshake).
+enum DispatchSocketError: Error, Equatable { case unauthorized }
+
 typealias WebSocketFactory = @MainActor (_ url: URL, _ onOpen: @escaping @Sendable () -> Void) -> WebSocketConnection
 
 /// Realtime dispatch socket: `.opened` on the handshake, a ping every 20 s (a failed ping counts
-/// as a close), reconnect 3 s after any close.
+/// as a close), reconnect 3 s after any close. A handshake rejected with 401 backs off instead:
+/// 3 s → 6 → 12 … capped at 60 s, back to 3 s once a handshake succeeds.
 @MainActor
 final class LiveDispatchSocket: DispatchSocket {
     var onEvent: ((DispatchEvent) -> Void)?
@@ -36,14 +46,21 @@ final class LiveDispatchSocket: DispatchSocket {
     private let factory: WebSocketFactory
     private let keepAlive: Duration
     private let reconnectDelay: Duration
+    private let maxBackoff: Duration
+    private let sleep: Sleeper
     private var connection: WebSocketConnection?
     private var connectionID = 0
     private var loop: Task<Void, Never>?
+    /// Consecutive 401 handshakes since the last successful open.
+    private var unauthorizedStreak = 0
     private let log = Logger(subsystem: "com.chinhtruongba.driverapp", category: "ws")
 
-    init(baseURL: URL, keepAlive: Duration = .seconds(20), reconnectDelay: Duration = .seconds(3),
+    init(baseURL: URL, keepAlive: Duration = .seconds(20), reconnectDelay: Duration = .seconds(3), maxBackoff: Duration = .seconds(60),
+         sleep: Sleeper = .live,
          factory: @escaping WebSocketFactory = { url, onOpen in URLSessionWebSocketConnection(url: url, onOpen: onOpen) }) {
         self.baseURL = baseURL
+        self.maxBackoff = maxBackoff
+        self.sleep = sleep
         self.keepAlive = keepAlive
         self.reconnectDelay = reconnectDelay
         self.factory = factory
@@ -51,10 +68,11 @@ final class LiveDispatchSocket: DispatchSocket {
 
     func start(phone: String) {
         stop()
-        loop = Task { [weak self, reconnectDelay] in
+        unauthorizedStreak = 0
+        loop = Task { [weak self, sleep] in
             while !Task.isCancelled {
-                await self?.runOnce(phone: phone)
-                try? await Task.sleep(for: reconnectDelay)
+                guard let delay = await self?.runOnce(phone: phone) else { return }
+                await sleep.run(delay)
             }
         }
     }
@@ -67,13 +85,22 @@ final class LiveDispatchSocket: DispatchSocket {
         connection = nil
     }
 
-    private func runOnce(phone: String) async {
+    /// Delay before retry number `attempt` (1-based) after consecutive 401 handshakes: `base · 2^(attempt−1)`, capped.
+    nonisolated static func unauthorizedBackoff(attempt: Int, base: Duration, max: Duration) -> Duration {
+        let factor = 1 << Swift.min(Swift.max(attempt - 1, 0), 20)
+        return Swift.min(base * factor, max)
+    }
+
+    /// One connection's lifetime; returns how long to wait before the next attempt.
+    private func runOnce(phone: String) async -> Duration {
         var comps = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
         comps?.queryItems = [URLQueryItem(name: "role", value: "driver"), URLQueryItem(name: "id", value: phone)]
-        guard let url = comps?.url, !Task.isCancelled else { return }
+        guard let url = comps?.url, !Task.isCancelled else { return reconnectDelay }
         connectionID += 1
         let id = connectionID
+        let opened = OpenFlag()
         let conn = factory(url) { [weak self] in
+            opened.set()
             Task { @MainActor in
                 guard let self, self.connectionID == id else { return }
                 self.onEvent?(.opened)
@@ -99,10 +126,11 @@ final class LiveDispatchSocket: DispatchSocket {
             conn.close()
             if connectionID == id { connection = nil }
         }
+        var rejected = false
         while !Task.isCancelled {
             do {
                 let message = try await conn.receive()
-                guard connectionID == id else { return }
+                guard connectionID == id else { break }
                 let data: Data
                 switch message {
                 case let .string(s): data = Data(s.utf8)
@@ -110,11 +138,29 @@ final class LiveDispatchSocket: DispatchSocket {
                 @unknown default: continue
                 }
                 if let event = Self.parse(data) { onEvent?(event) }
+            } catch DispatchSocketError.unauthorized {
+                rejected = true
+                break
             } catch {
                 log.notice("socket closed; reconnecting")
-                return
+                break
             }
         }
+        if opened.isSet { unauthorizedStreak = 0 }
+        guard rejected, !opened.isSet else { return reconnectDelay }
+        unauthorizedStreak += 1
+        let delay = Self.unauthorizedBackoff(attempt: unauthorizedStreak, base: reconnectDelay, max: maxBackoff)
+        log.notice("socket handshake rejected (401); retry in \(delay.components.seconds, privacy: .public)s")
+        return delay
+    }
+
+    /// Set from the URLSession delegate queue when the handshake completes.
+    private final class OpenFlag: @unchecked Sendable {
+        // Safe: every access goes through `lock`.
+        private let lock = NSLock()
+        private var value = false
+        func set() { lock.withLock { value = true } }
+        var isSet: Bool { lock.withLock { value } }
     }
 
     /// `{event, data}` frames.
@@ -153,7 +199,15 @@ final class URLSessionWebSocketConnection: NSObject, WebSocketConnection, URLSes
         onOpen()
     }
 
-    func receive() async throws -> URLSessionWebSocketTask.Message { try await task.receive() }
+    /// A failed upgrade whose HTTP response was 401 surfaces as `DispatchSocketError.unauthorized`.
+    func receive() async throws -> URLSessionWebSocketTask.Message {
+        do {
+            return try await task.receive()
+        } catch {
+            if (task.response as? HTTPURLResponse)?.statusCode == 401 { throw DispatchSocketError.unauthorized }
+            throw error
+        }
+    }
 
     func sendPing() async throws {
         let once = ResumeOnce()
