@@ -1,0 +1,109 @@
+{
+  "anchor": "2026-11-12T10:00:00+07:00",
+  "me": {
+    "id": "acc-demo-001", "role": "driver", "permissions": [], "name": "Nguyễn Văn Minh",
+    "phone": "0901234567", "email": "minh.nguyen@example.com", "status": "online",
+    "vehicle_type": "car_4", "vehicle_plate": "30A-123.45", "vehicle_name": "Toyota Vios",
+    "created_at": "2026-01-05T08:00:00+07:00", "updated_at": "2026-11-12T08:00:00+07:00"
+  },
+  "settings": {
+    "id_account": "acc-demo-001", "hands_free_mode": false, "notify_on_pickup_approach": true,
+    "notify_on_pickup_approach_radius_m": 1000, "auto_suggest_next_stop": true,
+    "auto_suggest_next_stop_radius_m": 500, "default_customer_call_mode": "agent",
+    "updated_at": "2026-11-10T08:00:00+07:00", "updated_by": "acc-demo-001"
+  },
+  "earnings": {
+    "week": { "period": "week", "total_earnings": 2185000, "trip_count": 19, "currency": "VND" },
+    "month": { "period": "month", "total_earnings": 8640000, "trip_count": 74, "currency": "VND" }
+  },
+  "context": {
+    "driver": { "phone": "0901234567", "name": "Nguyễn Văn Minh", "status": "online" },
+    "driver_profile": { "phone": "0901234567", "rating": 4.87, "acceptance_rate": 94, "completion_rate": 98, "total_trips": 1268 },
+    "today_earnings": { "total_earnings": 485000, "trip_count": 4, "bonus_earnings": 50000, "hours_online": 5.5, "currency": "VND" },
+    "active_bonuses": [],
+    "upcoming_trips": [
+      {
+        "trip_id": "trip-offer-01", "status": "notified", "driver_phone": "0901234567",
+        "customer_name": "Trần Thị Mai", "customer_phone": "0912345678",
+        "pickup_address": "191 Bà Triệu, Hai Bà Trưng, Hà Nội", "dropoff_address": "Times City, 458 Minh Khai, Hà Nội",
+        "pickup_lat": 21.0115, "pickup_lng": 105.8496, "dropoff_lat": 20.9952, "dropoff_lng": 105.8683,
+        "pickup_time": "2026-11-12T10:30:00+07:00", "booked_via": "app", "distance_km": 4.2, "eta_minutes": 14,
+        "traffic_note": "Đường Minh Khai hơi đông", "route_summary": "Bà Triệu → Minh Khai", "room_name": "",
+        "created_at": "2026-11-12T09:55:00+07:00", "updated_at": "2026-11-12T09:55:00+07:00", "estimated_fare": 78000
+      },
+      {
+        "trip_id": "trip-pending-02", "status": "pending", "driver_phone": "",
+        "customer_name": "Phạm Quốc Bảo", "customer_phone": "0987654321",
+        "pickup_address": "Lotte Center, 54 Liễu Giai, Ba Đình", "dropoff_address": "Sân bay Nội Bài, Sóc Sơn",
+        "pickup_time": "14:30", "booked_via": "app", "distance_km": 27.5, "eta_minutes": 38,
+        "traffic_note": "Đường thông thoáng", "route_summary": "Võ Chí Công → Nội Bài", "room_name": "",
+        "has_bulky_goods": true,
+        "created_at": "2026-11-12T09:40:00+07:00", "updated_at": "2026-11-12T09:40:00+07:00", "estimated_fare": 320000
+      }
+    ],
+    "active_trips": [
+      {
+        "trip_id": "trip-active-01", "status": "confirmed", "driver_phone": "0901234567",
+        "customer_name": "Lê Ngọc Lan", "customer_phone": "0934567890",
+        "pickup_address": "29 Liễu Giai, Ba Đình, Hà Nội", "dropoff_address": "2 Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội",
+        "pickup_lat": 21.0368, "pickup_lng": 105.8147, "dropoff_lat": 21.0287, "dropoff_lng": 105.8524,
+        "pickup_time": "2026-11-12T10:10:00+07:00", "booked_via": "app", "distance_km": 5.1, "eta_minutes": 17,
+        "traffic_note": "Đường thông thoáng", "route_summary": "Liễu Giai → Đinh Tiên Hoàng", "room_name": "",
+        "with_children": true,
+        "created_at": "2026-11-12T09:50:00+07:00", "updated_at": "2026-11-12T09:52:00+07:00", "estimated_fare": 92000
+      },
+      {
+        "trip_id": "trip-active-02", "status": "picked_up", "driver_phone": "0901234567",
+        "customer_name": "Đỗ Minh Hùng", "customer_phone": "0978123456",
+        "pickup_address": "Lăng Bác, 2 Hùng Vương, Ba Đình", "dropoff_address": "Văn Miếu, 58 Quốc Tử Giám, Đống Đa",
+        "pickup_lat": 21.0368, "pickup_lng": 105.8346, "dropoff_lat": 21.0277, "dropoff_lng": 105.8355,
+        "pickup_time": "2026-11-12T09:45:00+07:00", "booked_via": "driver", "distance_km": 2.3, "eta_minutes": 8,
+        "traffic_note": "Kẹt nhẹ ở Tôn Đức Thắng", "route_summary": "Hùng Vương → Quốc Tử Giám", "room_name": "",
+        "created_at": "2026-11-12T09:40:00+07:00", "updated_at": "2026-11-12T09:58:00+07:00", "estimated_fare": 45000
+      }
+    ],
+    "completed_trips": [
+      { "trip_id": "c-01", "status": "completed", "driver_phone": "0901234567", "customer_name": "Vũ Thu Hà", "customer_phone": "0911000111", "pickup_address": "Hồ Tây, Quảng An", "dropoff_address": "Đại học Bách Khoa, Hai Bà Trưng", "pickup_time": "2026-11-12T08:05:00+07:00", "booked_via": "app", "distance_km": 9.4, "eta_minutes": 26, "traffic_note": "Đường thông thoáng", "route_summary": "", "room_name": "", "created_at": "2026-11-12T07:50:00+07:00", "updated_at": "2026-11-12T08:35:00+07:00", "estimated_fare": 132000 },
+      { "trip_id": "c-02", "status": "completed", "driver_phone": "0901234567", "customer_name": "Ngô Đức Anh", "customer_phone": "0911000222", "pickup_address": "Vincom Bà Triệu", "dropoff_address": "Royal City, Thanh Xuân", "pickup_time": "2026-11-12T07:10:00+07:00", "booked_via": "app", "distance_km": 5.6, "eta_minutes": 18, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-12T07:00:00+07:00", "updated_at": "2026-11-12T07:32:00+07:00", "estimated_fare": 96000 },
+      { "trip_id": "c-03", "status": "completed", "driver_phone": "0901234567", "customer_name": "Hoàng Mỹ Linh", "customer_phone": "0911000333", "pickup_address": "Ga Hà Nội, Lê Duẩn", "dropoff_address": "Keangnam, Phạm Hùng", "pickup_time": "2026-11-12T06:20:00+07:00", "booked_via": "driver", "distance_km": 8.1, "eta_minutes": 24, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-12T06:10:00+07:00", "updated_at": "2026-11-12T06:48:00+07:00", "estimated_fare": 125000 },
+      { "trip_id": "c-04", "status": "completed", "driver_phone": "0901234567", "customer_name": "Bùi Văn Tâm", "customer_phone": "0911000444", "pickup_address": "Phố cổ Hàng Bạc", "dropoff_address": "Long Biên", "pickup_time": "2026-11-12T05:40:00+07:00", "booked_via": "app", "distance_km": 4.4, "eta_minutes": 15, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-12T05:30:00+07:00", "updated_at": "2026-11-12T05:58:00+07:00", "estimated_fare": 82000 },
+      { "trip_id": "c-05", "status": "completed", "driver_phone": "0901234567", "customer_name": "Đặng Thị Hồng", "customer_phone": "0911000555", "pickup_address": "Cầu Giấy", "dropoff_address": "Mỹ Đình 2", "pickup_time": "2026-11-11T17:20:00+07:00", "booked_via": "app", "distance_km": 6.0, "eta_minutes": 21, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-11T17:10:00+07:00", "updated_at": "2026-11-11T17:46:00+07:00", "estimated_fare": 104000 },
+      { "trip_id": "c-06", "status": "completed", "driver_phone": "0901234567", "customer_name": "Trịnh Quang Huy", "customer_phone": "0911000666", "pickup_address": "Hà Đông", "dropoff_address": "Hồ Gươm", "pickup_time": "2026-11-11T12:00:00+07:00", "booked_via": "app", "distance_km": 12.3, "eta_minutes": 35, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-11T11:50:00+07:00", "updated_at": "2026-11-11T12:40:00+07:00", "estimated_fare": 168000 },
+      { "trip_id": "c-07", "status": "completed", "driver_phone": "0901234567", "customer_name": "Lý Thanh Tùng", "customer_phone": "0911000777", "pickup_address": "Tây Hồ", "dropoff_address": "Đông Anh", "pickup_time": "2026-11-09T09:00:00+07:00", "booked_via": "app", "distance_km": 15.2, "eta_minutes": 32, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-09T08:50:00+07:00", "updated_at": "2026-11-09T09:35:00+07:00", "estimated_fare": 210000 },
+      { "trip_id": "c-08", "status": "completed", "driver_phone": "0901234567", "customer_name": "Phan Thu Trang", "customer_phone": "0911000888", "pickup_address": "Kim Mã", "dropoff_address": "Láng Hạ", "pickup_time": "2026-11-08T19:00:00+07:00", "booked_via": "app", "distance_km": 3.2, "eta_minutes": 12, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-08T18:50:00+07:00", "updated_at": "2026-11-08T19:20:00+07:00", "estimated_fare": 58000 },
+      { "trip_id": "c-09", "status": "completed", "driver_phone": "0901234567", "customer_name": "Mai Anh Tuấn", "customer_phone": "0911000999", "pickup_address": "Nguyễn Chí Thanh", "dropoff_address": "Hồ Hoàn Kiếm", "pickup_time": "2026-11-07T08:00:00+07:00", "booked_via": "app", "distance_km": 5.0, "eta_minutes": 19, "traffic_note": "", "route_summary": "", "room_name": "", "created_at": "2026-11-07T07:50:00+07:00", "updated_at": "2026-11-07T08:25:00+07:00", "estimated_fare": 88000 }
+    ],
+    "current_trip": null,
+    "current_location": { "lat": 21.0333, "lng": 105.8200, "updated_at": "2026-11-12T09:59:00+07:00" },
+    "has_pending_nudge": false,
+    "last_call": null,
+    "optimized_route": {
+      "stops": [
+        { "trip_id": "trip-active-01", "kind": "pickup", "address": "29 Liễu Giai, Ba Đình, Hà Nội", "customer_name": "Lê Ngọc Lan", "lat": 21.0368, "lng": 105.8147, "distance_m": 1200, "eta_minutes": 5 },
+        { "trip_id": "trip-active-02", "kind": "dropoff", "address": "Văn Miếu, 58 Quốc Tử Giám, Đống Đa", "customer_name": "Đỗ Minh Hùng", "lat": 21.0277, "lng": 105.8355, "distance_m": 2900, "eta_minutes": 11 },
+        { "trip_id": "trip-active-01", "kind": "dropoff", "address": "2 Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội", "customer_name": "Lê Ngọc Lan", "lat": 21.0287, "lng": 105.8524, "distance_m": 2300, "eta_minutes": 9 }
+      ],
+      "source": "goong_matrix", "cost_basis": "duration", "total_distance_m": 6400, "total_duration_s": 1500,
+      "computed_at": "2026-11-12T09:59:00+07:00",
+      "driver_location": { "lat": 21.0333, "lng": 105.8200 },
+      "path": [
+        { "lat": 21.0333, "lng": 105.8200 }, { "lat": 21.0341, "lng": 105.8183 }, { "lat": 21.0352, "lng": 105.8170 },
+        { "lat": 21.0360, "lng": 105.8158 }, { "lat": 21.0368, "lng": 105.8147 },
+        { "lat": 21.0359, "lng": 105.8172 }, { "lat": 21.0343, "lng": 105.8215 }, { "lat": 21.0322, "lng": 105.8262 },
+        { "lat": 21.0301, "lng": 105.8305 }, { "lat": 21.0285, "lng": 105.8338 }, { "lat": 21.0277, "lng": 105.8355 },
+        { "lat": 21.0272, "lng": 105.8390 }, { "lat": 21.0268, "lng": 105.8428 }, { "lat": 21.0271, "lng": 105.8466 },
+        { "lat": 21.0280, "lng": 105.8500 }, { "lat": 21.0287, "lng": 105.8524 }
+      ]
+    },
+    "fetched_at": "2026-11-12T10:00:00+07:00"
+  },
+  "navigation": {
+    "distance_km": 1.2, "eta_minutes": 5, "traffic_note": "Đường thông thoáng",
+    "polyline": "",
+    "steps": [
+      { "instruction": "Đi về hướng Tây Bắc trên Kim Mã", "maneuver": "straight", "distance_m": 220, "duration_s": 50, "start_location": { "lat": 21.0333, "lng": 105.8200 }, "end_location": { "lat": 21.0341, "lng": 105.8183 } },
+      { "instruction": "Rẽ trái vào Liễu Giai", "maneuver": "turn-left", "distance_m": 480, "duration_s": 110, "start_location": { "lat": 21.0341, "lng": 105.8183 }, "end_location": { "lat": 21.0360, "lng": 105.8158 } },
+      { "instruction": "Rẽ phải để tới điểm đón", "maneuver": "turn-right", "distance_m": 500, "duration_s": 140, "start_location": { "lat": 21.0360, "lng": 105.8158 }, "end_location": { "lat": 21.0368, "lng": 105.8147 } }
+    ]
+  }
+}

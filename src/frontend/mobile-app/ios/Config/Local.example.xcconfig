@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (uncommitted) or run: python3 scripts/seed-local-config.py
+// `//` starts a comment in xcconfig — write URLs as http:/$()/host.
+TRIP_SERVICE_URL = http:/$()/localhost:8002/api/v1
+AUTH_SERVICE_URL = http:/$()/localhost:8003/api/v1
+TRIP_SERVICE_WS_URL =
+GOONG_MAPS_KEY =

@@ -1,0 +1,1612 @@
+{
+  "sourceLanguage": "vi",
+  "version": "1.0",
+  "strings": {
+    ")\n    static let bubbleBot = Color(": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ")\n    static let bubbleBot = Color("
+          }
+        }
+      }
+    },
+    ")\n    static let onSuccessButton = Color(": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ")\n    static let onSuccessButton = Color("
+          }
+        }
+      }
+    },
+    "0901 234 567": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0901 234 567"
+          }
+        }
+      }
+    },
+    "7 ngày qua": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 ngày qua"
+          }
+        }
+      }
+    },
+    "Anh/chị…": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anh/chị…"
+          }
+        }
+      }
+    },
+    "Biển số": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biển số"
+          }
+        }
+      }
+    },
+    "Biển số xe": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biển số xe"
+          }
+        }
+      }
+    },
+    "Biểu đồ thu nhập 7 ngày qua": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biểu đồ thu nhập 7 ngày qua"
+          }
+        }
+      }
+    },
+    "Bạn muốn huỷ cuộc gọi này?": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn muốn huỷ cuộc gọi này?"
+          }
+        }
+      }
+    },
+    "Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng ứng dụng.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng ứng dụng."
+          }
+        }
+      }
+    },
+    "Bạn sẽ không thể nhận lại chuyến này sau khi từ chối.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn sẽ không thể nhận lại chuyến này sau khi từ chối."
+          }
+        }
+      }
+    },
+    "Bạn đang offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn đang offline"
+          }
+        }
+      }
+    },
+    "Bật \"Đang bật\" để bắt đầu nhận chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật \"Đang bật\" để bắt đầu nhận chuyến"
+          }
+        }
+      }
+    },
+    "Bật nhận chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật nhận chuyến"
+          }
+        }
+      }
+    },
+    "Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên."
+          }
+        }
+      }
+    },
+    "Chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyến"
+          }
+        }
+      }
+    },
+    "Chuyến mới": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyến mới"
+          }
+        }
+      }
+    },
+    "Chuyến sẽ vào ngay Đang chạy — không hiện banner nhận chuyến.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyến sẽ vào ngay Đang chạy — không hiện banner nhận chuyến."
+          }
+        }
+      }
+    },
+    "Chào mừng trở lại. Đăng nhập để bắt đầu nhận chuyến.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chào mừng trở lại. Đăng nhập để bắt đầu nhận chuyến."
+          }
+        }
+      }
+    },
+    "Chưa có chuyến nào": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có chuyến nào"
+          }
+        }
+      }
+    },
+    "Chưa có chuyến nào hoàn thành": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có chuyến nào hoàn thành"
+          }
+        }
+      }
+    },
+    "Chưa có chuyến nào trong 7 ngày": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có chuyến nào trong 7 ngày"
+          }
+        }
+      }
+    },
+    "Chưa có thu nhập": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có thu nhập"
+          }
+        }
+      }
+    },
+    "Chưa liên kết tài khoản ngân hàng": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa liên kết tài khoản ngân hàng"
+          }
+        }
+      }
+    },
+    "Chưa thể xác nhận": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa thể xác nhận"
+          }
+        }
+      }
+    },
+    "Chế độ rảnh tay": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chế độ rảnh tay"
+          }
+        }
+      }
+    },
+    "Chế độ tối": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chế độ tối"
+          }
+        }
+      }
+    },
+    "Chỉ đường": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉ đường"
+          }
+        }
+      }
+    },
+    "Chỉnh sửa hồ sơ": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh sửa hồ sơ"
+          }
+        }
+      }
+    },
+    "Chọn ngôn ngữ Trợ lý nói và hiểu. Áp dụng từ lần kết nối tiếp theo.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn ngôn ngữ Trợ lý nói và hiểu. Áp dụng từ lần kết nối tiếp theo."
+          }
+        }
+      }
+    },
+    "Cài đặt trợ lý": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cài đặt trợ lý"
+          }
+        }
+      }
+    },
+    "Cá nhân": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cá nhân"
+          }
+        }
+      }
+    },
+    "Câu hỏi thường gặp": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Câu hỏi thường gặp"
+          }
+        }
+      }
+    },
+    "Cước ước tính": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cước ước tính"
+          }
+        }
+      }
+    },
+    "Cần giúp đỡ? Liên hệ với đội ngũ hỗ trợ tài xế qua các kênh bên dưới, hoặc xem câu hỏi thường gặp.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần giúp đỡ? Liên hệ với đội ngũ hỗ trợ tài xế qua các kênh bên dưới, hoặc xem câu hỏi thường gặp."
+          }
+        }
+      }
+    },
+    "Ghi chú (nếu có)": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghi chú (nếu có)"
+          }
+        }
+      }
+    },
+    "Giấy tờ xác minh": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giấy tờ xác minh"
+          }
+        }
+      }
+    },
+    "Giới thiệu": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giới thiệu"
+          }
+        }
+      }
+    },
+    "Giờ online": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giờ online"
+          }
+        }
+      }
+    },
+    "Giữ chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ chuyến"
+          }
+        }
+      }
+    },
+    "Giữ lại": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ lại"
+          }
+        }
+      }
+    },
+    "Gọi khách": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gọi khách"
+          }
+        }
+      }
+    },
+    "Gọi khách mặc định": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gọi khách mặc định"
+          }
+        }
+      }
+    },
+    "Gọi khẩn cấp": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gọi khẩn cấp"
+          }
+        }
+      }
+    },
+    "Gọi nhắc khi còn cách": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gọi nhắc khi còn cách"
+          }
+        }
+      }
+    },
+    "Gửi tin nhắn": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gửi tin nhắn"
+          }
+        }
+      }
+    },
+    "Honda Wave": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Honda Wave"
+          }
+        }
+      }
+    },
+    "Huỷ": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huỷ"
+          }
+        }
+      }
+    },
+    "Huỷ chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huỷ chuyến"
+          }
+        }
+      }
+    },
+    "Huỷ chuyến này?": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huỷ chuyến này?"
+          }
+        }
+      }
+    },
+    "Huỷ cuộc gọi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huỷ cuộc gọi"
+          }
+        }
+      }
+    },
+    "Hàng hoá cồng kềnh": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hàng hoá cồng kềnh"
+          }
+        }
+      }
+    },
+    "Hôm nay": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hôm nay"
+          }
+        }
+      }
+    },
+    "Họ và tên": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Họ và tên"
+          }
+        }
+      }
+    },
+    "Hỗ trợ": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hỗ trợ"
+          }
+        }
+      }
+    },
+    "Khách": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khách"
+          }
+        }
+      }
+    },
+    "Khách sẽ được thông báo. Thao tác này không thể hoàn tác.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khách sẽ được thông báo. Thao tác này không thể hoàn tác."
+          }
+        }
+      }
+    },
+    "Không thể tải chuyến đi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải chuyến đi"
+          }
+        }
+      }
+    },
+    "Không thể tải cài đặt": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải cài đặt"
+          }
+        }
+      }
+    },
+    "Không thể tải dữ liệu. Nhấn để thử lại.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải dữ liệu. Nhấn để thử lại."
+          }
+        }
+      }
+    },
+    "Không thể tải thu nhập": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải thu nhập"
+          }
+        }
+      }
+    },
+    "Không thể tải thông tin hồ sơ.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải thông tin hồ sơ."
+          }
+        }
+      }
+    },
+    "Không tìm thấy chuyến đi phù hợp": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tìm thấy chuyến đi phù hợp"
+          }
+        }
+      }
+    },
+    "Không tìm thấy số điện thoại tài xế.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tìm thấy số điện thoại tài xế."
+          }
+        }
+      }
+    },
+    "Không tạo được chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tạo được chuyến"
+          }
+        }
+      }
+    },
+    "Kiểm tra kết nối rồi thử lại.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kiểm tra kết nối rồi thử lại."
+          }
+        }
+      }
+    },
+    "Lưu thay đổi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu thay đổi"
+          }
+        }
+      }
+    },
+    "Lịch sử": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lịch sử"
+          }
+        }
+      }
+    },
+    "Lỗi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lỗi"
+          }
+        }
+      }
+    },
+    "Lộ trình tối ưu": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lộ trình tối ưu"
+          }
+        }
+      }
+    },
+    "Mật khẩu": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mật khẩu"
+          }
+        }
+      }
+    },
+    "Mẹo an toàn khi lái xe": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mẹo an toàn khi lái xe"
+          }
+        }
+      }
+    },
+    "Nghe từ khoá đánh thức ở chế độ nền để điều khiển bằng giọng nói": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nghe từ khoá đánh thức ở chế độ nền để điều khiển bằng giọng nói"
+          }
+        }
+      }
+    },
+    "Nguyễn Văn A": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nguyễn Văn A"
+          }
+        }
+      }
+    },
+    "Ngôn ngữ trợ lý": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ngôn ngữ trợ lý"
+          }
+        }
+      }
+    },
+    "Nhận chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhận chuyến"
+          }
+        }
+      }
+    },
+    "Nhận chuyến, gọi khách, xem thu nhập — chỉ cần nói, mắt vẫn trên đường.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhận chuyến, gọi khách, xem thu nhập — chỉ cần nói, mắt vẫn trên đường."
+          }
+        }
+      }
+    },
+    "Nhập tên của bạn": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhập tên của bạn"
+          }
+        }
+      }
+    },
+    "Nói với Czen": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nói với Czen"
+          }
+        }
+      }
+    },
+    "Quản lý xe": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quản lý xe"
+          }
+        }
+      }
+    },
+    "Sắp ra mắt": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sắp ra mắt"
+          }
+        }
+      }
+    },
+    "Số nhà, đường, phường/xã…": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Số nhà, đường, phường/xã…"
+          }
+        }
+      }
+    },
+    "Số điện thoại": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Số điện thoại"
+          }
+        }
+      }
+    },
+    "Số điện thoại khách": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Số điện thoại khách"
+          }
+        }
+      }
+    },
+    "TB/chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TB/chuyến"
+          }
+        }
+      }
+    },
+    "Thoát chỉ đường": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thoát chỉ đường"
+          }
+        }
+      }
+    },
+    "Thu nhập": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thu nhập"
+          }
+        }
+      }
+    },
+    "Thu nhỏ hội thoại": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thu nhỏ hội thoại"
+          }
+        }
+      }
+    },
+    "Thêm chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm chuyến"
+          }
+        }
+      }
+    },
+    "Thêm chuyến (tự tạo)": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm chuyến (tự tạo)"
+          }
+        }
+      }
+    },
+    "Thêm chuyến tự tạo": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm chuyến tự tạo"
+          }
+        }
+      }
+    },
+    "Thêm tài khoản ngân hàng": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm tài khoản ngân hàng"
+          }
+        }
+      }
+    },
+    "Thêm tài khoản ngân hàng để nhận thanh toán tiền cước trực tiếp. Tính năng này đang được phát triển.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm tài khoản ngân hàng để nhận thanh toán tiền cước trực tiếp. Tính năng này đang được phát triển."
+          }
+        }
+      }
+    },
+    "Thông báo khách khi gần điểm đón": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thông báo khách khi gần điểm đón"
+          }
+        }
+      }
+    },
+    "Thưởng": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thưởng"
+          }
+        }
+      }
+    },
+    "Thống kê": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thống kê"
+          }
+        }
+      }
+    },
+    "Thử lại": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thử lại"
+          }
+        }
+      }
+    },
+    "Tiếp tục gọi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiếp tục gọi"
+          }
+        }
+      }
+    },
+    "Trung tâm an toàn": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trung tâm an toàn"
+          }
+        }
+      }
+    },
+    "Trạng thái sẵn sàng nhận chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trạng thái sẵn sàng nhận chuyến"
+          }
+        }
+      }
+    },
+    "Trở thành tài xế Czen": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trở thành tài xế Czen"
+          }
+        }
+      }
+    },
+    "Trợ lý": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trợ lý"
+          }
+        }
+      }
+    },
+    "Trợ lý giọng nói cho tài xế": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trợ lý giọng nói cho tài xế"
+          }
+        }
+      }
+    },
+    "Tài khoản ngân hàng": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tài khoản ngân hàng"
+          }
+        }
+      }
+    },
+    "Tên hiển thị": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tên hiển thị"
+          }
+        }
+      }
+    },
+    "Tên khách (nếu có)": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tên khách (nếu có)"
+          }
+        }
+      }
+    },
+    "Tên xe": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tên xe"
+          }
+        }
+      }
+    },
+    "Tìm theo tên hoặc số điện thoại...": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tìm theo tên hoặc số điện thoại..."
+          }
+        }
+      }
+    },
+    "Tìm theo tên khách hoặc địa chỉ...": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tìm theo tên khách hoặc địa chỉ..."
+          }
+        }
+      }
+    },
+    "Tính lại đường đi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tính lại đường đi"
+          }
+        }
+      }
+    },
+    "Tính năng tải lên giấy tờ sẽ sớm khả dụng.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tính năng tải lên giấy tờ sẽ sớm khả dụng."
+          }
+        }
+      }
+    },
+    "Tải lên giấy tờ để được xác minh và tiếp tục nhận chuyến. Tính năng tải ảnh giấy tờ đang được phát triển.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tải lên giấy tờ để được xác minh và tiếp tục nhận chuyến. Tính năng tải ảnh giấy tờ đang được phát triển."
+          }
+        }
+      }
+    },
+    "Tỉ lệ hoàn thành": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tỉ lệ hoàn thành"
+          }
+        }
+      }
+    },
+    "Tỉ lệ nhận": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tỉ lệ nhận"
+          }
+        }
+      }
+    },
+    "Tổng chuyến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tổng chuyến"
+          }
+        }
+      }
+    },
+    "Tổng thu nhập": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tổng thu nhập"
+          }
+        }
+      }
+    },
+    "Từ chối": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Từ chối"
+          }
+        }
+      }
+    },
+    "Từ chối chuyến này?": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Từ chối chuyến này?"
+          }
+        }
+      }
+    },
+    "Tự gợi ý điểm dừng tiếp theo": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự gợi ý điểm dừng tiếp theo"
+          }
+        }
+      }
+    },
+    "VD: 36B6-36363": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VD: 36B6-36363"
+          }
+        }
+      }
+    },
+    "VD: Toyota Vios": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VD: Toyota Vios"
+          }
+        }
+      }
+    },
+    "Vài thông tin về bạn và xe là xong.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vài thông tin về bạn và xe là xong."
+          }
+        }
+      }
+    },
+    "Về vị trí của tôi": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Về vị trí của tôi"
+          }
+        }
+      }
+    },
+    "Xin chào": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xin chào"
+          }
+        }
+      }
+    },
+    "Xoá": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá"
+          }
+        }
+      }
+    },
+    "Đang chờ chuyến mới được giao...": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang chờ chuyến mới được giao..."
+          }
+        }
+      }
+    },
+    "Đang gọi khách": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang gọi khách"
+          }
+        }
+      }
+    },
+    "Đang trả lời...": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang trả lời..."
+          }
+        }
+      }
+    },
+    "Đi cùng trẻ em": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đi cùng trẻ em"
+          }
+        }
+      }
+    },
+    "Điều khoản & Bảo mật": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điều khoản & Bảo mật"
+          }
+        }
+      }
+    },
+    "Điểm trả": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điểm trả"
+          }
+        }
+      }
+    },
+    "Điểm xuất phát (chưa có GPS)": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điểm xuất phát (chưa có GPS)"
+          }
+        }
+      }
+    },
+    "Điểm đón": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điểm đón"
+          }
+        }
+      }
+    },
+    "Điểm đến": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điểm đến"
+          }
+        }
+      }
+    },
+    "Đánh giá": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đánh giá"
+          }
+        }
+      }
+    },
+    "Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại."
+          }
+        }
+      }
+    },
+    "Đăng ký": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng ký"
+          }
+        }
+      }
+    },
+    "Đăng ký thất bại. Kiểm tra lại thông tin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng ký thất bại. Kiểm tra lại thông tin."
+          }
+        }
+      }
+    },
+    "Đăng nhập": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng nhập"
+          }
+        }
+      }
+    },
+    "Đăng nhập thất bại. Kiểm tra lại thông tin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng nhập thất bại. Kiểm tra lại thông tin."
+          }
+        }
+      }
+    },
+    "Đăng xuất": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng xuất"
+          }
+        }
+      }
+    },
+    "Đăng xuất?": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đăng xuất?"
+          }
+        }
+      }
+    },
+    "Để sau": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Để sau"
+          }
+        }
+      }
+    },
+    "Ước tính đường chim bay — chưa có dữ liệu giao thông thực tế": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ước tính đường chim bay — chưa có dữ liệu giao thông thực tế"
+          }
+        }
+      }
+    },
+    "Ảnh đại diện lấy theo chữ cái đầu của tên": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh đại diện lấy theo chữ cái đầu của tên"
+          }
+        }
+      }
+    },
+    "Ở lại": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ở lại"
+          }
+        }
+      }
+    }
+  }
+}

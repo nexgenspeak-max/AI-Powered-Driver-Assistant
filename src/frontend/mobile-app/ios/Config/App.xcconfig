@@ -1,0 +1,6 @@
+// Shared settings. Local.xcconfig holds base URLs and the Goong key (uncommitted).
+TRIP_SERVICE_URL = http:/$()/localhost:8002/api/v1
+AUTH_SERVICE_URL = http:/$()/localhost:8003/api/v1
+TRIP_SERVICE_WS_URL =
+GOONG_MAPS_KEY =
+#include? "Local.xcconfig"

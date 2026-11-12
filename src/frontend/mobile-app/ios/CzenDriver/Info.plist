@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>vi</string>
+	<key>CFBundleDisplayName</key>
+	<string>Czen</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>vi</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.chinhtruongba.driverapp</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>driver-app</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CZAuthServiceURL</key>
+	<string>$(AUTH_SERVICE_URL)</string>
+	<key>CZGoongMapsKey</key>
+	<string>$(GOONG_MAPS_KEY)</string>
+	<key>CZTripServiceURL</key>
+	<string>$(TRIP_SERVICE_URL)</string>
+	<key>CZTripServiceWSURL</key>
+	<string>$(TRIP_SERVICE_WS_URL)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSContactsUsageDescription</key>
+	<string>Czen Driver needs contacts access so the AI assistant can call people from your phone by name.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Czen Driver needs your location in the background so it can notify the customer when you're close to the pickup point.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Czen Driver needs your location to track the trip while you're driving.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Czen Driver needs microphone access so you can talk to the AI assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Czen Driver listens on-device for the wake phrase "hey ai" in hands-free mode.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>
