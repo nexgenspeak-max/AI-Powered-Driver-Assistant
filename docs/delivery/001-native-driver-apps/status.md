@@ -6,7 +6,7 @@ Appetite: 3 sessions of agent work · started 2026-11-12 · **Spent: 0 of 3 sess
 Platforms in scope: iOS | Android
 Status: doing
 
-**Next action:** Wait for the iOS and Android build agents (background); then review each against spec.md AC1–AC13, look at evidence/ screenshots, commit per platform, push.
+**Next action:** Read the independent review (background agent); fix must-fix findings on both apps plus the iOS garbled map labels (Android renders the same Goong tiles correctly, so it is an iOS-side text decoding issue); re-run gates; commit; demo page.
 
 Resume: re-invoke `ship`; "Where am I?" reads this file and does the Next action.
 
@@ -29,7 +29,7 @@ Resume: re-invoke `ship`; "Where am I?" reads this file and does the Next action
 | Set up | todo | |
 | Architect | done | design.md D1–D10 |
 | Plan | done | build order in agent briefs: skeleton → auth → trips → voice → map → earnings/profile → location/wakeword → tests |
-| Build | doing | iOS + Android agents in parallel |
+| Build | doing | android ec2d714 (lint, 42 unit, journey green); ios 9ab67a9 (34 tests + XCUITest green on iOS 26.1); review pending |
 | Verify | todo | |
 | Demo | todo | |
 | Release | n.a. | local only |
@@ -46,6 +46,8 @@ Resume: re-invoke `ship`; "Where am I?" reads this file and does the Next action
 
 - 2026-11-12 triage — driver-app, full parity, Liquid Glass on iOS, glassy on Android.
 - 2026-11-12 spec/design written; build agents launched for iOS and Android.
+- 2026-11-12 android app — committed ec2d714, review pending.
+- 2026-11-12 ios app — committed 9ab67a9, review pending. iOS 27.0 simulator: XCTest runner never connects; tests run on iOS 26.1.
 
 ## Rulings (decisions taken without asking)
 
