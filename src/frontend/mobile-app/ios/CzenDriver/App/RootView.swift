@@ -45,6 +45,10 @@ struct AppShellView: View {
     @State private var toastTask: Task<Void, Never>?
     @State private var didApplyLaunch = false
 
+    private static let blankTabIcon: UIImage = UIGraphicsImageRenderer(size: CGSize(width: 28, height: 28))
+        .image { _ in }
+        .withRenderingMode(.alwaysOriginal)
+
     var body: some View {
         let tabs = Binding<AppTab>(
             get: { selection },
@@ -70,7 +74,9 @@ struct AppShellView: View {
                 Tab(value: AppTab.assistant) {
                     Color.clear
                 } label: {
-                    Label { Text("Trợ lý") } icon: { Image(systemName: "circle.fill").opacity(0) }
+                    // The system tab bar ignores .opacity on tab icons, so the slot under the orb
+                    // uses a fully transparent bitmap (rendered as-is, not as a template).
+                    Label { Text("Trợ lý") } icon: { Image(uiImage: Self.blankTabIcon) }
                 }
                 Tab("Thu nhập", systemImage: "wallet.bifold", value: AppTab.earnings) {
                     NavigationStack { EarningsView(selection: $selection) }
