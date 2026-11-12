@@ -48,7 +48,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chinhtruongba.driverapp.R
 import com.chinhtruongba.driverapp.app.LocalPermissions
-import com.chinhtruongba.driverapp.app.requestLocationForOnline
 import com.chinhtruongba.driverapp.core.model.Trip
 import com.chinhtruongba.driverapp.core.util.Format
 import com.chinhtruongba.driverapp.designsystem.components.ButtonVariant
@@ -104,7 +103,7 @@ fun EarningsScreen(vm: EarningsViewModel = hiltViewModel()) {
                             m,
                             stringResource(if (s.isOnline) R.string.earn_empty_online else R.string.earn_empty_offline),
                             actionLabel = if (!s.isOnline && s.driverReady) stringResource(R.string.go_online_cta) else null,
-                            onAction = if (!s.isOnline && s.driverReady) ({ perms?.requestLocationForOnline(vm::goOnline) ?: vm.goOnline() }) else null,
+                            onAction = if (!s.isOnline && s.driverReady) ({ perms?.requestLocationForOnline { vm.goOnline() } ?: vm.goOnline() }) else null,
                             actionVariant = ButtonVariant.Primary,
                         )
                     }

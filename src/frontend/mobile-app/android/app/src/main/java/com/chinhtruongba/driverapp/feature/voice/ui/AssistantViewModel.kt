@@ -75,9 +75,9 @@ class AssistantViewModel @Inject constructor(
     fun openPanel() = chat.openPanel()
     fun closePanel() = chat.closePanel()
 
-    fun connect(phone: String) {
+    fun connect(phone: String, micGranted: Boolean = true) {
         chat.openPanel()
-        voice.connect(phone)
+        voice.connect(phone, micGranted)
     }
 
     /** Composer / orb button: connect when idle, end the session when connected. */

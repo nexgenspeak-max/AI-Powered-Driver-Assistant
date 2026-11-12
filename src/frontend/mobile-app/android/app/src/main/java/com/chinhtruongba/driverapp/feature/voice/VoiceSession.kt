@@ -116,8 +116,17 @@ class VoiceSession @Inject constructor(
         }
     }
 
-    fun connect(driverPhone: String) {
+    /**
+     * Joins the voice room. [micGranted] = false (RECORD_AUDIO denied at the prompt) does not
+     * join a room the driver cannot speak in: the session goes to [VoiceStatus.Error] so the
+     * panel shows the error caption and the orb offers a retry.
+     */
+    fun connect(driverPhone: String, micGranted: Boolean = true) {
         if (connecting) return // synchronous re-entrancy guard
+        if (!micGranted) {
+            if (!engine.isActive) _state.value = VoiceState(status = VoiceStatus.Error)
+            return
+        }
         connecting = true
         connectJob = scope.launch {
             try {
@@ -152,6 +161,9 @@ class VoiceSession @Inject constructor(
                 delay(200)
                 micOk = engine.setMicrophoneEnabled(true)
             }
+            // No mic track (permission revoked, device busy): an agent that cannot hear the
+            // driver is not "Connected"; tear down and surface the error caption instead.
+            if (!micOk) throw IllegalStateException("microphone unavailable")
             foreground.startCall()
             _state.update { it.copy(status = VoiceStatus.Connected, isMicMuted = false) }
             startWatchdog(generation)
@@ -181,6 +193,7 @@ class VoiceSession @Inject constructor(
     }
 
     private suspend fun cleanupAfterFailure(cancelled: Boolean) {
+        roomGeneration++ // a late onDisconnected from this room must not reset the Error state
         watchdog?.cancel()
         runCatching { engine.disconnect() }
         runCatching { engine.stopAudioSession() }

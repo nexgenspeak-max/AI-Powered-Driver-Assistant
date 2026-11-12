@@ -27,11 +27,38 @@ sealed interface DispatchEvent {
 
 /** Receive-only realtime channel, open only while the driver is online. */
 interface DispatchSocket {
-    /** Cold flow: connects on collect, reconnects 3 s after any close, closes on cancel. */
+    /**
+     * Cold flow: connects on collect, reconnects 3 s after a close (exponential backoff after
+     * rejected 401/403 handshakes, see [ReconnectBackoff]), closes on cancel.
+     */
     fun events(phone: String): Flow<DispatchEvent>
 }
 
 const val RECONNECT_DELAY_MS = 3_000L
+const val MAX_RECONNECT_DELAY_MS = 60_000L
+
+/**
+ * Delay before the next connect. An ordinary close/failure waits [baseMs]. A handshake the
+ * server rejects as unauthorized (401/403, e.g. a revoked session the refresh could not fix)
+ * waits base·2ⁿ for the n-th consecutive one (3 → 6 → 12 … s), capped at [maxMs], so a dead
+ * token does not hammer the server every 3 s. A successful open resets the streak.
+ */
+class ReconnectBackoff(private val baseMs: Long = RECONNECT_DELAY_MS, private val maxMs: Long = MAX_RECONNECT_DELAY_MS) {
+    private var authFailures = 0
+
+    fun onOpened() {
+        authFailures = 0
+    }
+
+    fun nextDelay(unauthorized: Boolean): Long {
+        if (!unauthorized) return baseMs
+        val shift = authFailures.coerceAtMost(20)
+        authFailures++
+        return (baseMs shl shift).coerceAtMost(maxMs)
+    }
+}
+
+private fun isUnauthorized(code: Int?) = code == 401 || code == 403
 
 /**
  * WebSocket keepalive. Without pings a half-open TCP connection (NAT timeout, radio switch)
@@ -44,6 +71,8 @@ class OkHttpDispatchSocket(
     client: OkHttpClient,
     private val json: Json,
     private val baseWsUrl: String,
+    /** Test seam for the reconnect wait. */
+    private val sleep: suspend (Long) -> Unit = { delay(it) },
 ) : DispatchSocket {
     /** The shared REST client plus a ping interval (same pool and interceptors, REST calls unchanged). */
     internal val socketClient: OkHttpClient = client.newBuilder()
@@ -52,17 +81,29 @@ class OkHttpDispatchSocket(
 
     override fun events(phone: String): Flow<DispatchEvent> = flow {
         val url = "$baseWsUrl?role=driver&id=${URLEncoder.encode(phone, "UTF-8")}"
+        val backoff = ReconnectBackoff()
         while (coroutineContext.isActive) {
-            singleConnection(url).collect { emit(it) }
-            delay(RECONNECT_DELAY_MS)
+            val outcome = Outcome()
+            singleConnection(url, outcome).collect {
+                if (it == DispatchEvent.Opened) backoff.onOpened()
+                emit(it)
+            }
+            sleep(backoff.nextDelay(unauthorized = !outcome.opened && isUnauthorized(outcome.httpCode)))
         }
     }
 
-    private fun singleConnection(url: String): Flow<DispatchEvent> = callbackFlow {
+    /** How one connection attempt ended. */
+    private class Outcome {
+        @Volatile var opened = false
+        @Volatile var httpCode: Int? = null
+    }
+
+    private fun singleConnection(url: String, outcome: Outcome): Flow<DispatchEvent> = callbackFlow {
         val ws = socketClient.newWebSocket(
             Request.Builder().url(url).build(),
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    outcome.opened = true
                     trySend(DispatchEvent.Opened)
                 }
 
@@ -70,11 +111,19 @@ class OkHttpDispatchSocket(
                     parse(text)?.let { trySend(it) }
                 }
 
+                // The server closed: OkHttp does not answer the close frame by itself, so reply and
+                // end this connection now (otherwise the reconnect would wait for a ping timeout).
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    webSocket.close(1000, null)
+                    close()
+                }
+
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     close()
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    outcome.httpCode = response?.code
                     close()
                 }
             },

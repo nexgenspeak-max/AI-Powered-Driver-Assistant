@@ -14,8 +14,23 @@ val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+// A Gradle property (-Pczen.tripServiceUrl=… or ~/.gradle/gradle.properties, e.g. CI) wins over local.properties.
 fun localProp(key: String, default: String): String =
-    localProps.getProperty(key)?.takeIf { it.isNotBlank() } ?: default
+    (findProperty(key) as String?)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(key)?.takeIf { it.isNotBlank() }
+        ?: default
+
+val tripServiceUrl = localProp("czen.tripServiceUrl", "http://10.0.2.2:8002/api/v1")
+val authServiceUrl = localProp("czen.authServiceUrl", "http://10.0.2.2:8003/api/v1")
+val tripServiceWsUrl = localProp("czen.tripServiceWsUrl", "")
+
+// Keys whose value would make a release build talk plain http/ws (values are never printed).
+val insecureReleaseUrlKeys: List<String> = buildList {
+    if (!tripServiceUrl.startsWith("https://")) add("czen.tripServiceUrl")
+    if (!authServiceUrl.startsWith("https://")) add("czen.authServiceUrl")
+    // Blank = derived from tripServiceUrl (https → wss).
+    if (tripServiceWsUrl.isNotBlank() && !tripServiceWsUrl.startsWith("wss://")) add("czen.tripServiceWsUrl")
+}
 
 fun String.quoted() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -45,9 +60,9 @@ android {
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "TRIP_SERVICE_URL", localProp("czen.tripServiceUrl", "http://10.0.2.2:8002/api/v1").quoted())
-        buildConfigField("String", "AUTH_SERVICE_URL", localProp("czen.authServiceUrl", "http://10.0.2.2:8003/api/v1").quoted())
-        buildConfigField("String", "TRIP_SERVICE_WS_URL", localProp("czen.tripServiceWsUrl", "").quoted())
+        buildConfigField("String", "TRIP_SERVICE_URL", tripServiceUrl.quoted())
+        buildConfigField("String", "AUTH_SERVICE_URL", authServiceUrl.quoted())
+        buildConfigField("String", "TRIP_SERVICE_WS_URL", tripServiceWsUrl.quoted())
         buildConfigField("String", "GOONG_MAPS_KEY", localProp("czen.goongMapsKey", "").quoted())
 
         ndk {
@@ -170,8 +185,21 @@ val verifyReleaseSigning = tasks.register("verifyReleaseSigning") {
         }
     }
 }
+// Release has no cleartext exception (usesCleartextTraffic=false), so http base URLs would
+// only fail at runtime; fail the release build instead. Debug builds are unaffected.
+val verifyReleaseBaseUrls = tasks.register("verifyReleaseBaseUrls") {
+    val insecure = insecureReleaseUrlKeys
+    doLast {
+        if (insecure.isNotEmpty()) {
+            throw GradleException(
+                "Release builds need https:// (and wss://) backend URLs. Not secure: ${insecure.joinToString()}. " +
+                    "Set them in local.properties or as Gradle properties (-P<key>=https://…).",
+            )
+        }
+    }
+}
 tasks.matching { Regex("^(assemble|bundle|package|sign)\\w*Release(Bundle)?$").matches(it.name) }.configureEach {
-    dependsOn(verifyReleaseSigning)
+    dependsOn(verifyReleaseSigning, verifyReleaseBaseUrls)
 }
 
 // The Vosk wake-word model is not duplicated in git: it is synced from the RN

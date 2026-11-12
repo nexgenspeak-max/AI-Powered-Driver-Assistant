@@ -289,6 +289,8 @@
     <string name="profile_section_settings">Cài đặt</string>
     <string name="profile_assistant_settings">Cài đặt trợ lý</string>
     <string name="profile_dark_mode">Chế độ tối</string>
+    <string name="a11y_theme_dark">Giao diện tối</string>
+    <string name="a11y_theme_light">Giao diện sáng</string>
     <string name="profile_about">Giới thiệu</string>
     <string name="profile_faq">Câu hỏi thường gặp</string>
     <string name="profile_logout">Đăng xuất</string>
@@ -410,6 +412,7 @@
     <string name="fg_title" translatable="false">Czen</string>
     <string name="fg_call_message">Đang trong cuộc gọi với trợ lý AI</string>
     <string name="fg_wake_message">Đang lắng nghe từ khoá đánh thức trợ lý</string>
+    <string name="location_approximate_note">Czen đang dùng vị trí gần đúng. Bật "Vị trí chính xác" trong Cài đặt để khách thấy bạn chính xác hơn.</string>
     <string name="fg_location_title">Czen đang theo dõi vị trí</string>
     <string name="fg_location_message">Giúp báo cho khách hàng khi bạn sắp đến điểm đón.</string>
 

@@ -4,4 +4,7 @@ package com.chinhtruongba.driverapp.app
 interface DemoHooks {
     val isDemo: Boolean
     fun triggerOffer()
+
+    /** Moves the demo GPS position (the home map follows it), e.g. for label screenshots. */
+    fun moveTo(lat: Double, lng: Double) = Unit
 }

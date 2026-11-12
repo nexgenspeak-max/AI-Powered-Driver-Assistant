@@ -124,11 +124,20 @@ class FakeVoiceEngine @Inject constructor() : VoiceEngine {
     override suspend fun publishData(topic: String, payload: ByteArray) = Unit
 }
 
-/** A fixed GPS position near Hồ Hoàn Kiếm (the start of the bundled optimized route). */
+/**
+ * A GPS position near Hồ Hoàn Kiếm (the start of the bundled optimized route); the
+ * `driver-app://demo/location?lat=&lng=` link moves it.
+ */
 @Singleton
 class FakeLocationSource @Inject constructor() : LocationSource {
-    private val here = Fix(LatLng(21.0285, 105.8522), heading = 200f)
+    @Volatile
+    private var here = Fix(LatLng(21.0285, 105.8522), heading = 200f)
     private val _last = MutableStateFlow<Fix?>(here)
+
+    fun moveTo(at: LatLng) {
+        here = Fix(at, heading = here.heading)
+        _last.value = here.copy(timeMs = System.currentTimeMillis())
+    }
     override val last: StateFlow<Fix?> = _last
 
     override fun hasForegroundPermission(): Boolean = true
@@ -160,7 +169,11 @@ class FakeContactsSource @Inject constructor() : ContactsSource {
 }
 
 @Singleton
-class DemoHooksImpl @Inject constructor(private val backend: FakeBackend) : DemoHooks {
+class DemoHooksImpl @Inject constructor(
+    private val backend: FakeBackend,
+    private val location: FakeLocationSource,
+) : DemoHooks {
     override val isDemo: Boolean = true
     override fun triggerOffer() = backend.triggerOffer()
+    override fun moveTo(lat: Double, lng: Double) = location.moveTo(LatLng(lat, lng))
 }

@@ -62,15 +62,30 @@ class SessionRepository @Inject constructor(
         if (tokenStore.current() != null) scope.launch { refreshMe() }
     }
 
+    /**
+     * Writes `me` only if the session that started the request is still the current one and
+     * still signed in: a `/auth/me` or PATCH answer that lands after logout is dropped.
+     */
+    private suspend fun commitMe(startedIn: Long, write: () -> Unit): Boolean =
+        generation.runIfCurrent(startedIn) {
+            if (tokenStore.current() == null) {
+                false
+            } else {
+                write()
+                true
+            }
+        }
+
     suspend fun refreshMe() {
+        val gen = generation.value
         if (tokenStore.current() == null) return
         _me.update { it.copy(loading = true, error = null) }
         try {
             val user = apiCall { authApi.me() }
-            _me.value = Loadable(user)
+            commitMe(gen) { _me.value = Loadable(user) }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            _me.update { it.copy(loading = false, error = e) }
+            commitMe(gen) { _me.update { it.copy(loading = false, error = e) } }
         }
     }
 
@@ -111,9 +126,10 @@ class SessionRepository @Inject constructor(
                 },
             )
         }
+        val gen = generation.value
         tokenStore.set(AuthTokens(res.accessToken, res.refreshToken))
         // Prime the ['me'] cache with the returned user.
-        if (res.user != null) _me.value = Loadable(res.user) else refreshMe()
+        if (res.user != null) commitMe(gen) { _me.value = Loadable(res.user) } else refreshMe()
     }
 
     /** Optimistically patch the cached profile (online toggle); returns the previous value. */
@@ -123,14 +139,16 @@ class SessionRepository @Inject constructor(
         return prev
     }
 
+    /** Rollback of [patchMe]; a no-op once that account is gone (logout in between). */
     fun restoreMe(user: AuthUser) {
-        _me.value = _me.value.copy(data = user)
+        _me.update { cur -> if (cur.data?.id == user.id) cur.copy(data = user) else cur }
     }
 
     suspend fun updateAccount(body: JsonObject): AuthUser {
+        val gen = generation.value
         val id = _me.value.data?.id ?: error("no account")
         val user = apiCall { authApi.updateAccount(id, body) }
-        _me.value = Loadable(user)
+        commitMe(gen) { _me.value = Loadable(user) }
         return user
     }
 
@@ -158,7 +176,9 @@ class SessionRepository @Inject constructor(
      * generation first stops a refresh still in flight from writing tokens back.
      */
     suspend fun logoutAndReset() {
-        generation.invalidate { tokenStore.clear() }
-        _me.value = Loadable()
+        generation.invalidate {
+            tokenStore.clear()
+            _me.value = Loadable()
+        }
     }
 }

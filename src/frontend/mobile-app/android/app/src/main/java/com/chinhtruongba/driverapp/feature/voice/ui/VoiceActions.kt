@@ -17,7 +17,7 @@ import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 /** Dialog + permission plumbing shared by the orb and the composer voice button. */
 class VoiceActionHandler internal constructor(
     private val vm: AssistantViewModel,
-    private val requestMic: (onDone: () -> Unit) -> Unit,
+    private val requestMic: (onDone: (granted: Boolean) -> Unit) -> Unit,
     private val showCancelCall: () -> Unit,
     private val showMissingPhone: () -> Unit,
 ) {
@@ -30,8 +30,8 @@ class VoiceActionHandler internal constructor(
             OrbAction.MissingPhone -> showMissingPhone()
             is OrbAction.Connect -> {
                 vm.openPanel()
-                // The mic is requested on each connect; LiveKit simply publishes nothing if denied.
-                requestMic { vm.connect(action.phone) }
+                // The mic is requested on each connect; denied → Error caption, not a silent room.
+                requestMic { granted -> vm.connect(action.phone, micGranted = granted) }
             }
         }
     }
@@ -77,7 +77,7 @@ fun rememberVoiceActions(vm: AssistantViewModel): VoiceActionHandler {
         VoiceActionHandler(
             vm = vm,
             requestMic = { done ->
-                if (perms == null) done() else perms.request(arrayOf(Manifest.permission.RECORD_AUDIO)) { done() }
+                if (perms == null) done(true) else perms.request(arrayOf(Manifest.permission.RECORD_AUDIO)) { done(it) }
             },
             showCancelCall = { cancelCall = true },
             showMissingPhone = { missingPhone = true },

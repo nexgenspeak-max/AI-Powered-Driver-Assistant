@@ -55,6 +55,18 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 - [x] Accessibility: remaining clickables carry `Role.Button`; the offer sheet body absorbs taps without a nameless node; orb, offer sheet, chat overlay, tab bar, home cards and status pill are static when the animator duration scale is 0 (`designsystem/motion`, observed live).
 - [x] +16 JVM tests (58 total).
 
+## Review fixes round 3 (2026-11-12)
+
+- [x] Location: `LocationTracker` collects `SessionRepository.loggedIn`; GPS watch + 15 s tick run only while visible && logged in; logout stops them and resets `lastPushAt`/`lastPushed`; `pushImmediate` is a no-op signed out.
+- [x] Session: `refreshMe`, `register` and `updateAccount` (profile + vehicle) write `me` only via `commitMe` (same `SessionGeneration` and tokens present); `restoreMe` ignores a different/absent account; logout clears tokens and `me` under one lock.
+- [x] Dispatch socket: `ReconnectBackoff` — 401/403 handshakes wait 3 → 6 → 12 … 60 s, any successful open resets; other closes stay at 3 s. Server-initiated close (`onClosing`) is now answered and ends the connection (it previously waited for a ping timeout).
+- [x] Permissions: `PermissionQueue` (FIFO, one dialog at a time, per-request callbacks) behind `PermissionRequester`; go-online treats COARSE-only (Android 12+ "Approximate") as foreground granted, still asks for background, returns a `LocationGrant` and shows a toast about approximate location.
+- [x] Voice: mic denied at the prompt → `VoiceSession.connect(phone, micGranted = false)` → `Error` (error chip/caption); a mic the engine cannot enable after the retry also ends in `Error` (room left); a late `onDisconnected` no longer overwrites `Error`.
+- [x] Gradle: `verifyReleaseBaseUrls` fails `assemble*/bundle*/package*/sign*Release` unless trip/auth URLs are `https://` and the WS URL is blank or `wss://` (keys named, values never printed). URL keys can also be given as Gradle properties (`-Pczen.tripServiceUrl=…`). Note: the current local.properties points at the http dev backend, so release builds need https overrides.
+- [x] a11y: `ThemeToggle` announces the sun/moon meaning as `stateDescription` ("Giao diện tối/sáng"); `CzenButton` already had `Role.Button` — both now covered by a Robolectric Compose test.
+- [x] Map labels (parity with iOS `TileTextRepair.swift`): `MojibakeRepair` + `VectorTileRepair` ported (same cases); `GoongTileRepairInterceptor` on MapLibre's OkHttp client (`HttpRequestUtil.setOkHttpClient`) repairs `*.goong.io/tiles/*.pbf` (gzip inflated when needed), leaves clean tiles byte-for-byte; ambient cache cleared once (`map` prefs `tileRepair.cacheVersion`). Demo deep link `driver-app://demo/location?lat=&lng=` moves the fake GPS. Evidence: `evidence/android/03-home-labels-dark.png` (21.0330, 105.8203 — "Công Ty Cổ Phần Hóa Dược Và Công Nghệ Sinh Học Biogreen").
+- [x] +22 JVM tests (80 total); instrumented MainJourneyTest 1/1.
+
 ## Remaining / follow-ups
 
 - Live LiveKit + real backend never exercised (no credentials by rule); verify prod flavor against the backend.
@@ -68,4 +80,5 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 ```
 ./gradlew lint testDemoDebugUnitTest assembleDemoDebug assembleProdDebug connectedDemoDebugAndroidTest
 ```
+Label screenshot: after dev-login, `driver-app://demo/location?lat=21.0330&lng=105.8203` (wait ~10 s for tiles).
 Screenshot pass: scratch script logic = pm clear → grant perms → `driver-app://demo/theme?mode=light|dark` → `driver-app://dev-login?phone=0901234567&password=secret1` → `driver-app://open/<trips|earnings|profile|assistant-settings>` → `driver-app://demo/offer` → `driver-app://demo/chat`.

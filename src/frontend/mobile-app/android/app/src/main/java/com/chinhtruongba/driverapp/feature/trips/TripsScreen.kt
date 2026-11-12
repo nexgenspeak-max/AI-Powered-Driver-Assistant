@@ -41,7 +41,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chinhtruongba.driverapp.R
 import com.chinhtruongba.driverapp.app.LocalPermissions
-import com.chinhtruongba.driverapp.app.requestLocationForOnline
 import com.chinhtruongba.driverapp.core.util.Format
 import com.chinhtruongba.driverapp.designsystem.components.CzenAlert
 import com.chinhtruongba.driverapp.designsystem.components.CzenToggle

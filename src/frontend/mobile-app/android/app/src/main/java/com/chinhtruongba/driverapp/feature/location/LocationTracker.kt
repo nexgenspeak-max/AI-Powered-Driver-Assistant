@@ -2,6 +2,7 @@ package com.chinhtruongba.driverapp.feature.location
 
 import com.chinhtruongba.driverapp.core.data.ApplicationScope
 import com.chinhtruongba.driverapp.core.data.DriverRepository
+import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.core.model.DriverContext
 import com.chinhtruongba.driverapp.core.model.LatLng
 import com.chinhtruongba.driverapp.core.model.TripStatus
@@ -26,45 +27,72 @@ fun activeStops(ctx: DriverContext?): List<LatLng> {
  * Foreground live push (useLiveDriverLocation): watch at 3 s / 5 m plus a 15 s wall-clock tick,
  * POST /drivers/me/location/live while online on the distance-based cadence, and immediate pushes
  * on accept / trip_confirmed / new active trip / navigation start / proximity setting changes.
+ * Runs only while the activity is visible and a driver is signed in; logout stops it and resets
+ * the push cadence so the next session pushes its first fix at once.
  */
 @Singleton
 class LocationTracker @Inject constructor(
     private val source: LocationSource,
     private val drivers: DriverRepository,
+    private val session: SessionRepository,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
     private var watchJob: Job? = null
     private var tickJob: Job? = null
+    @Volatile
     private var lastPushAt = 0L
+    @Volatile
     private var lastPushed: LatLng? = null
 
     /** Whether the activity is started; the watch only runs while it is. */
     @Volatile
     private var visible = false
 
+    /** Mirrors [SessionRepository.loggedIn]; the watch never runs signed out. */
+    @Volatile
+    private var loggedIn = false
+
+    init {
+        scope.launch {
+            session.loggedIn.collect { now ->
+                loggedIn = now
+                if (!now) resetCadence()
+                reconcile()
+            }
+        }
+    }
+
     private fun isOnline(): Boolean = drivers.context.value.data?.driver?.status == "online"
 
-    /** Activity `onStart`: start watching if location is already granted. */
+    /** Activity `onStart`: start watching if signed in and location is already granted. */
     fun onForeground() {
         visible = true
-        startForegroundWatch()
+        reconcile()
     }
 
     /** Activity `onStop`. */
     fun onBackground() {
         visible = false
-        stopForegroundWatch()
+        reconcile()
     }
 
     /**
      * Called from the runtime-permission result callback: a grant while the app is visible
      * starts the live watch immediately instead of waiting for the next `onStart`.
      */
-    fun onLocationPermissionChanged() {
-        if (visible) startForegroundWatch()
+    fun onLocationPermissionChanged() = reconcile()
+
+    /** The GPS watch and the 15 s tick run exactly while visible && logged in (&& permitted). */
+    @Synchronized
+    private fun reconcile() {
+        if (visible && loggedIn) startForegroundWatch() else stopForegroundWatch()
     }
 
-    @Synchronized
+    private fun resetCadence() {
+        lastPushAt = 0L
+        lastPushed = null
+    }
+
     private fun startForegroundWatch() {
         if (watchJob?.isActive == true) return
         if (!source.hasForegroundPermission()) return
@@ -82,7 +110,6 @@ class LocationTracker @Inject constructor(
         }
     }
 
-    @Synchronized
     private fun stopForegroundWatch() {
         watchJob?.cancel()
         tickJob?.cancel()
@@ -91,7 +118,7 @@ class LocationTracker @Inject constructor(
     }
 
     private suspend fun maybePush(here: LatLng) {
-        if (!isOnline()) return
+        if (!loggedIn || !isOnline()) return
         val now = System.currentTimeMillis()
         if (!PushCadence.shouldPush(now, lastPushAt, here, lastPushed, activeStops(drivers.context.value.data))) return
         lastPushAt = now
@@ -107,6 +134,7 @@ class LocationTracker @Inject constructor(
 
     /** pushImmediateLocation(scope?): one fresh fix straight to /location/live. */
     fun pushImmediate(proximityScope: String? = null) {
+        if (!loggedIn) return
         scope.launch {
             val fix = source.currentFix() ?: return@launch
             lastPushAt = System.currentTimeMillis()

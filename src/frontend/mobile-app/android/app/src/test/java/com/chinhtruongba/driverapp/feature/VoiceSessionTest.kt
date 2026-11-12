@@ -108,4 +108,28 @@ class VoiceSessionTest {
         engine.failSendText = true
         assertFalse(voice.sendText("xin chào"))
     }
+
+    @Test
+    fun `mic permission denied on connect ends in Error, not Connected`() = runTest {
+        val engine = FakeEngine()
+        val fg = RecordingForeground()
+        val voice = session(engine, ChatStore(), fg)
+        voice.connect("0901234567", micGranted = false)
+        settle()
+        assertEquals(VoiceStatus.Error, voice.state.value.status)
+        assertFalse("no room joined without a mic", engine.connected)
+        assertEquals(0, fg.calls)
+    }
+
+    @Test
+    fun `a mic the engine cannot enable ends in Error and leaves the room`() = runTest {
+        val engine = FakeEngine().apply { micAvailable = false }
+        val fg = RecordingForeground()
+        val voice = session(engine, ChatStore(), fg)
+        voice.connect("0901234567")
+        settle()
+        assertEquals(VoiceStatus.Error, voice.state.value.status)
+        assertFalse(engine.connected)
+        assertTrue("no foreground call left running", fg.calls < 1)
+    }
 }

@@ -96,6 +96,7 @@ fun DriverMap(
 
     val mapView = remember {
         MapLibre.getInstance(context)
+        GoongTileRepairer.install(context)
         val options = MapLibreMapOptions.createFromAttributes(context)
             .textureMode(true)
             .logoEnabled(false)

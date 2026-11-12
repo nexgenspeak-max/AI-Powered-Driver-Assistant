@@ -34,7 +34,8 @@ internal object DeepLinkPolicy {
 
 /**
  * `driver-app://` links, gated by [DeepLinkPolicy]: debug builds keep the RN dev routes
- * (dev-login, dev-say); the demo flavor adds `demo/offer`, `demo/theme?mode=`, `demo/chat`
+ * (dev-login, dev-say); the demo flavor adds `demo/offer`, `demo/theme?mode=`, `demo/chat`,
+ * `demo/location?lat=&lng=`
  * and `open/<tab|screen>` for screenshots.
  */
 @Singleton
@@ -89,6 +90,11 @@ class DeepLinks @Inject constructor(
                 }
             }
             path == listOf("demo", "offer") -> demo.triggerOffer()
+            path == listOf("demo", "location") -> {
+                val lat = uri.getQueryParameter("lat")?.toDoubleOrNull()
+                val lng = uri.getQueryParameter("lng")?.toDoubleOrNull()
+                if (lat != null && lng != null && lat in -90.0..90.0 && lng in -180.0..180.0) demo.moveTo(lat, lng)
+            }
             path == listOf("demo", "theme") -> scope.launch {
                 prefs.setTheme(if (uri.getQueryParameter("mode") == "light") ThemeMode.Light else ThemeMode.Dark)
             }

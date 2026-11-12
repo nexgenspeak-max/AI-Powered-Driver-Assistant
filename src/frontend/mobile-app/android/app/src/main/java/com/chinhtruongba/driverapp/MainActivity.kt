@@ -44,7 +44,8 @@ class MainActivity : ComponentActivity() {
                 if (pending) permissions.request(arrayOf(Manifest.permission.READ_CONTACTS)) { contactsGate.complete(it) }
             }
         }
-        // Foreground live location watch only while the activity is visible.
+        // Foreground live location watch only while the activity is visible; LocationTracker also
+        // follows SessionRepository.loggedIn, so it stops on logout even while visible.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = location.onForeground()
             override fun onStop(owner: LifecycleOwner) = location.onBackground()

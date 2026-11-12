@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -370,11 +371,16 @@ fun CzenTextField(
 fun ThemeToggle(dark: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
     val x by animateDpAsState(if (dark) 32.dp else 2.dp, spring(dampingRatio = 0.7f), label = "theme")
     val desc = stringResource(R.string.profile_dark_mode)
+    // The sun / moon art is meaningful (it shows the active theme): announce it as the state.
+    val themeState = stringResource(if (dark) R.string.a11y_theme_dark else R.string.a11y_theme_light)
     Box(
         modifier
             .size(64.dp, 48.dp)
             .toggleable(dark, role = Role.Switch) { onToggle() }
-            .semantics { contentDescription = desc },
+            .semantics {
+                contentDescription = desc
+                stateDescription = themeState
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -389,6 +395,8 @@ fun ThemeToggle(dark: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifi
             ) {
                 Image(
                     painterResource(if (dark) R.drawable.ic_moon else R.drawable.ic_sun),
+                    // Spoken through the toggle's stateDescription above; a second label here
+                    // would be read twice in the merged switch node.
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
