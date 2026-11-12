@@ -11,6 +11,7 @@ import com.chinhtruongba.driverapp.core.network.TripApi
 import com.chinhtruongba.driverapp.core.network.refreshBody
 import com.chinhtruongba.driverapp.core.realtime.DispatchSocket
 import com.chinhtruongba.driverapp.core.realtime.OkHttpDispatchSocket
+import com.chinhtruongba.driverapp.core.storage.SessionGeneration
 import com.chinhtruongba.driverapp.core.storage.TokenStore
 import dagger.Lazy
 import dagger.Module
@@ -43,11 +44,17 @@ object ApiModule {
 
     @Provides
     @Singleton
-    fun tokenRefresher(tokens: TokenStore, refreshApi: RefreshApi, session: Lazy<SessionRepository>): TokenRefresher =
+    fun tokenRefresher(
+        tokens: TokenStore,
+        refreshApi: RefreshApi,
+        session: Lazy<SessionRepository>,
+        generation: SessionGeneration,
+    ): TokenRefresher =
         TokenRefresher(
             tokenStore = tokens,
             refresh = { rt -> refreshApi.refresh(refreshBody(rt)) },
             onLogout = { session.get().logoutAndReset() },
+            generation = generation,
         )
 
     @Provides

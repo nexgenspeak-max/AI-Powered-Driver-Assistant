@@ -11,9 +11,14 @@ import androidx.core.content.ContextCompat
  * Runtime permissions asked in context (mic on connect, location when going online, contacts
  * lazily). Registered by [ComponentActivity] before it is started.
  */
-class PermissionRequester(private val activity: ComponentActivity) {
+class PermissionRequester(
+    private val activity: ComponentActivity,
+    /** Observes every permission result (before the caller's callback), e.g. to start location. */
+    private val onAnyResult: (Map<String, Boolean>) -> Unit = {},
+) {
     private var pending: ((Map<String, Boolean>) -> Unit)? = null
     private val launcher = activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
+        onAnyResult(res)
         pending?.invoke(res)
         pending = null
     }

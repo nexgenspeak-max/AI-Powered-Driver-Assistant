@@ -1,5 +1,6 @@
 package com.chinhtruongba.driverapp.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -24,6 +26,8 @@ import javax.inject.Singleton
  * live voice call, wake-word listening and background location share one notification. The
  * message follows the most important active reason.
  */
+// android.util.Log on purpose: no Timber tree is planted (Timber only arrives transitively via LiveKit).
+@SuppressLint("LogNotTimber")
 class CzenForegroundService : android.app.Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -63,6 +67,11 @@ class CzenForegroundService : android.app.Service() {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, n, 0)
         }.isSuccess
         if (reasons.isEmpty() || !started || type == 0) {
+            if (reasons.isNotEmpty()) {
+                // The service is going away: do not leave reasons that claim it runs.
+                Log.w(TAG, "foreground start failed or no permitted type; stopping (reasons=${reasons.size})")
+                Reasons.current = emptySet()
+            }
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -79,6 +88,7 @@ class CzenForegroundService : android.app.Service() {
     }
 
     companion object {
+        private const val TAG = "CzenForeground"
         const val NOTIFICATION_ID = 4471
         const val CHANNEL_ID = "czen-driver"
 
@@ -95,21 +105,40 @@ class CzenForegroundService : android.app.Service() {
     }
 }
 
-/** Adds/removes reasons and (re)starts or stops [CzenForegroundService]. */
+/**
+ * Adds/removes reasons and (re)starts or stops [CzenForegroundService]. When the OS refuses the
+ * start (e.g. `ForegroundServiceStartNotAllowedException` from the background) the added reason
+ * is rolled back, so [CzenForegroundService.Reasons] never claims a service that is not running.
+ */
+@SuppressLint("LogNotTimber")
 @Singleton
-class ServiceForegroundController @Inject constructor(@ApplicationContext private val context: Context) : ForegroundController {
+class ServiceForegroundController internal constructor(
+    private val start: () -> Unit,
+    private val stop: () -> Unit,
+) : ForegroundController {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(
+        start = { ContextCompat.startForegroundService(context, Intent(context, CzenForegroundService::class.java)) },
+        stop = { context.stopService(Intent(context, CzenForegroundService::class.java)) },
+    )
+
+    @Synchronized
     private fun update(add: String? = null, remove: String? = null) {
-        val next = CzenForegroundService.Reasons.current.toMutableSet()
+        val prev = CzenForegroundService.Reasons.current
+        val next = prev.toMutableSet()
         add?.let { next += it }
         remove?.let { next -= it }
         CzenForegroundService.Reasons.current = next
-        val intent = Intent(context, CzenForegroundService::class.java)
         if (next.isEmpty()) {
-            context.stopService(intent)
-        } else {
-            runCatching {
-                ContextCompat.startForegroundService(context, intent)
-            }
+            stop()
+            return
+        }
+        try {
+            start()
+        } catch (e: Exception) {
+            // Roll back only what this call added; reasons already running stay.
+            CzenForegroundService.Reasons.current = if (add != null && add !in prev) next - add else prev
+            Log.w(TAG, "foreground service start refused (${add ?: remove}): ${e.javaClass.simpleName}")
         }
     }
 
@@ -119,4 +148,8 @@ class ServiceForegroundController @Inject constructor(@ApplicationContext privat
     override fun stopWakeWord() = update(remove = CzenForegroundService.Reasons.WAKE)
     fun startLocation() = update(add = CzenForegroundService.Reasons.LOCATION)
     fun stopLocation() = update(remove = CzenForegroundService.Reasons.LOCATION)
+
+    private companion object {
+        const val TAG = "CzenForeground"
+    }
 }

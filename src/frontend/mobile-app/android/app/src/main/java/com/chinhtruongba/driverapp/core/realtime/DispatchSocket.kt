@@ -16,6 +16,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
 
 /** `{event, data}` frames from the dispatch WebSocket; [Opened] marks a (re)connect. */
@@ -32,11 +33,22 @@ interface DispatchSocket {
 
 const val RECONNECT_DELAY_MS = 3_000L
 
+/**
+ * WebSocket keepalive. Without pings a half-open TCP connection (NAT timeout, radio switch)
+ * never reports a failure, so the 3 s reconnect would never run; OkHttp fails the socket when
+ * a pong does not arrive within one interval.
+ */
+const val PING_INTERVAL_MS = 20_000L
+
 class OkHttpDispatchSocket(
-    private val client: OkHttpClient,
+    client: OkHttpClient,
     private val json: Json,
     private val baseWsUrl: String,
 ) : DispatchSocket {
+    /** The shared REST client plus a ping interval (same pool and interceptors, REST calls unchanged). */
+    internal val socketClient: OkHttpClient = client.newBuilder()
+        .pingInterval(PING_INTERVAL_MS, TimeUnit.MILLISECONDS)
+        .build()
 
     override fun events(phone: String): Flow<DispatchEvent> = flow {
         val url = "$baseWsUrl?role=driver&id=${URLEncoder.encode(phone, "UTF-8")}"
@@ -47,7 +59,7 @@ class OkHttpDispatchSocket(
     }
 
     private fun singleConnection(url: String): Flow<DispatchEvent> = callbackFlow {
-        val ws = client.newWebSocket(
+        val ws = socketClient.newWebSocket(
             Request.Builder().url(url).build(),
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {

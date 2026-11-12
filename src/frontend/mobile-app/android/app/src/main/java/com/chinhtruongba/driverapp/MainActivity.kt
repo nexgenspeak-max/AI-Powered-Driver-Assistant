@@ -31,7 +31,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        permissions = PermissionRequester(this)
+        permissions = PermissionRequester(this) { result ->
+            // Start the live watch as soon as location is granted, not on the next onStart.
+            if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+                location.onLocationPermissionChanged()
+            }
+        }
 
         // Contacts are requested lazily, the first time the agent calls search_contacts.
         lifecycleScope.launch {
@@ -41,8 +46,8 @@ class MainActivity : ComponentActivity() {
         }
         // Foreground live location watch only while the activity is visible.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) = location.startForegroundWatch()
-            override fun onStop(owner: LifecycleOwner) = location.stopForegroundWatch()
+            override fun onStart(owner: LifecycleOwner) = location.onForeground()
+            override fun onStop(owner: LifecycleOwner) = location.onBackground()
         })
 
         setContent {

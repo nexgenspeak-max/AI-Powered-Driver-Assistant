@@ -19,6 +19,19 @@ fun localProp(key: String, default: String): String =
 
 fun String.quoted() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
+// Release signing: Gradle property (e.g. ~/.gradle/gradle.properties or -P) first, then the
+// environment variable of the same name. Nothing is read from or written to the repo.
+fun releaseSecret(name: String): String? =
+    (findProperty(name) as String?)?.takeIf { it.isNotBlank() } ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = releaseSecret("CZEN_RELEASE_STORE_FILE")
+val releaseStorePassword = releaseSecret("CZEN_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = releaseSecret("CZEN_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = releaseSecret("CZEN_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }
+// Explicit opt-in for local testing only: -PallowDebugSigning=true signs release with the debug key.
+val allowDebugSigning = (findProperty("allowDebugSigning") as String?)?.toBoolean() == true
+
 android {
     namespace = "com.chinhtruongba.driverapp"
     // compileSdk 37: core-ktx 1.19 and okhttp 5.5 require it; targetSdk stays 36 (Play requirement, D2).
@@ -44,6 +57,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     flavorDimensions += "data"
     productFlavors {
         create("demo") {
@@ -59,13 +83,23 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug talks to the local http backend; see src/debug/res/xml/network_security_config.xml.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signing comes from the environment / ~/.gradle/gradle.properties; local builds
-            // reuse the debug key so `assembleProdRelease` still produces an installable APK.
-            signingConfig = signingConfigs.getByName("debug")
+            // Release is HTTPS/WSS only.
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            // Real key from CZEN_RELEASE_* (Gradle property or env). The debug key only with an
+            // explicit -PallowDebugSigning=true; otherwise verifyReleaseSigning fails the build.
+            signingConfig = when {
+                hasReleaseSigning -> signingConfigs.getByName("release")
+                allowDebugSigning -> signingConfigs.getByName("debug")
+                else -> null
+            }
         }
     }
 
@@ -120,6 +154,24 @@ android {
             "AndroidGradlePluginVersion",
         )
     }
+}
+
+// Fails release packaging (assemble*/bundle*/package*Release) instead of silently producing an
+// APK/AAB signed with the debug key or left unsigned.
+val verifyReleaseSigning = tasks.register("verifyReleaseSigning") {
+    val ok = hasReleaseSigning || allowDebugSigning
+    doLast {
+        if (!ok) {
+            throw GradleException(
+                "Release signing is not configured. Set CZEN_RELEASE_STORE_FILE, CZEN_RELEASE_STORE_PASSWORD, " +
+                    "CZEN_RELEASE_KEY_ALIAS and CZEN_RELEASE_KEY_PASSWORD (Gradle properties or environment), " +
+                    "or pass -PallowDebugSigning=true for a local test build signed with the debug key.",
+            )
+        }
+    }
+}
+tasks.matching { Regex("^(assemble|bundle|package|sign)\\w*Release(Bundle)?$").matches(it.name) }.configureEach {
+    dependsOn(verifyReleaseSigning)
 }
 
 // The Vosk wake-word model is not duplicated in git: it is synced from the RN

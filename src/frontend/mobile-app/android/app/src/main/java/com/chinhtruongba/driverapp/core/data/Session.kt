@@ -6,6 +6,7 @@ import com.chinhtruongba.driverapp.core.model.AuthUser
 import com.chinhtruongba.driverapp.core.network.AuthApi
 import com.chinhtruongba.driverapp.core.network.TripApi
 import com.chinhtruongba.driverapp.core.network.apiCall
+import com.chinhtruongba.driverapp.core.storage.SessionGeneration
 import com.chinhtruongba.driverapp.core.storage.TokenStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,7 @@ class SessionRepository @Inject constructor(
     private val authApi: AuthApi,
     private val tripApi: TripApi,
     @param:ApplicationScope private val scope: CoroutineScope,
+    private val generation: SessionGeneration = SessionGeneration(),
 ) {
     private val _me = MutableStateFlow<Loadable<AuthUser>>(Loadable())
     val me: StateFlow<Loadable<AuthUser>> = _me.asStateFlow()
@@ -151,9 +153,12 @@ class SessionRepository @Inject constructor(
         logoutAndReset()
     }
 
-    /** Clear tokens and the in-memory caches (also used when refresh fails). */
+    /**
+     * Clear tokens and the in-memory caches (also used when refresh fails). Bumping the session
+     * generation first stops a refresh still in flight from writing tokens back.
+     */
     suspend fun logoutAndReset() {
-        tokenStore.clear()
+        generation.invalidate { tokenStore.clear() }
         _me.value = Loadable()
     }
 }

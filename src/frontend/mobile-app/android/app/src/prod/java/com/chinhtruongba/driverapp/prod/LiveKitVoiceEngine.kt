@@ -130,11 +130,14 @@ class LiveKitVoiceEngine @Inject constructor(
         return pub != null && !pub.muted
     }
 
+    /** Throws when there is no room or LiveKit reports a failure; [VoiceSession] maps that to `false`. */
     override suspend fun sendText(text: String, topic: String) {
-        room?.localParticipant?.sendText(text, StreamTextOptions(topic = topic))
+        val lp = room?.localParticipant ?: throw IllegalStateException("not connected")
+        lp.sendText(text, StreamTextOptions(topic = topic)).getOrThrow()
     }
 
     override suspend fun publishData(topic: String, payload: ByteArray) {
-        room?.localParticipant?.publishData(payload, DataPublishReliability.RELIABLE, topic)
+        val lp = room?.localParticipant ?: throw IllegalStateException("not connected")
+        lp.publishData(payload, DataPublishReliability.RELIABLE, topic).getOrThrow()
     }
 }

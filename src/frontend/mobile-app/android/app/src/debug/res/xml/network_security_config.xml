@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug only: the local backend (emulator host 10.0.2.2 or a LAN IP from local.properties) is
+    plain http/ws, and its address is not known at build time, so cleartext is allowed for every
+    host. Release uses src/main/res/xml/network_security_config.xml (HTTPS/WSS only).
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration" />
+</network-security-config>

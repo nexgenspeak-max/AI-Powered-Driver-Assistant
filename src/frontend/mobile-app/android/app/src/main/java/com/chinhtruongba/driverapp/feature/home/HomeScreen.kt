@@ -33,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chinhtruongba.driverapp.app.LocalPermissions
 import com.chinhtruongba.driverapp.designsystem.components.LocalBottomBarPadding
 import com.chinhtruongba.driverapp.designsystem.glass.LocalHazeState
+import com.chinhtruongba.driverapp.designsystem.motion.rememberReduceMotion
+import com.chinhtruongba.driverapp.designsystem.motion.unless
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -53,6 +55,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 fun HomeScreen(onGoTrips: () -> Unit, vm: HomeViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val reduceMotion = rememberReduceMotion()
     val permissions = LocalPermissions.current
     val mapHaze = rememberHazeState()
     val bottomPad = LocalBottomBarPadding.current + ORB_CLEARANCE
@@ -123,8 +126,8 @@ fun HomeScreen(onGoTrips: () -> Unit, vm: HomeViewModel = hiltViewModel()) {
             AnimatedVisibility(
                 visible = !state.nav.active && (next != null || (state.hasContext && !state.online)),
                 modifier = bottom,
-                enter = slideInVertically { it / 2 } + fadeIn(),
-                exit = slideOutVertically { it / 2 } + fadeOut(),
+                enter = (slideInVertically { it / 2 } + fadeIn()).unless(reduceMotion),
+                exit = (slideOutVertically { it / 2 } + fadeOut()).unless(reduceMotion),
             ) {
                 if (next != null) {
                     NextStopCard(next, state.totalStops, onNavigate = vm::startNavigation)

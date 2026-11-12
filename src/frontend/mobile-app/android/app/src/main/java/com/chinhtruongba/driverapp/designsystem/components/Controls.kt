@@ -272,7 +272,7 @@ fun SearchInput(
             )
         }
         if (value.isNotEmpty()) {
-            Box(Modifier.size(32.dp).clip(CircleShape).clickable { onValueChange("") }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(32.dp).clip(CircleShape).clickable(role = Role.Button) { onValueChange("") }, contentAlignment = Alignment.Center) {
                 Icon(CzenIcon.CloseCircle, size = 18.dp, color = c.textMuted, contentDescription = stringResource(R.string.a11y_clear_search))
             }
         }
@@ -415,7 +415,7 @@ fun SurfaceCard(
     if (c.isDark) m = m.border(1.dp, c.border, shape)
     if (onClick != null) {
         val interaction = remember { MutableInteractionSource() }
-        m = m.pressScale(interaction).clickable(interaction, androidx.compose.material3.ripple(), onClick = onClick)
+        m = m.pressScale(interaction).clickable(interaction, androidx.compose.material3.ripple(), role = Role.Button, onClick = onClick)
     }
     Box(m) { content() }
 }

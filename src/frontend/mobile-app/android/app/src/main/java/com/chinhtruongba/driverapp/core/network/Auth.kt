@@ -3,6 +3,7 @@ package com.chinhtruongba.driverapp.core.network
 import com.chinhtruongba.driverapp.core.model.ApiErrorBody
 import com.chinhtruongba.driverapp.core.model.ApiException
 import com.chinhtruongba.driverapp.core.model.AuthTokens
+import com.chinhtruongba.driverapp.core.storage.SessionGeneration
 import com.chinhtruongba.driverapp.core.storage.TokenStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -21,15 +22,31 @@ import retrofit2.HttpException
 /** Header marking a request that was already replayed once after a refresh (`_retry`). */
 internal const val RETRY_HEADER = "X-Czen-Retry"
 
+/** Status codes from `/auth/refresh` that mean the refresh token itself was rejected. */
+private val AUTH_REJECTED = setOf(400, 401, 403)
+
+/** True when [e] is the server refusing the refresh token (log out); false for IO / 5xx (keep the session). */
+internal fun isRefreshRejected(e: Throwable): Boolean = when (e) {
+    is HttpException -> e.code() in AUTH_REJECTED
+    is ApiException -> e.code in AUTH_REJECTED
+    else -> false
+}
+
 /**
  * One shared refresh for many concurrent 401s. The server rotates refresh tokens, so two
  * refreshes in flight would revoke each other: a [Mutex] serialises them and late callers
- * reuse the token the first caller obtained. On failure the session is wiped (logoutAndReset).
+ * reuse the token the first caller obtained.
+ *
+ * - Only a 400/401/403 from `/auth/refresh` ends the session (logoutAndReset). Network errors
+ *   and 5xx fail the current request and keep the tokens for the next attempt.
+ * - A refresh that finishes after logout (the [generation] moved on, or the tokens it started
+ *   from are gone) is dropped instead of writing tokens back.
  */
 class TokenRefresher(
     private val tokenStore: TokenStore,
     private val refresh: suspend (refreshToken: String) -> AuthTokens,
     private val onLogout: suspend () -> Unit,
+    private val generation: SessionGeneration = SessionGeneration(),
 ) {
     private val mutex = Mutex()
 
@@ -38,16 +55,22 @@ class TokenRefresher(
         val current = tokenStore.current() ?: return@withLock null
         // Someone else already refreshed while we waited for the lock: reuse it.
         if (failedAccessToken != null && current.accessToken != failedAccessToken) return@withLock current.accessToken
-        try {
-            val fresh = refresh(current.refreshToken)
-            tokenStore.set(fresh)
-            fresh.accessToken
+        val startedIn = generation.value
+        val fresh = try {
+            refresh(current.refreshToken)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            onLogout()
-            null
+        } catch (e: Exception) {
+            if (isRefreshRejected(e) && generation.value == startedIn) onLogout()
+            return@withLock null
         }
+        val written = generation.runIfCurrent(startedIn) {
+            // Same session, and the tokens we refreshed from are still the stored ones.
+            val unchanged = tokenStore.current() == current
+            if (unchanged) tokenStore.set(fresh)
+            unchanged
+        }
+        if (written) fresh.accessToken else null
     }
 }
 

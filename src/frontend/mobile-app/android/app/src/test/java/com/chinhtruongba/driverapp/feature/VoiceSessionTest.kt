@@ -95,4 +95,17 @@ class VoiceSessionTest {
         val rpc = l.onRpc(VoiceTopics.RPC_SEARCH_CONTACTS, """{"query":"me"}""")
         assertEquals("""{"matches":[{"name":"Mẹ","phone_number":"0912000111"}]}""", rpc)
     }
+
+    @Test
+    fun `sendText returns false when the engine throws`() = runTest {
+        val engine = FakeEngine()
+        val voice = session(engine, ChatStore())
+        assertFalse("not connected", voice.sendText("idle"))
+        voice.connect("0901234567")
+        settle()
+        assertEquals(VoiceStatus.Connected, voice.state.value.status)
+        assertTrue(voice.sendText("xin chào"))
+        engine.failSendText = true
+        assertFalse(voice.sendText("xin chào"))
+    }
 }

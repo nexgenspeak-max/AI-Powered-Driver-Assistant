@@ -9,6 +9,7 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 - AVD: `czen_pixel` (Pixel 8). Headless: `$ANDROID_HOME/emulator/emulator -avd czen_pixel -no-window -no-audio -gpu swiftshader_indirect &`
 - Secrets: `./scripts/seed-local-properties.sh` copies URLs + Goong key from `driver-app/.env` into the uncommitted `local.properties` (values never printed).
 - Build: `./gradlew lint testDemoDebugUnitTest assembleDemoDebug`
+- Release signing: set `CZEN_RELEASE_STORE_FILE`, `CZEN_RELEASE_STORE_PASSWORD`, `CZEN_RELEASE_KEY_ALIAS`, `CZEN_RELEASE_KEY_PASSWORD` (Gradle properties in `~/.gradle/gradle.properties` or environment). Without them `assemble*Release` / `bundle*Release` fail in `verifyReleaseSigning`; `-PallowDebugSigning=true` signs with the debug key for local testing only.
 
 ## Decisions (recorded, see report)
 
@@ -37,8 +38,22 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 - [x] Voice: VoiceSession, LiveKit engine (prod, compiled not run live), fake engine (demo), orb, chat panel, composer, wake word (Vosk, compiled not exercised by voice)
 - [x] Home map (MapLibre + Goong), status pill, recenter, NextStop/GoOnline cards, turn-by-turn HUD, background location
 - [x] Earnings, Profile + 10 sub-screens, Assistant settings
-- [x] 42 JVM unit tests (refresh single-flight incl. MockWebServer, transcript merge/dedupe, nav math, cadence, formatting, search, earnings, voice session, repository) + instrumented MainJourneyTest (demo)
+- [x] 42 JVM unit tests at first delivery, 58 after the review fixes (refresh single-flight incl. MockWebServer, transcript merge/dedupe, nav math, cadence, formatting, search, earnings, voice session, repository) + instrumented MainJourneyTest (demo)
 - [x] Screenshots dark + light in `docs/delivery/001-native-driver-apps/evidence/android/`
+
+## Review fixes (2026-11-12)
+
+- [x] Live location watch starts from the permission-result callback (`LocationTracker.onLocationPermissionChanged`, visible-only), not only on the next `onStart`.
+- [x] Token refresh: `SessionGeneration` (logout bumps it and clears tokens under one lock); a refresh that finishes after logout never writes tokens back.
+- [x] Refresh failure: only 400/401/403 from `/auth/refresh` log out; IOException / 5xx fail the request and keep tokens.
+- [x] Dispatch WebSocket pings every 20 s (`PING_INTERVAL_MS`) on a socket-only client derived from the trip client.
+- [x] Cleartext only in debug (`usesCleartextTraffic` manifest placeholder + `src/debug` network security config); release is HTTPS/WSS only.
+- [x] Release signing from `CZEN_RELEASE_*`; otherwise release packaging fails unless `-PallowDebugSigning=true`.
+- [x] `dev-login` deep link only when `BuildConfig.DEBUG` (`DeepLinkPolicy`); `demo/*` stays under the demo flag.
+- [x] `ServiceForegroundController` rolls back the reason and logs (`Log.w`, no PII) when the start is refused; the service clears reasons when it stops itself.
+- [x] `VoiceSession.sendText` / `cancelCall` return false on engine errors (LiveKit `Result` now surfaced with `getOrThrow`).
+- [x] Accessibility: remaining clickables carry `Role.Button`; the offer sheet body absorbs taps without a nameless node; orb, offer sheet, chat overlay, tab bar, home cards and status pill are static when the animator duration scale is 0 (`designsystem/motion`, observed live).
+- [x] +16 JVM tests (58 total).
 
 ## Remaining / follow-ups
 

@@ -19,8 +19,23 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * `driver-app://` links. Debug builds keep the RN dev routes (dev-login, dev-say); the demo
- * flavor adds `demo/offer`, `demo/theme?mode=` and `open/<tab|screen>` for screenshots.
+ * Which `driver-app://` links a build accepts. `dev-login` signs in with a password from the
+ * URL, so it exists only in debug builds; `demo/<x>` needs the demo flavor; `dev-say` and
+ * `open/<screen>` are debug-or-demo helpers for screenshots and tests.
+ */
+internal object DeepLinkPolicy {
+    fun allows(path: List<String>, debug: Boolean, demo: Boolean): Boolean = when (path.firstOrNull()) {
+        "dev-login" -> debug
+        "dev-say", "open" -> debug || demo
+        "demo" -> demo
+        else -> false
+    }
+}
+
+/**
+ * `driver-app://` links, gated by [DeepLinkPolicy]: debug builds keep the RN dev routes
+ * (dev-login, dev-say); the demo flavor adds `demo/offer`, `demo/theme?mode=`, `demo/chat`
+ * and `open/<tab|screen>` for screenshots.
  */
 @Singleton
 class DeepLinks @Inject constructor(
@@ -44,9 +59,9 @@ class DeepLinks @Inject constructor(
         val uri = intent.data ?: return
         if (uri.scheme != "driver-app") return
         val path = listOfNotNull(uri.host, *uri.pathSegments.toTypedArray()).filter { it.isNotBlank() && it != "(app)" }
-        val dev = BuildConfig.DEBUG || demo.isDemo
+        if (!DeepLinkPolicy.allows(path, debug = BuildConfig.DEBUG, demo = demo.isDemo)) return
         when {
-            dev && path.firstOrNull() == "dev-login" -> {
+            path.firstOrNull() == "dev-login" -> {
                 val phone = uri.getQueryParameter("phone")
                 val pw = uri.getQueryParameter("password")
                 scope.launch {
@@ -60,7 +75,7 @@ class DeepLinks @Inject constructor(
                         .onFailure { _status.value = "error:${it.message}" }
                 }
             }
-            dev && path.firstOrNull() == "dev-say" -> {
+            path.firstOrNull() == "dev-say" -> {
                 val text = uri.getQueryParameter("text").orEmpty()
                 scope.launch {
                     if (uri.getQueryParameter("clear") == "1") chat.clear()
@@ -73,16 +88,16 @@ class DeepLinks @Inject constructor(
                     }
                 }
             }
-            demo.isDemo && path == listOf("demo", "offer") -> demo.triggerOffer()
-            demo.isDemo && path == listOf("demo", "theme") -> scope.launch {
+            path == listOf("demo", "offer") -> demo.triggerOffer()
+            path == listOf("demo", "theme") -> scope.launch {
                 prefs.setTheme(if (uri.getQueryParameter("mode") == "light") ThemeMode.Light else ThemeMode.Dark)
             }
-            demo.isDemo && path == listOf("demo", "chat") -> scope.launch {
+            path == listOf("demo", "chat") -> scope.launch {
                 chat.openPanel()
                 val phone = session.me.first { it.data != null }.data?.phone ?: return@launch
                 if (voice.state.value.status == VoiceStatus.Idle || voice.state.value.status == VoiceStatus.Error) voice.connect(phone)
             }
-            dev && path.firstOrNull() == "open" -> _route.value = when (path.getOrNull(1)) {
+            path.firstOrNull() == "open" -> _route.value = when (path.getOrNull(1)) {
                 "home" -> Route.Home
                 "trips" -> Route.Trips
                 "earnings" -> Route.Earnings

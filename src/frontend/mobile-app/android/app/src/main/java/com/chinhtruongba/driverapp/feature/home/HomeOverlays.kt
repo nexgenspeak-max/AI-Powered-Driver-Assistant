@@ -42,6 +42,7 @@ import com.chinhtruongba.driverapp.designsystem.glass.GlassKind
 import com.chinhtruongba.driverapp.designsystem.glass.glass
 import com.chinhtruongba.driverapp.designsystem.icons.CzenIcon
 import com.chinhtruongba.driverapp.designsystem.icons.Icon
+import com.chinhtruongba.driverapp.designsystem.motion.rememberReduceMotion
 import com.chinhtruongba.driverapp.designsystem.theme.Brand
 import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 import com.chinhtruongba.driverapp.designsystem.theme.Radii
@@ -62,6 +63,7 @@ fun MapStatusPill(online: Boolean, tripCount: Int, modifier: Modifier = Modifier
     val c = CzenTheme.colors
     val pulse = rememberInfiniteTransition(label = "pill")
     val s by pulse.animateFloat(1f, 1.35f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "dot")
+    val reduceMotion = rememberReduceMotion()
     Row(
         modifier
             .glass(RoundedCornerShape(50), kind = GlassKind.Lens, elevation = 12.dp, tint = mapGlassTint())
@@ -69,7 +71,7 @@ fun MapStatusPill(online: Boolean, tripCount: Int, modifier: Modifier = Modifier
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(Modifier.size(8.dp).scale(if (online) s else 1f).clip(CircleShape).background(if (online) c.success else c.textMuted))
+        Box(Modifier.size(8.dp).scale(if (online && !reduceMotion) s else 1f).clip(CircleShape).background(if (online) c.success else c.textMuted))
         Text(
             stringResource(if (online) R.string.map_status_online else R.string.map_status_offline),
             style = CzenTheme.type.label,

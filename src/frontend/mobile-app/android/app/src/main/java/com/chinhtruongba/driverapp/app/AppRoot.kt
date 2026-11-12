@@ -43,6 +43,8 @@ import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.core.model.ThemeMode
 import com.chinhtruongba.driverapp.core.storage.PrefsStore
 import com.chinhtruongba.driverapp.designsystem.components.LocalBottomBarPadding
+import com.chinhtruongba.driverapp.designsystem.motion.rememberReduceMotion
+import com.chinhtruongba.driverapp.designsystem.motion.unless
 import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 import com.chinhtruongba.driverapp.feature.auth.LandingScreen
 import com.chinhtruongba.driverapp.feature.auth.LoginScreen
@@ -197,6 +199,7 @@ private fun NavHostController.replaceWith(route: Route) {
 @Composable
 private fun MainShell(vm: ShellViewModel = hiltViewModel()) {
     val nav = rememberNavController()
+    val reduceMotion = rememberReduceMotion()
     val haze = rememberHazeState()
     val panelOpen by vm.panelOpen.collectAsStateWithLifecycle()
     val entry by nav.currentBackStackEntryAsState()
@@ -249,8 +252,8 @@ private fun MainShell(vm: ShellViewModel = hiltViewModel()) {
         AnimatedVisibility(
             visible = !panelOpen,
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(260)) { it } + fadeIn(),
-            exit = slideOutVertically(tween(220)) { it } + fadeOut(),
+            enter = (slideInVertically(tween(260)) { it } + fadeIn()).unless(reduceMotion),
+            exit = (slideOutVertically(tween(220)) { it } + fadeOut()).unless(reduceMotion),
         ) {
             CompositionLocalProvider(com.chinhtruongba.driverapp.designsystem.glass.LocalHazeState provides haze) {
                 CzenTabBar(
@@ -263,8 +266,8 @@ private fun MainShell(vm: ShellViewModel = hiltViewModel()) {
         // AssistantChatOverlay: zIndex 100
         AnimatedVisibility(
             visible = panelOpen,
-            enter = slideInVertically(tween(320)) { it / 3 } + fadeIn(tween(240)),
-            exit = slideOutVertically(tween(260)) { it / 3 } + fadeOut(tween(200)),
+            enter = (slideInVertically(tween(320)) { it / 3 } + fadeIn(tween(240))).unless(reduceMotion),
+            exit = (slideOutVertically(tween(260)) { it / 3 } + fadeOut(tween(200))).unless(reduceMotion),
         ) {
             AssistantChatOverlay(onClose = vm::closePanel)
         }

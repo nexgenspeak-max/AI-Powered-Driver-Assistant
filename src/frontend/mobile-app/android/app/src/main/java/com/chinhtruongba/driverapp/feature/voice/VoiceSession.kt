@@ -338,17 +338,30 @@ class VoiceSession @Inject constructor(
         }
     }
 
+    /** Sends a typed message to the agent; false when not connected or the engine failed. */
     suspend fun sendText(text: String): Boolean {
         if (_state.value.status != VoiceStatus.Connected) return false
-        engine.sendText(text, VoiceTopics.CHAT)
-        return true
+        return try {
+            engine.sendText(text, VoiceTopics.CHAT)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /** Ask the agent to hang up the customer call (`call_control` `{"action":"cancel"}`). */
     suspend fun cancelCall(): Boolean {
         if (_state.value.status != VoiceStatus.Connected) return false
-        engine.publishData(VoiceTopics.CALL_CONTROL, buildJsonObject { put("action", "cancel") }.toString().encodeToByteArray())
-        return true
+        return try {
+            engine.publishData(VoiceTopics.CALL_CONTROL, buildJsonObject { put("action", "cancel") }.toString().encodeToByteArray())
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /** Wait until the session is idle (used by the wake word to resume). */

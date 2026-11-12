@@ -38,10 +38,34 @@ class LocationTracker @Inject constructor(
     private var lastPushAt = 0L
     private var lastPushed: LatLng? = null
 
+    /** Whether the activity is started; the watch only runs while it is. */
+    @Volatile
+    private var visible = false
+
     private fun isOnline(): Boolean = drivers.context.value.data?.driver?.status == "online"
 
-    /** Called while the app is in the foreground and signed in. */
-    fun startForegroundWatch() {
+    /** Activity `onStart`: start watching if location is already granted. */
+    fun onForeground() {
+        visible = true
+        startForegroundWatch()
+    }
+
+    /** Activity `onStop`. */
+    fun onBackground() {
+        visible = false
+        stopForegroundWatch()
+    }
+
+    /**
+     * Called from the runtime-permission result callback: a grant while the app is visible
+     * starts the live watch immediately instead of waiting for the next `onStart`.
+     */
+    fun onLocationPermissionChanged() {
+        if (visible) startForegroundWatch()
+    }
+
+    @Synchronized
+    private fun startForegroundWatch() {
         if (watchJob?.isActive == true) return
         if (!source.hasForegroundPermission()) return
         watchJob = scope.launch {
@@ -58,7 +82,8 @@ class LocationTracker @Inject constructor(
         }
     }
 
-    fun stopForegroundWatch() {
+    @Synchronized
+    private fun stopForegroundWatch() {
         watchJob?.cancel()
         tickJob?.cancel()
         watchJob = null

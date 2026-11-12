@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -64,6 +66,8 @@ import com.chinhtruongba.driverapp.designsystem.glass.GlassKind
 import com.chinhtruongba.driverapp.designsystem.glass.glass
 import com.chinhtruongba.driverapp.designsystem.icons.CzenIcon
 import com.chinhtruongba.driverapp.designsystem.icons.Icon
+import com.chinhtruongba.driverapp.designsystem.motion.rememberReduceMotion
+import com.chinhtruongba.driverapp.designsystem.motion.unless
 import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 import com.chinhtruongba.driverapp.feature.location.LocationTracker
 import com.chinhtruongba.driverapp.feature.voice.FillerAudio
@@ -197,21 +201,22 @@ fun TripOfferHost(vm: TripOfferViewModel = hiltViewModel()) {
     val s by vm.ui.collectAsStateWithLifecycle()
     val visible = s.tripId != null && s.trip != null
     val laterDesc = stringResource(R.string.offer_later)
+    val reduceMotion = rememberReduceMotion()
     Box(Modifier.fillMaxSize()) {
-        AnimatedVisibility(visible, enter = fadeIn(tween(180)), exit = fadeOut(tween(150))) {
+        AnimatedVisibility(visible, enter = fadeIn(tween(180)).unless(reduceMotion), exit = fadeOut(tween(150)).unless(reduceMotion)) {
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(Color(0x8C0A0614))
-                    .clickable(remember { MutableInteractionSource() }, null, onClick = vm::dismiss)
+                    .clickable(remember { MutableInteractionSource() }, null, role = Role.Button, onClick = vm::dismiss)
                     .semantics { contentDescription = laterDesc },
             )
         }
         AnimatedVisibility(
             visible,
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { it },
-            exit = slideOutVertically(tween(200)) { it },
+            enter = slideInVertically(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { it }.unless(reduceMotion),
+            exit = slideOutVertically(tween(200)) { it }.unless(reduceMotion),
         ) {
             s.trip?.let { OfferSheet(it, s, vm) }
         }
@@ -232,7 +237,7 @@ private fun OfferSheet(trip: Trip, s: OfferUiState, vm: TripOfferViewModel) {
                 elevation = 24.dp,
                 tint = c.surfaceElevated.copy(alpha = if (c.isDark) 0.78f else 0.82f),
             )
-            .clickable(remember { MutableInteractionSource() }, null) {}
+            .pointerInput(Unit) { detectTapGestures { } }
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

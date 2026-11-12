@@ -1,6 +1,5 @@
 package com.chinhtruongba.driverapp.feature.voice.ui
 
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -10,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -64,6 +63,8 @@ import com.chinhtruongba.driverapp.R
 import com.chinhtruongba.driverapp.designsystem.glass.GlassKind
 import com.chinhtruongba.driverapp.designsystem.glass.glass
 import com.chinhtruongba.driverapp.designsystem.icons.CzenMark
+import com.chinhtruongba.driverapp.designsystem.motion.rememberReduceMotion
+import com.chinhtruongba.driverapp.designsystem.motion.unless
 import com.chinhtruongba.driverapp.designsystem.theme.Brand
 import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
@@ -72,15 +73,6 @@ import kotlinx.coroutines.delay
 const val ORB_SIZE_DP = 64
 private val ORB = ORB_SIZE_DP.dp
 private val BAR_WEIGHT = floatArrayOf(0.72f, 1f, 0.88f, 0.95f, 0.78f)
-
-/** System "remove animations" (animator duration scale 0) = reduce motion. */
-@Composable
-fun rememberReduceMotion(): Boolean {
-    val ctx = LocalContext.current
-    return remember {
-        runCatching { Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false)
-    }
-}
 
 /**
  * The centre Czen orb: 64 dp liquid-glass bezel around a violet core. Idle breathes; connecting
@@ -131,7 +123,7 @@ fun CzenOrb(
     val scale by animateFloatAsState(targetScale, spring(dampingRatio = 0.6f, stiffness = 300f), label = "orbScale")
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val press by animateFloatAsState(if (pressed && status != VoiceStatus.Connecting) 0.94f else 1f, label = "press")
+    val press by animateFloatAsState(if (pressed && status != VoiceStatus.Connecting && !reduceMotion) 0.94f else 1f, label = "press")
 
     // Last bot message pops above the orb for 4.5 s when not on Home.
     var toast by remember { mutableStateOf<String?>(null) }
@@ -154,8 +146,9 @@ fun CzenOrb(
         ) {
             AnimatedVisibility(
                 visible = toast != null,
-                enter = fadeIn(tween(220)) + scaleIn(tween(260), initialScale = 0.9f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)),
-                exit = fadeOut(tween(200)) + scaleOut(tween(200), targetScale = 0.94f),
+                enter = (fadeIn(tween(220)) + scaleIn(tween(260), initialScale = 0.9f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)))
+                    .unless(reduceMotion),
+                exit = (fadeOut(tween(200)) + scaleOut(tween(200), targetScale = 0.94f)).unless(reduceMotion),
             ) {
                 Text(
                     toast.orEmpty(),
@@ -266,7 +259,10 @@ private fun PulsingMark(reduceMotion: Boolean) {
     CzenMark(size = 28.dp, color = Color.White, modifier = Modifier.alpha(if (reduceMotion) 1f else a))
 }
 
-/** 5 white bars scaled by the agent's level; a gentle idle sway while the agent listens. */
+/**
+ * 5 white bars scaled by the agent's level; a gentle idle sway while the agent listens. With
+ * reduce motion the bars are static: tall while the agent speaks, short while it listens.
+ */
 @Composable
 fun WaveBars(
     level: Float,
@@ -282,12 +278,12 @@ fun WaveBars(
     val liveNow = speaking || level > 0.02f
     val t = rememberInfiniteTransition(label = "wave")
     val idle by t.animateFloat(0f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "idle")
-    val base = (level * 2.4f).coerceAtMost(1f)
+    val base = if (reduceMotion) (if (liveNow) 0.6f else 0.15f) else (level * 2.4f).coerceAtMost(1f)
     Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
         repeat(count) { i ->
             val w = BAR_WEIGHT[i % BAR_WEIGHT.size]
             val target = minH + (maxH - minH) * (base * w) + if (!liveNow && !reduceMotion) (4.dp * idle * w) else 0.dp
-            val h by animateFloatAsState(target.value, tween(90), label = "bar$i")
+            val h by animateFloatAsState(target.value, if (reduceMotion) snap() else tween(90), label = "bar$i")
             Canvas(Modifier.size(barWidth, h.dp)) {
                 drawRoundRect(color.copy(alpha = 0.95f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2, size.width / 2))
             }

@@ -4,7 +4,9 @@ import com.chinhtruongba.driverapp.core.model.AuthTokens
 import com.chinhtruongba.driverapp.core.network.AuthHeaderInterceptor
 import com.chinhtruongba.driverapp.core.network.RefreshAuthenticator
 import com.chinhtruongba.driverapp.core.network.TokenRefresher
+import com.chinhtruongba.driverapp.core.storage.SessionGeneration
 import com.chinhtruongba.driverapp.core.storage.TokenStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -16,6 +18,9 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
 import okhttp3.Request
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -23,6 +28,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -35,6 +41,8 @@ class FakeTokenStore(initial: AuthTokens?) : TokenStore {
     override suspend fun set(tokens: AuthTokens) { state.value = tokens }
     override suspend fun clear() { state.value = null }
 }
+
+private fun http(code: Int) = HttpException(retrofit2.Response.error<Any>(code, "{}".toResponseBody()))
 
 class TokenRefresherTest {
     @Test
@@ -59,13 +67,90 @@ class TokenRefresherTest {
     fun `failed refresh logs out once and returns null`() = runTest {
         val store = FakeTokenStore(AuthTokens("old", "r1"))
         var logouts = 0
-        val refresher = TokenRefresher(store, refresh = { error("401") }, onLogout = {
+        val refresher = TokenRefresher(store, refresh = { throw http(401) }, onLogout = {
             logouts++
             store.clear()
         })
         val results = (1..4).map { async { refresher.refreshAfter401("old") } }.awaitAll()
         assertTrue(results.all { it == null })
         assertEquals(1, logouts)
+        assertNull(store.current())
+    }
+
+    @Test
+    fun `400 and 403 from refresh also log out`() = runTest {
+        for (code in listOf(400, 403)) {
+            val store = FakeTokenStore(AuthTokens("old", "r1"))
+            var logouts = 0
+            val refresher = TokenRefresher(store, refresh = { throw http(code) }, onLogout = {
+                logouts++
+                store.clear()
+            })
+            assertNull(refresher.refreshAfter401("old"))
+            assertEquals("code $code", 1, logouts)
+        }
+    }
+
+    @Test
+    fun `network error or 5xx fails the request but keeps the session`() = runTest {
+        val failures = listOf<Exception>(IOException("offline"), http(500), http(503))
+        for (failure in failures) {
+            val store = FakeTokenStore(AuthTokens("old", "r1"))
+            val refresher = TokenRefresher(store, refresh = { throw failure }, onLogout = { error("must not log out on $failure") })
+            assertNull(refresher.refreshAfter401("old"))
+            assertEquals(AuthTokens("old", "r1"), store.current())
+        }
+    }
+
+    @Test
+    fun `logout while a refresh is in flight never writes tokens back`() = runTest {
+        val store = FakeTokenStore(AuthTokens("old", "r1"))
+        val gate = CompletableDeferred<Unit>()
+        val refresher = TokenRefresher(store, refresh = {
+            gate.await()
+            AuthTokens("new", "r2")
+        }, onLogout = { store.clear() })
+
+        val pending = async { refresher.refreshAfter401("old") }
+        testScheduler.runCurrent()
+        store.clear() // the user logs out meanwhile
+        gate.complete(Unit)
+
+        assertNull(pending.await())
+        assertNull(store.current())
+    }
+}
+
+class SessionGenerationTest {
+    @Test
+    fun `a refresh that finishes after the session generation moved on is dropped`() = runTest {
+        val store = FakeTokenStore(AuthTokens("old", "r1"))
+        val generation = SessionGeneration()
+        val gate = CompletableDeferred<Unit>()
+        val refresher = TokenRefresher(store, refresh = {
+            gate.await()
+            AuthTokens("new", "r2")
+        }, onLogout = { error("must not log out") }, generation = generation)
+
+        val pending = async { refresher.refreshAfter401("old") }
+        testScheduler.runCurrent()
+        generation.invalidate() // logout bumps the generation (tokens not yet cleared)
+        gate.complete(Unit)
+
+        assertNull(pending.await())
+        assertEquals(AuthTokens("old", "r1"), store.current())
+    }
+
+    @Test
+    fun `logoutAndReset bumps the generation and clears tokens atomically`() = runTest {
+        val store = FakeTokenStore(AuthTokens("a", "r"))
+        val generation = SessionGeneration()
+        val session = com.chinhtruongba.driverapp.core.data.SessionRepository(
+            store, com.chinhtruongba.driverapp.feature.FakeAuthApi(), com.chinhtruongba.driverapp.feature.FakeTripApi(), backgroundScope, generation,
+        )
+        val before = generation.value
+        session.logoutAndReset()
+        assertEquals(before + 1, generation.value)
         assertNull(store.current())
     }
 }
@@ -104,7 +189,7 @@ class RefreshAuthenticatorTest {
         val refresher = TokenRefresher(store, refresh = { rt ->
             val body = """{"refresh_token":"$rt"}""".toByteArray()
             val req = Request.Builder().url(server.url("/api/v1/auth/refresh"))
-                .post(okhttp3.RequestBody.create(null, body)).build()
+                .post(body.toRequestBody()).build()
             plain.newCall(req).execute().use { res ->
                 check(res.isSuccessful)
                 AuthTokens("new", "r2")

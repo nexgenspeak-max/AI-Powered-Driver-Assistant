@@ -80,7 +80,10 @@ class FakeEngine : VoiceEngine {
     }
     override suspend fun disconnect() { connected = false }
     override suspend fun setMicrophoneEnabled(enabled: Boolean) = true
-    override suspend fun sendText(text: String, topic: String) = Unit
+    var failSendText = false
+    override suspend fun sendText(text: String, topic: String) {
+        if (failSendText) throw IllegalStateException("data channel closed")
+    }
     override suspend fun publishData(topic: String, payload: ByteArray) { published += topic to payload.decodeToString() }
 }
 
