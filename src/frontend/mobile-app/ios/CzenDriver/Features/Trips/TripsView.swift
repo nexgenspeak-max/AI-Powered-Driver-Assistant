@@ -37,6 +37,8 @@ struct TripsView: View {
         .scrollDismissesKeyboard(.immediately)
         .refreshable { await model.loadContext(fresh: true) }
         .screenBackground()
+        // The root's title is never shown (bar hidden) but names the pushed screens' back button.
+        .navigationTitle("Quay lại")
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             guard !didApplyLaunch else { return }

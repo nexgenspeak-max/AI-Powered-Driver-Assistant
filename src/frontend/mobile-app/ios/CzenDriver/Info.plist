@@ -45,17 +45,19 @@
 	<string>$(TRIP_SERVICE_WS_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+#if CZ_ALLOW_INSECURE_HTTP
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+#endif
 	<key>NSContactsUsageDescription</key>
 	<string>Czen Driver needs contacts access so the AI assistant can call people from your phone by name.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Czen Driver needs your location in the background so it can notify the customer when you're close to the pickup point.</string>
+	<string>Czen Driver needs your location in the background so it can notify the customer when you’re close to the pickup point.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Czen Driver needs your location to track the trip while you're driving.</string>
+	<string>Czen Driver needs your location to track the trip while you’re driving.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Czen Driver needs microphone access so you can talk to the AI assistant.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

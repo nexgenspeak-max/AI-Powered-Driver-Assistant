@@ -8,6 +8,7 @@ final class LiveKitVoiceEngine: VoiceEngine {
     var onEvent: ((VoiceEvent) -> Void)?
     private var room: Room?
     private var bridge: LiveKitRoomBridge?
+    private var roomGeneration = 0
     private let contacts: ContactsSearching
 
     init(contacts: ContactsSearching = DeviceContactsSearch()) { self.contacts = contacts }
@@ -22,8 +23,14 @@ final class LiveKitVoiceEngine: VoiceEngine {
 
     func connect(url: String, token: String) async throws {
         if let old = room { await old.disconnect(); room = nil }
+        roomGeneration += 1
+        let gen = roomGeneration
+        // Events from a room we already replaced or dropped are ignored.
         let bridge = LiveKitRoomBridge { [weak self] event in
-            Task { @MainActor in self?.onEvent?(event) }
+            Task { @MainActor in
+                guard let self, self.roomGeneration == gen else { return }
+                self.onEvent?(event)
+            }
         }
         let room = Room(delegate: bridge)
         self.room = room
@@ -33,19 +40,11 @@ final class LiveKitVoiceEngine: VoiceEngine {
 
         let handler: TextStreamHandler = { reader, identity in
             let isLocal = identity == room.localParticipant.identity
-            let segmentId = reader.info.attributes["lk.segment_id"]
-            if reader.info.topic != "lk.transcription" {
-                let text = try await reader.readAll()
-                sink(.text(text, identity: identity.stringValue, isLocal: isLocal, isFinal: true, segmentId: segmentId))
-                return
+            let info = reader.info
+            let segmentId = info.attributes["lk.segment_id"]
+            try await TextStreamTranscript.consume(reader, topic: info.topic, attributes: info.attributes) { text, isFinal in
+                sink(.text(text, identity: identity.stringValue, isLocal: isLocal, isFinal: isFinal, segmentId: segmentId))
             }
-            var text = ""
-            for try await chunk in reader {
-                text += chunk
-                sink(.text(text, identity: identity.stringValue, isLocal: isLocal, isFinal: false, segmentId: segmentId))
-            }
-            // The stream closing ends the segment (the SDK exposes the header attributes only).
-            sink(.text(text, identity: identity.stringValue, isLocal: isLocal, isFinal: true, segmentId: segmentId))
         }
         try await room.registerTextStreamHandler(for: "lk.transcription", onNewStream: handler)
         try await room.registerTextStreamHandler(for: "lk.chat", onNewStream: handler)
@@ -55,8 +54,14 @@ final class LiveKitVoiceEngine: VoiceEngine {
         do {
             try await room.connect(url: url, token: token)
         } catch {
-            if Task.isCancelled { throw CancellationError() }
+            if Task.isCancelled || self.room !== room { throw CancellationError() }
             throw error
+        }
+        // `disconnect()` ran while the join was in flight (it forgot this room): the join still
+        // completed, so leave the room now instead of keeping an orphaned live connection.
+        if self.room !== room {
+            await room.disconnect()
+            throw CancellationError()
         }
     }
 
@@ -80,10 +85,37 @@ final class LiveKitVoiceEngine: VoiceEngine {
 
     func disconnect() async {
         guard let room else { return }
-        await room.disconnect()
+        roomGeneration += 1 // the bridge's own didDisconnect for this room is now stale
         self.room = nil
         bridge = nil
+        await room.disconnect()
         onEvent?(.disconnected)
+    }
+}
+
+/// Text-stream → transcript updates. `lk.transcription` streams carry their finality in the
+/// header attribute `lk.transcription_final` ("false" = interim); chunks render as a streaming
+/// bubble and only a final stream ends with an `isFinal` update (dedupe, `call_transcript`).
+/// `lk.chat` messages are always final.
+enum TextStreamTranscript {
+    static func isFinal(topic: String, attributes: [String: String]) -> Bool {
+        guard topic == "lk.transcription" else { return true }
+        return attributes["lk.transcription_final"] != "false"
+    }
+
+    static func consume<S: AsyncSequence>(_ chunks: S, topic: String, attributes: [String: String],
+                                          emit: (String, Bool) -> Void) async throws where S.Element == String {
+        var text = ""
+        guard topic == "lk.transcription" else {
+            for try await chunk in chunks { text += chunk }
+            emit(text, true)
+            return
+        }
+        for try await chunk in chunks {
+            text += chunk
+            emit(text, false)
+        }
+        if isFinal(topic: topic, attributes: attributes) { emit(text, true) }
     }
 }
 

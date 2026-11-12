@@ -46,8 +46,15 @@ final class VoiceSession {
     @ObservationIgnored private let api: DriverAPI
     @ObservationIgnored private let prefs: Preferences
     @ObservationIgnored private let audio: FillerAudio
-    @ObservationIgnored private var connecting = false
     @ObservationIgnored private var pendingUserHangup = false
+    /// The in-flight connect; a hang-up or logout while `.connecting` cancels it.
+    @ObservationIgnored private var connectTask: Task<Void, Never>?
+    /// Bumped by every connect and every cancel; a connect step that resumes under a newer
+    /// generation stops and tears its room down instead of going live.
+    @ObservationIgnored private var generation = 0
+    /// A cancelled connect still unwinding; the next connect waits for it so its teardown can
+    /// never drop the new room.
+    @ObservationIgnored private var draining: Task<Void, Never>?
     @ObservationIgnored private var watchdog: Task<Void, Never>?
     @ObservationIgnored private var deduper = TranscriptDeduper()
     @ObservationIgnored var onMessage: ((String, ChatMessage.Who, Bool, String?) -> Void)?
@@ -69,50 +76,72 @@ final class VoiceSession {
 
     // MARK: Connect
 
+    /// Connects (no-op while a connect is in flight or a room is live). Returns when the attempt
+    /// finished: `.connected`, `.error`, or `.idle` after a cancel.
     func connect(phone: String) async {
-        if connecting { return } // synchronous re-entrancy guard
-        connecting = true
-        defer { connecting = false }
-        if engine.isConnected { return }
-
+        if connectTask != nil || status == .connecting || engine.isConnected { return }
+        generation += 1
+        let gen = generation
         status = .connecting
-        isCallActive = false
-        callMode = ""
-        agentSpeaking = false
-        isMicMuted = false
+        resetState()
+        let previous = draining
+        let task = Task {
+            await previous?.value
+            await self.runConnect(phone: phone, gen: gen)
+        }
+        connectTask = task
+        await task.value
+        if connectTask == task { connectTask = nil }
+    }
+
+    private struct Superseded: Error {}
+
+    /// Throws when the attempt was cancelled or replaced while it was suspended.
+    private func checkCurrent(_ gen: Int) throws {
+        if Task.isCancelled || gen != generation { throw Superseded() }
+    }
+
+    private func runConnect(phone: String, gen: Int) async {
         let started = Date()
         do {
             try await Task.sleep(for: settleDelay) // let the wake-word mic release
+            try checkCurrent(gen)
             async let token = api.voiceToken(phone: phone, lang: prefs.voiceLang.rawValue)
             await audio.playConnecting()
             let granted = asksMicPermission ? await AVAudioApplication.requestRecordPermission() : true
             if !granted { log.notice("mic permission denied") }
             let tok = try await token
+            try checkCurrent(gen)
             await audio.fadeOutConnecting()
             try await Task.sleep(for: .milliseconds(160))
+            try checkCurrent(gen)
             try await engine.connect(url: tok.livekitUrl, token: tok.token)
+            try checkCurrent(gen)
             if try await !engine.setMicrophone(enabled: true) {
+                try checkCurrent(gen)
                 _ = try await engine.setMicrophone(enabled: false)
                 try await Task.sleep(for: .milliseconds(200))
+                try checkCurrent(gen)
                 _ = try await engine.setMicrophone(enabled: true)
             }
+            try checkCurrent(gen)
             status = .connected
             isMicMuted = false
             log.info("voice connected in \(Date().timeIntervalSince(started), privacy: .public)s")
             startWatchdog()
-        } catch is CancellationError {
-            await teardownAfterFailure(cancelled: true)
-        } catch APIError.cancelled {
-            await teardownAfterFailure(cancelled: true)
         } catch {
-            log.error("voice connect failed: \(String(describing: error), privacy: .public)")
-            await teardownAfterFailure(cancelled: false)
+            let cancelled = error is Superseded || error is CancellationError || (error as? APIError) == .cancelled || Task.isCancelled || gen != generation
+            if !cancelled { log.error("voice connect failed: \(String(describing: error), privacy: .public)") }
+            await teardownAfterFailure(gen: gen, cancelled: cancelled)
         }
     }
 
-    private func teardownAfterFailure(cancelled: Bool) async {
-        watchdog?.cancel()
+    /// Always drops the room (never leave a live mic behind); only the current attempt may
+    /// change the visible status.
+    private func teardownAfterFailure(gen: Int, cancelled: Bool) async {
         await engine.disconnect()
+        guard gen == generation else { return }
+        watchdog?.cancel()
         audio.stopAll()
         resetState()
         status = (cancelled || pendingUserHangup) ? .idle : .error
@@ -131,9 +160,27 @@ final class VoiceSession {
     }
 
     /// Ends the session. `userInitiated` plays the goodbye filler and closes the panel.
+    /// While `.connecting` it cancels the in-flight connect and returns to `.idle` at once.
     func disconnect(userInitiated: Bool = false) {
-        pendingUserHangup = userInitiated && isActive
         audio.stopAll()
+        if status == .connecting || connectTask != nil {
+            generation += 1
+            let inFlight = connectTask
+            inFlight?.cancel()
+            connectTask = nil
+            pendingUserHangup = false
+            watchdog?.cancel()
+            resetState()
+            status = .idle
+            let previous = draining
+            draining = Task { [engine] in
+                await engine.disconnect() // aborts a room.connect that is still in flight
+                await inFlight?.value
+                await previous?.value
+            }
+            return
+        }
+        pendingUserHangup = userInitiated && isActive
         Task { await engine.disconnect() }
     }
 
@@ -197,8 +244,10 @@ final class VoiceSession {
         onMessage?(text, who, isFinal, segmentId)
     }
 
+    /// Only a live session can drop: a failed or cancelled connect already settled its own
+    /// status, so the engine's `.disconnected` from that teardown must not turn `.error` into `.idle`.
     private func handleDisconnected() async {
-        guard !connecting, status != .idle else { return }
+        guard status == .connected else { return }
         watchdog?.cancel()
         let hangup = pendingUserHangup
         pendingUserHangup = false

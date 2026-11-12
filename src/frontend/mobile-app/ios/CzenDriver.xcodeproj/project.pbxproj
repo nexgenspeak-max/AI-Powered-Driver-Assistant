@@ -11,6 +11,7 @@
 		0793E3E3913E7B5953B3940A /* AssistantChatPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 520D19072EE2CD99CCD1B256 /* AssistantChatPanel.swift */; };
 		10EBB92657CC906C487097A8 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C7EBC75DCCA3C54AE056A0 /* HomeView.swift */; };
 		12B8B22A112F69338FE00EC7 /* TurnByTurn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19F42329B44E9050FB5FDF6C /* TurnByTurn.swift */; };
+		173BAF56A6B5BAE718361671 /* LifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F4261C420E370422B3B0E5 /* LifecycleTests.swift */; };
 		1CCF672E656F66E2405CBD87 /* demo-data.json in Resources */ = {isa = PBXBuildFile; fileRef = 13AE47072A36695EF539D7D2 /* demo-data.json */; };
 		1F81180B702F45FE230DA426 /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A5E64BCB5131871601238C /* TripsView.swift */; };
 		32BE493E4EC528AAAED1249E /* NavigationMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72CE61D6B6DD205D5D28EEC /* NavigationMath.swift */; };
@@ -29,9 +30,11 @@
 		809F23571425E210016C04E4 /* CzenDriverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466E3BA578B44E41F7D1B1B4 /* CzenDriverApp.swift */; };
 		844C4A642956E4ADEF97F093 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 69FD703EDE7850CE0301205E /* PrivacyInfo.xcprivacy */; };
 		868F9D76E7A1DC142A1CAE06 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37E87A50A2E71FCE6701C2F9 /* Assets.xcassets */; };
+		89194D7ADEC423C6F513382B /* ReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */; };
 		8FFA9717C6C33CEA33EC3459 /* InfoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CE017B75C9EEE8213FBFBB /* InfoViews.swift */; };
 		90B03E758D3BC8B2DD7A3CD9 /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE3A6108D90B859D9E84021 /* HTTPClient.swift */; };
 		9122784554E3885923E64E6D /* TokenRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0295A8B937C8C9D71007A9EF /* TokenRefreshTests.swift */; };
+		962E4BFAFF469AFCA86E48A3 /* TileTextRepair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD31BC0AE646D428E3A6A50 /* TileTextRepair.swift */; };
 		AB8CC21323F6CEF682A5B3A4 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81894AA2CC5F65E54039B302 /* AuthViews.swift */; };
 		AC216A50972D6F305C870F68 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF839A4D3255C96B280FF7CE /* Storage.swift */; };
 		ADFFE7799B80C3513EE31ABF /* connecting-czen.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5F0166CF74066E3229E939FC /* connecting-czen.mp3 */; };
@@ -81,6 +84,7 @@
 		19F42329B44E9050FB5FDF6C /* TurnByTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnByTurn.swift; sourceTree = "<group>"; };
 		1E4E75533E422CAEAC24D99A /* VoiceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSession.swift; sourceTree = "<group>"; };
 		27D997DE4A572F7ED31E57D0 /* OrbViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbViews.swift; sourceTree = "<group>"; };
+		2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewFixTests.swift; sourceTree = "<group>"; };
 		2E190D9285B4726F9661F694 /* CzenDriverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CzenDriverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		37E87A50A2E71FCE6701C2F9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3EE3A6108D90B859D9E84021 /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
@@ -100,6 +104,7 @@
 		74C7EBC75DCCA3C54AE056A0 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		78E4894CE0BB30E68CE8575D /* TripCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCards.swift; sourceTree = "<group>"; };
 		7D2CFC0398B37F3AA73AA896 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7DD31BC0AE646D428E3A6A50 /* TileTextRepair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileTextRepair.swift; sourceTree = "<group>"; };
 		7DF773C51904C30A3E50E1D3 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		81894AA2CC5F65E54039B302 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
 		82CE017B75C9EEE8213FBFBB /* InfoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoViews.swift; sourceTree = "<group>"; };
@@ -114,6 +119,7 @@
 		BC910F0F8F89DF70663FCE6C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		BCDF57B3E0B4BC2465C1D7CA /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		BF839A4D3255C96B280FF7CE /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
+		C8F4261C420E370422B3B0E5 /* LifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifecycleTests.swift; sourceTree = "<group>"; };
 		D03F7BFB63E5152D70C32DCB /* Geo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geo.swift; sourceTree = "<group>"; };
 		D18A4E29C8B4EDCF6B448DE9 /* LogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogicTests.swift; sourceTree = "<group>"; };
 		D2F28542D97A24A715D838BA /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
@@ -234,6 +240,7 @@
 			children = (
 				E6A726D60BBEC1718B0F5BEE /* DriverMapView.swift */,
 				74C7EBC75DCCA3C54AE056A0 /* HomeView.swift */,
+				7DD31BC0AE646D428E3A6A50 /* TileTextRepair.swift */,
 				19F42329B44E9050FB5FDF6C /* TurnByTurn.swift */,
 			);
 			path = Home;
@@ -413,7 +420,9 @@
 		F3D9AE391EE8CA46CA01F82A /* CzenDriverTests */ = {
 			isa = PBXGroup;
 			children = (
+				C8F4261C420E370422B3B0E5 /* LifecycleTests.swift */,
 				D18A4E29C8B4EDCF6B448DE9 /* LogicTests.swift */,
+				2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */,
 				0295A8B937C8C9D71007A9EF /* TokenRefreshTests.swift */,
 			);
 			path = CzenDriverTests;
@@ -587,6 +596,7 @@
 				5BBD40ED70C8827CF99C819A /* RootView.swift in Sources */,
 				AC216A50972D6F305C870F68 /* Storage.swift in Sources */,
 				E68BAD274FBCED1ABF7B63E7 /* Theme.swift in Sources */,
+				962E4BFAFF469AFCA86E48A3 /* TileTextRepair.swift in Sources */,
 				BA6C6593B43AB2D944C9457A /* TripCards.swift in Sources */,
 				D45B0B81E237760A8D715F14 /* TripOfferSheet.swift in Sources */,
 				1F81180B702F45FE230DA426 /* TripsView.swift in Sources */,
@@ -600,7 +610,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				173BAF56A6B5BAE718361671 /* LifecycleTests.swift in Sources */,
 				F09C80EAFCA3CFCA8471415B /* LogicTests.swift in Sources */,
+				89194D7ADEC423C6F513382B /* ReviewFixTests.swift in Sources */,
 				9122784554E3885923E64E6D /* TokenRefreshTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -808,6 +820,9 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = CzenDriver/Info.plist;
+				INFOPLIST_OTHER_PREPROCESSOR_FLAGS = "-traditional";
+				INFOPLIST_PREPROCESS = YES;
+				INFOPLIST_PREPROCESSOR_DEFINITIONS = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -828,6 +843,9 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = CzenDriver/Info.plist;
+				INFOPLIST_OTHER_PREPROCESSOR_FLAGS = "-traditional";
+				INFOPLIST_PREPROCESS = YES;
+				INFOPLIST_PREPROCESSOR_DEFINITIONS = "CZ_ALLOW_INSECURE_HTTP=1";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -21,7 +21,8 @@ struct CzenOrb: View {
             let angleA = Angle.degrees((t / period).truncatingRemainder(dividingBy: 1) * 360)
             let angleB = Angle.degrees(-(t / (period * 1.35)).truncatingRemainder(dividingBy: 1) * 360)
             let breathe = reduceMotion ? 0 : (sin(t * 2 * .pi / 3.2) + 1) / 2
-            let energy = status == .connected ? max(level, speaking ? 0.35 + 0.15 * sin(t * 6) : 0) : 0
+            // Reduce Motion: no breathing, rotation, pulse or level-driven scaling (static orb).
+            let energy = reduceMotion ? 0 : (status == .connected ? max(level, speaking ? 0.35 + 0.15 * sin(t * 6) : 0) : 0)
             let scale = 1 + (status == .idle || status == .error ? breathe * 0.03 : energy * 0.12)
 
             ZStack {

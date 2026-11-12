@@ -176,7 +176,7 @@ struct AssistantChatPanel: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(voice.status != .connected)
-                    .accessibilityLabel(voice.isMicMuted ? "Bật micro" : "Tắt micro, giữ kết nối")
+                    .accessibilityLabel(voice.status != .connected ? "Micro, chưa kết nối" : (voice.isMicMuted ? "Bật micro" : "Tắt micro, giữ kết nối"))
                     .accessibilityIdentifier("chat-mic")
                     TextField(placeholder, text: $text, axis: .vertical)
                         .appText(.body)
@@ -256,6 +256,7 @@ struct ComposerVoiceButton: View {
     @Environment(AppModel.self) private var model
     @Environment(ChatStore.self) private var chat
     @Environment(VoiceSession.self) private var voice
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onCancelCall: () -> Void
 
     var body: some View {
@@ -266,7 +267,7 @@ struct ComposerVoiceButton: View {
                 case .connecting:
                     ProgressView().tint(.white)
                 case .connected:
-                    TimelineView(.animation(minimumInterval: 1 / 30)) { tl in
+                    TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { tl in
                         let t = tl.date.timeIntervalSinceReferenceDate
                         let level = max(voice.agentAudioLevel, voice.agentSpeaking ? 0.4 : 0.08)
                         HStack(spacing: 3) {

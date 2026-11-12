@@ -163,6 +163,7 @@ struct ActiveTripCard: View {
                     CzenButton(title: "Gọi khách", kind: .outline, systemImage: "phone.fill") {
                         if let phone = trip.customerPhone, let url = URL(string: "tel:\(phone)") { openURL(url) }
                     }
+                    .accessibilityLabel(trip.customerName.map { "Gọi \($0)" } ?? "Gọi khách")
                     if trip.status != .pickedUp {
                         CzenButton(title: "Huỷ chuyến", kind: .outline) { confirmCancel = true }
                     }

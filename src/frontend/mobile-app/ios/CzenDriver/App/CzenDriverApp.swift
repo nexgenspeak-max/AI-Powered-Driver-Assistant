@@ -51,8 +51,9 @@ enum AppModelFactory {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refresh])
             let (data, response) = try await transport.send(req)
-            guard (200..<300).contains(response.statusCode) else { throw APIError.unauthorized }
-            return try JSONCoding.decoder().decode(AuthTokens.self, from: data)
+            // Keep the status: only 400/401/403 mean "refresh token rejected" (see AuthSession).
+            guard (200..<300).contains(response.statusCode) else { throw APIError.http(status: response.statusCode, detail: nil) }
+            do { return try JSONCoding.decoder().decode(AuthTokens.self, from: data) } catch { throw APIError.decoding(String(describing: error)) }
         }
         let authHTTP = HTTPClient(baseURL: config.authServiceURL, transport: transport, session: session, sendsDriverPhone: false)
         let apiHTTP = HTTPClient(baseURL: config.tripServiceURL, transport: transport, session: session, sendsDriverPhone: true)

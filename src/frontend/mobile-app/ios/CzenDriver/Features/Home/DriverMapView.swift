@@ -36,6 +36,7 @@ struct DriverMapView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> MLNMapView {
+        GoongTileRepairer.install()
         let map = MLNMapView(frame: .zero, styleURL: styleURL ?? URL(string: "https://demotiles.maplibre.org/style.json"))
         map.delegate = context.coordinator
         map.logoView.isHidden = true

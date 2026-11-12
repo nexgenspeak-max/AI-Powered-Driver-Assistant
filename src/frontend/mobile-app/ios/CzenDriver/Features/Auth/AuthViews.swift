@@ -65,7 +65,10 @@ struct LandingView: View {
             }
             .frame(maxWidth: 480)
         }
+        // Title hidden by the empty principal item; it names the back button on login/register.
+        .navigationTitle("Quay lại")
         .toolbar {
+            ToolbarItem(placement: .principal) { EmptyView() }
             ToolbarItem(placement: .topBarTrailing) { ThemeToggle() }
         }
         .toolbarBackground(.hidden, for: .navigationBar)

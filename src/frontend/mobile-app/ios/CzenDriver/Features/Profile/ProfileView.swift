@@ -86,6 +86,8 @@ struct ProfileView: View {
             .padding(.bottom, 120)
         }
         .screenBackground()
+        // The root's title is never shown (bar hidden) but names the pushed screens' back button.
+        .navigationTitle("Quay lại")
         .toolbar(.hidden, for: .navigationBar)
         .confirmationDialog("Đăng xuất?", isPresented: $confirmLogout, titleVisibility: .visible) {
             Button("Đăng xuất", role: .destructive) { Task { await model.logout() } }

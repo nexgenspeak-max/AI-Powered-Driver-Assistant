@@ -27,6 +27,8 @@ final class LocationTracker: NSObject {
     @ObservationIgnored var isOnline: () -> Bool = { false }
     @ObservationIgnored var activeStops: () -> [LatLng] = { [] }
     @ObservationIgnored private(set) var backgroundTracking = false
+    /// True between `startForeground()` and `stopForeground()`.
+    @ObservationIgnored private(set) var foregroundActive = false
 
     init(api: DriverAPI, demo: Bool) {
         self.api = api
@@ -46,6 +48,7 @@ final class LocationTracker: NSObject {
 
     /// Foreground watch (3 s / 5 m) plus a 15 s wall-clock tick that refreshes a fix older than 10 s.
     func startForeground() {
+        foregroundActive = true
         guard !demo else { return }
         if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
         manager.startUpdatingLocation()
@@ -57,6 +60,16 @@ final class LocationTracker: NSObject {
                 if let at = self.lastFixAt, Date().timeIntervalSince(at) > 10 { self.manager.requestLocation() }
             }
         }
+    }
+
+    /// Sign-out: stop the watch and the wall-clock tick, release anyone awaiting a fix.
+    func stopForeground() {
+        foregroundActive = false
+        tick?.cancel()
+        tick = nil
+        resumeWaiters(with: current)
+        guard !demo else { return }
+        manager.stopUpdatingLocation()
     }
 
     /// Background tracking while online; asks for Always authorisation in context.
@@ -71,6 +84,7 @@ final class LocationTracker: NSObject {
             if let here = current { Task { await pushBackground(here, force: true) } }
         } else {
             manager.allowsBackgroundLocationUpdates = false
+            manager.showsBackgroundLocationIndicator = false
         }
     }
 
@@ -154,7 +168,7 @@ extension LocationTracker: CLLocationManagerDelegate {
         let status = manager.authorizationStatus
         Task { @MainActor in
             self.authorization = status
-            if status == .authorizedWhenInUse || status == .authorizedAlways { self.manager.startUpdatingLocation() }
+            if self.foregroundActive, status == .authorizedWhenInUse || status == .authorizedAlways { self.manager.startUpdatingLocation() }
             if self.backgroundTracking { self.manager.allowsBackgroundLocationUpdates = status == .authorizedAlways }
         }
     }

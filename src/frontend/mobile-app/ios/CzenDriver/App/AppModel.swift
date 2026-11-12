@@ -117,7 +117,9 @@ final class AppModel {
         voice.disconnect()
         socket.stop()
         socketPhone = nil
+        navigation.stop()
         location.setBackgroundTracking(false)
+        location.stopForeground()
         me = nil
         context = nil
         settings = nil

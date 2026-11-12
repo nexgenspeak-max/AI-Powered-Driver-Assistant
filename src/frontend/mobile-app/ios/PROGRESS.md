@@ -7,7 +7,7 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 ```sh
 cd src/frontend/mobile-app/ios
 python3 scripts/seed-local-config.py          # writes uncommitted Config/Local.xcconfig from driver-app/.env
-xcodegen generate
+xcodegen generate   # Info.plist is hand-maintained (preprocessed for per-configuration ATS), not generated
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 xcodebuild -project CzenDriver.xcodeproj -scheme CzenDriver \
   -destination 'platform=iOS Simulator,name=Czen Native iOS 26,OS=26.1' \
@@ -52,8 +52,34 @@ Remaining / known gaps
 - Live backend never exercised (demo mode only, by instruction).
 - Screenshots on iPhone 17 Pro only (no smallest-device / AX-size pass yet).
 
+Review fixes (2026-11-12)
+- [x] Transcription finality from `lk.transcription_final` (`TextStreamTranscript`).
+- [x] Voice connect is cancellable (also: `LiveKitVoiceEngine.connect` leaves a room whose join completed after a
+      `disconnect()`, instead of keeping it live): hang-up / logout while connecting cancels the task (generation checked after
+      every await), tears the room down, ends `.idle`; a failed connect stays `.error` (`.disconnected` only
+      affects a live session; stale LiveKit room events are dropped).
+- [x] Token refresh: session generation + cancel on logout (no tokens written back), slot freed only by its own
+      task, "token already rotated" short-circuit; only 400/401/403 from `/auth/refresh` log out.
+- [x] Dispatch socket: `.opened` on the handshake (`didOpenWithProtocol`), 20 s ping keepalive (failed / no pong
+      in 10 s = close → 3 s reconnect).
+- [x] Sign-out stops foreground location (updates + tick), navigation and the background location indicator.
+- [x] Turn-by-turn: empty steps = error (no instant arrival); routes resolving after `stop()` are ignored.
+- [x] ATS: `NSAllowsArbitraryLoads` only in Debug (`CZ_ALLOW_INSECURE_HTTP` plist preprocessing); Release has
+      no ATS exception → HTTPS only (a Release build therefore needs https backend URLs).
+- [x] Garbled map labels: not an iOS text bug — Goong's `composite` tiles carry some `point_map` names already
+      double-encoded (UTF-8 read as Windows-1252, then title-cased; the same bytes reach Android, whose screenshot
+      just shows a different area). `GoongTileRepairer` (MapLibre `MLNNetworkConfiguration` delegate) repairs those
+      strings in each Goong vector tile before parsing; the ambient tile cache is cleared once so stale tiles go.
+      Known limit: an all-caps source letter Ị/Ọ/Ỏ that the upstream title-casing lowercased can't be told apart
+      from Ớ/Ờ/Ở and may decode to the latter.
+- [x] Accessibility: "Quay lại" back buttons (root titles), "Gọi {khách}" on trip cards, mic label when not
+      connected; orb + composer bars static under Reduce Motion. XCUITest `AccessibilityLabelUITests` checks them.
+
 Test notes
-- `xcodebuild test` passes on an iOS 26.1 iPhone 17 Pro simulator (34 Swift Testing tests + 1 XCUITest journey).
+- `xcodebuild test` passes on the "Czen Native iOS 26" (iOS 26.1) simulator: 60 Swift Testing tests in 15 suites
+  + 3 XCUITests (demo journey, 2 accessibility-label tests). Wrap runs in a timeout (e.g. a perl `alarm` wrapper;
+  macOS has no `timeout`). The 13 lifecycle tests (`LifecycleTests.swift`) were first run against the pre-fix
+  sources: 11 failed there, all pass now.
 - On the iOS 27.0 simulator runtime the XCTest runner never connects ("test runner hung before establishing
   connection" / kAXErrorServerNotFound) — a simulator/Xcode 27 issue; the app itself runs there (screenshots).
 - First LiveKit/WebRTC package resolve downloads ~600 MB; it can take 30+ minutes on a slow link.
@@ -62,6 +88,7 @@ Deviations from the RN app (decided)
 - Tab bar: system Liquid Glass TabView; the orb floats over a 5th "Trợ lý" tab slot (tab selection intercepted).
 - Map overlays render as light glass in both themes (Goong tiles are light), replacing the RN forced status bar.
 - Buttons use `.glassProminent` / `.glass` instead of the Skia gradient pill; segmented control keeps the gradient.
-- Transcript "final" = stream closed (Swift SDK exposes only header attributes, not the trailer flag).
+- Transcript finality comes from the stream header attribute `lk.transcription_final` ("false" = interim stream);
+  interim streams stay streaming bubbles, only final streams go through dedupe / `call_transcript`.
 - Wake word: on-device SFSpeechRecognizer with a decoy-tolerant matcher (no Vosk grammar on iOS).
 - Single app target with feature folders (no local SPM packages yet).
