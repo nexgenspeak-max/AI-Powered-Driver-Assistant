@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="620" viewBox="0 0 1500 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="12" refX="15" refY="6" orient="auto-start-reverse"><path d="M0,0 L16,6 L0,12 z" fill="#4A5563"/></marker>
+  </defs>
+  <rect width="1500" height="620" fill="#FFFFFF"/>
+  <g stroke="#E07B1A" stroke-width="2" fill="#FFF3E8">
+    <rect x="30" y="60" width="270" height="110" rx="22"/>
+    <rect x="1150" y="150" width="320" height="270" rx="22"/>
+    <rect x="1150" y="490" width="320" height="100" rx="22"/>
+  </g>
+  <g stroke="#7A7F87" stroke-width="2" stroke-dasharray="7 6" fill="#F5F5F5">
+    <rect x="30" y="400" width="270" height="110" rx="16"/>
+    <rect x="400" y="400" width="260" height="110" rx="16"/>
+    <rect x="770" y="150" width="270" height="270" rx="16"/>
+    <rect x="1150" y="14" width="320" height="86" rx="16"/>
+  </g>
+  <g fill="none" stroke="#4A5563" stroke-width="2.5" marker-start="url(#ah)" marker-end="url(#ah)">
+    <path d="M300,115 H715 V230 H770"/>
+    <path d="M300,455 H400"/>
+    <path d="M660,455 H715 V340 H770"/>
+    <path d="M1040,285 H1150"/>
+    <path d="M1310,150 V100"/>
+  </g>
+  <path d="M1310,420 V490" fill="none" stroke="#4A5563" stroke-width="2.5" marker-end="url(#ah)"/>
+  <g text-anchor="middle" fill="#1B2733" font-weight="700" font-size="27">
+    <text x="165" y="108">Ứng dụng tài xế</text>
+    <text x="165" y="448">Điện thoại</text>
+    <text x="530" y="448">Mạng điện thoại</text>
+    <text x="905" y="262">Phòng LiveKit</text>
+    <text x="1310" y="240">Tác nhân hội thoại</text>
+    <text x="1310" y="50">Nhà cung cấp AI</text>
+    <text x="1310" y="532">Các dịch vụ nghiệp vụ</text>
+  </g>
+  <g text-anchor="middle" fill="#4F5762" font-size="21">
+    <text x="165" y="142">micro và loa của máy</text>
+    <text x="165" y="482">tài xế hoặc khách hàng</text>
+    <text x="530" y="482">Twilio · trung kế SIP</text>
+    <text x="905" y="298">LiveKit Cloud</text>
+    <text x="905" y="330">mỗi phiên một phòng</text>
+    <text x="1310" y="278">Dịch vụ Liên lạc hội thoại</text>
+    <text x="1310" y="308">thời gian thực</text>
+    <text x="1310" y="352">dùng chung cho cả hai kênh</text>
+    <text x="1310" y="80">STT · LLM · TTS</text>
+    <text x="1310" y="564">qua API Gateway</text>
+  </g>
+  <g fill="#1B2733" font-size="24" font-weight="700">
+    <text x="508" y="102" text-anchor="middle">WebRTC</text>
+    <text x="703" y="388" text-anchor="end">SIP</text>
+  </g>
+  <g fill="#4F5762" font-size="20">
+    <text x="508" y="142" text-anchor="middle">âm thanh qua Internet</text>
+    <text x="350" y="440" text-anchor="middle">cuộc gọi</text>
+    <text x="1095" y="270" text-anchor="middle">âm thanh</text>
+    <text x="1328" y="132">API</text>
+    <text x="1296" y="462" text-anchor="end">gọi công cụ (HTTPS)</text>
+  </g>
+  <g font-size="19" fill="#4F5762">
+    <rect x="30" y="566" width="26" height="18" rx="5" fill="#FFF3E8" stroke="#E07B1A" stroke-width="2"/>
+    <text x="66" y="581">thành phần của hệ thống</text>
+    <rect x="320" y="566" width="26" height="18" rx="5" fill="#F5F5F5" stroke="#7A7F87" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="356" y="581">dịch vụ bên ngoài</text>
+  </g>
+</svg>

@@ -287,7 +287,9 @@ def architecture(view: str = "structure") -> Diagram:
     # ── Năm lớp (cột) ──
     for cid, text, x, w, fill in [
         ("band-client", "Client Layer", 10, 330, "#F2F4F4"),
-        ("band-rtai", "Real-time Communication &amp;<br>Conversational AI Layer", 350, 600, "#FFF7ED"),
+        # Two columns: third-party real-time platforms (outside AWS) and the conversational AI service on AWS.
+        ("band-rt", "Real-time<br>Communication", 350, 262, "#FFF7ED"),
+        ("band-ai", "Conversational<br>AI", 618, 332, "#FFFBEA"),
         ("band-apigw", "API Gateway Layer", 960, 330, "#F5F0FF"),
         ("band-ms", "Microservices Layer", 1300, 420, "#FFF4EC"),
         ("band-data", "Data Layer", 1730, 400, "#FBF0FC"),
@@ -295,6 +297,9 @@ def architecture(view: str = "structure") -> Diagram:
         ("band-ext", "External Services", 2140, 216, "#F2F4F4"),
     ]:
         d.vertex(cid, text, column.format(fill=fill), x, 10, w, 1100, data={"layer": cid.removeprefix("band-")})
+    # AI model providers belong to the Conversational AI layer but run outside AWS: same tint, left of the AWS frame.
+    d.vertex("band-ai-ext", "", "rounded=0;html=1;fillColor=#FFFBEA;strokeColor=#D5D8DC;", 350, 722, 262, 388,
+             data={"layer": "ai"})
 
     d.vertex("aws-cloud", "AWS Cloud", group("group_aws_cloud_alt", "#232F3E"), 620, 110, 1515, 1260)
     d.vertex("region", "Region ap-southeast-1", group("group_region", "#00A4A6", dashed=1), 636, 150, 1493, 1216)
@@ -412,7 +417,7 @@ def architecture(view: str = "structure") -> Diagram:
         ("f14", "apigw-rest", "fn-records", {D: "⑭ ⑮", C: "⑭", P: "⑰", Q: "⑳ ㉗"}, (1, .8, .5, 0), [(1340, 401), (1340, 700), (1672, 700)], EDGE, 0.45),
         ("f16", "fn-records", "tbl-call-records", {D: "⑯", C: "⑯", P: "⑯", Q: "⑯"}, (1, .5, 0, .5), None, EDGE, 0.0),
         ("k1", "twilio", "customer", {"structure": "PSTN", C: "⑪ ⑫"}, (0, .3, 1, .5), [(300, 557), (300, 474)], both, -0.75),
-        ("k2", "customer", "dispatcher", {"structure": "Zalo / gọi điện", C: "Zalo / gọi điện", P: "Zalo / gọi điện"}, (0, .5, 0, .5), [(40, 474), (40, 679)], EDGE + "dashed=1;", 0.25),
+        ("k2", "customer", "dispatcher", {"structure": "gọi điện", C: "gọi điện", P: "gọi điện"}, (0, .5, 0, .5), [(40, 474), (40, 679)], EDGE + "dashed=1;", 0.25),
         ("f17", "dispatcher", "apigw-rest", {"structure": "HTTPS", P: "⑰"}, (1, .5, 0, .95), [(305, 679), (305, 1060), (985, 1060), (985, 411)], EDGE, 0.05),
         ("f17s", "sysadmin", "apigw-rest", {"structure": "HTTPS", Q: "⑰"}, (1, .5, 0, .1), [(298, 859), (298, 1075), (955, 1075), (955, 356)], EDGE, 0.05),
         ("a-ops", "apigw-rest", "fn-ops", {Q: "⑰"}, (1, .95, .15, 0), [(1360, 411), (1360, 920), (1650, 920)], EDGE, 0.3),

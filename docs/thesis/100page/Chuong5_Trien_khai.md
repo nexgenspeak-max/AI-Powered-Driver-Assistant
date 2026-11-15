@@ -1,5 +1,7 @@
 # Chương 5. Triển khai
 
+Chương này trình bày cách thiết kế ở Chương 4 được hiện thực thành nguyên mẫu: công nghệ và cách tổ chức mã nguồn (mục 5.1, 5.2), dịch vụ hội thoại (mục 5.3), năm dịch vụ nghiệp vụ (mục 5.4), ứng dụng tài xế (mục 5.5), hạ tầng AWS cùng trạng thái triển khai thực tế (mục 5.6), và bảng đối chiếu từng quyết định thiết kế với vị trí trong mã nguồn (mục 5.7). Chương chỉ nêu những điểm hiện thực có ảnh hưởng tới kết quả đánh giá ở Chương 6; chi tiết còn lại nằm trong kho mã nguồn.
+
 ## 5.1. Công nghệ sử dụng
 
 Công nghệ được chọn theo vai trò của từng lớp kiến trúc (Bảng 5.1); nhà cung cấp STT, LLM, TTS được khai báo qua cấu hình (mục 5.3.4) nên có thể thay đổi mà không phải sửa kiến trúc.
@@ -19,7 +21,7 @@ Công nghệ được chọn theo vai trò của từng lớp kiến trúc (Bả
 
 ## 5.2. Tổ chức mã nguồn
 
-Mã nguồn nằm trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered-Driver-Assistant (thẻ thesis-final), được tổ chức theo kiểu kho mã đơn (monorepo). Thư mục src/backend chứa sáu dịch vụ: llm-orchestrator, identity-service, external-api-service, external-channel-service, call-records-service và ops-service, lần lượt là Dịch vụ Liên lạc hội thoại thời gian thực, Định danh, Chuyến đi và Điều phối, Liên lạc bằng tin nhắn, Nhật ký cuộc gọi, Giám sát vận hành. Thư mục src/frontend chứa ứng dụng tài xế, trang quản trị và trang giám sát; src/e2e chứa kiểm thử đầu cuối; infra chứa hạ tầng dạng mã. Mỗi dịch vụ Node.js dùng chung một mã nguồn cho hai điểm vào: máy chủ Express khi chạy cục bộ và hàm Lambda khi chạy trên AWS.
+Mã nguồn nằm trong kho GitHub https://github.com/nexgenspeak-max/AI-Powered-Driver-Assistant (thẻ thesis-final), được tổ chức theo kiểu kho mã đơn (monorepo). Thư mục src/backend chứa sáu dịch vụ: llm-orchestrator, identity-service, external-api-service, external-channel-service, call-records-service và ops-service, lần lượt là Dịch vụ Liên lạc hội thoại thời gian thực, Định danh, Chuyến đi và Điều phối, Liên lạc bằng tin nhắn, Nhật ký cuộc gọi, Giám sát vận hành. Thư mục src/frontend chứa ứng dụng tài xế (driver-app, viết bằng React Native), trang quản trị (admin-panel) và trang giám sát (super-admin-panel); src/e2e chứa kiểm thử đầu cuối; infra chứa hạ tầng dạng mã. Mỗi dịch vụ Node.js dùng chung một mã nguồn cho hai điểm vào: máy chủ Express khi chạy cục bộ và hàm Lambda khi chạy trên AWS.
 
 ## 5.3. Hiện thực Dịch vụ Liên lạc hội thoại thời gian thực
 
@@ -53,9 +55,9 @@ Câu hỏi về cách dùng ứng dụng được trả lời bằng công cụ 
 
 Nhà cung cấp STT, LLM, TTS được khởi tạo theo cấu hình thông qua một hàm khởi tạo chung (factory); khi có nhà cung cấp dự phòng, chuỗi nhà cung cấp được bọc bằng FallbackAdapter của LiveKit Agents. Mỗi lần thử STT và LLM chờ tối đa 5 giây; nhà cung cấp lỗi bị đánh dấu không khả dụng, yêu cầu được chuyển sang nhà cung cấp kế tiếp và sự kiện được ghi nhật ký.
 
-Trước khi chuyển sang TTS, câu trả lời do LLM sinh ra được chuẩn hóa thành dạng đọc, còn bản hiển thị trên ứng dụng được giữ nguyên. Số điện thoại được đọc từng chữ số, số tiền và số nhà dạng 5/9/36 được đổi sang chữ, còn từ viết tắt, đơn vị, giờ và biển số xe được đổi theo tệp từ điển phát âm app/voicebot/locales/vn/pronunciation.toml. Ví dụ, "30A-123.45" được đọc là "ba mươi a, một hai ba, bốn năm", còn "14:30" là "14 giờ 30". Bước này được đặt trước mọi nhà cung cấp TTS nên giọng chính và giọng dự phòng đọc giống nhau. Khi câu trả lời được truyền theo luồng (streaming), từ cuối của mỗi đoạn được giữ lại để ghép với đoạn kế tiếp, nhờ đó một từ bị cắt giữa hai đoạn vẫn được chuẩn hóa đúng.
+Trước khi chuyển sang TTS, câu trả lời do LLM sinh ra được chuẩn hóa thành dạng đọc, còn bản hiển thị trên ứng dụng được giữ nguyên: số điện thoại được đọc từng chữ số, số tiền được đổi sang chữ, còn từ viết tắt, đơn vị, giờ và biển số xe được đổi theo một tệp từ điển phát âm. Ví dụ, "30A-123.45" được đọc là "ba mươi a, một hai ba, bốn năm". Bước này đặt trước mọi nhà cung cấp TTS nên giọng chính và giọng dự phòng đọc giống nhau.
 
-Sau đợt đo ở Chương 6 (dùng Google TTS, Bảng 6.2), cấu hình mặc định được chuyển sang ElevenLabs eleven_v4_turbo với giọng "Kiều Linh" (giọng nữ miền Nam), còn Google TTS được giữ làm dự phòng; các số liệu ở Chương 6 chưa được đo lại với cấu hình này. Với giọng này, phiên tài xế dùng phong cách vui tươi: lời chào, lời cảm ơn hay tin vui có thể kèm thẻ âm thanh (audio tag) như cười khẽ hoặc giọng tươi vui; khi báo lỗi, xác nhận thao tác, đọc số tiền, số điện thoại và trong phiên với khách, trợ lý giữ giọng nghiêm túc. Biểu tượng cảm xúc (emoji) trong câu trả lời được loại bỏ trước khi đưa sang TTS.
+Cấu hình hiện hành dùng ElevenLabs (mô hình eleven_v4_turbo, giọng nữ miền Nam "Kiều Linh") làm TTS chính và Google TTS làm dự phòng. Đợt đo độ trễ ngày 15/11/2026 (mục 6.4) chạy với cấu hình này; các phép đo còn lại ở Chương 6 được thực hiện trước đó, khi TTS chính là Google (Bảng 6.2). Trợ lý giữ giọng nghiêm túc khi báo lỗi, xác nhận thao tác, đọc số tiền, số điện thoại và trong phiên với khách.
 
 ### 5.3.5. Xử lý im lặng và kết thúc phiên
 
@@ -107,19 +109,19 @@ Dịch vụ Nhật ký cuộc gọi lưu bản ghi trong một bảng DynamoDB r
 | stt_provider, llm_provider, llm_model | Nhà cung cấp và mô hình đã dùng |
 | mode, metrics; ttl | Loại phiên, chỉ số phiên (mục 5.3.6); thời hạn tự xóa |
 
-Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, kiểm tra định kỳ tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực biểu đồ tuần tự S7 (mục 4.5.7), dùng LLM chấm một mẫu câu trả lời chọn ngẫu nhiên nhưng cố định theo ngày, và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi thay vì từ CloudWatch Logs.
+Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, kiểm tra định kỳ tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực biểu đồ tuần tự S7 (mục 4.5.7), dùng LLM chấm một mẫu câu trả lời chọn ngẫu nhiên nhưng cố định theo ngày, và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi thay vì từ CloudWatch Logs. Trên trang giám sát, mục "Báo cáo ngày" hiển thị các nhóm chỉ số, các câu trả lời bị chấm sai và xu hướng 7 ngày (Hình C.21, Hình C.22). Dữ liệu trong hai hình lấy từ một tài khoản thử nghiệm ngày 18/10/2026, chỉ để minh họa và không dùng cho đánh giá ở Chương 6; dù vậy, các câu bị chấm sai đã giúp phát hiện và sửa hai lỗi thực tế.
 
 ### 5.4.4. Tích hợp dịch vụ bản đồ
 
-Trong backend, chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1). Ứng dụng tài xế chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng 4.4); tìm địa chỉ, chỉ đường và ma trận khoảng cách đều đi qua backend (luồng ㉓), nơi có bộ điều hợp (adapter) cho cả Goong và Google Maps Platform. Trong thực nghiệm, hệ thống dùng Goong.
+Trong backend, chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1). Ứng dụng tài xế chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng G.1); tìm địa chỉ, chỉ đường và ma trận khoảng cách đều đi qua backend (luồng ㉓), nơi có bộ điều hợp (adapter) cho cả Goong và Google Maps Platform. Trong thực nghiệm, hệ thống dùng Goong.
 
 Tích hợp bản đồ phục vụ bốn chức năng: (1) tìm và chuẩn hóa địa chỉ; (2) lấy lộ trình và tình trạng giao thông khi tạo chuyến, lưu cùng chuyến cho công cụ get_trip_traffic (FR-T07); (3) sắp xếp thứ tự ghé điểm dừng theo ma trận khoảng cách đường bộ bằng heuristic láng giềng gần nhất, sau đó cải tiến bằng 2-opt, với ràng buộc điểm đón phải đứng trước điểm trả của cùng một chuyến; kết quả được lưu vào bộ nhớ đệm, cập nhật theo vị trí GPS và dùng chung cho thẻ điểm dừng, tab Chuyến và trợ lý (get_optimal_route, suggest_next_stop, UC16); (4) hiển thị bản đồ và chỉ đường trong ứng dụng (Hình 5.1c), còn trợ lý giọng nói không đọc chỉ dẫn rẽ từng bước (mục 3.5).
 
-Lỗi dịch vụ bản đồ không làm dừng nghiệp vụ (NFR-04): khi không lấy được ma trận, thứ tự ghé được tính theo khoảng cách đường chim bay với tốc độ giả định 25 km/h và gắn nhãn ước lượng; khi không lấy được chỉ đường, API điều hướng trả mã 502 nhưng chuyến vẫn được tạo. Chất lượng thứ tự ghé được đánh giá ở Bảng 6.15; độ chính xác của thời gian đến dự kiến trên đường thật chưa được đo.
+Lỗi dịch vụ bản đồ không làm dừng nghiệp vụ (NFR-04): khi không lấy được ma trận, thứ tự ghé được tính theo khoảng cách đường chim bay với tốc độ giả định 25 km/h và gắn nhãn ước lượng; khi không lấy được chỉ đường, API điều hướng trả mã 502 nhưng chuyến vẫn được tạo. Chất lượng thứ tự ghé được đánh giá ở Bảng 6.14; độ chính xác của thời gian đến dự kiến trên đường thật chưa được đo.
 
 ## 5.5. Hiện thực ứng dụng tài xế
 
-Ứng dụng tài xế hiện thực thiết kế ở mục 4.8 dưới thương hiệu Czen, với bộ 57 biểu tượng SVG riêng, kèm nhãn chữ cho cả năm mục điều hướng. Hình 5.1 trình bày màn hình chào, màn hình đăng nhập và màn hình bản đồ có lộ trình tối ưu cùng thẻ điểm dừng kế tiếp.
+Ứng dụng tài xế hiện thực thiết kế ở mục 4.8 dưới thương hiệu Czen. Hình 5.1 trình bày màn hình chào, màn hình đăng nhập và màn hình bản đồ có lộ trình tối ưu cùng thẻ điểm dừng kế tiếp.
 
 ![Hình 5.1|row=4.6](thesis_screenshots/landing.jpg;thesis_screenshots/login.jpg;thesis_screenshots/map.jpg)
 
@@ -130,16 +132,6 @@ Bảng mời nhận chuyến toàn màn hình có cước ước tính, vòng đ
 ![Hình 5.2|row=4.6](thesis_screenshots/trolyczen1.jpg;thesis_screenshots/trolyaidangketnoi.jpg)
 
 **Hình 5.2.** Phiên trợ lý giọng nói: (a) tài xế chọn câu gợi ý nhanh, trợ lý đang xử lý; (b) hội thoại tra cứu lịch trình trong ngày
-
-Mục "Báo cáo ngày" trên trang giám sát hiển thị các nhóm chỉ số (Hình 5.3), các câu trả lời bị bộ chấm LLM đánh giá sai và xu hướng 7 ngày (Hình 5.4). Dữ liệu ngày 18/10/2026 được lấy từ một tài khoản thử nghiệm, chỉ dùng để minh họa và không dùng cho đánh giá ở Chương 6; dù vậy, các câu bị chấm sai đã giúp phát hiện và sửa hai lỗi thực tế.
-
-![Hình 5.3|h=11](thesis_screenshots/superadmin/baocaongay.png)
-
-**Hình 5.3.** Trang báo cáo vận hành ngày: các chỉ số tổng hợp (dữ liệu ngày 18/10/2026)
-
-![Hình 5.4](thesis_screenshots/superadmin/baocaongay_xuhuong.png)
-
-**Hình 5.4.** Trang báo cáo vận hành ngày: câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 18/10/2026)
 
 Màn hình cài đặt trợ lý cho phép chọn ngôn ngữ, chế độ gọi khách mặc định và bán kính nhắc khách. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk; khi nhận ra từ khóa, ứng dụng mở phiên giống như khi tài xế chạm nút Czen. Các ảnh giao diện khác được trình bày ở Phụ lục C.
 
@@ -191,4 +183,4 @@ Bảng 5.6 đối chiếu quyết định thiết kế ở Chương 4 với vị
 
 ## Kết luận chương
 
-Nguyên mẫu đã hiện thực các quyết định thiết kế ở Chương 4 (Bảng 5.6), nhưng tại thời điểm đánh giá vẫn chạy trên máy phát triển, chưa chạy trên kiến trúc AWS đầy đủ (mục 5.6.1). Chương 6 đánh giá nguyên mẫu theo các yêu cầu ở Chương 3.
+Nguyên mẫu đã hiện thực các quyết định thiết kế ở Chương 4: sáu dịch vụ, tác nhân hội thoại dùng chung cho ứng dụng và cuộc gọi điện thoại, cùng ứng dụng tài xế (Bảng 5.6). Mã hạ tầng AWS đã viết xong, nhưng tại thời điểm đánh giá nguyên mẫu vẫn chạy trên máy phát triển, chưa chạy trên kiến trúc AWS đầy đủ (mục 5.6.1); giới hạn này được tính đến khi diễn giải kết quả. Chương 6 đánh giá nguyên mẫu theo các yêu cầu ở Chương 3.

@@ -72,23 +72,23 @@ def figure_width_cm(img_path: Path, max_w: float = FIG_MAX_W_CM, max_h: float = 
 
 
 CONCLUSION_PARAS = [
-    "Luận văn đã thực hiện đủ các bước của nghiên cứu khoa học thiết kế: xác định yêu cầu cho bốn nhóm người sử dụng, lập luận kiến trúc từ năm yêu cầu phi chức năng thông qua các chiến thuật kiến trúc, hiện thực nguyên mẫu chạy trên WebRTC và SIP, và đánh giá theo 19 tiêu chí chấp nhận (17 tiêu chí đã có kết quả; AC-09 và AC-12 đã được hiện thực nhưng chưa được đánh giá riêng).",
+    "Luận văn đã thực hiện đủ các bước của nghiên cứu khoa học thiết kế: xác định yêu cầu cho bốn nhóm người sử dụng, lập luận kiến trúc từ năm yêu cầu phi chức năng thông qua các chiến thuật kiến trúc, hiện thực nguyên mẫu dùng được trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP), và đánh giá theo 19 tiêu chí chấp nhận (cả 19 tiêu chí đã được đánh giá; AC-09 và AC-12 đạt khi kiểm thử chức năng trên thiết bị thật).",
     "Câu trả lời cho các câu hỏi nghiên cứu (chi tiết ở mục 6.12):",
     "- RQ1: Kiến trúc microservices đáp ứng khả năng phục hồi ở mức thành phần (200/200 lượt tiêm lỗi không làm hỏng luồng hội thoại), nhưng phiên đang chạy bị mất khi một bản sao tác nhân bị dừng. Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ (khoảng 225 MB mỗi phiên). AC-16 đạt trong môi trường mô phỏng, chưa kiểm chứng trên AWS với nhà cung cấp AI thật.",
-    "- RQ2: Trên 174 lượt qua LLM (05–06/09/2026), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu (P95 2,49 giây); thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ để tính P95.",
+    "- RQ2: Trên 120 lượt của thiết kế hiện hành (15/11/2026), P50 độ trễ phản hồi là 1,83 giây và P95 là 2,58 giây, không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng. Hai chặng chi phối với mức gần bằng nhau là phát hiện kết thúc phát ngôn và thời gian sinh token đầu của LLM, mỗi chặng khoảng 1 giây ở trung vị.",
     "- RQ3: Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe; với một người đọc và 22 câu, kết quả này chỉ cho thấy xu hướng.",
     "- RQ4: 37/43 lượt (86,0%) chọn đúng công cụ, 32/43 (74,4%) hoàn thành đúng ngay lần đầu; khoảng tin cậy rộng do cỡ mẫu nhỏ, và chỉ có một người chấm. Lỗi chủ yếu là chọn sai thao tác (phát sinh từ nhánh rút gọn, nay đã loại bỏ), sai tham số và đáp lời nhưng chưa thực hiện. Về tính khả dụng (AC-14), 100% thao tác rủi ro có bước xác nhận; danh mục hành vi khi lái đạt 6/6 sau một vòng sửa.",
-    "Đóng góp chính: kiến trúc tham chiếu được lập luận từ yêu cầu phi chức năng; nguyên mẫu mã nguồn công khai; khung đánh giá gắn với tiêu chí chấp nhận; bằng chứng cho thấy độ trễ chủ yếu do mô hình ngôn ngữ bên ngoài chi phối, còn kiến trúc gần như không làm tăng độ trễ khi số phiên tăng (trong môi trường mô phỏng).",
+    "Đóng góp chính: kiến trúc tham chiếu được lập luận từ yêu cầu phi chức năng; nguyên mẫu mã nguồn công khai; khung đánh giá gắn với tiêu chí chấp nhận; bằng chứng cho thấy độ trễ do hai chặng chi phối (phát hiện kết thúc phát ngôn và token đầu của mô hình ngôn ngữ), còn cách chia dịch vụ gần như không làm tăng độ trễ khi số phiên tăng (trong môi trường mô phỏng).",
     "Hạn chế và hướng phát triển:",
-    "- Độ trễ chưa đạt (NFR-02): đo lại thiết kế hiện hành với ít nhất 200 lượt; thử mô hình nhanh hơn, rút gọn lời nhắc và giảm số vòng gọi công cụ.",
+    "- Độ trễ chưa đạt (NFR-02): tinh chỉnh ngưỡng phát hiện kết thúc phát ngôn, thử mô hình nhanh hơn hoặc mô hình giọng nói đầu cuối, phát câu đệm sớm hơn; đo lại với người nói thật và với các lượt gọi điện, gửi SMS, đổi trạng thái chuyến.",
     "- Khả năng mở rộng mới được đo trong môi trường mô phỏng (NFR-03): lặp lại SC-01, SC-02 trên LiveKit Cloud và Fargate với nhà cung cấp AI thật; cấu hình tự mở rộng theo bộ nhớ hoặc số phiên.",
     "- Lỗi treo khiến tài xế chờ 6–8 giây và phiên đang chạy bị mất khi bản sao bị dừng (NFR-04): rút ngắn thời gian chờ, duy trì tối thiểu hai bản sao, tự động xin lại token và đo đường khôi phục đầu cuối.",
-    "- Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.13, Bảng 6.9); cần xóa nhật ký cũ và tự động hóa bước quét nhật ký.",
+    "- Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại (Bảng 6.12, Bảng 6.9); cần xóa nhật ký cũ và tự động hóa bước quét nhật ký.",
     "- Hệ thống chưa được triển khai đầy đủ trên AWS (mục 5.6.1): triển khai toàn bộ các stack và đo lại trên Lambda, API Gateway và Fargate.",
     "- Cỡ mẫu nhỏ, chỉ một người đọc (RQ3) và một người chấm (RQ4): bổ sung người đọc và mức nhiễu; dùng hai người chấm độc lập và báo cáo hệ số đồng thuận.",
     "- SMS chưa được giao tới thuê bao Việt Nam (AC-11 mới đạt ở mức kiểm thử): đăng ký tên người gửi (sender ID) với Twilio; kiểm tra chữ ký X-Twilio-Signature ở webhook (mục 6.13).",
-    "- AC-09 (từ khóa đánh thức), AC-12 (điều phối viên mời tài xế) và gói tiếng Anh chưa được đánh giá định lượng: đo tỷ lệ đánh thức đúng và đánh thức nhầm, đánh giá luồng mời tài xế, đo tỷ lệ lỗi từ và độ trễ với tiếng Anh.",
-    "- Chưa có nghiên cứu người dùng: tiến hành thử nghiệm có kiểm soát với tài xế trong kịch bản lái mô phỏng, đo thời gian hoàn thành tác vụ, số lần nhìn màn hình và tải nhận thức.",
+    "- AC-09 (từ khóa đánh thức) và AC-12 (điều phối viên mời tài xế) đạt khi kiểm thử chức năng trên thiết bị thật nhưng chưa có số đo định lượng, gói tiếng Anh cũng chưa được đánh giá định lượng: đo tỷ lệ đánh thức đúng và đánh thức nhầm, tự động hóa kiểm thử luồng mời tài xế, đo tỷ lệ lỗi từ và độ trễ với tiếng Anh.",
+    "- Chưa có nghiên cứu người dùng (yêu cầu mới được đối chiếu qua trao đổi không chính thức với tài xế, mục 3.1): khảo sát có cấu trúc để kiểm chứng bộ yêu cầu; tiến hành thử nghiệm có kiểm soát với tài xế trong kịch bản lái mô phỏng, đo thời gian hoàn thành tác vụ, số lần nhìn màn hình và tải nhận thức.",
 ]
 
 APPENDIX_A_INTRO = (
@@ -235,6 +235,8 @@ APPENDIX_C_FIGURES = [
     ("thesis_screenshots/superadmin/config.png", "Hình C.18. Trang giám sát: cấu hình chuỗi STT – LLM – TTS theo gói ngôn ngữ."),
     ("thesis_screenshots/superadmin/logs.png", "Hình C.19. Trang giám sát: nhật ký thời gian thực, kèm độ trễ TTFB."),
     ("thesis_screenshots/superadmin/cuocgoi.png", "Hình C.20. Trang giám sát: bản ghi và tóm tắt cuộc gọi."),
+    ("thesis_screenshots/superadmin/baocaongay.png", "Hình C.21. Trang giám sát: báo cáo vận hành ngày, các chỉ số tổng hợp (dữ liệu ngày 18/10/2026)."),
+    ("thesis_screenshots/superadmin/baocaongay_xuhuong.png", "Hình C.22. Trang giám sát: câu trả lời bị chấm sai và xu hướng 7 ngày (dữ liệu ngày 18/10/2026)."),
 ]
 APPENDIX_A_GROUPS = [
     ("Chuyến đi và lịch trình (tài xế)", ["check_upcoming_trips", "create_walkup_trip", "refresh_latest_data", "get_current_trip_info",
@@ -268,11 +270,11 @@ APPENDIX_E_RTM = [
     ("FR-T03", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S3", "update_trip_status; routes/trips.ts", "UC03", "Không đủ mẫu"),
     ("FR-T04", "RQ4", "Dịch vụ Chuyến đi và Điều phối; LiveKit SIP", "S4", "confirm_trip, reject_trip; dispatchService.ts", "UC02", "Bảng 6.7"),
     ("FR-T05", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S3", "request_cancel_trip, confirm_cancel_trip", "UC05", "Bảng 6.9"),
-    ("FR-T06, FR-T07", "RQ4", "Dịch vụ Chuyến đi và Điều phối; dịch vụ bản đồ", "S3 (mẫu gọi công cụ)", "create_walkup_trip; suggest_next_stop, get_optimal_route, get_trip_traffic; routeOptimizationService.ts", "UC16", "Kiểm thử tự động đạt: test_create_walkup_trip (2 ca), giao thông trong test_f7_f12_driver_tools và test_f1_f12_text_checklist; thứ tự ghé: Bảng 6.15"),
-    ("FR-C01, FR-C02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối; LiveKit SIP", "S5", "call_customer, call_custom_number; callService.ts", "UC04", "Bảng 6.7, Bảng 6.14"),
-    ("FR-C03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "send_sms_to_customer; smsService.ts", "UC04", "Bảng 6.14 (kiểm thử đạt); Bảng 6.12 (RS-04); chưa giao tin thật tới thuê bao Việt Nam (mục 6.13)"),
-    ("FR-C04", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "S3 (mẫu gọi công cụ)", "get_customer_location", "UC15", "Bảng 6.13"),
-    ("FR-C05", "RQ4", "Dịch vụ Nhật ký cuộc gọi", "S6", "summarize_last_call; conversation_service.py", "UC04", "Bảng 6.14"),
+    ("FR-T06, FR-T07", "RQ4", "Dịch vụ Chuyến đi và Điều phối; dịch vụ bản đồ", "S3 (mẫu gọi công cụ)", "create_walkup_trip; suggest_next_stop, get_optimal_route, get_trip_traffic; routeOptimizationService.ts", "UC16", "Kiểm thử tự động đạt: test_create_walkup_trip (2 ca), giao thông trong test_f7_f12_driver_tools và test_f1_f12_text_checklist; thứ tự ghé: Bảng 6.14"),
+    ("FR-C01, FR-C02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối; LiveKit SIP", "S5", "call_customer, call_custom_number; callService.ts", "UC04", "Bảng 6.7, Bảng 6.13"),
+    ("FR-C03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "send_sms_to_customer; smsService.ts", "UC04", "Bảng 6.13 (kiểm thử đạt); Bảng 6.11 (RS-04); chưa giao tin thật tới thuê bao Việt Nam (mục 6.13)"),
+    ("FR-C04", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "S3 (mẫu gọi công cụ)", "get_customer_location", "UC15", "Bảng 6.12"),
+    ("FR-C05", "RQ4", "Dịch vụ Nhật ký cuộc gọi", "S6", "summarize_last_call; conversation_service.py", "UC04", "Bảng 6.13"),
     ("FR-W01, FR-W02", "RQ4", "Tác nhân; Dịch vụ Chuyến đi và Điều phối", "S3 (mẫu gọi công cụ)", "create_reminder, extend_wait_time", "UC15", "Kiểm thử tự động đạt: gia hạn chờ 3 ca (test_trip_on_route_actions); nhắc việc 4 ca (test_create_reminder)"),
     ("FR-I01, FR-I02", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "S3 (mẫu gọi công cụ)", "report_customer_no_show, report_trip_issue", "UC06", "Bảng 6.9"),
     ("FR-E01, FR-E02", "RQ4", "Dịch vụ Chuyến đi và Điều phối", "S3 (mẫu gọi công cụ)", "get_today_earnings, get_earnings_summary, set_driver_status", "UC08", "Bảng 6.7"),
@@ -280,23 +282,23 @@ APPENDIX_E_RTM = [
     ("FR-L01", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S2 (chọn ngôn ngữ khi mở phiên)", "voicebot/locales/vn, voicebot/locales/en", "Mọi UC của tài xế", "Kiểm thử tự động đạt: test_locale_loader, test_locale_service, test_session_lang, test_tool_parity (17 ca); chưa đo tỷ lệ lỗi từ tiếng Anh"),
     ("FR-L02", "RQ4", "Tác nhân", "S3 (theo dõi im lặng giữa các lượt)", "Theo dõi im lặng trong session.py", "UC09", "Bảng 6.9"),
     ("FR-L03", "RQ4", "Tác nhân", "S4", "Tập công cụ theo loại phiên trong locales/*/agent.py", "UC02", "Bảng 6.7"),
-    ("FR-A01", "Ngoài RQ (kiểm tra tuân thủ)", "Ứng dụng tài xế", "S2", "wakeWordService.ts", "UC10", "Chưa đo định lượng tỷ lệ đánh thức đúng và đánh thức nhầm; hướng phát triển"),
+    ("FR-A01", "Ngoài RQ (kiểm tra tuân thủ)", "Ứng dụng tài xế", "S2", "wakeWordService.ts", "UC10", "Kiểm thử chức năng trên thiết bị thật đạt (Bảng 6.15); chưa đo định lượng tỷ lệ đánh thức đúng và đánh thức nhầm"),
     ("FR-A02", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S5", "Cụm từ kết thúc chế độ nói trực tiếp", "UC04", "Kiểm thử tự động đạt: chọn chế độ nói trực tiếp (test_outbound_call_modes, 9 ca); cụm từ kết thúc và trả quyền về trợ lý (test_bridge_end_phrase, 4 ca)"),
-    ("FR-K01, FR-K04", "RQ4", "Tác nhân (gọi khách nền, tác nhân gọi thay); Dịch vụ Nhật ký cuộc gọi", "S5", "Phòng custcall-…; test_customer_outbound_opening, test_record_customer_request, test_customer_call_faq", "UC12", "Bảng 6.14"),
-    ("FR-K02", "RQ4", "Tác nhân; LiveKit SIP", "S5", "Chế độ nói trực tiếp (bridge); test_outbound_call_modes", "UC12", "Bảng 6.14"),
-    ("FR-K03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "confirm_trip_with_customer, send_sms_to_customer", "UC13", "Bảng 6.12 (RS-04, đường lỗi)"),
+    ("FR-K01, FR-K04", "RQ4", "Tác nhân (gọi khách nền, tác nhân gọi thay); Dịch vụ Nhật ký cuộc gọi", "S5", "Phòng custcall-…; test_customer_outbound_opening, test_record_customer_request, test_customer_call_faq", "UC12", "Bảng 6.13"),
+    ("FR-K02", "RQ4", "Tác nhân; LiveKit SIP", "S5", "Chế độ nói trực tiếp (bridge); test_outbound_call_modes", "UC12", "Bảng 6.13"),
+    ("FR-K03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "confirm_trip_with_customer, send_sms_to_customer", "UC13", "Bảng 6.11 (RS-04, đường lỗi)"),
     ("FR-Q01 đến FR-Q05", "Ngoài RQ (kiểm tra tuân thủ)", "Trang quản trị điều hành; Dịch vụ Chuyến đi và Điều phối; Dịch vụ Định danh; Dịch vụ Nhật ký cuộc gọi", "S4", "admin-panel: TripBoardPage, CreateTripPage, DriversPage, CustomerPage, CallLogsPage", "UC14, UC17", "Hình C.12 đến C.16"),
-    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng 4.4)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.17 đến C.19"),
-    ("FR-O01, FR-O02", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi; tác nhân", "S7", "session_metrics.py; ops-service/src/services/reports; ReportsPage.tsx", "UC11", "Bảng 6.14"),
+    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng G.1)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.17 đến C.19"),
+    ("FR-O01, FR-O02", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi; tác nhân", "S7", "session_metrics.py; ops-service/src/services/reports; ReportsPage.tsx", "UC11", "Bảng 6.13"),
     ("NFR-01", "RQ4", "Tác nhân", "S3", "Phân loại phiên; hành động chờ xác nhận; câu báo lỗi (test_call_error_message)", "Danh mục hành vi", "Bảng 6.9 (đạt sau một vòng sửa)"),
-    ("NFR-02", "RQ2", "Tác nhân; nhà cung cấp AI", "S2, S3", "turn_filler.py; prefetch.py; context_store.py", "UC01, UC03, UC04, UC07", "Bảng 6.3, Bảng 6.5"),
-    ("NFR-03", "RQ1", "Tác nhân (ECS); các Lambda; DynamoDB", "S2 (phân công bản sao tác nhân)", "infra/llm-orchestrator/cfn.yaml (DesiredCount); infra/*/sam.yaml", "SC-01 đến SC-03", "Bảng 6.10, Bảng 6.11 (đạt trong môi trường mô phỏng)"),
-    ("NFR-04", "RQ1", "Tác nhân; Dịch vụ Nhật ký cuộc gọi; nhà cung cấp AI", "S3, S6", "providers/fallback.py; backend_api.py; conversation_service.py", "RS-01 đến RS-05", "Bảng 6.12"),
-    ("NFR-05", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh; mọi dịch vụ", "S1", "tokenService.ts; middleware xác minh JWT; tham số NoEcho; che số điện thoại trong logger/format", "Danh mục bảo mật", "Bảng 6.13 (đạt sau một vòng sửa)"),
-    ("CON-01", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S3", "backend_api.py", "Kiểm tra mã nguồn", "Bảng 6.13"),
+    ("NFR-02", "RQ2", "Tác nhân; nhà cung cấp AI", "S2, S3", "turn_filler.py; prefetch.py; context_store.py", "UC01, UC03, UC04, UC07", "Bảng 6.3, Bảng 6.4"),
+    ("NFR-03", "RQ1", "Tác nhân (ECS); các Lambda; DynamoDB", "S2 (phân công bản sao tác nhân)", "infra/llm-orchestrator/cfn.yaml (DesiredCount); infra/*/sam.yaml", "SC-01 đến SC-03", "Bảng 6.10 (đạt trong môi trường mô phỏng)"),
+    ("NFR-04", "RQ1", "Tác nhân; Dịch vụ Nhật ký cuộc gọi; nhà cung cấp AI", "S3, S6", "providers/fallback.py; backend_api.py; conversation_service.py", "RS-01 đến RS-05", "Bảng 6.11"),
+    ("NFR-05", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh; mọi dịch vụ", "S1", "tokenService.ts; middleware xác minh JWT; tham số NoEcho; che số điện thoại trong logger/format", "Danh mục bảo mật", "Bảng 6.12 (đạt sau một vòng sửa)"),
+    ("CON-01", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S3", "backend_api.py", "Kiểm tra mã nguồn", "Bảng 6.12"),
     ("CON-02", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Mọi sequence", "Bảng DynamoDB riêng từng stack", "Kiểm tra cấu hình", "Bảng 5.6"),
-    ("CON-03", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh", "S1", "tokenService.ts", "Kiểm tra mã nguồn", "Bảng 6.13"),
-    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng 4.4)", "Nhật ký gắn mã phòng và mã hội thoại", "Kiểm tra nhật ký", "Bảng 6.13"),
+    ("CON-03", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh", "S1", "tokenService.ts", "Kiểm tra mã nguồn", "Bảng 6.12"),
+    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng G.1)", "Nhật ký gắn mã phòng và mã hội thoại", "Kiểm tra nhật ký", "Bảng 6.12"),
 ]
 
 
@@ -308,39 +310,39 @@ APPENDIX_F_INTRO = (
     "lập, thông tin đăng nhập AWS giả, số điện thoại giả lập), không gọi tới AWS hay nhà cung cấp bên ngoài."
 )
 APPENDIX_F_ROWS = [
-    ("Độ trễ phản hồi và phân tích điểm nghẽn (Bảng 6.3, 6.4)",
-     "python3 docs/thesis/extract_ch6_metrics.py",
-     "Nhật ký tác nhân agent.*.log của đợt đo 05–06/09/2026",
-     "P50, P90, P95 theo nhánh; độ trễ theo chặng"),
+    ("Độ trễ phản hồi và độ trễ theo chặng (Bảng 6.3, 6.4)",
+     "docs/thesis/experiments/latency_20261115: audio_probe.py (đo); python3 analyze.py turns_after_fix.jsonl agent_metrics_after_fix.txt (tính lại)",
+     "120 lượt của tài xế ảo ngày 15/11/2026; các dòng chỉ số trích từ nhật ký tác nhân",
+     "P50, P90, P95 theo ba cách đo; độ trễ theo chặng"),
     ("Tỷ lệ lỗi từ (Bảng 6.6)",
      "python3 docs/thesis/compute_wer.py --room <mã phòng> --label A|B",
      "Nhật ký STT của phiên đọc 22 câu tham chiếu",
      "WER theo điều kiện âm thanh"),
-    ("SC-03 – thử tải API (Bảng 6.10)",
+    ("SC-03 – thử tải API (mục 6.8, tham khảo)",
      "docs/thesis/experiments/sc03_setup.sh; sc03_run.sh; python3 sc03_analyze.py",
      "Bảng bench-trips (200 tài xế giả lập × 3 chuyến) trên DynamoDB giả lập; k6",
      "P50, P95 theo số người dùng ảo; tỷ lệ lỗi"),
-    ("RS-01, RS-02, RS-04 – tiêm lỗi mức thành phần (Bảng 6.12)",
+    ("RS-01, RS-02, RS-04 – tiêm lỗi mức thành phần (Bảng 6.11)",
      "PYTHONPATH=. .venv/bin/python docs/thesis/experiments/rs_component_faults.py --trials 20 (chạy trong src/backend/llm-orchestrator)",
      "Máy chủ tiêm lỗi trả mã 503, treo hoặc từ chối kết nối",
      "Tỷ lệ lượt đạt; thời gian đến khi tác nhân báo lỗi"),
-    ("RS-05 – dự phòng nhà cung cấp LLM (Bảng 6.12)",
+    ("RS-05 – dự phòng nhà cung cấp LLM (Bảng 6.11)",
      ".venv/bin/python docs/thesis/experiments/rs05_provider_fallback.py --trials 30 (chạy trong src/backend/llm-orchestrator)",
      "FallbackAdapter của LiveKit Agents với nhà cung cấp giả lập",
      "Tỷ lệ thành công; thời gian đến token đầu khi chuyển đổi"),
-    ("SC-01, SC-02 – phiên hội thoại đồng thời (Bảng 6.11)",
+    ("SC-01, SC-02 – phiên hội thoại đồng thời (Bảng 6.10)",
      "Máy chủ LiveKit: docker run livekit/livekit-server --dev; python3 experiments/fake_ai_server.py; source experiments/sc_agent_env.sh; bản sao tác nhân: python -m app.main start hoặc experiments/bench_worker.py; python3 experiments/sc_sessions.py --levels 1 5 10 20 40",
      "Tác nhân thật, nhà cung cấp AI giả lập (STT 0,3 giây, LLM 0,8 giây, TTS 0,2 giây), lk perf agent-load-test",
      "Phiên được phục vụ; P50, P95 độ trễ phản hồi; thời gian vào phiên; CPU, RAM"),
-    ("RS-03 – dừng một bản sao tác nhân (Bảng 6.12)",
+    ("RS-03 – dừng một bản sao tác nhân (Bảng 6.11)",
      "python3 docs/thesis/experiments/rs03_replica_kill.py --trials 10 (chạy trong src/backend/llm-orchestrator, cùng môi trường SC-01)",
      "Hai bản sao tác nhân; SIGKILL bản sao đang phục vụ phiên",
      "Phiên mới được phục vụ; phiên đang chạy được giữ; thời gian khôi phục bản sao"),
-    ("Kiểm tra lại nhật ký sau khi che số điện thoại (Bảng 6.13, dòng 4)",
+    ("Kiểm tra lại nhật ký sau khi che số điện thoại (Bảng 6.12, dòng 4)",
      ".venv/bin/python docs/thesis/experiments/log_masking_check.py --trials 20 (chạy trong src/backend/llm-orchestrator)",
      "Chạy lại RS-01, RS-02, RS-04 với nhật ký mức DEBUG; phát lại nhật ký cũ qua hàm che",
      "Số lần xuất hiện số điện thoại đầy đủ (kỳ vọng 0)"),
-    ("Sắp xếp thứ tự ghé (Bảng 6.15)",
+    ("Sắp xếp thứ tự ghé (Bảng 6.14)",
      "node docs/thesis/experiments/route_opt_quality.js (chạy trong src/backend/external-api-service)",
      "600 bộ điểm dừng sinh ngẫu nhiên, hạt giống 20261013",
      "Tỷ lệ đạt lời giải tối ưu; chênh lệch quãng đường so với tối ưu và với thứ tự theo danh sách"),
@@ -352,8 +354,8 @@ APPENDIX_F_ROWS = [
      ".venv/bin/python -m app.voicebot.testing.tool_choice_eval [số lần chạy] (chạy trong src/backend/llm-orchestrator; cần OPENAI_API_KEY)",
      "23 câu nói mẫu, mỗi câu chạy 12 lần với mô hình thật",
      "Số lượt chọn đúng công cụ và tham số"),
-    ("Luồng khách hàng và báo cáo ngày (Bảng 6.14)",
-     "pytest trong src/backend/llm-orchestrator (662 ca, gồm test_send_sms_flow); npm run verify:ops; npm run verify:records; npm run verify:sms (hai dịch vụ); npm run verify:logger",
+    ("Luồng khách hàng và báo cáo ngày (Bảng 6.13)",
+     "pytest trong src/backend/llm-orchestrator (733 ca, gồm test_send_sms_flow); npm run verify:ops; npm run verify:records; npm run verify:sms (hai dịch vụ); npm run verify:logger",
      "Bộ kiểm thử tự động",
      "Kết quả đạt/không đạt"),
 ]
@@ -529,6 +531,56 @@ REFERENCES = [
         "Lewis, J., & Fowler, M. (2014, March 25). «Microservices: A definition of this new architectural term». "
         "https://martinfowler.com/articles/microservices.html",
         "Lewis & Fowler, 2014",
+    ),
+    (
+        "ref_grab2026",
+        "Grab. (2026, April 8). «Driving smarter with the new Driver AI Assistant». https://www.grab.com/sg/inside-grab/stories/grabx-driver-ai-assistant/",
+        "Grab, 2026",
+    ),
+    (
+        "ref_greensm2026",
+        "Green SM. (2026, September 23). «Ra mắt tính năng mới: Theo dõi tỷ lệ vận doanh trên Trợ lý tài xế». https://www.greensm.com/vn-vi/news/ra-mat-tinh-nang-moi-theo-doi-ty-le-van-doanh-tren-tro-ly-tai-xe",
+        "Green SM, 2026",
+    ),
+    (
+        "ref_google_androidauto",
+        "Google. (n.d.). «Android Auto». https://www.android.com/auto/",
+        "Google, n.d.",
+    ),
+    (
+        "ref_apple_carplay",
+        "Apple. (n.d.). «CarPlay». https://www.apple.com/ios/carplay/",
+        "Apple, n.d.",
+    ),
+    (
+        "ref_openai_sip",
+        "OpenAI. (n.d.). «Telephony and SIP». OpenAI API Documentation. https://developers.openai.com/api/docs/guides/realtime-sip",
+        "OpenAI, n.d.",
+    ),
+    (
+        "ref_ray2026",
+        "Ray, S., Dhandhania, K., Barres, V., & Narasimhan, K. (2026). «τ-Voice: Benchmarking full-duplex voice agents on real-world domains» [Preprint]. arXiv. https://doi.org/10.48550/arXiv.2603.13686",
+        "Ray et al., 2026",
+    ),
+    (
+        "ref_nielsen1993",
+        "Nielsen, J. (1993). «Response times: The 3 important limits». Nielsen Norman Group. https://www.nngroup.com/articles/response-times-3-important-limits/",
+        "Nielsen, 1993",
+    ),
+    (
+        "ref_rosenberg2002",
+        "Rosenberg, J., Schulzrinne, H., Camarillo, G., Johnston, A., Peterson, J., Sparks, R., Handley, M., & Schooler, E. (2002). «SIP: Session Initiation Protocol» (RFC 3261). Internet Engineering Task Force. https://www.rfc-editor.org/rfc/rfc3261",
+        "Rosenberg et al., 2002",
+    ),
+    (
+        "ref_lewis2020",
+        "Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W., Rocktäschel, T., Riedel, S., & Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. «Advances in Neural Information Processing Systems, 33». https://doi.org/10.48550/arXiv.2005.11401",
+        "Lewis et al., 2020",
+    ),
+    (
+        "ref_shiwa2009",
+        "Shiwa, T., Kanda, T., Imai, M., Ishiguro, H., Hagita, N., & Anzai, Y. (2009). How quickly should communication robots respond? «Journal of the Robotics Society of Japan, 27»(1), 87–95. https://doi.org/10.7210/jrsj.27.87",
+        "Shiwa et al., 2009",
     ),
     (
         "ref_livekit_agents",
@@ -795,16 +847,18 @@ def soft_breaks(text: str, width_cm: float) -> str:
     return " ".join(out)
 
 ABSTRACT_PARAS = [
-    "Tài xế xe công nghệ thường phải thao tác điện thoại khi lái để xem chuyến, cập nhật trạng thái và liên lạc với khách, nhất là ở các hãng xe nhận đặt chuyến qua tổng đài, Zalo hoặc Facebook và do điều phối viên tạo chuyến. Theo phương pháp nghiên cứu khoa học thiết kế, luận văn thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế làm các việc này mà không cần dùng tay.",
-    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả bằng kịch bản thuộc tính chất lượng và 19 tiêu chí chấp nhận dạng Given – When – Then. Dựa trên các chiến thuật kiến trúc, luận văn chọn kiến trúc microservices trên AWS; Dịch vụ Liên lạc hội thoại thời gian thực được tách khỏi các dịch vụ nghiệp vụ và xử lý mỗi lượt theo chuỗi STT – LLM kèm gọi công cụ – TTS, có nhà cung cấp dự phòng và câu đệm (câu ngắn báo đang xử lý). Nguyên mẫu chạy trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
-    "Cả 200 lượt tiêm lỗi ở mức thành phần đều không làm hỏng luồng hội thoại, nhưng lỗi treo khiến tài xế chờ 6–8 giây; khi một bản sao tác nhân bị dừng đột ngột, phiên mới vẫn được phục vụ nhưng phiên đang chạy đều bị mất (0/10 phiên được giữ). Với nhà cung cấp AI giả lập, độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Trên 174 lượt qua mô hình ngôn ngữ (05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn, nay đã loại bỏ), P95 độ trễ phản hồi là 3,75 giây, không đạt ngưỡng 2 giây, chủ yếu do thời gian sinh token đầu; thiết kế hiện hành (có câu đệm) mới có bốn lượt đo, chưa đủ để tính P95. Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt (một người chấm), 37 (86,0%) chọn đúng công cụ, 32 (74,4%) hoàn thành đúng ngay lần đầu. Hai lỗi hiện thực (nhật ký chứa số điện thoại đầy đủ, câu báo lỗi lộ thông tin kỹ thuật) đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng, thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3% (2–4 chuyến). Hệ thống chưa được thử với tài xế thật; mọi kết quả đều nêu kèm cỡ mẫu và giới hạn.",
+    "Tài xế xe công nghệ thường phải thao tác điện thoại khi đang lái để xem chuyến, cập nhật trạng thái và liên lạc với khách, khiến họ rời mắt khỏi đường và rời tay khỏi vô lăng. Tình trạng này rõ nhất ở các hãng xe nhận đặt chuyến qua tổng đài và do điều phối viên tạo chuyến. Áp dụng phương pháp nghiên cứu khoa học thiết kế, luận văn xây dựng, triển khai và đánh giá một trợ lý AI bằng giọng nói giúp tài xế thực hiện các việc này mà không cần dùng tay.",
+    "Yêu cầu chức năng được xác định cho bốn nhóm người sử dụng (tài xế, khách hàng, điều phối viên, quản trị viên hệ thống). Năm yêu cầu phi chức năng (tính khả dụng, hiệu năng, khả năng mở rộng, khả năng phục hồi, bảo mật) được phân loại theo ISO/IEC 25010, đặc tả bằng kịch bản thuộc tính chất lượng và 19 tiêu chí chấp nhận dạng Given – When – Then. Từ các yêu cầu này, thông qua chiến thuật kiến trúc, luận văn lập luận và chọn kiến trúc microservices hướng tới AWS. Dịch vụ Liên lạc hội thoại thời gian thực được tách khỏi các dịch vụ nghiệp vụ và xử lý mỗi lượt theo chuỗi nhận dạng giọng nói (STT) – mô hình ngôn ngữ lớn (LLM) kèm gọi công cụ – tổng hợp giọng nói (TTS), có nhà cung cấp dự phòng và câu đệm (câu ngắn báo đang xử lý). Nguyên mẫu chạy trong ứng dụng tài xế (WebRTC) và qua cuộc gọi điện thoại (SIP).",
+    "Cả 19 tiêu chí chấp nhận đều đã được đánh giá. Khả năng phục hồi và khả năng mở rộng được thử trong môi trường mô phỏng cục bộ với nhà cung cấp AI giả lập. Cả 200 lượt tiêm lỗi ở mức thành phần đều không làm hỏng luồng hội thoại, nhưng lỗi treo khiến tài xế phải chờ 6–8 giây; khi một bản sao tác nhân bị dừng đột ngột, phiên mới vẫn được phục vụ còn phiên đang chạy đều bị mất (0/10 phiên được giữ). Độ trễ không tăng khi số phiên đồng thời tăng từ 1 lên 40; yếu tố giới hạn là bộ nhớ, khoảng 225 MB mỗi phiên. Trên 120 lượt hội thoại, độ trễ phản hồi có trung vị 1,83 giây và P95 2,58 giây, không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng. Độ trễ do hai chặng chi phối với mức gần bằng nhau, mỗi chặng khoảng 1 giây: phát hiện tài xế đã nói xong và thời gian sinh token đầu của mô hình. Tỷ lệ lỗi từ (WER) tăng từ 3,1% lên 7,3% khi có nhiễu mô phỏng khoang xe (22 câu, một người đọc). Trong 43 lượt hội thoại do một người chấm, 37 lượt (86,0%) chọn đúng công cụ và 32 lượt (74,4%) hoàn thành đúng ngay lần đầu. Hai lỗi hiện thực về tính khả dụng và bảo mật (câu báo lỗi lộ thông tin kỹ thuật, nhật ký ghi số điện thoại đầy đủ) đã được sửa và đạt khi kiểm tra lại. Trên dữ liệu mô phỏng với 2–4 chuyến, thứ tự ghé điểm dừng do hệ thống đề xuất dài hơn lời giải tối ưu trung bình 1,2–6,3%.",
+    "Kết quả cho thấy kiến trúc đề xuất khả thi về mặt kỹ thuật ở mức nguyên mẫu; độ trễ phản hồi là tiêu chí duy nhất không đạt. Hệ thống chưa được thử với tài xế thật và chưa được kiểm chứng trên AWS với nhà cung cấp AI thật.",
     "Từ khóa: trợ lý AI bằng giọng nói, tài xế xe công nghệ, kiến trúc microservices, chiến thuật kiến trúc, ISO/IEC 25010, gọi công cụ, nghiên cứu khoa học thiết kế.",
 ]
 
 ABSTRACT_EN_PARAS = [
-    "Ride-hailing drivers often operate their phones while driving to check trips, update trip status and contact passengers, especially at operators where customers book by hotline, Zalo or Facebook and a dispatcher creates the trips. Following the design science research methodology, this thesis designs, implements and evaluates a voice-based AI assistant that lets drivers perform these tasks hands-free.",
-    "Functional requirements are specified for four user classes (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010 and specified as quality attribute scenarios and 19 Given–When–Then acceptance criteria. Reasoning from architectural tactics, the thesis adopts a microservices architecture on AWS; a real-time conversational service, separated from the business services, processes each turn through a speech-to-text (STT) – large language model (LLM) with tool calling – text-to-speech (TTS) pipeline, with provider fallback and filler utterances (short phrases signaling that processing is under way). The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
-    "All 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was abruptly killed, new sessions were still served but all in-progress sessions were lost (0/10 retained). With mock AI providers, latency did not increase as concurrent sessions grew from 1 to 40; the limiting factor was memory, at about 225 MB per session. Across 174 turns processed by the language model (5–6 September 2026, when the prototype still had a since-removed shortcut branch), P95 response latency was 3.75 seconds, missing the 2-second target, mainly because of the LLM's time to first token; the current design (with filler utterances) has only four measured turns, too few to compute a P95. Word error rate rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 turns (one rater), 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. Two implementation defects (full phone numbers in logs, an error message exposing technical details) were fixed and passed re-testing. On simulated data, the stop ordering proposed by the system was on average 1.2–6.3% longer than the optimal route for two to four trips. The system has not yet been tested with real drivers; every result is reported with its sample size and limitations.",
+    "Ride-hailing drivers often operate their phones while driving to check trips, update trip status and contact passengers, which takes their eyes off the road and their hands off the wheel. The problem is most acute at operators where customers book by hotline and a dispatcher creates the trips. Following the design science research methodology, this thesis designs, implements and evaluates a voice-based AI assistant that lets drivers perform these tasks hands-free.",
+    "Functional requirements are specified for four user classes (driver, customer, dispatcher, system administrator). Five non-functional requirements (usability, performance, scalability, resilience, security) are classified according to ISO/IEC 25010 and specified as quality attribute scenarios and 19 Given–When–Then acceptance criteria. Reasoning from these requirements through architectural tactics, the thesis adopts a microservices architecture targeting AWS. A real-time conversational service, separated from the business services, processes each turn through a speech-to-text (STT) – large language model (LLM) with tool calling – text-to-speech (TTS) pipeline, with provider fallback and filler utterances (short phrases signaling that processing is under way). The prototype runs in the driver app (WebRTC) and over phone calls (SIP).",
+    "All 19 acceptance criteria were evaluated. Resilience and scalability were tested in a local simulated environment with mock AI providers. All 200 component-level fault injections left the conversation flow intact, although hang faults made the driver wait 6–8 seconds; when an agent replica was abruptly killed, new sessions were still served but all in-progress sessions were lost (0/10 retained). Latency did not increase as concurrent sessions grew from 1 to 40; the limiting factor was memory, at about 225 MB per session. Across 120 conversation turns, response latency had a median of 1.83 seconds and a P95 of 2.58 seconds, missing the 2-second target; 72.5% of turns were within the target. Two stages dominated latency in roughly equal measure, at about one second each: detecting that the driver had finished speaking, and the model's time to first token. Word error rate (WER) rose from 3.1% to 7.3% under simulated cabin noise (22 sentences, one speaker). Of 43 conversation turns scored by one rater, 37 (86.0%) selected the correct tool and 32 (74.4%) completed the task correctly on the first attempt. Two implementation defects in usability and security (an error message exposing technical details, full phone numbers in logs) were fixed and passed re-testing. On simulated data with two to four trips, the stop ordering proposed by the system was on average 1.2–6.3% longer than the optimal route.",
+    "The results show that the proposed architecture is technically feasible at prototype level; response latency is the only criterion not met. The system has not yet been tested with real drivers or validated on AWS with real AI providers.",
     "Keywords: voice AI assistant, ride-hailing driver, microservices architecture, architectural tactics, ISO/IEC 25010, tool calling, design science research.",
 ]
 
@@ -1843,7 +1897,7 @@ def build() -> Path:
         "Phụ lục gồm: A — danh mục công cụ; B — kịch bản thoại mẫu; C — ảnh giao diện; "
         "D — cấu hình môi trường (không chứa bí mật); E — tái lập số liệu thực nghiệm; "
         "F — bảng thuật ngữ Anh – Việt. Ma trận đối chiếu yêu cầu đầy đủ không được in; việc truy vết được thể hiện qua "
-        "Bảng 4.10 (yêu cầu phi chức năng – thiết kế), Bảng 5.6 (thiết kế – hiện thực) và Bảng 6.1, Bảng 6.16 (yêu cầu – kết quả đánh giá).",
+        "Bảng 4.10 (yêu cầu phi chức năng – thiết kế), Bảng 5.6 (thiết kế – hiện thực) và Bảng 6.1, Bảng 6.15 (yêu cầu – kết quả đánh giá).",
         "Normal",
         first_line_indent=True,
     )
@@ -1929,6 +1983,58 @@ def build() -> Path:
         if r[0].split("(")[0].strip().lower() in _lower_text
     ]
     add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt"]] + [[r[0], r[1]] for r in sorted(_used_terms, key=lambda r: r[0].lower())])
+
+    # ---- Phụ lục G: mô hình luồng hành vi theo nhóm người sử dụng (chuyển từ mục 4.3.2) ----
+    add_styled("Phụ lục G. Mô hình luồng hành vi theo nhóm người sử dụng", "Heading 2", first_line_indent=False)
+    add_styled(
+        "Bốn hình dưới đây vẽ các luồng hành vi của từng nhóm người sử dụng trên nền kiến trúc tổng thể (Hình 4.1). "
+        "Số trên mũi tên là số luồng ở Bảng G.1, đặt sau bốn hình; thành phần không nằm trên luồng "
+        "của nhóm đó được làm mờ.",
+        "Normal",
+        first_line_indent=True,
+    )
+    for _path, _cap in [
+        ("../diagrams/H4_1_aws_architecture_driver.png", "Hình G.1. Mô hình luồng hành vi: nhóm chức năng của tài xế"),
+        ("../diagrams/H4_1_aws_architecture_customer.png", "Hình G.2. Mô hình luồng hành vi: nhóm chức năng của khách hàng"),
+        ("../diagrams/H4_1_aws_architecture_dispatcher.png", "Hình G.3. Mô hình luồng hành vi: nhóm chức năng của điều phối viên"),
+        ("../diagrams/H4_1_aws_architecture_sysadmin.png", "Hình G.4. Mô hình luồng hành vi: nhóm chức năng của quản trị viên hệ thống"),
+    ]:
+        add_figure_image(_path, width_cm=15.0)
+        add_figure_caption(_cap)
+
+    add_table_caption("Bảng G.1. Hai mươi chín luồng hành vi được đánh số trên Hình G.1 đến Hình G.4")
+    add_bordered_table([
+        ["Số", "Từ → Đến", "Giao thức", "Mục đích", "Hình", "Biểu đồ"],
+        ["①", "Ứng dụng tài xế → API Gateway → Định danh", "HTTPS", "Đăng nhập, làm mới token", "G.1", "S1"],
+        ["②", "Định danh → DynamoDB (accounts, driver-settings)", "AWS SDK", "Đọc tài khoản, lưu băm refresh token", "G.1, G.3, G.4", "S1"],
+        ["③", "Ứng dụng tài xế → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Xin token thoại, tra cứu chuyến", "G.1", "S2"],
+        ["④", "Chuyến đi và Điều phối → LiveKit Cloud", "HTTPS", "Tạo phòng, phân công tác nhân, quay số SIP", "G.1, G.2, G.3", "S2, S4, S5"],
+        ["⑤", "Ứng dụng tài xế ↔ LiveKit Cloud", "WebRTC", "Truyền âm thanh hai chiều", "G.1", "S2, S3"],
+        ["⑥", "LiveKit Cloud ↔ tác nhân hội thoại", "WebRTC, WebSocket", "Giao việc cho tác nhân; truyền âm thanh", "G.1, G.2", "S2, S3"],
+        ["⑦", "Tác nhân hội thoại → nhà cung cấp AI (chính, dự phòng)", "HTTPS, gRPC", "Nhận dạng giọng nói, sinh phản hồi, tổng hợp giọng nói", "G.1, G.2", "S3"],
+        ["⑧", "Tác nhân hội thoại → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Đăng ký phiên, tải ngữ cảnh, gọi công cụ nghiệp vụ", "G.1, G.2", "S2 đến S5"],
+        ["⑨", "Chuyến đi và Điều phối → DynamoDB (trips, ws-connections)", "AWS SDK", "Đọc, ghi chuyến và kết nối WebSocket", "G.1, G.2, G.3", "S3, S4"],
+        ["⑩", "Chuyến đi và Điều phối → API Gateway WebSocket → ứng dụng tài xế", "WSS", "Đẩy thông báo khi chuyến thay đổi", "G.1", "S4"],
+        ["⑪", "LiveKit Cloud → Twilio (SIP trunk) → điện thoại", "SIP, mạng điện thoại", "Gọi mời tài xế nhận chuyến; gọi khách hàng", "G.1, G.2, G.3", "S4, S5"],
+        ["⑫", "Chuyến đi và Điều phối → Liên lạc bằng tin nhắn → Twilio → điện thoại khách", "HTTPS, SMS", "Gửi SMS cho khách", "G.1, G.2", "S5"],
+        ["⑬", "Twilio → API Gateway → Liên lạc bằng tin nhắn", "HTTPS (webhook)", "Trạng thái cuộc gọi; trạng thái giao tin SMS", "G.1, G.2", "S5"],
+        ["⑭", "Tác nhân hội thoại → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Ghi bản ghi và tóm tắt khi kết thúc phiên", "G.1, G.2", "S6"],
+        ["⑮", "Chuyến đi và Điều phối → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc tóm tắt cuộc gọi gần nhất", "G.1", "S6"],
+        ["⑯", "Nhật ký cuộc gọi → DynamoDB (call-records)", "AWS SDK", "Lưu và đọc bản ghi cuộc gọi", "G.1 đến G.4", "S6"],
+        ["⑰", "Trang quản trị, trang giám sát → API Gateway → các dịch vụ", "HTTPS", "Điều phối chuyến, quản lý tài khoản, xem nhật ký cuộc gọi; xem tình trạng dịch vụ, nhật ký, báo cáo", "G.3, G.4", "S7"],
+        ["⑱", "Mọi dịch vụ và tác nhân → CloudWatch Logs", "AWS SDK", "Ghi nhật ký gắn mã phòng (CON-04)", "G.1, G.2, G.4", "Mọi biểu đồ"],
+        ["⑲", "EventBridge Scheduler → Giám sát vận hành", "Gọi Lambda", "Kích hoạt lập báo cáo ngày lúc 00:15", "G.4", "S7"],
+        ["⑳", "Giám sát vận hành → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc bản ghi hội thoại của một ngày", "G.4", "S7"],
+        ["㉑", "Giám sát vận hành → DynamoDB (daily-reports)", "AWS SDK", "Lưu báo cáo ngày", "G.4", "S7"],
+        ["㉒", "Liên lạc bằng tin nhắn → DynamoDB (channel-events)", "AWS SDK", "Lưu sự kiện Twilio và kết quả gửi SMS", "G.1, G.2", "S5"],
+        ["㉓", "Chuyến đi và Điều phối → dịch vụ bản đồ", "HTTPS", "Tìm địa chỉ, chỉ đường, thời gian đến, ma trận khoảng cách (mục 5.4.4)", "G.1, G.3", "Không có"],
+        ["㉔", "Chuyến đi và Điều phối → Redis (tùy chọn)", "TLS", "Bộ nhớ đệm giữa các lần chạy Lambda: phiên đang mở, thông báo chờ phát, ngữ cảnh", "G.1, G.3", "S2"],
+        ["㉕", "Ứng dụng tài xế → dịch vụ bản đồ", "HTTPS", "Tải lớp bản đồ nền để hiển thị", "G.1", "Không có"],
+        ["㉖", "Chuyến đi và Điều phối → API Gateway → Định danh", "HTTPS, JWT dịch vụ", "Đọc tài khoản và cài đặt tài xế khi tải ngữ cảnh", "G.1, G.3", "S2"],
+        ["㉗", "Giám sát vận hành → API Gateway → các dịch vụ", "HTTPS", "Kiểm tra tình trạng từng dịch vụ", "G.4", "Không có"],
+        ["㉘", "Giám sát vận hành → nhà cung cấp AI", "HTTPS", "Mô hình chấm một mẫu câu trả lời khi lập báo cáo ngày", "G.4", "S7"],
+        ["㉙", "Giám sát vận hành → CloudWatch Logs, Amazon ECS", "AWS SDK", "Đọc nhật ký và số tác vụ tác nhân đang chạy", "G.4", "Không có"],
+    ])
 
     drop_orphan_images(new)
     new.save(str(OUT))

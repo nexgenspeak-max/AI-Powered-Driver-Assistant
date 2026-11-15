@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Hình 6.1 — biểu đồ cột P50/P95 độ trễ cảm nhận theo đường xử lý.
+"""Hình 6.1 — biểu đồ cột P50/P95 độ trễ phản hồi theo ba cách đo.
 
-Số liệu: extract_ch6_metrics.py trên nhật ký voice-agent, cửa sổ 2026-09-05..06
-(gpt-5.6-luna). In-friendly SVG → PNG bằng rsvg-convert.
+Số liệu: experiments/latency_20261115/results.txt (đợt đo 15/11/2026, sau khi sửa
+đồng hồ đo). In-friendly SVG → PNG bằng rsvg-convert.
 """
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "thesis_screenshots"
 
-# (nhãn, P50, P95, n) — extract_ch6_metrics.py, cửa sổ 2026-09-05..06
+# (nhãn, P50, P95, n) — experiments/latency_20261115/results.txt
 GROUPS = [
-    ("Nhánh rút gọn (đã loại bỏ)", 0.21, 2.00, 167),
-    ("Luồng đầy đủ qua LLM", 1.54, 3.75, 174),
-    ("Toàn bộ lượt", 0.50, 2.87, 341),
+    ("A. Tác nhân: tới âm thanh đầu (AC-15)", 1.83, 2.58, 120),
+    ("B. Tác nhân: tới câu trả lời thật", 2.14, 2.87, 81),
+    ("C. Phía tài xế ảo", 2.94, 3.62, 120),
 ]
 THRESHOLD = 2.0
 Y_MAX = 4.0
@@ -56,7 +56,7 @@ def main() -> None:
     yt = y(THRESHOLD)
     s.append(f'<line x1="{ML}" y1="{yt:.1f}" x2="{ML+PW}" y2="{yt:.1f}" '
              f'stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6 4"/>')
-    s.append(f'<text x="{ML+PW-6}" y="{yt-8:.1f}" text-anchor="end" font-size="13" '
+    s.append(f'<text x="{ML+PW/3:.1f}" y="{yt-8:.1f}" text-anchor="middle" font-size="13" '
              f'fill="#DC2626">Ngưỡng P95 ≤ 2 giây</text>')
 
     gw = PW / len(GROUPS)
@@ -73,7 +73,7 @@ def main() -> None:
             s.append(f'<text x="{bx+(bw-6)/2:.1f}" y="{by-6:.1f}" text-anchor="middle" '
                      f'font-size="13" fill="#111827">{vn(val)}</text>')
         s.append(f'<text x="{cx:.1f}" y="{MT+PH+24:.1f}" text-anchor="middle" '
-                 f'font-size="15" fill="#111827">{label}</text>')
+                 f'font-size="13" fill="#111827">{label}</text>')
         s.append(f'<text x="{cx:.1f}" y="{MT+PH+43:.1f}" text-anchor="middle" '
                  f'font-size="12" fill="#6B7280">n = {n}</text>')
 
