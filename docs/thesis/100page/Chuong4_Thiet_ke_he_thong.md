@@ -63,7 +63,7 @@ Quyết định ở mục này được ký hiệu là ADR-02.
 
 ## 4.3. Kiến trúc tổng thể trên AWS
 
-Theo cách Bass et al. (2021) phân biệt cấu trúc tĩnh với hành vi động, kiến trúc được trình bày bằng mô hình cấu trúc (Hình 4.1) và mô hình luồng hành vi (Bảng 4.4; hình vẽ ở Phụ lục G). Đây là kiến trúc đích; trạng thái triển khai thực tế nêu ở mục 5.6.1.
+Theo cách Bass et al. (2021) phân biệt cấu trúc tĩnh với hành vi động, kiến trúc được trình bày bằng mô hình cấu trúc (Hình 4.1) và mô hình luồng hành vi (Bảng 4.4; hình vẽ ở Phụ lục E). Đây là kiến trúc đích; trạng thái triển khai thực tế nêu ở mục 5.6.1.
 
 ### 4.3.1. Kiến trúc tổng thể
 
@@ -79,16 +79,16 @@ Hình 4.1 được vẽ theo quy ước sơ đồ kiến trúc AWS: sáu lớp x
 
 ### 4.3.2. Mô hình luồng hành vi theo nhóm người sử dụng
 
-Mô hình luồng hành vi cho biết mỗi nhóm người sử dụng đi qua những thành phần nào của Hình 4.1. Bảng 4.4 tóm tắt theo nhóm và dẫn tới biểu đồ tuần tự tương ứng ở mục 4.5. Hình vẽ từng nhóm trên nền kiến trúc tổng thể, cùng bảng 29 luồng được đánh số, nằm ở Phụ lục G (Hình G.1 đến Hình G.4, Bảng G.1).
+Mô hình luồng hành vi cho biết mỗi nhóm người sử dụng đi qua những thành phần nào của Hình 4.1. Bảng 4.4 tóm tắt theo nhóm và dẫn tới biểu đồ tuần tự tương ứng ở mục 4.5. Hình vẽ từng nhóm trên nền kiến trúc tổng thể, cùng bảng 29 luồng được đánh số, nằm ở Phụ lục E (Hình E.1 đến Hình E.4, Bảng E.1).
 
 **Bảng 4.4.** Các luồng hành vi chính theo nhóm người sử dụng
 
 | Nhóm người dùng | Việc chính | Thành phần đi qua | Hình | Biểu đồ tuần tự |
 |---|---|---|---|---|
-| Tài xế | Đăng nhập; mở phiên trợ lý; hội thoại và thực hiện nghiệp vụ; gọi và nhắn tin cho khách; nghe tóm tắt cuộc gọi | Ứng dụng, cổng API, năm dịch vụ (trừ Giám sát vận hành), LiveKit, nhà cung cấp AI | G.1 | S1, S2, S3, S5, S6 |
-| Khách hàng | Nghe cuộc gọi từ tài xế hoặc tác nhân; nhận tin nhắn SMS | Điện thoại thường, Twilio, LiveKit, tác nhân | G.2 | S5 |
-| Điều phối viên | Quản lý tài khoản và chuyến; mời tài xế nhận chuyến; xem nhật ký cuộc gọi | Trang quản trị, cổng API, Định danh, Chuyến đi và Điều phối, Nhật ký cuộc gọi | G.3 | S4, S6 |
-| Quản trị viên hệ thống | Xem tình trạng dịch vụ và nhật ký; xem báo cáo ngày | Trang giám sát, cổng API, Giám sát vận hành | G.4 | S7 |
+| Tài xế | Đăng nhập; mở phiên trợ lý; hội thoại và thực hiện nghiệp vụ; gọi và nhắn tin cho khách; nghe tóm tắt cuộc gọi | Ứng dụng, cổng API, năm dịch vụ (trừ Giám sát vận hành), LiveKit, nhà cung cấp AI | E.1 | S1, S2, S3, S5, S6 |
+| Khách hàng | Nghe cuộc gọi từ tài xế hoặc tác nhân; nhận tin nhắn SMS | Điện thoại thường, Twilio, LiveKit, tác nhân | E.2 | S5 |
+| Điều phối viên | Quản lý tài khoản và chuyến; mời tài xế nhận chuyến; xem nhật ký cuộc gọi | Trang quản trị, cổng API, Định danh, Chuyến đi và Điều phối, Nhật ký cuộc gọi | E.3 | S4, S6 |
+| Quản trị viên hệ thống | Xem tình trạng dịch vụ và nhật ký; xem báo cáo ngày | Trang giám sát, cổng API, Giám sát vận hành | E.4 | S7 |
 
 **Luồng của tài xế.** Khi tài xế nói "nhận chuyến này", mô hình chọn công cụ, tác nhân gọi API, Dịch vụ Chuyến đi và Điều phối ghi trạng thái confirmed rồi đẩy thông báo tới ứng dụng; chỉ khi API thành công, tác nhân mới xác nhận bằng lời.
 
@@ -173,7 +173,7 @@ Khi phiên kết thúc, tác nhân gửi bản ghi, tóm tắt do LLM sinh và c
 
 **Hình 4.8.** Biểu đồ tuần tự S7: lập báo cáo vận hành ngày từ bản ghi và chỉ số phiên
 
-EventBridge Scheduler kích hoạt dịch vụ hằng ngày lúc 00:15 giờ Việt Nam (quản trị viên cũng có thể yêu cầu lập lại). Dịch vụ tổng hợp số phiên, độ trễ trung bình, P50, P95, tỷ lệ gọi công cụ thành công và lỗi theo loại; một mẫu các cặp câu hỏi – trả lời được mô hình chấm (LLM) gán nhãn correct, incorrect hoặc unclear. Báo cáo lưu theo khóa report_date; trang giám sát hiển thị báo cáo và xu hướng 7 ngày (Hình C.21, Hình C.22). Nếu thiếu khóa API của mô hình chấm thì phần chấm được bỏ qua và ghi chú trong báo cáo.
+EventBridge Scheduler kích hoạt dịch vụ hằng ngày lúc 00:15 giờ Việt Nam (quản trị viên cũng có thể yêu cầu lập lại). Dịch vụ tổng hợp số phiên, độ trễ trung bình, P50, P95, tỷ lệ gọi công cụ thành công và lỗi theo loại; một mẫu các cặp câu hỏi – trả lời được mô hình chấm (LLM) gán nhãn correct, incorrect hoặc unclear. Báo cáo lưu theo khóa report_date; trang giám sát hiển thị báo cáo và xu hướng 7 ngày (Hình C.7, Hình C.8). Nếu thiếu khóa API của mô hình chấm thì phần chấm được bỏ qua và ghi chú trong báo cáo.
 
 ## 4.6. Thiết kế Dịch vụ Liên lạc hội thoại thời gian thực
 

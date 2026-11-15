@@ -109,11 +109,11 @@ Dịch vụ Nhật ký cuộc gọi lưu bản ghi trong một bảng DynamoDB r
 | stt_provider, llm_provider, llm_model | Nhà cung cấp và mô hình đã dùng |
 | mode, metrics; ttl | Loại phiên, chỉ số phiên (mục 5.3.6); thời hạn tự xóa |
 
-Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, kiểm tra định kỳ tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực biểu đồ tuần tự S7 (mục 4.5.7), dùng LLM chấm một mẫu câu trả lời chọn ngẫu nhiên nhưng cố định theo ngày, và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi thay vì từ CloudWatch Logs. Trên trang giám sát, mục "Báo cáo ngày" hiển thị các nhóm chỉ số, các câu trả lời bị chấm sai và xu hướng 7 ngày (Hình C.21, Hình C.22). Dữ liệu trong hai hình lấy từ một tài khoản thử nghiệm ngày 18/10/2026, chỉ để minh họa và không dùng cho đánh giá ở Chương 6; dù vậy, các câu bị chấm sai đã giúp phát hiện và sửa hai lỗi thực tế.
+Dịch vụ Giám sát vận hành, chỉ dành cho quản trị viên hệ thống, kiểm tra định kỳ tình trạng các dịch vụ và cung cấp nhật ký, cấu hình tác nhân và báo cáo ngày cho trang giám sát. Mô-đun báo cáo hiện thực biểu đồ tuần tự S7 (mục 4.5.7), dùng LLM chấm một mẫu câu trả lời chọn ngẫu nhiên nhưng cố định theo ngày, và đọc bản ghi từ Dịch vụ Nhật ký cuộc gọi thay vì từ CloudWatch Logs. Trên trang giám sát, mục "Báo cáo ngày" hiển thị các nhóm chỉ số, các câu trả lời bị chấm sai và xu hướng 7 ngày (Hình C.7, Hình C.8). Dữ liệu trong hai hình lấy từ một tài khoản thử nghiệm ngày 18/10/2026, chỉ để minh họa và không dùng cho đánh giá ở Chương 6; dù vậy, các câu bị chấm sai đã giúp phát hiện và sửa hai lỗi thực tế.
 
 ### 5.4.4. Tích hợp dịch vụ bản đồ
 
-Trong backend, chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1). Ứng dụng tài xế chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng G.1); tìm địa chỉ, chỉ đường và ma trận khoảng cách đều đi qua backend (luồng ㉓), nơi có bộ điều hợp (adapter) cho cả Goong và Google Maps Platform. Trong thực nghiệm, hệ thống dùng Goong.
+Trong backend, chỉ Dịch vụ Chuyến đi và Điều phối gọi dịch vụ bản đồ bên ngoài (Hình 4.1). Ứng dụng tài xế chỉ tải trực tiếp lớp bản đồ nền từ Goong (luồng ㉕, Bảng E.1); tìm địa chỉ, chỉ đường và ma trận khoảng cách đều đi qua backend (luồng ㉓), nơi có bộ điều hợp (adapter) cho cả Goong và Google Maps Platform. Trong thực nghiệm, hệ thống dùng Goong.
 
 Tích hợp bản đồ phục vụ bốn chức năng: (1) tìm và chuẩn hóa địa chỉ; (2) lấy lộ trình và tình trạng giao thông khi tạo chuyến, lưu cùng chuyến cho công cụ get_trip_traffic (FR-T07); (3) sắp xếp thứ tự ghé điểm dừng theo ma trận khoảng cách đường bộ bằng heuristic láng giềng gần nhất, sau đó cải tiến bằng 2-opt, với ràng buộc điểm đón phải đứng trước điểm trả của cùng một chuyến; kết quả được lưu vào bộ nhớ đệm, cập nhật theo vị trí GPS và dùng chung cho thẻ điểm dừng, tab Chuyến và trợ lý (get_optimal_route, suggest_next_stop, UC16); (4) hiển thị bản đồ và chỉ đường trong ứng dụng (Hình 5.1c), còn trợ lý giọng nói không đọc chỉ dẫn rẽ từng bước (mục 3.5).
 
@@ -127,13 +127,13 @@ Lỗi dịch vụ bản đồ không làm dừng nghiệp vụ (NFR-04): khi kh�
 
 **Hình 5.1.** Ứng dụng tài xế: (a) màn hình chào, (b) đăng nhập, (c) bản đồ sau khi bật trạng thái hoạt động
 
-Bảng mời nhận chuyến toàn màn hình có cước ước tính, vòng đếm ngược 30 giây cùng hai nút "Từ chối" và "Nhận chuyến" (Hình C.2); thời hạn được nâng từ 20 lên 30 giây vì việc vào phòng thoại trước khi trợ lý đọc chuyến có lúc mất 10–16 giây. Khung trò chuyện có một thanh nhập liệu gồm nút micro và nút Czen; tài xế chạm nút Czen để bắt đầu hoặc kết thúc phiên. Câu gợi ý nhanh và bản ghi hội thoại được minh họa ở Hình 5.2.
+Bảng mời nhận chuyến toàn màn hình có cước ước tính, vòng đếm ngược 30 giây cùng hai nút "Từ chối" và "Nhận chuyến" (Hình C.1); thời hạn được nâng từ 20 lên 30 giây vì việc vào phòng thoại trước khi trợ lý đọc chuyến có lúc mất 10–16 giây. Khung trò chuyện có một thanh nhập liệu gồm nút micro và nút Czen; tài xế chạm nút Czen để bắt đầu hoặc kết thúc phiên. Câu gợi ý nhanh và bản ghi hội thoại được minh họa ở Hình 5.2.
 
 ![Hình 5.2|row=4.6](thesis_screenshots/trolyczen1.jpg;thesis_screenshots/trolyaidangketnoi.jpg)
 
 **Hình 5.2.** Phiên trợ lý giọng nói: (a) tài xế chọn câu gợi ý nhanh, trợ lý đang xử lý; (b) hội thoại tra cứu lịch trình trong ngày
 
-Màn hình cài đặt trợ lý cho phép chọn ngôn ngữ, chế độ gọi khách mặc định và bán kính nhắc khách. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk; khi nhận ra từ khóa, ứng dụng mở phiên giống như khi tài xế chạm nút Czen. Các ảnh giao diện khác được trình bày ở Phụ lục C.
+Màn hình cài đặt trợ lý cho phép chọn ngôn ngữ, chế độ gọi khách mặc định và bán kính nhắc khách. Từ khóa đánh thức được nhận dạng trên thiết bị bằng thư viện Vosk; khi nhận ra từ khóa, ứng dụng mở phiên giống như khi tài xế chạm nút Czen. Các ảnh giao diện chính khác được trình bày ở Phụ lục C.
 
 ## 5.6. Triển khai trên AWS
 
@@ -157,7 +157,7 @@ Mỗi dịch vụ có một stack hạ tầng dạng mã riêng trong thư mục
 
 ### 5.6.2. Môi trường phát triển và thử nghiệm
 
-Trong thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express trên các bảng DynamoDB của môi trường phát triển; tác nhân chạy cục bộ và kết nối LiveKit Cloud. Khóa bí mật nằm trong tệp .env ngoài kho mã; kho mã kèm tệp mẫu để tái lập môi trường (Phụ lục D). Để chạy hệ thống từ đầu đến cuối, cần tối thiểu Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối, tác nhân và ứng dụng tài xế; SIP trunk của Twilio chỉ cần khi thực hiện cuộc gọi điện thoại.
+Trong thực nghiệm, các dịch vụ Node.js chạy cục bộ bằng Express trên các bảng DynamoDB của môi trường phát triển; tác nhân chạy cục bộ và kết nối LiveKit Cloud. Khóa bí mật nằm trong tệp .env ngoài kho mã; kho mã kèm tệp mẫu để tái lập môi trường; bảng cấu hình chính nằm ở tệp docs/thesis/supplement/cau_hinh_va_tai_lap.md trong kho mã nguồn. Để chạy hệ thống từ đầu đến cuối, cần tối thiểu Dịch vụ Định danh, Dịch vụ Chuyến đi và Điều phối, tác nhân và ứng dụng tài xế; SIP trunk của Twilio chỉ cần khi thực hiện cuộc gọi điện thoại.
 
 ## 5.7. Đối chiếu thiết kế và hiện thực
 

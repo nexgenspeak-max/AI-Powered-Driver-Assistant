@@ -3,7 +3,7 @@
 Thư mục này chứa script, dữ liệu và kết quả thô của các phép đo ở Chương 6. Luận văn chỉ nêu kết quả và nhận định;
 chi tiết từng phép đo nằm ở đây.
 
-Đường dẫn trong bảng tính từ `docs/thesis/`. Lệnh chạy lại đầy đủ nằm ở Phụ lục E của luận văn.
+Đường dẫn trong bảng tính từ `docs/thesis/`. Lệnh chạy lại đầy đủ nằm ở `supplement/cau_hinh_va_tai_lap.md`.
 
 ## Mục lục theo tiêu chí chấp nhận
 

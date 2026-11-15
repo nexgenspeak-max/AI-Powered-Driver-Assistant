@@ -255,12 +255,26 @@ APPENDIX_A_GROUPS = [
 ]
 assert sorted(n for _, ns in APPENDIX_A_GROUPS for n in ns) == sorted(n for n, _ in APPENDIX_A_TOOLS)
 
+# Luận văn chỉ in tám ảnh chính; đủ 22 ảnh nằm ở docs/thesis/supplement/anh_giao_dien.md.
+_APPENDIX_C_KEEP = (
+    "chuyenmoi_offer.jpg", "caidattroly.jpg", "chuyendidangchay.jpg", "admin/bangchuyen.png",
+    "admin/nhatkicuocgoi.png", "superadmin/tongquan2.png", "superadmin/baocaongay.png",
+    "superadmin/baocaongay_xuhuong.png",
+)
+APPENDIX_C_FIGURES = [
+    (p, re.sub(r"^Hình C\.\d+", f"Hình C.{i}", c))
+    for i, (p, c) in enumerate(
+        [(p, c) for p, c in APPENDIX_C_FIGURES if p.endswith(_APPENDIX_C_KEEP)], 1
+    )
+]
+assert len(APPENDIX_C_FIGURES) == len(_APPENDIX_C_KEEP)
+
 # Contact-sheet Phụ lục C: ảnh điện thoại 3 ảnh/hàng, ảnh trang web 1 ảnh/hàng (chữ nhỏ hơn sẽ không đọc được)
 APPENDIX_C_PHONE = [(p, c) for p, c in APPENDIX_C_FIGURES if p.endswith(".jpg")]
 APPENDIX_C_WEB = [(p, c) for p, c in APPENDIX_C_FIGURES if not p.endswith(".jpg")]
 APPENDIX_C_BACKUP_LINK = (
-    "Bộ ảnh ở độ phân giải gốc được lưu dự phòng trong kho mã nguồn tại docs/thesis/thesis_screenshots/, "
-    "kèm một bản sao trên Google Drive của tác giả. Các ảnh in trong phụ lục đã đủ để đối chiếu; bản gốc chỉ cần thiết khi muốn xem ảnh ở kích thước lớn."
+    "Phụ lục này chỉ in tám ảnh chính. Toàn bộ 22 ảnh giao diện, ở độ phân giải gốc, nằm trong kho mã nguồn: "
+    "tệp docs/thesis/supplement/anh_giao_dien.md và thư mục docs/thesis/thesis_screenshots/."
 )
 
 # Phụ lục E — ma trận đối chiếu yêu cầu (Requirements Traceability Matrix)
@@ -288,7 +302,7 @@ APPENDIX_E_RTM = [
     ("FR-K02", "RQ4", "Tác nhân; LiveKit SIP", "S5", "Chế độ nói trực tiếp (bridge); test_outbound_call_modes", "UC12", "Bảng 6.13"),
     ("FR-K03", "RQ4", "Dịch vụ Chuyến đi và Điều phối; Dịch vụ Liên lạc bằng tin nhắn", "S5", "confirm_trip_with_customer, send_sms_to_customer", "UC13", "Bảng 6.11 (RS-04, đường lỗi)"),
     ("FR-Q01 đến FR-Q05", "Ngoài RQ (kiểm tra tuân thủ)", "Trang quản trị điều hành; Dịch vụ Chuyến đi và Điều phối; Dịch vụ Định danh; Dịch vụ Nhật ký cuộc gọi", "S4", "admin-panel: TripBoardPage, CreateTripPage, DriversPage, CustomerPage, CallLogsPage", "UC14, UC17", "Hình C.12 đến C.16"),
-    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng G.1)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.17 đến C.19"),
+    ("FR-S01 đến FR-S03", "Ngoài RQ (kiểm tra tuân thủ)", "Trang giám sát hệ thống; Dịch vụ Giám sát vận hành", "Luồng ⑰ (Bảng E.1)", "super-admin-panel: OverviewPage, AgentPage, LogsPage", "UC18", "Hình C.17 đến C.19"),
     ("FR-O01, FR-O02", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Giám sát vận hành; Dịch vụ Nhật ký cuộc gọi; tác nhân", "S7", "session_metrics.py; ops-service/src/services/reports; ReportsPage.tsx", "UC11", "Bảng 6.13"),
     ("NFR-01", "RQ4", "Tác nhân", "S3", "Phân loại phiên; hành động chờ xác nhận; câu báo lỗi (test_call_error_message)", "Danh mục hành vi", "Bảng 6.9 (đạt sau một vòng sửa)"),
     ("NFR-02", "RQ2", "Tác nhân; nhà cung cấp AI", "S2, S3", "turn_filler.py; prefetch.py; context_store.py", "UC01, UC03, UC04, UC07", "Bảng 6.3, Bảng 6.4"),
@@ -298,7 +312,7 @@ APPENDIX_E_RTM = [
     ("CON-01", "Ngoài RQ (kiểm tra tuân thủ)", "Tác nhân", "S3", "backend_api.py", "Kiểm tra mã nguồn", "Bảng 6.12"),
     ("CON-02", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Mọi sequence", "Bảng DynamoDB riêng từng stack", "Kiểm tra cấu hình", "Bảng 5.6"),
     ("CON-03", "Ngoài RQ (kiểm tra tuân thủ)", "Dịch vụ Định danh", "S1", "tokenService.ts", "Kiểm tra mã nguồn", "Bảng 6.12"),
-    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng G.1)", "Nhật ký gắn mã phòng và mã hội thoại", "Kiểm tra nhật ký", "Bảng 6.12"),
+    ("CON-04", "Ngoài RQ (kiểm tra tuân thủ)", "Mọi dịch vụ", "Luồng ⑱ (Bảng E.1)", "Nhật ký gắn mã phòng và mã hội thoại", "Kiểm tra nhật ký", "Bảng 6.12"),
 ]
 
 
@@ -1712,15 +1726,19 @@ def build() -> Path:
         return found
 
     add_heading1_new_page("Danh sách hình ảnh", bookmark="ds_hinh")
-    for caption in collect_captions("Hình") + [c for _p, c in APPENDIX_C_PHONE + APPENDIX_C_WEB]:
+    for caption in collect_captions("Hình") + [c for _p, c in APPENDIX_C_PHONE + APPENDIX_C_WEB] + [
+        "Hình E.1. Mô hình luồng hành vi: nhóm chức năng của tài xế",
+        "Hình E.2. Mô hình luồng hành vi: nhóm chức năng của khách hàng",
+        "Hình E.3. Mô hình luồng hành vi: nhóm chức năng của điều phối viên",
+        "Hình E.4. Mô hình luồng hành vi: nhóm chức năng của quản trị viên hệ thống",
+    ]:
         add_styled(caption, "Normal", first_line_indent=False)
 
     add_heading1_new_page("Danh sách bảng", bookmark="ds_bang")
     for caption in collect_captions("Bảng") + [
         "Bảng A.1. Danh mục công cụ gói tiếng Việt theo nhóm chức năng (48 công cụ)",
-        "Bảng D.1. Cấu hình chính của tác nhân hội thoại",
-        "Bảng E.1. Tái lập số liệu thực nghiệm",
-        "Bảng F.1. Bảng thuật ngữ Anh – Việt",
+        "Bảng D.1. Bảng thuật ngữ Anh – Việt",
+        "Bảng E.1. Hai mươi chín luồng hành vi được đánh số trên Hình E.1 đến Hình E.4",
     ]:
         add_styled(caption, "Normal", first_line_indent=False)
 
@@ -1894,9 +1912,9 @@ def build() -> Path:
 
     add_heading1_new_page("Phụ lục", bookmark="phu_luc")
     add_styled(
-        "Phụ lục gồm: A — danh mục công cụ; B — kịch bản thoại mẫu; C — ảnh giao diện; "
-        "D — cấu hình môi trường (không chứa bí mật); E — tái lập số liệu thực nghiệm; "
-        "F — bảng thuật ngữ Anh – Việt. Ma trận đối chiếu yêu cầu đầy đủ không được in; việc truy vết được thể hiện qua "
+        "Phụ lục gồm: A — danh mục công cụ; B — kịch bản thoại mẫu; C — ảnh giao diện chính; "
+        "D — bảng thuật ngữ Anh – Việt; E — mô hình luồng hành vi theo nhóm người sử dụng. Cấu hình môi trường, "
+        "lệnh tái lập số liệu và toàn bộ ảnh giao diện nằm trong kho mã nguồn, thư mục docs/thesis/supplement. Ma trận đối chiếu yêu cầu đầy đủ không được in; việc truy vết được thể hiện qua "
         "Bảng 4.10 (yêu cầu phi chức năng – thiết kế), Bảng 5.6 (thiết kế – hiện thực) và Bảng 6.1, Bảng 6.15 (yêu cầu – kết quả đánh giá).",
         "Normal",
         first_line_indent=True,
@@ -1942,39 +1960,15 @@ def build() -> Path:
         add_figure_row([p for p, _ in chunk], cell_w_cm=7.2, captions=[c for _, c in chunk])
     add_styled(APPENDIX_C_BACKUP_LINK, "Normal", first_line_indent=True)
 
-    # ---- Phụ lục D: cấu hình môi trường ----
-    add_styled("Phụ lục D. Cấu hình môi trường triển khai", "Heading 2", first_line_indent=False)
-    add_styled(APPENDIX_D_INTRO, "Normal", first_line_indent=True)
-    add_table_caption("Bảng D.1. Cấu hình chính của tác nhân hội thoại")
-    add_bordered_table(
-        [["Biến", "Ý nghĩa", "Giá trị"]] + [list(row) for row in APPENDIX_D_ENV]
-    )
-    add_styled(
-        "Luận văn không công bố khóa API, token LiveKit, mật khẩu hay đường dẫn tới tệp thông tin xác thực.",
-        "Normal",
-        first_line_indent=True,
-        italic=True,
-    )
-
-    # ---- Phụ lục E: tái lập số liệu (bản 200 trang là Phụ lục F; ma trận đối chiếu E cũ đã bỏ) ----
-    add_styled("Phụ lục E. Tái lập số liệu thực nghiệm", "Heading 2", first_line_indent=False)
-    add_styled(APPENDIX_F_INTRO.replace("Bảng F.1", "Bảng E.1"), "Normal", first_line_indent=True)
-    add_table_caption("Bảng E.1. Tái lập số liệu thực nghiệm")
-    add_bordered_table(
-        [["Số liệu", "Script hoặc lệnh", "Dữ liệu đầu vào", "Kết quả trong luận văn"]]
-        + [list(row) for row in APPENDIX_F_ROWS]
-    )
-    add_styled("", "Normal", first_line_indent=False, space_after=6)
-
     # ---- Phụ lục G: thuật ngữ ----
-    add_styled("Phụ lục F. Bảng thuật ngữ Anh – Việt", "Heading 2", first_line_indent=False)
+    add_styled("Phụ lục D. Bảng thuật ngữ Anh – Việt", "Heading 2", first_line_indent=False)
     add_styled(
-        "Bảng F.1 liệt kê các thuật ngữ chuyên môn xuất hiện trong luận văn cùng cách dịch sang tiếng Việt. Nguồn "
+        "Bảng D.1 liệt kê các thuật ngữ chuyên môn xuất hiện trong luận văn cùng cách dịch sang tiếng Việt. Nguồn "
         "định nghĩa được dẫn ở lần dùng đầu tiên trong thân bài; tại đó, thuật ngữ tiếng Việt được ghi kèm thuật ngữ gốc trong ngoặc đơn.",
         "Normal",
         first_line_indent=True,
     )
-    add_table_caption("Bảng F.1. Bảng thuật ngữ Anh – Việt")
+    add_table_caption("Bảng D.1. Bảng thuật ngữ Anh – Việt")
     # Chỉ giữ thuật ngữ gốc (tiếng Anh) thật sự xuất hiện trong thân bài: bảng này giải nghĩa từ gốc được
     # ghi trong ngoặc đơn ở lần dùng đầu; thuật ngữ chỉ còn bản dịch tiếng Việt thì không cần tra.
     _lower_text = _chapter_text.lower()
@@ -1985,55 +1979,55 @@ def build() -> Path:
     add_bordered_table([["Thuật ngữ gốc", "Tiếng Việt"]] + [[r[0], r[1]] for r in sorted(_used_terms, key=lambda r: r[0].lower())])
 
     # ---- Phụ lục G: mô hình luồng hành vi theo nhóm người sử dụng (chuyển từ mục 4.3.2) ----
-    add_styled("Phụ lục G. Mô hình luồng hành vi theo nhóm người sử dụng", "Heading 2", first_line_indent=False)
+    add_styled("Phụ lục E. Mô hình luồng hành vi theo nhóm người sử dụng", "Heading 2", first_line_indent=False)
     add_styled(
         "Bốn hình dưới đây vẽ các luồng hành vi của từng nhóm người sử dụng trên nền kiến trúc tổng thể (Hình 4.1). "
-        "Số trên mũi tên là số luồng ở Bảng G.1, đặt sau bốn hình; thành phần không nằm trên luồng "
+        "Số trên mũi tên là số luồng ở Bảng E.1, đặt sau bốn hình; thành phần không nằm trên luồng "
         "của nhóm đó được làm mờ.",
         "Normal",
         first_line_indent=True,
     )
     for _path, _cap in [
-        ("../diagrams/H4_1_aws_architecture_driver.png", "Hình G.1. Mô hình luồng hành vi: nhóm chức năng của tài xế"),
-        ("../diagrams/H4_1_aws_architecture_customer.png", "Hình G.2. Mô hình luồng hành vi: nhóm chức năng của khách hàng"),
-        ("../diagrams/H4_1_aws_architecture_dispatcher.png", "Hình G.3. Mô hình luồng hành vi: nhóm chức năng của điều phối viên"),
-        ("../diagrams/H4_1_aws_architecture_sysadmin.png", "Hình G.4. Mô hình luồng hành vi: nhóm chức năng của quản trị viên hệ thống"),
+        ("../diagrams/H4_1_aws_architecture_driver.png", "Hình E.1. Mô hình luồng hành vi: nhóm chức năng của tài xế"),
+        ("../diagrams/H4_1_aws_architecture_customer.png", "Hình E.2. Mô hình luồng hành vi: nhóm chức năng của khách hàng"),
+        ("../diagrams/H4_1_aws_architecture_dispatcher.png", "Hình E.3. Mô hình luồng hành vi: nhóm chức năng của điều phối viên"),
+        ("../diagrams/H4_1_aws_architecture_sysadmin.png", "Hình E.4. Mô hình luồng hành vi: nhóm chức năng của quản trị viên hệ thống"),
     ]:
         add_figure_image(_path, width_cm=15.0)
         add_figure_caption(_cap)
 
-    add_table_caption("Bảng G.1. Hai mươi chín luồng hành vi được đánh số trên Hình G.1 đến Hình G.4")
+    add_table_caption("Bảng E.1. Hai mươi chín luồng hành vi được đánh số trên Hình E.1 đến Hình E.4")
     add_bordered_table([
         ["Số", "Từ → Đến", "Giao thức", "Mục đích", "Hình", "Biểu đồ"],
-        ["①", "Ứng dụng tài xế → API Gateway → Định danh", "HTTPS", "Đăng nhập, làm mới token", "G.1", "S1"],
-        ["②", "Định danh → DynamoDB (accounts, driver-settings)", "AWS SDK", "Đọc tài khoản, lưu băm refresh token", "G.1, G.3, G.4", "S1"],
-        ["③", "Ứng dụng tài xế → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Xin token thoại, tra cứu chuyến", "G.1", "S2"],
-        ["④", "Chuyến đi và Điều phối → LiveKit Cloud", "HTTPS", "Tạo phòng, phân công tác nhân, quay số SIP", "G.1, G.2, G.3", "S2, S4, S5"],
-        ["⑤", "Ứng dụng tài xế ↔ LiveKit Cloud", "WebRTC", "Truyền âm thanh hai chiều", "G.1", "S2, S3"],
-        ["⑥", "LiveKit Cloud ↔ tác nhân hội thoại", "WebRTC, WebSocket", "Giao việc cho tác nhân; truyền âm thanh", "G.1, G.2", "S2, S3"],
-        ["⑦", "Tác nhân hội thoại → nhà cung cấp AI (chính, dự phòng)", "HTTPS, gRPC", "Nhận dạng giọng nói, sinh phản hồi, tổng hợp giọng nói", "G.1, G.2", "S3"],
-        ["⑧", "Tác nhân hội thoại → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Đăng ký phiên, tải ngữ cảnh, gọi công cụ nghiệp vụ", "G.1, G.2", "S2 đến S5"],
-        ["⑨", "Chuyến đi và Điều phối → DynamoDB (trips, ws-connections)", "AWS SDK", "Đọc, ghi chuyến và kết nối WebSocket", "G.1, G.2, G.3", "S3, S4"],
-        ["⑩", "Chuyến đi và Điều phối → API Gateway WebSocket → ứng dụng tài xế", "WSS", "Đẩy thông báo khi chuyến thay đổi", "G.1", "S4"],
-        ["⑪", "LiveKit Cloud → Twilio (SIP trunk) → điện thoại", "SIP, mạng điện thoại", "Gọi mời tài xế nhận chuyến; gọi khách hàng", "G.1, G.2, G.3", "S4, S5"],
-        ["⑫", "Chuyến đi và Điều phối → Liên lạc bằng tin nhắn → Twilio → điện thoại khách", "HTTPS, SMS", "Gửi SMS cho khách", "G.1, G.2", "S5"],
-        ["⑬", "Twilio → API Gateway → Liên lạc bằng tin nhắn", "HTTPS (webhook)", "Trạng thái cuộc gọi; trạng thái giao tin SMS", "G.1, G.2", "S5"],
-        ["⑭", "Tác nhân hội thoại → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Ghi bản ghi và tóm tắt khi kết thúc phiên", "G.1, G.2", "S6"],
-        ["⑮", "Chuyến đi và Điều phối → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc tóm tắt cuộc gọi gần nhất", "G.1", "S6"],
-        ["⑯", "Nhật ký cuộc gọi → DynamoDB (call-records)", "AWS SDK", "Lưu và đọc bản ghi cuộc gọi", "G.1 đến G.4", "S6"],
-        ["⑰", "Trang quản trị, trang giám sát → API Gateway → các dịch vụ", "HTTPS", "Điều phối chuyến, quản lý tài khoản, xem nhật ký cuộc gọi; xem tình trạng dịch vụ, nhật ký, báo cáo", "G.3, G.4", "S7"],
-        ["⑱", "Mọi dịch vụ và tác nhân → CloudWatch Logs", "AWS SDK", "Ghi nhật ký gắn mã phòng (CON-04)", "G.1, G.2, G.4", "Mọi biểu đồ"],
-        ["⑲", "EventBridge Scheduler → Giám sát vận hành", "Gọi Lambda", "Kích hoạt lập báo cáo ngày lúc 00:15", "G.4", "S7"],
-        ["⑳", "Giám sát vận hành → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc bản ghi hội thoại của một ngày", "G.4", "S7"],
-        ["㉑", "Giám sát vận hành → DynamoDB (daily-reports)", "AWS SDK", "Lưu báo cáo ngày", "G.4", "S7"],
-        ["㉒", "Liên lạc bằng tin nhắn → DynamoDB (channel-events)", "AWS SDK", "Lưu sự kiện Twilio và kết quả gửi SMS", "G.1, G.2", "S5"],
-        ["㉓", "Chuyến đi và Điều phối → dịch vụ bản đồ", "HTTPS", "Tìm địa chỉ, chỉ đường, thời gian đến, ma trận khoảng cách (mục 5.4.4)", "G.1, G.3", "Không có"],
-        ["㉔", "Chuyến đi và Điều phối → Redis (tùy chọn)", "TLS", "Bộ nhớ đệm giữa các lần chạy Lambda: phiên đang mở, thông báo chờ phát, ngữ cảnh", "G.1, G.3", "S2"],
-        ["㉕", "Ứng dụng tài xế → dịch vụ bản đồ", "HTTPS", "Tải lớp bản đồ nền để hiển thị", "G.1", "Không có"],
-        ["㉖", "Chuyến đi và Điều phối → API Gateway → Định danh", "HTTPS, JWT dịch vụ", "Đọc tài khoản và cài đặt tài xế khi tải ngữ cảnh", "G.1, G.3", "S2"],
-        ["㉗", "Giám sát vận hành → API Gateway → các dịch vụ", "HTTPS", "Kiểm tra tình trạng từng dịch vụ", "G.4", "Không có"],
-        ["㉘", "Giám sát vận hành → nhà cung cấp AI", "HTTPS", "Mô hình chấm một mẫu câu trả lời khi lập báo cáo ngày", "G.4", "S7"],
-        ["㉙", "Giám sát vận hành → CloudWatch Logs, Amazon ECS", "AWS SDK", "Đọc nhật ký và số tác vụ tác nhân đang chạy", "G.4", "Không có"],
+        ["①", "Ứng dụng tài xế → API Gateway → Định danh", "HTTPS", "Đăng nhập, làm mới token", "E.1", "S1"],
+        ["②", "Định danh → DynamoDB (accounts, driver-settings)", "AWS SDK", "Đọc tài khoản, lưu băm refresh token", "E.1, E.3, E.4", "S1"],
+        ["③", "Ứng dụng tài xế → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Xin token thoại, tra cứu chuyến", "E.1", "S2"],
+        ["④", "Chuyến đi và Điều phối → LiveKit Cloud", "HTTPS", "Tạo phòng, phân công tác nhân, quay số SIP", "E.1, E.2, E.3", "S2, S4, S5"],
+        ["⑤", "Ứng dụng tài xế ↔ LiveKit Cloud", "WebRTC", "Truyền âm thanh hai chiều", "E.1", "S2, S3"],
+        ["⑥", "LiveKit Cloud ↔ tác nhân hội thoại", "WebRTC, WebSocket", "Giao việc cho tác nhân; truyền âm thanh", "E.1, E.2", "S2, S3"],
+        ["⑦", "Tác nhân hội thoại → nhà cung cấp AI (chính, dự phòng)", "HTTPS, gRPC", "Nhận dạng giọng nói, sinh phản hồi, tổng hợp giọng nói", "E.1, E.2", "S3"],
+        ["⑧", "Tác nhân hội thoại → API Gateway → Chuyến đi và Điều phối", "HTTPS", "Đăng ký phiên, tải ngữ cảnh, gọi công cụ nghiệp vụ", "E.1, E.2", "S2 đến S5"],
+        ["⑨", "Chuyến đi và Điều phối → DynamoDB (trips, ws-connections)", "AWS SDK", "Đọc, ghi chuyến và kết nối WebSocket", "E.1, E.2, E.3", "S3, S4"],
+        ["⑩", "Chuyến đi và Điều phối → API Gateway WebSocket → ứng dụng tài xế", "WSS", "Đẩy thông báo khi chuyến thay đổi", "E.1", "S4"],
+        ["⑪", "LiveKit Cloud → Twilio (SIP trunk) → điện thoại", "SIP, mạng điện thoại", "Gọi mời tài xế nhận chuyến; gọi khách hàng", "E.1, E.2, E.3", "S4, S5"],
+        ["⑫", "Chuyến đi và Điều phối → Liên lạc bằng tin nhắn → Twilio → điện thoại khách", "HTTPS, SMS", "Gửi SMS cho khách", "E.1, E.2", "S5"],
+        ["⑬", "Twilio → API Gateway → Liên lạc bằng tin nhắn", "HTTPS (webhook)", "Trạng thái cuộc gọi; trạng thái giao tin SMS", "E.1, E.2", "S5"],
+        ["⑭", "Tác nhân hội thoại → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Ghi bản ghi và tóm tắt khi kết thúc phiên", "E.1, E.2", "S6"],
+        ["⑮", "Chuyến đi và Điều phối → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc tóm tắt cuộc gọi gần nhất", "E.1", "S6"],
+        ["⑯", "Nhật ký cuộc gọi → DynamoDB (call-records)", "AWS SDK", "Lưu và đọc bản ghi cuộc gọi", "E.1 đến E.4", "S6"],
+        ["⑰", "Trang quản trị, trang giám sát → API Gateway → các dịch vụ", "HTTPS", "Điều phối chuyến, quản lý tài khoản, xem nhật ký cuộc gọi; xem tình trạng dịch vụ, nhật ký, báo cáo", "E.3, E.4", "S7"],
+        ["⑱", "Mọi dịch vụ và tác nhân → CloudWatch Logs", "AWS SDK", "Ghi nhật ký gắn mã phòng (CON-04)", "E.1, E.2, E.4", "Mọi biểu đồ"],
+        ["⑲", "EventBridge Scheduler → Giám sát vận hành", "Gọi Lambda", "Kích hoạt lập báo cáo ngày lúc 00:15", "E.4", "S7"],
+        ["⑳", "Giám sát vận hành → API Gateway → Nhật ký cuộc gọi", "HTTPS", "Đọc bản ghi hội thoại của một ngày", "E.4", "S7"],
+        ["㉑", "Giám sát vận hành → DynamoDB (daily-reports)", "AWS SDK", "Lưu báo cáo ngày", "E.4", "S7"],
+        ["㉒", "Liên lạc bằng tin nhắn → DynamoDB (channel-events)", "AWS SDK", "Lưu sự kiện Twilio và kết quả gửi SMS", "E.1, E.2", "S5"],
+        ["㉓", "Chuyến đi và Điều phối → dịch vụ bản đồ", "HTTPS", "Tìm địa chỉ, chỉ đường, thời gian đến, ma trận khoảng cách (mục 5.4.4)", "E.1, E.3", "Không có"],
+        ["㉔", "Chuyến đi và Điều phối → Redis (tùy chọn)", "TLS", "Bộ nhớ đệm giữa các lần chạy Lambda: phiên đang mở, thông báo chờ phát, ngữ cảnh", "E.1, E.3", "S2"],
+        ["㉕", "Ứng dụng tài xế → dịch vụ bản đồ", "HTTPS", "Tải lớp bản đồ nền để hiển thị", "E.1", "Không có"],
+        ["㉖", "Chuyến đi và Điều phối → API Gateway → Định danh", "HTTPS, JWT dịch vụ", "Đọc tài khoản và cài đặt tài xế khi tải ngữ cảnh", "E.1, E.3", "S2"],
+        ["㉗", "Giám sát vận hành → API Gateway → các dịch vụ", "HTTPS", "Kiểm tra tình trạng từng dịch vụ", "E.4", "Không có"],
+        ["㉘", "Giám sát vận hành → nhà cung cấp AI", "HTTPS", "Mô hình chấm một mẫu câu trả lời khi lập báo cáo ngày", "E.4", "S7"],
+        ["㉙", "Giám sát vận hành → CloudWatch Logs, Amazon ECS", "AWS SDK", "Đọc nhật ký và số tác vụ tác nhân đang chạy", "E.4", "Không có"],
     ])
 
     drop_orphan_images(new)
