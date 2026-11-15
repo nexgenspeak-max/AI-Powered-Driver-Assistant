@@ -14,6 +14,7 @@ Edit this script and rerun; do not hand-edit the generated files.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from xml.sax.saxutils import escape, quoteattr
 
@@ -491,6 +492,9 @@ FRAME = (f"shape=umlFrame;whiteSpace=wrap;html=1;width={{w}};height=32;fontSize=
          f"strokeColor=#879196;fontColor={TEXT};" + FONT)
 
 
+_FLOW_NO = re.compile("^[\u2460-\u2473\u3251-\u325f]+ *")
+
+
 def sequence(page: str, participants: list[tuple[str, str, str]], steps: list[tuple], frames=()) -> Diagram:
     """participants: (id, title, tech). steps: (kind, from, to, text) with kind msg|ret|self.
     Bước cách nhau SEQ_GAP; riêng bước mở hoặc ngay sau một khung alt/opt được nới thêm để
@@ -515,7 +519,8 @@ def sequence(page: str, participants: list[tuple[str, str, str]], steps: list[tu
     for n, step in enumerate(steps, 1):
         kind, src, dst, text = step
         y = ys[n - 1]
-        value = f"{n}. {escape(tr(text))}"
+        # Số luồng ①–㉙ chỉ dùng ở hình kiến trúc (Phụ lục G); biểu đồ tuần tự chỉ giữ số bước.
+        value = f"{n}. {escape(_FLOW_NO.sub('', tr(text)))}"
         if kind == "self":
             d.free_edge(f"m{n}", xs[src], y, xs[src] + 1, y + 18,
                         value, SELF + "align=left;labelPosition=right;spacingLeft=48;" + "entryX=0;")
