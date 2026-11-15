@@ -24,7 +24,7 @@ làm được nghiệp vụ thật.
 > đón khách, gọi khách, tra lộ trình. Nghiên cứu SHRP 2 trên hơn 900 vụ va chạm cho thấy yếu tố người
 > lái có mặt trong gần 90% số vụ, và thao tác thiết bị cầm tay làm tăng đáng kể nguy cơ.
 >
-> Luận văn hướng tới các hãng xe nhận chuyến qua tổng đài, Zalo, Facebook — nơi điều phối viên tạo
+> Luận văn hướng tới các hãng xe nhận chuyến qua tổng đài — nơi điều phối viên tạo
 > chuyến cho tài xế. Bài toán là: thiết kế, triển khai và đánh giá một trợ lý AI bằng giọng nói tiếng
 > Việt, **nghe** yêu cầu, **hiểu** ý định, **thực hiện** nghiệp vụ qua gọi công cụ, và **trả lời** bằng
 > giọng nói theo thời gian thực.
@@ -92,7 +92,7 @@ phần mềm dùng để lập luận, và ba khoảng trống nghiên cứu.
 ### Ví dụ trong Czen
 
 - "Cộng dồn độ trễ": tài xế dứt lời → chờ chốt lượt → chờ LLM sinh token đầu → chờ TTS ra âm thanh
-  đầu. Ba chặng cộng lại mới thành con số 3,75 giây ở Chương 6.
+  đầu. Ba chặng cộng lại mới thành con số P95 2,58 giây ở Chương 6.
 - Serverless và container (mục 2.7): API chuyến đi chỉ chạy vài trăm mili-giây nên đặt trên Lambda;
   tác nhân Czen phải giữ kết nối âm thanh cả cuốc xe nên **không thể** đặt trên Lambda — phải chạy
   container trên Fargate.
@@ -101,7 +101,7 @@ phần mềm dùng để lập luận, và ba khoảng trống nghiên cứu.
 
 - **"Vì sao không dùng mô hình giọng nói đầu-cuối như Moshi?"** Moshi đạt khoảng 200 ms nhưng không
   gọi công cụ; Czen cần thực hiện nghiệp vụ qua API nên chọn chuỗi theo tầng và chấp nhận chậm hơn
-  khoảng một bậc độ lớn (mục 2.9.3, Bảng 6.17).
+  khoảng một bậc độ lớn (mục 2.9.3, Bảng 6.16).
 - **"Giọng nói có thật sự an toàn hơn không?"** Giọng nói giảm rời mắt nhưng không loại bỏ tải nhận
   thức (mục 2.9.1) — luận văn không khẳng định an toàn giao thông.
 
@@ -274,10 +274,11 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 > Em đánh giá theo từng câu hỏi nghiên cứu, quy tắc xử lý dữ liệu được cố định từ trước, tỷ lệ kèm
 > khoảng tin cậy 95% Wilson.
 >
-> **RQ2 — độ trễ.** Trên 174 lượt qua LLM trong đợt đo 05–06/09/2026, P50 là 1,54 giây nhưng **P95 là
-> 3,75 giây**, không đạt ngưỡng 2 giây. Phân tích theo chặng (Bảng 6.4) cho thấy chặng lớn nhất là LLM
-> sinh token đầu, P95 khoảng 2,5 giây. Khi mô hình dùng qua API bên ngoài, việc đạt ngưỡng phụ thuộc
-> chủ yếu vào nhà cung cấp mô hình, không phải cách chia dịch vụ.
+> **RQ2 — độ trễ.** Trên 120 lượt đo ngày 15/11/2026, P50 là 1,83 giây nhưng **P95 là 2,58 giây**,
+> không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng. Phân tích theo chặng (Bảng 6.4) cho thấy
+> hai chặng lớn, mỗi chặng khoảng 1 giây: chờ STT trả kết quả cuối của câu và chờ LLM sinh token đầu.
+> Cả hai thuộc nhà cung cấp AI bên ngoài, nên việc đạt ngưỡng phụ thuộc vào nhà cung cấp, không phải
+> cách chia dịch vụ.
 >
 > **RQ3 — nhận dạng giọng nói.** Tỷ lệ lỗi từ tăng từ 3,1% lên 7,3% khi có nhiễu khoang xe — với một
 > người đọc và 22 câu, đây là xu hướng.
@@ -296,7 +297,7 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 > Cuối chương, em phân tích mối đe dọa đối với độ tin cậy theo bốn loại của Wohlin: nội tại, bên ngoài,
 > cấu trúc và kết luận.
 
-### Ví dụ trong Czen — tiêm lỗi (Bảng 6.12)
+### Ví dụ trong Czen — tiêm lỗi (Bảng 6.11)
 
 | Lỗi được tiêm | Czen phản ứng | Kết quả |
 |---|---|---|
@@ -308,7 +309,7 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 
 ### Mối đe dọa (mục 6.13) — nói ngắn gọn
 
-> Nội tại: 341 lượt trong hai ngày, một tài khoản, một người chấm. Bên ngoài: thử tải trên một máy với
+> Nội tại: 120 lượt đo độ trễ trong một ngày với giọng máy, một tài khoản, một người chấm. Bên ngoài: thử tải trên một máy với
 > AI giả lập, chưa phải AWS thật. Cấu trúc: độ trễ đo trải nghiệm hội thoại, không đo an toàn giao
 > thông. Kết luận: mẫu nhỏ nên em báo khoảng tin cậy và không khẳng định khác biệt khi khoảng tin cậy
 > chồng lấn.
@@ -317,13 +318,13 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 
 - **"Độ trễ không đạt thì luận văn có thất bại không?"** Không — RQ2 hỏi độ trễ đạt mức nào và thành
   phần nào chi phối; câu trả lời có số liệu rõ ràng, và đó là đóng góp thứ tư. Kết quả "không đạt" được
-  báo trung thực ở Bảng 6.16.
-- **"Thiết kế hiện tại (có câu đệm, không còn nhánh rút gọn) đã đo chưa?"** Mới có 4 lượt (Bảng 6.5),
-  chưa đủ để tính P95; cần ít nhất 200 lượt.
+  báo trung thực ở Bảng 6.15.
+- **"Thiết kế hiện tại (có câu đệm, không còn nhánh rút gọn) đã đo chưa?"** Đã đo ngày 15/11/2026: 120
+  lượt, P95 2,58 giây (Bảng 6.3). Đợt đo tháng 9 chỉ còn để tham khảo (Bảng 6.5).
 - **"74,4% so với τ-bench dưới 50% — Czen tốt hơn GPT-4o à?"** Không so trực tiếp được: τ-bench tính
-  theo nhiệm vụ nhiều lượt, luận văn tính theo lượt (Bảng 6.17).
-- **"Slide 8 nói chốt lượt 0,25–0,55 giây, Bảng 6.4 nói 0,9–1,7 giây?"** Khác cấu hình: đợt đo tháng 9
-  còn dùng mô hình phát hiện lượt; cấu hình hiện tại chốt bằng VAD và khoảng lặng.
+  theo nhiệm vụ nhiều lượt, luận văn tính theo lượt (Bảng 6.16).
+- **"Slide 8 nói chốt lượt 0,25–0,55 giây, Bảng 6.4 nói gần 1 giây?"** 0,25–0,55 giây là khoảng lặng
+  tác nhân chờ; phần còn lại của chặng là thời gian STT trả kết quả cuối của câu.
 
 ---
 
@@ -331,7 +332,7 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 
 > Tóm lại, em đã đi đủ các bước của nghiên cứu khoa học thiết kế: xác định yêu cầu cho bốn nhóm người
 > dùng, lập luận kiến trúc từ năm yêu cầu phi chức năng, hiện thực nguyên mẫu trên WebRTC và SIP, và
-> đánh giá theo 19 tiêu chí chấp nhận — 17 tiêu chí đã có kết quả.
+> đánh giá theo 19 tiêu chí chấp nhận — cả 19 tiêu chí đã được đánh giá.
 >
 > Kết quả chính: phục hồi và mở rộng đạt trong môi trường mô phỏng; chức năng đạt mức khá với mẫu nhỏ;
 > độ trễ chưa đạt và bị chi phối bởi mô hình ngôn ngữ bên ngoài.

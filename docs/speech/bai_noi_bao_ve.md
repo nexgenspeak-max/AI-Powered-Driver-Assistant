@@ -20,15 +20,15 @@ và chỗ trong luận văn để trỏ tới khi hội đồng hỏi.
 | Chỉ số | Kết quả | Nguồn |
 |---|---|---|
 | Ngưỡng độ trễ | P95 ≤ 2 giây (từ lúc tài xế dứt lời đến lúc Czen bắt đầu nói) | Mục 1.3, 2.8 |
-| Độ trễ luồng qua LLM | P50 1,54 s · P95 **3,75 s** (n = 174) — không đạt | Bảng 6.3 |
-| Độ trễ toàn bộ lượt | P95 2,87 s (n = 341) | Bảng 6.3 |
-| Token đầu của LLM | P50 1,25 s · P95 **2,49 s** — chặng lớn nhất | Bảng 6.4 |
+| Độ trễ phản hồi (AC-15) | P50 1,83 s · P95 **2,58 s** (n = 120, đo 15/11/2026) — không đạt; 72,5% lượt ≤ 2 s | Bảng 6.3 |
+| Đo từ phía máy khách | P50 2,94 s · P95 3,62 s (gồm cả đường truyền) | Bảng 6.3 |
+| Hai chặng lớn | Chờ kết quả cuối của STT P50 0,95 s · LLM token đầu P50 1,04 s · TTS 0,17 s | Bảng 6.4 |
 | Chọn đúng công cụ | **37/43 = 86,0%** (KTC 95% Wilson 72,7–93,4%) | Mục 6.6 |
 | Hoàn thành ngay lần đầu | **32/43 = 74,4%** (59,8–85,1%) | Mục 6.6 |
 | Tỷ lệ lỗi từ (WER) | **3,1%** yên tĩnh → **7,3%** có nhiễu (1 người đọc, 22 câu) | Mục 6.5 |
-| Phục hồi | **200/200** lượt tiêm lỗi không làm hỏng hội thoại; lỗi treo 6–8 s | Bảng 6.12 |
-| Mở rộng | 1 → 40 phiên, P95 không tăng (1,54 → 1,51 s), AI giả lập; ~225 MB RAM/phiên | Bảng 6.11 |
-| Tiêu chí chấp nhận | 19 tiêu chí; 17 đã có kết quả | Kết luận |
+| Phục hồi | **200/200** lượt tiêm lỗi không làm hỏng hội thoại; lỗi treo 6–8 s | Bảng 6.11 |
+| Mở rộng | 1 → 40 phiên, P95 không tăng (1,54 → 1,51 s), AI giả lập; ~225 MB RAM/phiên | Bảng 6.10 |
+| Tiêu chí chấp nhận | 19 tiêu chí, cả 19 đã được đánh giá; chỉ AC-15 (độ trễ) không đạt | Bảng 6.15 |
 | Công cụ | 48 công cụ gói tiếng Việt (42 cho tài xế) | Phụ lục A |
 
 ---
@@ -57,7 +57,7 @@ và chỗ trong luận văn để trỏ tới khi hội đồng hỏi.
 >
 > Nghiên cứu SHRP 2 trên hơn 900 vụ va chạm cho thấy yếu tố người lái có mặt trong gần 90% số vụ, và
 > thao tác thiết bị cầm tay làm tăng đáng kể nguy cơ. Thêm vào đó, nhiều việc lặp đi lặp lại hằng
-> ngày, và với các hãng xe nhận chuyến qua tổng đài, Zalo, Facebook thì điều phối viên và tài xế còn
+> ngày, và với các hãng xe nhận chuyến qua tổng đài thì điều phối viên và tài xế còn
 > phải gọi qua lại để xác nhận — chậm và dễ sót.
 
 **Luận văn:** mục 1.1 (bối cảnh), 1.2 (phát biểu bài toán).
@@ -68,7 +68,7 @@ và chỗ trong luận văn để trỏ tới khi hội đồng hỏi.
 
 > Czen phục vụ bốn vai trò. **Tài xế** dùng app có trợ lý nghe tiếng Việt và thực hiện nghiệp vụ qua
 > gọi công cụ. **Điều phối viên** là người tạo chuyến chính: nhận yêu cầu từ mọi kênh, gán tài xế và
-> theo dõi. **Khách hàng** đặt qua tổng đài, Zalo, Facebook — web là tùy chọn — và nhận cuộc gọi do AI
+> theo dõi. **Khách hàng** đặt qua tổng đài — web là tùy chọn — và nhận cuộc gọi do AI
 > thực hiện. **Vận hành** giám sát chất lượng hội thoại, độ trễ và báo cáo hằng ngày.
 >
 > Hai nguyên tắc thiết kế xuyên suốt: **không bịa** — Czen chỉ nói dữ liệu lấy từ hệ thống; và **xác
@@ -132,12 +132,12 @@ trả lời nhanh mà không bị tiếng ồn đánh lừa."
 > khoảng lặng.
 
 **Lưu ý quan trọng (hội đồng có thể hỏi):** Bảng 6.4 ghi chặng "phát hiện kết thúc phát ngôn" là P50
-0,94 s, P95 1,7 s — dài hơn nhiều so với 0,25–0,55 s trên slide. Cả hai đều đúng vì **khác cấu hình**:
-đợt đo 05–06/09/2026 còn dùng mô hình phát hiện lượt; cấu hình hiện tại dùng VAD + khoảng lặng với
-ngưỡng ngắn hơn và mới có 4 lượt đo (Bảng 6.5). Nói chủ động câu này nếu thời gian cho phép:
+0,95 s, P95 1,23 s — dài hơn nhiều so với 0,25–0,55 s trên slide. Cả hai đều đúng: 0,25–0,55 s là
+khoảng lặng mà tác nhân chờ; phần còn lại của chặng là thời gian nhà cung cấp STT trả kết quả cuối của
+câu (trung vị 0,96 s trong nhật ký 15/11/2026). Nói chủ động câu này nếu thời gian cho phép:
 
-> Số 0,25–0,55 giây là cấu hình hiện tại. Đợt đo chính trong tháng 9 còn dùng mô hình chốt lượt cũ,
-> nên chặng này ở Bảng 6.4 dài hơn — em sẽ trình bày ở phần kết quả.
+> Số 0,25–0,55 giây là khoảng lặng hệ thống chờ. Chặng này ở Bảng 6.4 dài gần 1 giây vì còn phải chờ
+> STT trả kết quả cuối của câu — em sẽ trình bày ở phần kết quả.
 
 ## Slide 9 — Trả lời nhanh, đúng, và không bị tiếng ồn đánh lừa (≈ 1 phút 30 giây)
 
@@ -171,13 +171,14 @@ ngưỡng ngắn hơn và mới có 4 lượt đo (Bảng 6.5). Nói chủ độ
 > **RQ3 — nhận dạng giọng nói:** tỷ lệ lỗi từ tăng từ **3,1%** lên **7,3%** khi có nhiễu khoang xe —
 > với một người đọc và 22 câu, đây là xu hướng.
 >
-> **RQ2 — độ trễ: chưa đạt.** P95 của luồng qua LLM là **3,75 giây**, ngưỡng là 2 giây. Thành phần
-> chi phối là thời gian **LLM sinh token đầu**, P95 khoảng 2,5 giây. Kết luận của em là: khi dùng mô
-> hình qua API bên ngoài, việc đạt ngưỡng phụ thuộc chủ yếu vào nhà cung cấp mô hình, **không phải vào
-> cách chia dịch vụ** — bằng chứng là độ trễ không tăng khi số phiên tăng. Vì vậy câu đệm sau 2 giây
-> rất quan trọng với trải nghiệm.
+> **RQ2 — độ trễ: chưa đạt.** Trên 120 lượt đo ngày 15/11, trung vị là 1,83 giây nhưng P95 là
+> **2,58 giây**, ngưỡng là 2 giây; 72,5% số lượt nằm trong ngưỡng. Có hai chặng chi phối, mỗi chặng
+> khoảng 1 giây: **chờ STT trả kết quả cuối của câu** và **chờ LLM sinh token đầu**. Cả hai thuộc nhà
+> cung cấp AI bên ngoài, nên việc đạt ngưỡng phụ thuộc vào nhà cung cấp, **không phải vào cách chia
+> dịch vụ** — bằng chứng là độ trễ không tăng khi số phiên tăng. Câu đệm sau 2 giây giúp tài xế không
+> phải nghe khoảng lặng, nhưng không làm tiêu chí này đạt.
 
-**Luận văn:** Bảng 6.3, 6.4 (độ trễ), mục 6.5 (WER), 6.6 (gọi công cụ), Bảng 6.11–6.12, Bảng 6.16
+**Luận văn:** Bảng 6.3, 6.4 (độ trễ), mục 6.5 (WER), 6.6 (gọi công cụ), Bảng 6.10–6.11, Bảng 6.15
 (tổng hợp), mục 6.12 (trả lời RQ).
 
 ## Slide 11 — Kịch bản demo (≈ 40 giây)
@@ -223,8 +224,8 @@ ngưỡng ngắn hơn và mới có 4 lượt đo (Bảng 6.5). Nói chủ độ
 > Vì vậy mọi câu trả lời đi qua **từ điển phát âm** trước khi tới bất kỳ nhà cung cấp TTS nào: biển số,
 > giờ, đơn vị và từ viết tắt được đổi sang cách đọc tiếng Việt.
 
-**Lưu ý:** đợt đo trong Chương 6 dùng TTS Google (Bảng 6.2); ElevenLabs được đưa vào sau đợt đo, vì vậy
-"đo lại với giọng ElevenLabs" nằm trong bước tiếp theo.
+**Lưu ý:** đợt đo độ trễ 15/11/2026 đã chạy với giọng ElevenLabs; các phép đo khác ở Chương 6 làm trước
+đó, khi TTS chính còn là Google (Bảng 6.2).
 
 ## Slide 17 — Thông điệp (≈ 15 giây)
 
@@ -239,12 +240,12 @@ ngưỡng ngắn hơn và mới có 4 lượt đo (Bảng 6.5). Nói chủ độ
 > **Đã làm được:** tài xế đi trọn một chuyến bằng giọng nói; AI gọi điện thoại thật cho khách; kiến
 > trúc microservices trên AWS với LiveKit, mã nguồn công khai.
 >
-> **Chưa đạt:** độ trễ — P95 luồng qua LLM 3,75 giây so với ngưỡng 2 giây trong đợt đo tháng 9, chủ
-> yếu do LLM sinh token đầu.
+> **Chưa đạt:** độ trễ — P95 là 2,58 giây so với ngưỡng 2 giây, do hai chặng thuộc nhà cung cấp AI:
+> chờ kết quả cuối của STT và chờ token đầu của LLM.
 >
-> **Bước tiếp theo:** giảm độ trễ token đầu — mô hình nhanh hơn, lời nhắc ngắn hơn, ít vòng gọi công cụ
-> hơn — và đo lại với ít nhất 200 lượt; đo lại với giọng ElevenLabs; và thử nghiệm với tài xế thật
-> trên đường.
+> **Bước tiếp theo:** giảm độ trễ — thử nhà cung cấp STT và LLM nhanh hơn hoặc mô hình giọng nói đầu
+> cuối, phát câu đệm sớm hơn; đo lại với người nói thật và các lượt gọi điện, nhắn tin; và thử nghiệm
+> với tài xế thật trên đường.
 >
 > Em xin cảm ơn thầy cô và các bạn đã lắng nghe. Em rất mong nhận được câu hỏi và góp ý của Hội đồng.
 
@@ -253,13 +254,13 @@ ngưỡng ngắn hơn và mới có 4 lượt đo (Bảng 6.5). Nói chủ độ
 ## Chuẩn bị câu hỏi của Hội đồng
 
 **1. Độ trễ không đạt thì hệ thống có còn dùng được không?**
-Có, với giới hạn rõ ràng. P50 luồng qua LLM là 1,54 s; chỉ đuôi phân phối vượt 2 s, và câu đệm sau 2 s
-giúp tài xế biết hệ thống đang xử lý. Luận văn không giấu kết quả này: AC-15 ghi "Không đạt" (Bảng
-6.16). Đóng góp thứ tư của luận văn chính là bằng chứng rằng nút thắt nằm ở token đầu của LLM chứ không
-ở kiến trúc.
+Có, với giới hạn rõ ràng. Trung vị là 1,83 s và 72,5% số lượt nằm trong 2 s; ở các lượt chậm hơn, câu
+đệm giúp tài xế biết hệ thống đang xử lý. Luận văn không giấu kết quả này: AC-15 ghi "Không đạt" (Bảng
+6.15), và còn nêu rằng khoảng chờ đo từ phía máy khách dài hơn khoảng 1,1 s. Đóng góp thứ tư của luận
+văn chính là bằng chứng rằng nút thắt nằm ở hai nhà cung cấp AI (STT và LLM) chứ không ở kiến trúc.
 
 **2. Vì sao không dùng mô hình giọng nói đầu-cuối (speech-to-speech) cho nhanh?**
-Mô hình song công như Moshi đạt khoảng 200 ms nhưng không gọi công cụ được (Bảng 6.17). Bài toán của
+Mô hình song công như Moshi đạt khoảng 200 ms nhưng không gọi công cụ được (Bảng 6.16). Bài toán của
 em cần thực hiện nghiệp vụ thật qua API, nên chọn chuỗi STT – LLM – TTS; chuỗi này chậm hơn khoảng một
 bậc độ lớn — đó là cái giá để gọi được công cụ (mục 2.9.3).
 
@@ -281,7 +282,7 @@ rộng cần dựa trên bộ nhớ hoặc số phiên.
 
 **6. Khi một bản sao tác nhân chết thì sao?**
 Phiên mới được phục vụ 10/10 lần, nhưng phiên đang chạy bị mất, và lỗi treo khiến tài xế chờ 6–8 giây
-(Bảng 6.12). Hướng sửa: rút ngắn thời gian chờ, duy trì tối thiểu hai bản sao, tự xin lại token.
+(Bảng 6.11). Hướng sửa: rút ngắn thời gian chờ, duy trì tối thiểu hai bản sao, tự xin lại token.
 
 **7. Làm sao tránh LLM "bịa" hay làm sai thao tác nguy hiểm?**
 Czen chỉ trả lời từ dữ liệu công cụ trả về; thao tác rủi ro (hủy chuyến, gọi/nhắn số ngoài chuyến) bắt
@@ -290,7 +291,7 @@ cho ngắt lời.
 
 **8. Bảo mật và dữ liệu cá nhân?**
 Kiểm tra theo danh mục đạt 5/6 lúc đầu vì nhật ký còn số điện thoại đầy đủ; đã sửa (che số) và đạt
-6/6 (Bảng 6.13). Còn tồn tại: webhook Twilio chưa kiểm tra chữ ký X-Twilio-Signature (mục 6.13).
+6/6 (Bảng 6.12). Còn tồn tại: webhook Twilio chưa kiểm tra chữ ký X-Twilio-Signature (mục 6.13).
 
 **9. Vì sao tiếng Việt không dùng mô hình chốt lượt như tiếng Anh?**
 Bộ phát hiện lượt của LiveKit chưa hỗ trợ tiếng Việt, nên hệ thống chốt bằng VAD Silero và khoảng lặng
@@ -306,7 +307,7 @@ khung đánh giá gắn 19 tiêu chí Given – When – Then có truy vết; v�
 độ trễ của chuỗi xử lý theo tầng.
 
 **12. So với các benchmark công bố thì sao?**
-Chỉ để định vị (Bảng 6.17): τ-bench báo GPT-4o hoàn thành dưới 50% nhiệm vụ nhiều lượt — luận văn tính
+Chỉ để định vị (Bảng 6.16): τ-bench báo GPT-4o hoàn thành dưới 50% nhiệm vụ nhiều lượt — luận văn tính
 theo lượt nên 74,4% không so trực tiếp được; WER 3,1% thấp hơn Whisper trên FLEURS tiếng Việt (10,3%)
 nhưng bộ câu của em ngắn và đúng miền, nên chưa đủ để kết luận khâu nhận dạng tốt hơn.
 
@@ -314,10 +315,11 @@ nhưng bộ câu của em ngắn và đúng miền, nên chưa đủ để kết
 
 Những điểm đã ghi nhận khi rà soát luận văn, cần tự xác nhận để không bị hỏi bất ngờ:
 
-- Chương 6, RS-03 ghi "trung vị 4,1 s" nhưng tệp `results_rs03.txt` ghi 0,1 s — kiểm tra lại số nào đúng.
-- Bảng 6.8: số lỗi tổng (4/3/2/2) chưa khớp các dòng chấm chi tiết (3/2/1/0).
-- Một chỗ ghi 2.350, tệp kết quả ghi 2.352.
-- Hình 5.3: Chương 5 nói dữ liệu 18/10 nhưng Bảng 6.14 dẫn cho giai đoạn 30/08–10/09.
+- Bảng 6.8: số lỗi tổng (4/3/2/2) chưa khớp các dòng chấm chi tiết (3/2/1/0); mục 6.13 đã giải thích
+  là bảng chấm chi tiết thiếu dòng của một trong 13 phiên.
+- Đã sửa trong luận văn ngày 15/11/2026: RS-03 ghi theo tệp kết quả (phiên mới được phục vụ sau trung
+  vị 0,1 s); số lần lộ số điện thoại là 2.352; hình báo cáo ngày (nay là Hình C.21) chỉ là giao diện
+  minh họa.
 - Mục 6.2 nói "số điện thoại được che" trong khi mục 6.10 nói nhật ký có số đầy đủ trước khi sửa —
   thống nhất cách nói theo thời gian.
 - Bìa: bổ sung mã học viên; xác nhận tên người hướng dẫn và tên đề tài chính xác.

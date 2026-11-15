@@ -67,8 +67,8 @@ Chỉ số B chỉ có ở 81 lượt, vì ở 39 lượt còn lại công cụ 
 
 | Chặng | P50 | P95 | Nhận xét |
 |---|---|---|---|
-| Phát hiện kết thúc phát ngôn | 0,95 | 1,23 | Nằm trong tầm cấu hình của hệ thống |
-| LLM sinh token đầu | 1,04 | 1,32 | Thuộc nhà cung cấp bên ngoài |
+| Phát hiện kết thúc phát ngôn | 0,95 | 1,23 | Gần như toàn bộ là thời gian chờ STT trả kết quả cuối của câu |
+| LLM sinh token đầu | 1,04 | 1,32 | Thuộc nhà cung cấp LLM |
 | TTS đến âm thanh đầu | 0,17 | 0,19 | Không đáng kể |
 
 ![Biểu đồ P50 P95 độ trễ theo ba cách đo|h=8](thesis_screenshots/H6_1_latency.png)
@@ -77,7 +77,7 @@ Chỉ số B chỉ có ở 81 lượt, vì ở 39 lượt còn lại công cụ 
 
 **AC-15 không đạt:** P95 là 2,58 giây so với ngưỡng 2 giây. Phần lớn các lượt nằm sát dưới ngưỡng: 78 trong 120 lượt rơi vào khoảng 1,5–2,0 giây, và 33 lượt vượt 2 giây (24 lượt trong khoảng 2,0–2,5 giây, 9 lượt trên 2,5 giây). Có ba nhận định.
 
-Thứ nhất, không chặng nào một mình vượt ngưỡng. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị; cộng lại, hai chặng này đã dùng gần hết ngân sách 2 giây, nên chỉ cần một chặng chậm hơn bình thường là lượt đó vượt ngưỡng.
+Thứ nhất, không chặng nào một mình vượt ngưỡng. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị; cộng lại, hai chặng này đã dùng gần hết ngân sách 2 giây, nên chỉ cần một chặng chậm hơn bình thường là lượt đó vượt ngưỡng. Chặng thứ nhất không phải do khoảng lặng chờ quá dài: tác nhân chỉ chờ 0,25–0,55 giây im lặng, còn lại là thời gian nhà cung cấp STT trả kết quả cuối của câu (trung vị 0,96 giây trong nhật ký). Cả hai chặng lớn vì vậy đều thuộc nhà cung cấp AI bên ngoài.
 
 Thứ hai, câu đệm rút ngắn khoảng lặng nhưng không giúp đạt AC-15. Câu đệm được phát ở 33 lượt. Nó được kích hoạt đúng ở giây thứ 2 và còn cần thời gian tổng hợp giọng nói, nên âm thanh của nó luôn tới sau ngưỡng. Muốn đạt ngưỡng bằng câu đệm thì phải phát sớm hơn, đổi lại câu đệm sẽ xuất hiện ở nhiều lượt hơn.
 
@@ -188,7 +188,7 @@ Bảng 6.11 tổng hợp kết quả tiêm lỗi (mục 6.2.2); mỗi kiểu l�
 | RS-02 | Dịch vụ nghiệp vụ trả 503 | Báo lỗi; phiên tiếp tục | 20/20 (84–100%) | < 0,01 s | Đạt |
 | RS-02 | Dịch vụ nghiệp vụ treo | Như trên | 20/20 (84–100%) | Trung vị 8,01 s (chờ 8 s) | Đạt |
 | RS-02 | Dịch vụ nghiệp vụ từ chối kết nối | Như trên | 20/20 (84–100%) | < 0,01 s | Đạt |
-| RS-03 | SIGKILL bản sao đang có phiên (hai bản sao) | Bản sao khác phục vụ phiên mới | Mới 10/10 (72–100%); đang chạy 0/10 | Phiên mới < 1 s; đăng ký lại sau trung vị 4,1 s | Đạt một phần |
+| RS-03 | SIGKILL bản sao đang có phiên (hai bản sao) | Bản sao khác phục vụ phiên mới | Mới 10/10 (72–100%); đang chạy 0/10 | Phiên mới được phục vụ sau trung vị 0,1 s, lớn nhất 0,4 s | Đạt một phần |
 | RS-04 | Kênh tin nhắn trả lỗi | Báo không gửi được | 20/20 (84–100%) | < 0,01 s | Đạt |
 | RS-04 | Khởi tạo cuộc gọi trả lỗi | Báo không gọi được | 20/20 (84–100%) | < 0,01 s | Đạt (lộ chi tiết kỹ thuật, mục 6.7) |
 | RS-05 | LLM chính trả lỗi ngay | Chuyển dự phòng | 30/30 (89–100%) | Token đầu 1,05 s (cơ sở 1,00 s) | Đạt |
@@ -196,7 +196,7 @@ Bảng 6.11 tổng hợp kết quả tiêm lỗi (mục 6.2.2); mỗi kiểu l�
 
 Trong 200 lượt tiêm lỗi mức thành phần, không lượt nào để ngoại lệ thoát ra luồng hội thoại; kết quả này xác nhận điểm không rủi ro NR-1 (Bảng 4.11) và khớp với lỗi thật ngày 06/09/2026, khi SMS trả 503 mà phiên vẫn tiếp tục (Bảng 5.2). Điểm cần cải thiện là khi gặp lỗi treo, tài xế phải chờ đến khi hết thời gian chờ (8 giây với API nghiệp vụ; 6 giây với LLM chính), vượt ngân sách 2 giây của NFR-02. Đây là hai điểm đánh đổi TP-2 và TP-3 ở Bảng 4.11: rút ngắn thời gian chờ sẽ tăng báo lỗi giả khi mạng chậm.
 
-Ở RS-03 (hai bản sao), mỗi lượt dừng đột ngột bản sao đang phục vụ một phiên rồi mở ngay phiên mới; phiên mới luôn được bản sao còn lại phục vụ (Bảng 6.11). Ngược lại, phiên đang chạy trên bản sao bị dừng đều mất (0/10) vì LiveKit không tự giao lại phiên; đường khôi phục ở tầng ứng dụng (khi tài xế mở lại trợ lý, API cấp token phân công lại tác nhân; biểu đồ tuần tự S2, Bảng 4.8) chưa được đo đầu cuối. Vì vậy hệ thống cần tối thiểu hai bản sao, và AC-17 với RS-03 **đạt một phần**.
+Ở RS-03 (hai bản sao), mỗi lượt dừng đột ngột bản sao đang phục vụ một phiên rồi mở ngay phiên mới; phiên mới luôn được bản sao còn lại phục vụ (Bảng 6.11). Ngược lại, phiên đang chạy trên bản sao bị dừng đều mất (0/10) vì LiveKit không tự giao lại phiên; đường khôi phục ở tầng ứng dụng (khi tài xế mở lại trợ lý, API cấp token phân công lại tác nhân; biểu đồ tuần tự S2, Bảng 4.8) chưa được đo đầu cuối. Trong một lượt bổ sung không còn bản sao nào, phiên mở trong lúc đó vẫn không được phục vụ trong 30 giây sau khi bản sao mới khởi động xong. Vì vậy hệ thống cần tối thiểu hai bản sao, và AC-17 với RS-03 **đạt một phần**.
 
 ## 6.10. Kết quả bảo mật — NFR-05
 
@@ -213,7 +213,7 @@ Bảng 6.12 là danh mục kiểm tra bảo mật dùng cho AC-18.
 | 5 | Tác nhân không truy cập cơ sở dữ liệu (CON-01) | Đạt |
 | 6 | Vị trí khách chỉ lấy từ dữ liệu chuyến | Đạt (mẫu) |
 
-Ngày 11/10/2026, danh mục chỉ đạt 5/6 vì nhật ký ghi số điện thoại đầy đủ (2.350 lần trong 5/19 tệp nhật ký của tác nhân được quét và 10 lần trong nhật ký Dịch vụ Chuyến đi và Điều phối), nên AC-18 **không đạt**. Đây là lỗi hiện thực: chiến thuật giới hạn phơi lộ (Bảng 3.8) đã được chọn nhưng chưa được áp dụng ở tầng ghi nhật ký. Sau đó, số điện thoại được che ngay trong bộ định dạng nhật ký dùng chung của tác nhân và năm dịch vụ Node.js (0888123798 thành 0888xxx798), kiểm tra bằng test_log_phone_mask và verify:logger; lần kiểm tra lại ngày 13/10/2026 ghi nhận 0 số đầy đủ trong 5.335 dòng DEBUG, nên AC-18 **đạt sau một vòng sửa**. Sự kiện Twilio trong bảng channel-events vẫn chứa số điện thoại vì đây là dữ liệu nghiệp vụ, chỉ Dịch vụ Liên lạc bằng tin nhắn mới truy cập được (CON-02).
+Ngày 11/10/2026, danh mục chỉ đạt 5/6 vì nhật ký ghi số điện thoại đầy đủ (2.352 lần trong 5/19 tệp nhật ký của tác nhân được quét và 10 lần trong nhật ký Dịch vụ Chuyến đi và Điều phối), nên AC-18 **không đạt**. Đây là lỗi hiện thực: chiến thuật giới hạn phơi lộ (Bảng 3.8) đã được chọn nhưng chưa được áp dụng ở tầng ghi nhật ký. Sau đó, số điện thoại được che ngay trong bộ định dạng nhật ký dùng chung của tác nhân và năm dịch vụ Node.js (0888123798 thành 0888xxx798), kiểm tra bằng test_log_phone_mask và verify:logger; lần kiểm tra lại ngày 13/10/2026 ghi nhận 0 số đầy đủ trong 5.335 dòng DEBUG, nên AC-18 **đạt sau một vòng sửa**. Sự kiện Twilio trong bảng channel-events vẫn chứa số điện thoại vì đây là dữ liệu nghiệp vụ, chỉ Dịch vụ Liên lạc bằng tin nhắn mới truy cập được (CON-02).
 
 ## 6.11. Kết quả luồng khách hàng, giám sát vận hành và sắp xếp điểm dừng
 
@@ -254,7 +254,7 @@ Bảng 6.15 tổng hợp kết quả theo từng tiêu chí chấp nhận.
 
 | Yêu cầu | Tiêu chí | Kết quả chính | Trạng thái |
 |---|---|---|---|
-| NFR-02 Hiệu năng | AC-15 | P50 1,83 s, P95 2,58 s (n = 120); 72,5% lượt ≤ 2 s; phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng ≈ 1 s | Không đạt |
+| NFR-02 Hiệu năng | AC-15 | P50 1,83 s, P95 2,58 s (n = 120); 72,5% lượt ≤ 2 s; chờ kết quả cuối của STT và token đầu của LLM mỗi chặng ≈ 1 s | Không đạt |
 | Nhận dạng giọng nói | AC-19 | WER 3,1% (yên tĩnh), 7,3% (nhiễu); 1 người đọc, 22 câu | Đã đo (mẫu nhỏ) |
 | FR của tài xế | AC-01–AC-08 | Đúng công cụ 37/43 (86,0%; KTC 72,7–93,4%); hoàn thành ngay 32/43 (74,4%; 59,8–85,1%) | Đã đo (mẫu nhỏ) |
 | NFR-01 Tính khả dụng | AC-14 | 100% thao tác rủi ro có xác nhận; danh mục 5/6, sau sửa 6/6 | Đạt sau một vòng sửa |
@@ -268,7 +268,7 @@ Bảng 6.15 tổng hợp kết quả theo từng tiêu chí chấp nhận.
 
 **RQ1 – Kiến trúc microservices có đáp ứng khả năng mở rộng và khả năng phục hồi không?** Có, ở mức thành phần và trong môi trường mô phỏng: 200/200 lượt tiêm lỗi không làm hỏng luồng hội thoại và P95 không tăng khi số phiên tăng từ 1 lên 40 (Bảng 6.10, Bảng 6.11). Giới hạn là phiên đang chạy bị mất khi bản sao bị dừng, lỗi treo kéo dài 6–8 giây, và kết quả chưa được kiểm chứng trên AWS với nhà cung cấp AI thật.
 
-**RQ2 – Độ trễ phản hồi đạt mức nào và thành phần nào chi phối?** Trên 120 lượt của thiết kế hiện hành, P50 là 1,83 giây và P95 là 2,58 giây, không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng (Bảng 6.3). Độ trễ do hai chặng chi phối với mức gần bằng nhau: phát hiện kết thúc phát ngôn (P50 0,95 giây) và token đầu của LLM (P50 1,04 giây) (Bảng 6.4). Chặng thứ hai thuộc nhà cung cấp mô hình; chặng thứ nhất nằm trong tầm cấu hình của hệ thống nhưng rút ngắn nó thì trợ lý dễ ngắt lời tài xế (điểm nhạy SP-2, rủi ro R-1, Bảng 4.11). Cách chia dịch vụ không phải là nguyên nhân: với nhà cung cấp AI giả lập, độ trễ không đổi khi số phiên tăng (Bảng 6.10).
+**RQ2 – Độ trễ phản hồi đạt mức nào và thành phần nào chi phối?** Trên 120 lượt của thiết kế hiện hành, P50 là 1,83 giây và P95 là 2,58 giây, không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng (Bảng 6.3). Độ trễ do hai chặng chi phối với mức gần bằng nhau: phát hiện kết thúc phát ngôn (P50 0,95 giây) và token đầu của LLM (P50 1,04 giây) (Bảng 6.4). Cả hai đều thuộc nhà cung cấp AI bên ngoài: chặng thứ nhất gần như toàn bộ là thời gian STT trả kết quả cuối của câu, chặng thứ hai là thời gian của LLM (điểm nhạy SP-1, SP-2, rủi ro R-1, Bảng 4.11). Cách chia dịch vụ không phải là nguyên nhân: với nhà cung cấp AI giả lập, độ trễ không đổi khi số phiên tăng (Bảng 6.10).
 
 **RQ3 – Tỷ lệ lỗi từ thay đổi thế nào khi có nhiễu?** Tăng từ 3,1% lên 7,3%, do lỗi chèn và thay thế tăng (mục 6.5); với một người đọc và 22 câu, đây chỉ là xu hướng.
 

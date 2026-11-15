@@ -289,7 +289,7 @@ Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng r
 | U-5 | Kịch bản | NFR-05: chỉ Định danh phát hành JWT; nhật ký không có số điện thoại đầy đủ | Bảo mật (C / Th) | Kiểm tra bảo mật (mục 6.10) |
 | U-6 | Kịch bản | NFR-01: 100% thao tác rủi ro có xác nhận | Khả dụng (C / Th) | Kiểm tra khi lái (mục 6.7) |
 | SP-1 | Điểm nhạy | Thời gian LLM sinh token đầu | Hiệu năng | Đo riêng theo chặng (mục 6.4) |
-| SP-2 | Điểm nhạy | Ngưỡng phát hiện kết thúc phát ngôn: ngắn thì trả lời nhanh nhưng dễ ngắt lời tài xế | Hiệu năng, khả dụng | Giữ mặc định nền tảng; đo riêng theo chặng (mục 6.4) |
+| SP-2 | Điểm nhạy | Thời gian phát hiện kết thúc phát ngôn: khoảng lặng chờ (ngắn thì nhanh nhưng dễ ngắt lời tài xế) cộng thời gian STT trả kết quả cuối | Hiệu năng, khả dụng | Khoảng lặng chờ 0,25–0,55 giây; đo riêng theo chặng (mục 6.4) |
 | TP-1 | Đánh đổi | Mọi lượt qua LLM (ADR-02) | Đúng chức năng ↔ hiệu năng | Bù bằng câu đệm |
 | TP-2 | Đánh đổi | Thời gian chờ API (8–25 giây) | Phục hồi ↔ hiệu năng | Tránh báo lỗi giả khi mạng chậm |
 | TP-3 | Đánh đổi | AI dự phòng (STT, LLM chờ tối đa 5 giây/lần thử) | Phục hồi ↔ chi phí, hiệu năng | Chấp nhận chi phí; đo RS-05 |
@@ -301,7 +301,7 @@ Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng r
 | NR-1 | Không rủi ro | Dữ liệu riêng; tác nhân chỉ gọi API | Phục hồi, bảo trì | Lỗi không lan (RS-01, RS-02, RS-04) |
 | NR-2 | Không rủi ro | Tác nhân chỉ kết nối chiều ra | Bảo mật | Không nhận kết nối vào |
 
-Rủi ro lớn nhất là R-1, và nó đến từ hai chặng. Thời gian sinh token đầu của LLM (SP-1) thuộc về nhà cung cấp bên ngoài: lớp trừu tượng nhà cung cấp (mục 5.3.4) cho phép thay LLM mà không ảnh hưởng đến dịch vụ khác, nhưng kiến trúc không rút ngắn được thời gian này. Thời gian phát hiện kết thúc phát ngôn (SP-2) thì nằm trong tầm cấu hình của hệ thống, nhưng rút ngắn nó là một đánh đổi với tính khả dụng, vì trợ lý dễ ngắt lời khi tài xế ngập ngừng. Chương 6 kiểm chứng U-1 đến U-6, SP-1, SP-2, TP-2, TP-3, R-1 và NR-1; các mục còn lại (TP-1, TP-4, R-2 đến R-4, NR-2) chưa được kiểm chứng riêng.
+Rủi ro lớn nhất là R-1, và nó đến từ hai chặng. Thời gian sinh token đầu của LLM (SP-1) thuộc về nhà cung cấp bên ngoài: lớp trừu tượng nhà cung cấp (mục 5.3.4) cho phép thay LLM mà không ảnh hưởng đến dịch vụ khác, nhưng kiến trúc không rút ngắn được thời gian này. Thời gian phát hiện kết thúc phát ngôn (SP-2) gồm hai phần: khoảng lặng chờ do hệ thống cấu hình (0,25–0,55 giây; rút ngắn nữa thì trợ lý dễ ngắt lời khi tài xế ngập ngừng) và thời gian nhà cung cấp STT trả kết quả cuối của câu, phần này chiếm gần hết chặng (mục 6.4) và cũng nằm ngoài hệ thống. Chương 6 kiểm chứng U-1 đến U-6, SP-1, SP-2, TP-2, TP-3, R-1 và NR-1; các mục còn lại (TP-1, TP-4, R-2 đến R-4, NR-2) chưa được kiểm chứng riêng.
 
 ## Kết luận chương
 

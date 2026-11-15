@@ -31,6 +31,10 @@ Bằng chứng cho mục 6.4 của luận văn: độ trễ phản hồi của t
 Theo chặng (n = 81): phát hiện kết thúc phát ngôn P50 0,95 s, P95 1,23 s; token đầu của LLM P50 1,04 s, P95 1,32 s;
 âm thanh đầu của TTS P50 0,17 s, P95 0,19 s. Câu đệm được phát ở 33 lượt.
 
+Chặng phát hiện kết thúc phát ngôn gần như toàn bộ là thời gian STT trả kết quả cuối của câu: trong các dòng
+`eou_metrics` (n = 134), `transcription_delay_ms` có P50 956 ms so với `end_of_utterance_delay_ms` P50 958 ms.
+Khoảng lặng tác nhân chờ được cấu hình 0,25–0,55 giây (`app/agent/session.py`).
+
 **Kết luận:** AC-15 (P95 ≤ 2 giây) không đạt; P95 là 2,58 giây.
 
 ## Lỗi đo đã sửa trong cùng ngày
