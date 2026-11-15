@@ -9,6 +9,8 @@ import com.chinhtruongba.driverapp.core.network.apiCall
 import com.chinhtruongba.driverapp.core.storage.SessionGeneration
 import com.chinhtruongba.driverapp.core.storage.TokenStore
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,9 @@ import javax.inject.Singleton
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
+
+const val ME_RETRY_MIN_MS = 2_000L
+const val ME_RETRY_MAX_MS = 30_000L
 
 /** One-shot load state for a cached query (React Query parity: keeps previous data while refetching). */
 data class Loadable<out T>(
@@ -57,16 +62,43 @@ class SessionRepository @Inject constructor(
     /** Phone of the signed-in driver, read synchronously by the `X-Driver-Phone` header. */
     fun currentPhone(): String? = _me.value.data?.phone
 
+    private var meJob: Job? = null
+
     suspend fun hydrate() {
         tokenStore.hydrate()
-        if (tokenStore.current() != null) scope.launch { refreshMe() }
+        ensureMe()
     }
 
     /**
-     * Writes `me` only if the session that started the request is still the current one and
-     * still signed in: a `/auth/me` or PATCH answer that lands after logout is dropped.
+     * Keeps loading `me` while signed in and it is still missing (React Query retry parity): a
+     * failed `/auth/me` is retried after 2 s, 4 s, 8 s … capped at 30 s. [now] = true (app back
+     * in the foreground, "Thử lại") skips the wait of a retry that is backing off.
      */
-    private suspend fun commitMe(startedIn: Long, write: () -> Unit): Boolean =
+    fun ensureMe(now: Boolean = false) {
+        if (tokenStore.current() == null || _me.value.data != null) return
+        if (meJob?.isActive == true) {
+            if (!now) return
+            meJob?.cancel()
+        }
+        meJob = scope.launch {
+            var wait = if (_me.value.error != null && !now) ME_RETRY_MIN_MS else 0L
+            while (true) {
+                if (wait > 0) delay(wait)
+                if (tokenStore.current() == null || _me.value.data != null) break
+                refreshMe()
+                wait = if (wait == 0L) ME_RETRY_MIN_MS else minOf(wait * 2, ME_RETRY_MAX_MS)
+            }
+        }
+    }
+
+    /** The session generation a request starts in; pass it to [commitIfCurrent] with the answer. */
+    val sessionGeneration: Long get() = generation.value
+
+    /**
+     * Runs [write] only if the session that started the request is still the current one and
+     * still signed in: a `/auth/me`, PATCH or context answer that lands after logout is dropped.
+     */
+    suspend fun commitIfCurrent(startedIn: Long, write: () -> Unit): Boolean =
         generation.runIfCurrent(startedIn) {
             if (tokenStore.current() == null) {
                 false
@@ -79,13 +111,14 @@ class SessionRepository @Inject constructor(
     suspend fun refreshMe() {
         val gen = generation.value
         if (tokenStore.current() == null) return
-        _me.update { it.copy(loading = true, error = null) }
+        // The previous error stays until an answer arrives, so a retry does not flicker the error state.
+        _me.update { it.copy(loading = true) }
         try {
             val user = apiCall { authApi.me() }
-            commitMe(gen) { _me.value = Loadable(user) }
+            commitIfCurrent(gen) { _me.value = Loadable(user) }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            commitMe(gen) { _me.update { it.copy(loading = false, error = e) } }
+            commitIfCurrent(gen) { _me.update { it.copy(loading = false, error = e) } }
         }
     }
 
@@ -101,6 +134,7 @@ class SessionRepository @Inject constructor(
         }
         tokenStore.set(tokens)
         refreshMe()
+        ensureMe() // no-op when the profile loaded; otherwise keeps retrying
     }
 
     suspend fun register(
@@ -129,7 +163,12 @@ class SessionRepository @Inject constructor(
         val gen = generation.value
         tokenStore.set(AuthTokens(res.accessToken, res.refreshToken))
         // Prime the ['me'] cache with the returned user.
-        if (res.user != null) commitMe(gen) { _me.value = Loadable(res.user) } else refreshMe()
+        if (res.user != null) {
+            commitIfCurrent(gen) { _me.value = Loadable(res.user) }
+        } else {
+            refreshMe()
+            ensureMe()
+        }
     }
 
     /** Optimistically patch the cached profile (online toggle); returns the previous value. */
@@ -148,7 +187,7 @@ class SessionRepository @Inject constructor(
         val gen = generation.value
         val id = _me.value.data?.id ?: error("no account")
         val user = apiCall { authApi.updateAccount(id, body) }
-        commitMe(gen) { _me.value = Loadable(user) }
+        commitIfCurrent(gen) { _me.value = Loadable(user) }
         return user
     }
 
@@ -176,6 +215,7 @@ class SessionRepository @Inject constructor(
      * generation first stops a refresh still in flight from writing tokens back.
      */
     suspend fun logoutAndReset() {
+        meJob?.cancel()
         generation.invalidate {
             tokenStore.clear()
             _me.value = Loadable()

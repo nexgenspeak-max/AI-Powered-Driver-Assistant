@@ -38,6 +38,7 @@ import com.chinhtruongba.driverapp.core.storage.PrefsStore
 import com.chinhtruongba.driverapp.core.util.Format
 import com.chinhtruongba.driverapp.designsystem.components.CzenToggle
 import com.chinhtruongba.driverapp.designsystem.components.Divider
+import com.chinhtruongba.driverapp.designsystem.components.EmptyState
 import com.chinhtruongba.driverapp.designsystem.components.Screen
 import com.chinhtruongba.driverapp.designsystem.components.Skeleton
 import com.chinhtruongba.driverapp.designsystem.components.SurfaceCard
@@ -48,6 +49,7 @@ import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 import com.chinhtruongba.driverapp.feature.location.LocationTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,6 +70,8 @@ data class AssistantSettingsUiState(
     val loaded: Boolean = false,
     val settings: AccountSettings? = null,
     val lang: VoiceLang = VoiceLang.Vn,
+    /** GET settings failed and nothing is loaded: error state with retry instead of skeletons. */
+    val loadError: Boolean = false,
 )
 
 /** Server settings with optimistic rollback; voice language and wake word are local. */
@@ -78,20 +82,36 @@ class AssistantSettingsViewModel @Inject constructor(
     private val tracker: LocationTracker,
 ) : ViewModel() {
     private val settings = MutableStateFlow<AccountSettings?>(null)
+    private val loadFailed = MutableStateFlow(false)
+    private var loadJob: Job? = null
 
-    val ui: StateFlow<AssistantSettingsUiState> = combine(settings, prefs.voiceLang, session.me) { s, lang, me ->
-        AssistantSettingsUiState(loaded = me.data != null && s != null, settings = s, lang = lang)
+    val ui: StateFlow<AssistantSettingsUiState> = combine(settings, prefs.voiceLang, session.me, loadFailed) { s, lang, me, failed ->
+        AssistantSettingsUiState(loaded = me.data != null && s != null, settings = s, lang = lang, loadError = failed && s == null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssistantSettingsUiState())
 
     init {
-        viewModelScope.launch {
+        load()
+    }
+
+    private fun load() {
+        if (loadJob?.isActive == true) return
+        loadFailed.value = false
+        loadJob = viewModelScope.launch {
             session.me.map { it.data }.filterNotNull().first()
-            runCatching { session.settings() }.onSuccess {
-                settings.value = it
-                prefs.setWakeWordEnabled(it.handsFreeMode) // mirror into the local wake-word store
+            try {
+                val loaded = session.settings()
+                settings.value = loaded
+                prefs.setWakeWordEnabled(loaded.handsFreeMode) // mirror into the local wake-word store
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                loadFailed.value = true
             }
         }
     }
+
+    /** "Thử lại" on the load error state. */
+    fun retry() = load()
 
     fun setLang(l: VoiceLang) {
         viewModelScope.launch { prefs.setVoiceLang(l) }
@@ -139,6 +159,16 @@ fun AssistantSettingsScreen(onBack: () -> Unit, vm: AssistantSettingsViewModel =
     val c = CzenTheme.colors
     Screen(stringResource(R.string.profile_assistant_settings), onBack) {
         val st = s.settings
+        if (s.loadError) {
+            EmptyState(
+                CzenIcon.AlertCircle,
+                stringResource(R.string.as_load_error_title),
+                message = stringResource(R.string.dash_error_body),
+                actionLabel = stringResource(R.string.common_retry),
+                onAction = vm::retry,
+            )
+            return@Screen
+        }
         if (!s.loaded || st == null) {
             Skeleton(Modifier.fillMaxWidth(0.5f).height(28.dp), radius = 8.dp)
             Skeleton(Modifier.fillMaxWidth().height(48.dp), radius = 12.dp)

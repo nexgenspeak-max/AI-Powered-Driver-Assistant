@@ -1,7 +1,10 @@
 package com.chinhtruongba.driverapp.app
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,6 +14,17 @@ import javax.inject.Singleton
 class TripOfferStore @Inject constructor() {
     private val _tripId = MutableStateFlow<String?>(null)
     val tripId: StateFlow<String?> = _tripId.asStateFlow()
+
+    private val _revalidations = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** `invalidateQueries(['trip-offer'])`: the sheet re-fetches the offered trip and re-checks it. */
+    val revalidations: SharedFlow<Unit> = _revalidations.asSharedFlow()
+
     fun show(id: String) { _tripId.value = id }
     fun dismiss() { _tripId.value = null }
+
+    /** Closes the sheet only if it still shows [id] (a late timer or answer of an older offer is ignored). */
+    fun dismiss(id: String) { _tripId.compareAndSet(id, null) }
+
+    fun revalidate() { _revalidations.tryEmit(Unit) }
 }

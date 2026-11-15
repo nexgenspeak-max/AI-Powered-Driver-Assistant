@@ -103,6 +103,14 @@ class VoiceSession @Inject constructor(
     private var roomGeneration = 0
 
     init {
+        // The service accepted the start and then dropped the call reason (typed start refused).
+        scope.launch {
+            foreground.refused.collect { reason ->
+                if (reason == CALL_REASON) {
+                    _state.update { if (it.status == VoiceStatus.Connected) it.copy(callServiceRefused = true) else it }
+                }
+            }
+        }
         // useCaptureVoiceMessages: mirror transcripts into the chat bubbles.
         scope.launch {
             messages.collect { m ->
@@ -164,8 +172,8 @@ class VoiceSession @Inject constructor(
             // No mic track (permission revoked, device busy): an agent that cannot hear the
             // driver is not "Connected"; tear down and surface the error caption instead.
             if (!micOk) throw IllegalStateException("microphone unavailable")
-            foreground.startCall()
-            _state.update { it.copy(status = VoiceStatus.Connected, isMicMuted = false) }
+            val serviceHeld = foreground.startCall()
+            _state.update { it.copy(status = VoiceStatus.Connected, isMicMuted = false, callServiceRefused = !serviceHeld) }
             startWatchdog(generation)
         } catch (e: CancellationException) {
             cleanupAfterFailure(cancelled = true)
@@ -375,6 +383,11 @@ class VoiceSession @Inject constructor(
         } catch (_: Exception) {
             false
         }
+    }
+
+    private companion object {
+        /** `CzenForegroundService.Reasons.CALL`, as reported by [ForegroundController.refused]. */
+        const val CALL_REASON = "call"
     }
 
     /** Wait until the session is idle (used by the wake word to resume). */

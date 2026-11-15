@@ -13,7 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import com.chinhtruongba.driverapp.app.AppRoot
 import com.chinhtruongba.driverapp.app.DeepLinks
 import com.chinhtruongba.driverapp.app.LocalPermissions
+import com.chinhtruongba.driverapp.app.PermissionGateway
 import com.chinhtruongba.driverapp.app.PermissionRequester
+import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.feature.location.LocationTracker
 import com.chinhtruongba.driverapp.feature.voice.ContactsPermissionGate
 import dagger.hilt.android.AndroidEntryPoint
@@ -25,6 +27,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var deepLinks: DeepLinks
     @Inject lateinit var contactsGate: ContactsPermissionGate
     @Inject lateinit var location: LocationTracker
+    @Inject lateinit var gateway: PermissionGateway
+    @Inject lateinit var session: SessionRepository
 
     private lateinit var permissions: PermissionRequester
 
@@ -47,8 +51,19 @@ class MainActivity : ComponentActivity() {
         // Foreground live location watch only while the activity is visible; LocationTracker also
         // follows SessionRepository.loggedIn, so it stops on logout even while visible.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) = location.onForeground()
-            override fun onStop(owner: LifecycleOwner) = location.onBackground()
+            override fun onStart(owner: LifecycleOwner) {
+                location.onForeground()
+                // Permission requests made without an activity (nudge auto-connect, wake word,
+                // notifications) were waiting for this.
+                gateway.attach(permissions)
+                // Back in the foreground: retry a profile load that failed while away.
+                session.ensureMe(now = true)
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                location.onBackground()
+                gateway.detach(permissions)
+            }
         })
 
         setContent {

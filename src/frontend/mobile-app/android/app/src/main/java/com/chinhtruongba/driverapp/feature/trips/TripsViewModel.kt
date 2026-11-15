@@ -38,6 +38,8 @@ sealed interface TripsDialog {
 
 data class TripsUiState(
     val driverLoaded: Boolean = false,
+    /** `/auth/me` failed and there is no profile to show: error state with retry, not skeletons. */
+    val driverError: Boolean = false,
     val driverName: String = "",
     val isOnline: Boolean = false,
     val today: TodayEarnings? = null,
@@ -84,6 +86,7 @@ class TripsViewModel @Inject constructor(
         val completed = ctx?.completedTrips.orEmpty()
         TripsUiState(
             driverLoaded = me.data != null,
+            driverError = me.data == null && me.error != null,
             driverName = me.data?.name.orEmpty(),
             isOnline = me.data?.isOnline == true,
             today = ctx?.todayEarnings,
@@ -112,7 +115,10 @@ class TripsViewModel @Inject constructor(
     fun selectTab(t: TripTab) = local.update { it.copy(tab = t) }
     fun search(q: String) = local.update { it.copy(query = q) }
     fun dismissDialog() = local.update { it.copy(dialog = null) }
-    fun retry() = drivers.invalidate()
+    fun retry() {
+        session.ensureMe(now = true)
+        drivers.invalidate()
+    }
 
     fun pullRefresh() {
         viewModelScope.launch {

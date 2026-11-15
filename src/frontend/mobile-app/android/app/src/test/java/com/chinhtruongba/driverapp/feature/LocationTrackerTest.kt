@@ -44,7 +44,13 @@ private class PermissionToggleSource : LocationSource {
 }
 
 class LocationTrackerTest {
-    private class Rig(val tracker: LocationTracker, val tokens: FakeTokenStore, val trip: CountingTripApi, val drivers: DriverRepository)
+    private class Rig(
+        val tracker: LocationTracker,
+        val tokens: FakeTokenStore,
+        val trip: CountingTripApi,
+        val drivers: DriverRepository,
+        val session: SessionRepository,
+    )
 
     private class CountingTripApi(private val inner: FakeTripApi = FakeTripApi()) : TripApi by inner {
         var livePushes = 0
@@ -59,7 +65,7 @@ class LocationTrackerTest {
         val store = FakeTokenStore(tokens)
         val session = SessionRepository(store, FakeAuthApi(), trip, backgroundScope)
         val drivers = DriverRepository(trip, session, backgroundScope)
-        return Rig(LocationTracker(source, drivers, session, backgroundScope), store, trip, drivers)
+        return Rig(LocationTracker(source, drivers, session, backgroundScope), store, trip, drivers, session)
     }
 
     private fun TestScope.tracker(source: LocationSource): LocationTracker = rig(source).tracker
@@ -131,6 +137,7 @@ class LocationTrackerTest {
         val r = rig(source)
         // Online driver so maybePush is allowed.
         r.trip.updateDriver("0901234567", buildJsonObject { put("status", "online") })
+        r.session.refreshMe() // the context is only fetched once the profile is loaded
         r.drivers.refresh()
         r.tracker.onForeground()
         runCurrent()
@@ -138,8 +145,8 @@ class LocationTrackerTest {
 
         r.tokens.clear()
         runCurrent()
-        r.drivers.refresh() // still online server-side
         r.tokens.set(AuthTokens("a", "r"))
+        r.drivers.refresh() // still online server-side
         runCurrent()
         // Same position, well inside the cadence window: only a reset cadence pushes again.
         assertEquals(2, r.trip.livePushes)

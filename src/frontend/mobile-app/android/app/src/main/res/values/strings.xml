@@ -120,6 +120,7 @@
     <string name="dash_seg_active">Đang chạy (%1$d)</string>
     <string name="dash_seg_done">Xong (%1$d)</string>
     <string name="dash_error_title">Không thể tải chuyến đi</string>
+    <string name="dash_profile_error_title">Không thể tải tài khoản</string>
     <string name="dash_error_body">Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.</string>
     <string name="dash_empty_online_title">Chưa có chuyến nào</string>
     <string name="dash_empty_online_body">Đang chờ chuyến mới được giao...</string>
@@ -315,6 +316,7 @@
     <string name="vehicle_failed">Không thể lưu thông tin xe, vui lòng thử lại.</string>
 
     <!-- Assistant settings -->
+    <string name="as_load_error_title">Không thể tải cài đặt trợ lý</string>
     <string name="as_intro">Bật/tắt các tính năng trợ lý sẽ tự động thực hiện thay bạn. Cài đặt được lưu trên tài khoản — đăng nhập ở máy khác hoặc cài lại app vẫn giữ nguyên.</string>
     <string name="as_intro_lang">Chọn ngôn ngữ Trợ lý nói và hiểu. Áp dụng từ lần kết nối tiếp theo.</string>
     <string name="as_lang">Ngôn ngữ trợ lý</string>

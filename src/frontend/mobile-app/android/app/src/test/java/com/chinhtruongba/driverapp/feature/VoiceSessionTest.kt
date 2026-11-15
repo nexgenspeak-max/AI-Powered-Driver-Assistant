@@ -110,6 +110,29 @@ class VoiceSessionTest {
     }
 
     @Test
+    fun `a refused call service is surfaced in the session state`() = runTest {
+        val fg = RecordingForeground()
+        val voice = session(FakeEngine(), ChatStore(), fg)
+        voice.connect("0901234567")
+        settle()
+        assertFalse(voice.state.value.callServiceRefused)
+
+        fg.refusals.emit("call") // the service dropped the call reason after accepting the start
+        runCurrent()
+        assertEquals(VoiceStatus.Connected, voice.state.value.status)
+        assertTrue(voice.state.value.callServiceRefused)
+
+        voice.disconnect()
+        settle()
+        assertFalse(voice.state.value.callServiceRefused)
+
+        fg.refuseCall = true
+        voice.connect("0901234567")
+        settle()
+        assertTrue("refused synchronously at connect", voice.state.value.callServiceRefused)
+    }
+
+    @Test
     fun `mic permission denied on connect ends in Error, not Connected`() = runTest {
         val engine = FakeEngine()
         val fg = RecordingForeground()

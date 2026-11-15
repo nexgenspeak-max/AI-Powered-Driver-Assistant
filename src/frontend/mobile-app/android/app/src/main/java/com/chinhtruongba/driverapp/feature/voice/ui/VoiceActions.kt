@@ -1,6 +1,5 @@
 package com.chinhtruongba.driverapp.feature.voice.ui
 
-import android.Manifest
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -11,13 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.chinhtruongba.driverapp.R
-import com.chinhtruongba.driverapp.app.LocalPermissions
 import com.chinhtruongba.driverapp.designsystem.theme.CzenTheme
 
 /** Dialog + permission plumbing shared by the orb and the composer voice button. */
 class VoiceActionHandler internal constructor(
     private val vm: AssistantViewModel,
-    private val requestMic: (onDone: (granted: Boolean) -> Unit) -> Unit,
     private val showCancelCall: () -> Unit,
     private val showMissingPhone: () -> Unit,
 ) {
@@ -28,11 +25,8 @@ class VoiceActionHandler internal constructor(
             OrbAction.ConfirmCancelCall -> showCancelCall()
             OrbAction.Disconnect -> vm.disconnect()
             OrbAction.MissingPhone -> showMissingPhone()
-            is OrbAction.Connect -> {
-                vm.openPanel()
-                // The mic is requested on each connect; denied → Error caption, not a silent room.
-                requestMic { granted -> vm.connect(action.phone, micGranted = granted) }
-            }
+            // The mic is requested on each connect (VoiceConnector); denied → Error caption.
+            is OrbAction.Connect -> vm.connect(action.phone)
         }
     }
 
@@ -41,7 +35,6 @@ class VoiceActionHandler internal constructor(
 
 @Composable
 fun rememberVoiceActions(vm: AssistantViewModel): VoiceActionHandler {
-    val perms = LocalPermissions.current
     var cancelCall by remember { mutableStateOf(false) }
     var missingPhone by remember { mutableStateOf(false) }
     val c = CzenTheme.colors
@@ -73,12 +66,9 @@ fun rememberVoiceActions(vm: AssistantViewModel): VoiceActionHandler {
             confirmButton = { TextButton(onClick = { missingPhone = false }) { Text(stringResource(R.string.common_ok), color = c.primary) } },
         )
     }
-    return remember(vm, perms) {
+    return remember(vm) {
         VoiceActionHandler(
             vm = vm,
-            requestMic = { done ->
-                if (perms == null) done(true) else perms.request(arrayOf(Manifest.permission.RECORD_AUDIO)) { done(it) }
-            },
             showCancelCall = { cancelCall = true },
             showMissingPhone = { missingPhone = true },
         )

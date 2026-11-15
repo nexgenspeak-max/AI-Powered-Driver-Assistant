@@ -3,12 +3,14 @@
 <resources>
     <string name="voice_caption_idle_vn">Chạm nút Czen cạnh ô nhập để kết nối</string>
     <string name="voice_caption_connecting_vn">Đang kết nối với Czen…</string>
+    <string name="voice_caption_background_limited_vn">Đã kết nối — micro có thể tắt khi ứng dụng chạy nền</string>
     <string name="voice_caption_connected_vn">Đã kết nối — chạm sóng âm để kết thúc</string>
     <string name="voice_caption_error_vn">Kết nối lỗi — chạm nút Czen để thử lại</string>
     <string name="voice_caption_in_call_vn">Đang gọi khách — chạm nút Czen để huỷ cuộc gọi</string>
     <string name="voice_caption_mic_off_vn">Mic đang tắt — phiên vẫn kết nối</string>
     <string name="voice_caption_idle_en" translatable="false">Tap the Czen button next to the input to connect</string>
     <string name="voice_caption_connecting_en" translatable="false">Connecting to Czen…</string>
+    <string name="voice_caption_background_limited_en" translatable="false">Connected — the mic may stop when the app is in the background</string>
     <string name="voice_caption_connected_en" translatable="false">Connected to Czen — tap the waveform to end</string>
     <string name="voice_caption_error_en" translatable="false">Connection failed — tap the Czen button to try again</string>
     <string name="voice_caption_in_call_en" translatable="false">In a call — can\'t disconnect</string>

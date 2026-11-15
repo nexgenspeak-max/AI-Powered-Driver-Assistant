@@ -1,8 +1,10 @@
 package com.chinhtruongba.driverapp.app
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.chinhtruongba.driverapp.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /** Something that can ask for runtime permissions and report each one's state afterwards. */
 interface PermissionAsker {
@@ -79,6 +84,93 @@ class PermissionQueue(
             launch(next.permissions)
             return
         }
+    }
+}
+
+/**
+ * Lets code without an activity (coordinators, the voice connector, deep links) ask for a
+ * runtime permission. Requests go to the visible activity's [PermissionAsker]; while there is
+ * none they wait and are asked as soon as an activity is started again.
+ */
+@Singleton
+class PermissionGateway internal constructor(
+    private val isGranted: (String) -> Boolean,
+    private val sdk: Int,
+) : PermissionAsker {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this({ context.hasPermission(it) }, Build.VERSION.SDK_INT)
+
+    private class Waiting(
+        val key: String?,
+        val permissions: Array<String>,
+        val stillWanted: () -> Boolean,
+        val onDropped: () -> Unit,
+        val onResult: (Map<String, Boolean>) -> Unit,
+    )
+
+    private var asker: PermissionAsker? = null
+    private val waiting = ArrayDeque<Waiting>()
+    private var notificationsAsked = false
+
+    /** Whether an activity is started, i.e. a system permission dialog can be shown now. */
+    val hasVisibleActivity: Boolean get() = asker != null
+
+    /**
+     * Activity `onStart`: requests that waited for a visible activity are asked now, unless
+     * what they were for is gone meanwhile (no prompt without context).
+     */
+    fun attach(asker: PermissionAsker) {
+        this.asker = asker
+        while (waiting.isNotEmpty()) {
+            val next = waiting.removeFirst()
+            if (next.stillWanted()) request(next.permissions, next.key, next.stillWanted, next.onDropped, next.onResult) else next.onDropped()
+        }
+    }
+
+    /** Activity `onStop`. */
+    fun detach(asker: PermissionAsker) {
+        if (this.asker === asker) this.asker = null
+    }
+
+    override fun requestEach(permissions: Array<String>, onResult: (Map<String, Boolean>) -> Unit) =
+        request(permissions, onResult = onResult)
+
+    /**
+     * [requestEach] for a request that can go stale while it waits for an activity: when one
+     * starts and [stillWanted] is false, nothing is asked and [onDropped] is called instead.
+     * At most one request per [key] waits; a newer one replaces it.
+     */
+    fun request(
+        permissions: Array<String>,
+        key: String? = null,
+        stillWanted: () -> Boolean = { true },
+        onDropped: () -> Unit = { },
+        onResult: (Map<String, Boolean>) -> Unit,
+    ) {
+        if (permissions.all(isGranted)) {
+            onResult(permissions.associateWith { true })
+            return
+        }
+        val current = asker
+        if (current != null) {
+            current.requestEach(permissions, onResult)
+        } else {
+            if (key != null) waiting.removeAll { it.key == key }
+            waiting.addLast(Waiting(key, permissions, stillWanted, onDropped, onResult))
+        }
+    }
+
+    /**
+     * Android 13+ hides the foreground-service notification without POST_NOTIFICATIONS. Asked
+     * once per process, before the first foreground-service start (going online, first connect,
+     * enabling hands-free). Nobody waits for the answer: a denial never blocks the action.
+     */
+    fun requestNotifications() {
+        if (sdk < Build.VERSION_CODES.TIRAMISU || notificationsAsked) return
+        notificationsAsked = true
+        @SuppressLint("InlinedApi") // guarded by the injected sdk level above
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        requestEach(arrayOf(permission)) { }
     }
 }
 

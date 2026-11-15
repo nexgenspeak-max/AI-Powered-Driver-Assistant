@@ -1,5 +1,8 @@
 package com.chinhtruongba.driverapp.feature.voice
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+
 /** Protocol constants shared with the voice agent (parity-map §3). */
 object VoiceTopics {
     const val CALL_STATE = "call_state"
@@ -26,6 +29,11 @@ data class VoiceState(
     /** "", "agent" or "bridge". */
     val callMode: String = "",
     val isMicMuted: Boolean = false,
+    /**
+     * The OS refused the foreground service for this call: the session works while the app is
+     * visible, but the microphone may be cut off once it goes to the background.
+     */
+    val callServiceRefused: Boolean = false,
 )
 
 enum class VoiceSource { User, Agent, Customer }
@@ -79,12 +87,21 @@ interface FillerAudio {
 
 /** Android foreground service id 4471 (channel "Czen Driver"). */
 interface ForegroundController {
-    fun startCall()
+    /** False when the OS refused to run the foreground service for the call. */
+    fun startCall(): Boolean
 
     /** Stops unless the wake word (hands-free) keeps the service alive. */
     fun stopCall()
-    fun startWakeWord()
+
+    /** False when the OS refused to run the foreground service for listening. */
+    fun startWakeWord(): Boolean
     fun stopWakeWord()
+
+    /**
+     * Reasons ("call", "wake", "location") the service had to drop after the start request was
+     * accepted, e.g. a typed start the OS refused. Owners stop what depended on it.
+     */
+    val refused: Flow<String> get() = emptyFlow()
 }
 
 data class ContactMatch(val name: String, val phoneNumber: String)

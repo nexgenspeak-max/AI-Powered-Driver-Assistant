@@ -121,7 +121,6 @@ class HomeViewModel @Inject constructor(
     private val goingOnline = MutableStateFlow(false)
     private val recenterTick = MutableStateFlow(0)
 
-    private var updatesJob: Job? = null
     private var fetchJob: Job? = null
     private var arrivedJob: Job? = null
     private var fetchedFor: String? = null
@@ -134,8 +133,8 @@ class HomeViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     init {
+        // LocationTracker owns the GPS watch (visible && signed in); Home only reads its fixes.
         viewModelScope.launch { location.last.collect { it?.let(::onFix) } }
-        startUpdates()
         drivers.ensureFresh()
         // The navigation target follows the next stop; losing it ends navigation.
         viewModelScope.launch {
@@ -147,13 +146,6 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    /** (Re)starts the 3 s / 5 m watch — call again after the location permission is granted. */
-    fun startUpdates() {
-        if (updatesJob?.isActive == true) return
-        if (!location.hasForegroundPermission()) return
-        updatesJob = viewModelScope.launch { location.updates(3_000, 5f).collect(::onFix) }
     }
 
     fun recenter() = recenterTick.update { it + 1 }
@@ -234,6 +226,8 @@ class HomeViewModel @Inject constructor(
         val k = key(t)
         if (fetchedFor == k) return
         fetchedFor = k
+        // A request still in flight is for the previous stop: drop it, do not wait for it.
+        fetchJob?.cancel()
         fetch(reroute = false)
     }
 
@@ -241,10 +235,14 @@ class HomeViewModel @Inject constructor(
         val from = fix.value?.latLng ?: return
         val to = target ?: return
         if (fetchJob?.isActive == true) return
+        val requestedFor = key(to)
+        // A late answer for a stop that is no longer the target must not be shown.
+        val current = { target?.let(::key) == requestedFor }
         nav.update { if (reroute) it.copy(rerouting = true) else it.copy(loading = true, error = false) }
         fetchJob = viewModelScope.launch {
             try {
                 val route = drivers.navigation(from, to)
+                if (!current()) return@launch
                 offRouteTicks = 0
                 val rem = NavigationMath.remainingFromPosition(from, route.steps, 0)
                 nav.update {
@@ -264,6 +262,7 @@ class HomeViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
+                if (!current()) return@launch
                 nav.update { it.copy(loading = false, rerouting = false, error = if (reroute) it.error else true) }
             }
         }

@@ -110,6 +110,8 @@ private fun captionRes(voice: VoiceState, lang: VoiceLang): Int {
     return when {
         voice.status == VoiceStatus.Connected && voice.isCallActive -> if (en) R.string.voice_caption_in_call_en else R.string.voice_caption_in_call_vn
         voice.status == VoiceStatus.Connected && voice.isMicMuted -> if (en) R.string.voice_caption_mic_off_en else R.string.voice_caption_mic_off_vn
+        voice.status == VoiceStatus.Connected && voice.callServiceRefused ->
+            if (en) R.string.voice_caption_background_limited_en else R.string.voice_caption_background_limited_vn
         voice.status == VoiceStatus.Connected -> if (en) R.string.voice_caption_connected_en else R.string.voice_caption_connected_vn
         voice.status == VoiceStatus.Connecting -> if (en) R.string.voice_caption_connecting_en else R.string.voice_caption_connecting_vn
         voice.status == VoiceStatus.Error -> if (en) R.string.voice_caption_error_en else R.string.voice_caption_error_vn

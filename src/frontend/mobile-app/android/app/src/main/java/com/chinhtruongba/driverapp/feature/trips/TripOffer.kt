@@ -75,11 +75,12 @@ import com.chinhtruongba.driverapp.feature.voice.VoiceSession
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -94,6 +95,74 @@ data class OfferUiState(
     val rejecting: Boolean = false,
 )
 
+/**
+ * The life of one ringing offer (TripOfferSheet effects): the 30 s countdown, the fetch of the
+ * offered trip and the "still offered to this driver" check. Everything runs inside the block of
+ * the current trip id, so a newer offer (or a dismiss) cancels the older offer's timer and fetch.
+ */
+internal class OfferSession(
+    private val store: TripOfferStore,
+    private val fetchTrip: suspend (String) -> Trip,
+    private val phone: () -> String?,
+    private val onNewOffer: () -> Unit = {},
+    private val now: () -> Long = System::currentTimeMillis,
+) {
+    private val _ui = MutableStateFlow(OfferUiState())
+    val ui: StateFlow<OfferUiState> = _ui.asStateFlow()
+
+    fun update(transform: (OfferUiState) -> OfferUiState) = _ui.update(transform)
+
+    /** Runs until cancelled; call once from the owner's scope. */
+    suspend fun run() {
+        store.tripId.collectLatest { id ->
+            if (id == null) {
+                _ui.value = OfferUiState()
+                return@collectLatest
+            }
+            _ui.value = OfferUiState(tripId = id)
+            onNewOffer()
+            coroutineScope {
+                launch { countdown(id) }
+                // Socket (re)open and schedule_updated: the offer may have been answered elsewhere.
+                launch { store.revalidations.collect { check(id, initial = false) } }
+                check(id, initial = true)
+            }
+        }
+    }
+
+    private suspend fun countdown(id: String) {
+        val started = now()
+        while (true) {
+            val left = OFFER_SECONDS - ((now() - started) / 1000).toInt()
+            if (left <= 0) {
+                store.dismiss(id)
+                return
+            }
+            _ui.update { it.copy(secondsLeft = left) }
+            delay(250)
+        }
+    }
+
+    private suspend fun check(id: String, initial: Boolean) {
+        try {
+            val trip = fetchTrip(id)
+            val me = phone()
+            val stillOffered = (trip.status == TripStatus.Notified || trip.status == TripStatus.Calling) &&
+                (me == null || trip.driverPhone == me)
+            if (!stillOffered) {
+                store.dismiss(id)
+                return
+            }
+            _ui.update { if (it.tripId == id) it.copy(trip = trip) else it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // A failed first load has nothing to show; a failed re-check keeps the sheet as it is.
+            if (initial) store.dismiss(id)
+        }
+    }
+}
+
 @HiltViewModel
 class TripOfferViewModel @Inject constructor(
     private val store: TripOfferStore,
@@ -104,92 +173,56 @@ class TripOfferViewModel @Inject constructor(
     private val filler: FillerAudio,
     private val haptics: Haptics,
 ) : ViewModel() {
-    private val _ui = MutableStateFlow(OfferUiState())
-    val ui: StateFlow<OfferUiState> = _ui.asStateFlow()
-    private var job: Job? = null
+    private val offer = OfferSession(
+        store = store,
+        fetchTrip = drivers::trip,
+        phone = session::currentPhone,
+        onNewOffer = {
+            haptics.success()
+            // The alert is skipped while the voice session is connecting/connected.
+            val vs = voice.state.value.status
+            if (vs != VoiceStatus.Connecting && vs != VoiceStatus.Connected) filler.playNewTripAlert()
+        },
+    )
+    val ui: StateFlow<OfferUiState> = offer.ui
 
     init {
-        viewModelScope.launch {
-            store.tripId.collect { id ->
-                job?.cancel()
-                if (id == null) {
-                    _ui.value = OfferUiState()
-                    return@collect
-                }
-                _ui.value = OfferUiState(tripId = id)
-                haptics.success()
-                // The alert is skipped while the voice session is connecting/connected.
-                val vs = voice.state.value.status
-                if (vs != VoiceStatus.Connecting && vs != VoiceStatus.Connected) filler.playNewTripAlert()
-                job = launch { run(id) }
-            }
-        }
-    }
-
-    private suspend fun run(id: String) {
-        val countdown = viewModelScope.launch {
-            val started = System.currentTimeMillis()
-            while (true) {
-                val left = OFFER_SECONDS - ((System.currentTimeMillis() - started) / 1000).toInt()
-                if (left <= 0) {
-                    store.dismiss()
-                    return@launch
-                }
-                _ui.update { it.copy(secondsLeft = left) }
-                delay(250)
-            }
-        }
-        try {
-            val trip = drivers.trip(id)
-            val phone = session.currentPhone()
-            val stillOffered = (trip.status == TripStatus.Notified || trip.status == TripStatus.Calling) &&
-                (phone == null || trip.driverPhone == phone)
-            if (!stillOffered) {
-                store.dismiss()
-                return
-            }
-            _ui.update { it.copy(trip = trip) }
-        } catch (e: CancellationException) {
-            countdown.cancel()
-            throw e
-        } catch (_: Exception) {
-            store.dismiss()
-        }
+        viewModelScope.launch { offer.run() }
     }
 
     fun dismiss() = store.dismiss()
 
     fun accept() {
-        val id = _ui.value.tripId ?: return
-        if (_ui.value.accepting) return
-        _ui.update { it.copy(accepting = true) }
+        val id = ui.value.tripId ?: return
+        if (ui.value.accepting) return
+        offer.update { it.copy(accepting = true) }
         viewModelScope.launch {
             try {
                 tracker.pushImmediate()
                 drivers.acceptTrip(id)
                 haptics.success()
-                store.dismiss()
+                store.dismiss(id)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 haptics.error()
-                _ui.update { it.copy(accepting = false) }
+                offer.update { it.copy(accepting = false) }
             }
         }
     }
 
     fun reject() {
-        val id = _ui.value.tripId ?: return
-        if (_ui.value.rejecting) return
-        _ui.update { it.copy(rejecting = true) }
+        val id = ui.value.tripId ?: return
+        if (ui.value.rejecting) return
+        offer.update { it.copy(rejecting = true) }
         viewModelScope.launch {
             try {
                 drivers.rejectTrip(id)
-                store.dismiss()
+                store.dismiss(id)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                _ui.update { it.copy(rejecting = false) }
+                offer.update { it.copy(rejecting = false) }
             }
         }
     }

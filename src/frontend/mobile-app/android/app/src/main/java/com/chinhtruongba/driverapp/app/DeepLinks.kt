@@ -7,6 +7,7 @@ import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.core.model.ThemeMode
 import com.chinhtruongba.driverapp.core.storage.PrefsStore
 import com.chinhtruongba.driverapp.feature.voice.ChatStore
+import com.chinhtruongba.driverapp.feature.voice.VoiceConnector
 import com.chinhtruongba.driverapp.feature.voice.VoiceSession
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +45,7 @@ class DeepLinks @Inject constructor(
     private val prefs: PrefsStore,
     private val chat: ChatStore,
     private val voice: VoiceSession,
+    private val connector: VoiceConnector,
     private val demo: DemoHooks,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
@@ -101,7 +103,7 @@ class DeepLinks @Inject constructor(
             path == listOf("demo", "chat") -> scope.launch {
                 chat.openPanel()
                 val phone = session.me.first { it.data != null }.data?.phone ?: return@launch
-                if (voice.state.value.status == VoiceStatus.Idle || voice.state.value.status == VoiceStatus.Error) voice.connect(phone)
+                if (voice.state.value.status == VoiceStatus.Idle || voice.state.value.status == VoiceStatus.Error) connector.connect(phone)
             }
             path.firstOrNull() == "open" -> _route.value = when (path.getOrNull(1)) {
                 "home" -> Route.Home

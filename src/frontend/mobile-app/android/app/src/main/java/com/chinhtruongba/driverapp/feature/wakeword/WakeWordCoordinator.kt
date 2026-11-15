@@ -6,17 +6,22 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.chinhtruongba.driverapp.MainActivity
+import com.chinhtruongba.driverapp.app.PermissionGateway
 import com.chinhtruongba.driverapp.core.data.ApplicationScope
 import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.core.storage.PrefsStore
 import com.chinhtruongba.driverapp.feature.voice.ChatStore
 import com.chinhtruongba.driverapp.feature.voice.ForegroundController
+import com.chinhtruongba.driverapp.feature.voice.VoiceConnector
 import com.chinhtruongba.driverapp.feature.voice.VoiceSession
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
+import com.chinhtruongba.driverapp.service.CzenForegroundService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -73,30 +78,146 @@ object WakeWordRules {
         matchesWakePhrase(h.text) && (h.confidence == null || h.confidence >= MIN_CONFIDENCE)
 }
 
+/** The recogniser behind the wake word: Vosk in the app, a fake in unit tests. */
+internal interface WakeEngine {
+    interface Listener {
+        fun onResult(hypothesis: String)
+        fun onFinalResult()
+        fun onError()
+        fun onTimeout()
+    }
+
+    /** Loads the model if needed and starts listening; a recogniser still running is stopped first. */
+    suspend fun start(listener: Listener)
+
+    fun stop()
+
+    /** Stops and unloads the model. */
+    fun unload()
+}
+
+/** Vosk with the bundled vosk-model-small-en-us, 16 kHz, grammar from [WakeWordRules]. */
+internal class VoskWakeEngine(private val context: Context) : WakeEngine {
+    private var model: Model? = null
+    private var service: SpeechService? = null
+    private var recognizer: Recognizer? = null
+
+    private suspend fun loadModel(): Model = model ?: suspendCoroutine { cont ->
+        StorageService.unpack(
+            context,
+            "model-en-us",
+            "model",
+            { m -> cont.resume(m) },
+            { e -> cont.resumeWithException(e) },
+        )
+    }.also { model = it }
+
+    override suspend fun start(listener: WakeEngine.Listener) {
+        // Never replace a SpeechService that still holds the microphone.
+        stop()
+        val m = loadModel()
+        // The model load is not cancellable: do not start listening for a caller that gave up.
+        currentCoroutineContext().ensureActive()
+        val rec = Recognizer(m, 16000f, WakeWordRules.grammarJson()).apply { setWords(true) }
+        recognizer = rec
+        val svc = SpeechService(rec, 16000f)
+        service = svc
+        svc.startListening(object : RecognitionListener {
+            override fun onPartialResult(hypothesis: String?) = Unit
+            override fun onResult(hypothesis: String?) { hypothesis?.let(listener::onResult) }
+            override fun onFinalResult(hypothesis: String?) = listener.onFinalResult()
+            override fun onError(exception: Exception?) = listener.onError()
+            override fun onTimeout() = listener.onTimeout()
+        })
+    }
+
+    override fun stop() {
+        service?.let { svc ->
+            runCatching { svc.stop() }
+            runCatching { svc.shutdown() }
+        }
+        service = null
+        recognizer?.let { runCatching { it.close() } }
+        recognizer = null
+    }
+
+    override fun unload() {
+        stop()
+        model?.close()
+        model = null
+    }
+}
+
 /**
  * Hands-free wake word "hey ai" (Vosk, bundled vosk-model-small-en-us). Listens under the
  * foreground service while signed in, hands-free is on and the mic is granted; pauses while a
  * voice session runs; on trigger opens the chat panel, connects and brings the app forward.
+ *
+ * The foreground service is held for as long as hands-free is on (voiceSessionStore.ts
+ * `stopCallForegroundService`): pausing for a call does not release it, only turning hands-free
+ * off (or signing out) does.
  */
 @Singleton
-class WakeWordCoordinator @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class WakeWordCoordinator internal constructor(
     private val session: SessionRepository,
     private val prefs: PrefsStore,
     private val voice: VoiceSession,
+    private val connector: VoiceConnector,
     private val chat: ChatStore,
     private val foreground: ForegroundController,
-    @param:ApplicationScope private val scope: CoroutineScope,
+    private val permissions: PermissionGateway,
+    private val scope: CoroutineScope,
+    private val engine: WakeEngine,
+    private val micGranted: () -> Boolean,
+    private val bringToFront: () -> Unit,
 ) {
-    private var model: Model? = null
-    private var service: SpeechService? = null
-    private var recognizer: Recognizer? = null
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        session: SessionRepository,
+        prefs: PrefsStore,
+        voice: VoiceSession,
+        connector: VoiceConnector,
+        chat: ChatStore,
+        foreground: ForegroundController,
+        permissions: PermissionGateway,
+        @ApplicationScope scope: CoroutineScope,
+    ) : this(
+        session = session,
+        prefs = prefs,
+        voice = voice,
+        connector = connector,
+        chat = chat,
+        foreground = foreground,
+        permissions = permissions,
+        scope = scope,
+        engine = VoskWakeEngine(context),
+        micGranted = {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        },
+        bringToFront = {
+            runCatching {
+                context.startActivity(
+                    Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
+                )
+            }
+        },
+    )
+
     private var desired = false
+
+    /** A listening session was requested (it may still be loading the model). */
     private var sessionActive = false
+
+    /** The recogniser is running. */
+    private var listening = false
     private var triggered = false
+
+    /** Identifies the current recogniser run; callbacks of a run that was stopped are ignored. */
+    private var engineRun = 0
     private var startFailures = 0
     private var restartJob: Job? = null
-    private var stopWatchdog: Job? = null
     private var started = false
 
     fun start() {
@@ -119,14 +240,23 @@ class WakeWordCoordinator @Inject constructor(
                 }
             }
         }
+        // The OS dropped the service after accepting the start: no recogniser without it.
+        scope.launch {
+            foreground.refused.collect { reason ->
+                if (reason == CzenForegroundService.Reasons.WAKE && desired) {
+                    restartJob?.cancel()
+                    stopListening()
+                    retryLater()
+                }
+            }
+        }
     }
-
-    private fun micGranted() =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
     private fun enable() {
         desired = true
         startFailures = 0
+        // Hands-free runs under the foreground service: make sure its notification can be shown.
+        permissions.requestNotifications()
         scheduleRestart(0)
     }
 
@@ -134,10 +264,9 @@ class WakeWordCoordinator @Inject constructor(
         desired = false
         restartJob?.cancel()
         stopListening()
+        // Only turning hands-free off releases the service.
         foreground.stopWakeWord()
-        // Disable unloads the model.
-        model?.close()
-        model = null
+        engine.unload()
     }
 
     private fun scheduleRestart(delayMs: Long = 300) {
@@ -150,15 +279,10 @@ class WakeWordCoordinator @Inject constructor(
         }
     }
 
-    private suspend fun loadModel(): Model = model ?: suspendCoroutine { cont ->
-        StorageService.unpack(
-            context,
-            "model-en-us",
-            "model",
-            { m -> cont.resume(m) },
-            { e -> cont.resumeWithException(e) },
-        )
-    }.also { model = it }
+    private fun retryLater() {
+        startFailures++
+        if (desired) scheduleRestart(if (startFailures <= 3) 1000L * startFailures else 30_000L)
+    }
 
     private suspend fun startListening() {
         if (sessionActive) return
@@ -166,69 +290,54 @@ class WakeWordCoordinator @Inject constructor(
         triggered = false
         try {
             if (!micGranted()) throw SecurityException("RECORD_AUDIO not granted")
-            val m = loadModel()
-            foreground.startWakeWord()
-            val rec = Recognizer(m, 16000f, WakeWordRules.grammarJson()).apply { setWords(true) }
-            recognizer = rec
-            val svc = SpeechService(rec, 16000f)
-            service = svc
-            svc.startListening(listener)
+            // No recogniser without the service: a microphone held in the background is cut off.
+            if (!foreground.startWakeWord()) throw IllegalStateException("foreground service refused")
+            engine.start(listenerFor(++engineRun))
+            listening = true
             startFailures = 0
         } catch (e: Exception) {
+            stopListening()
             if (e is kotlinx.coroutines.CancellationException) throw e
-            sessionActive = false
-            releaseRecognizer()
-            startFailures++
-            if (desired) scheduleRestart(if (startFailures <= 3) 1000L * startFailures else 30_000L)
+            retryLater()
         }
     }
 
+    /** Stops the recogniser; the foreground service stays while hands-free is on. */
     private fun stopListening() {
-        val svc = service ?: run {
-            sessionActive = false
-            return
-        }
-        // Force-reset if the native stop is never confirmed.
-        stopWatchdog?.cancel()
-        stopWatchdog = scope.launch {
-            delay(2_500)
-            sessionActive = false
-        }
-        runCatching { svc.stop() }
-        runCatching { svc.shutdown() }
-        service = null
-        releaseRecognizer()
+        // Whatever the stopped recogniser still reports (Vosk sends a final result on stop)
+        // must not schedule a restart: the caller of this stop decides what happens next.
+        engineRun++
+        engine.stop()
+        listening = false
         sessionActive = false
-        foreground.stopWakeWord()
     }
 
-    private fun releaseRecognizer() {
-        recognizer?.let { runCatching { it.close() } }
-        recognizer = null
-    }
+    private fun listenerFor(run: Int) = object : WakeEngine.Listener {
+        private val current get() = run == engineRun
 
-    private val listener = object : RecognitionListener {
-        override fun onPartialResult(hypothesis: String?) = Unit
-
-        override fun onResult(hypothesis: String?) {
-            val h = WakeWordRules.parse(hypothesis ?: return)
+        override fun onResult(hypothesis: String) {
+            if (!current) return
+            val h = WakeWordRules.parse(hypothesis)
             if (sessionActive && !triggered && WakeWordRules.shouldTrigger(h)) {
                 triggered = true
                 onDetected()
             }
         }
 
-        override fun onFinalResult(hypothesis: String?) {
-            sessionActive = false
-            if (!triggered) scheduleRestart()
+        override fun onFinalResult() {
+            if (!current) return
+            stopListening()
+            if (!triggered && desired) scheduleRestart()
         }
 
-        override fun onError(exception: Exception?) {
+        override fun onError() {
+            if (!current) return
             stopListening()
             if (!triggered && desired) scheduleRestart(1_000)
         }
 
         override fun onTimeout() {
+            if (!current) return
             stopListening()
             if (!triggered && desired) scheduleRestart()
         }
@@ -244,12 +353,7 @@ class WakeWordCoordinator @Inject constructor(
             return
         }
         chat.openPanel()
-        voice.connect(phone)
-        runCatching {
-            context.startActivity(
-                Intent(context, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
-            )
-        }
+        connector.connect(phone)
+        bringToFront()
     }
 }

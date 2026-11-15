@@ -67,6 +67,27 @@ Contract: `docs/delivery/001-native-driver-apps/{parity-map,spec,design}.md`.
 - [x] Map labels (parity with iOS `TileTextRepair.swift`): `MojibakeRepair` + `VectorTileRepair` ported (same cases); `GoongTileRepairInterceptor` on MapLibre's OkHttp client (`HttpRequestUtil.setOkHttpClient`) repairs `*.goong.io/tiles/*.pbf` (gzip inflated when needed), leaves clean tiles byte-for-byte; ambient cache cleared once (`map` prefs `tileRepair.cacheVersion`). Demo deep link `driver-app://demo/location?lat=&lng=` moves the fake GPS. Evidence: `evidence/android/03-home-labels-dark.png` (21.0330, 105.8203 — "Công Ty Cổ Phần Hóa Dược Và Công Nghệ Sinh Học Biogreen").
 - [x] +22 JVM tests (80 total); instrumented MainJourneyTest 1/1.
 
+## Audit fixes (2026-11-15)
+
+- [x] Offer sheet: countdown, trip fetch and validity check run inside the per-offer block (`OfferSession`, `collectLatest`), so an older offer's 30 s timer can no longer close a newer offer; dismissals are per trip id. The offered trip is re-fetched and re-checked on socket open and `schedule_updated` (`TripOfferStore.revalidate`).
+- [x] Driver context: fetched only once `me` is loaded (no request without `X-Driver-Phone`) and as soon as it is; an `invalidate()` during a fetch runs exactly one follow-up fetch; an answer landing after logout is dropped (`SessionRepository.commitIfCurrent`).
+- [x] `/auth/me`: `SessionRepository.ensureMe` retries 2 s → 4 s → … 30 s while signed in and the profile is missing, immediately on activity start and on "Thử lại"; Chuyến shows an error state with retry instead of endless skeletons.
+- [x] Wake word: recogniser behind `WakeEngine` (Vosk in the app); the stop watchdog is gone, a restart always stops the previous `SpeechService`; hands-free holds the `wake` foreground reason across calls and releases it only when turned off; no recogniser when the service start is refused or later dropped.
+- [x] Foreground service: API 29 starts call/wake word with the manifest default type; a refused typed start is retried with the reasons that were already running, only the new reason is dropped and reported through `ForegroundController.refused`; `startCall`/`startWakeWord`/`startLocation` return false when the start is refused.
+- [x] Microphone: every connect (orb, composer, nudge auto-connect, wake word, demo link) goes through `VoiceConnector`, which asks for RECORD_AUDIO via `PermissionGateway` (waits for a visible activity when there is none).
+- [x] POST_NOTIFICATIONS asked once per process before the first foreground-service start (going online, first connect, enabling hands-free); the action never waits for the answer.
+- [x] Home: no second GPS watch (reads `LocationSource.last` fed by `LocationTracker`); turn-by-turn cancels the route request of the previous stop and ignores late answers; an "Approximate" location grant counts as granted (`requestLocationForOnline`).
+- [x] Nudge auto-connect re-evaluates on `[has_pending_nudge, phone, voice status]` with the fired latch.
+- [x] Portrait lock in the manifest (lint `LockedOrientationActivity`/`DiscouragedApi` suppressed with the reason; Android 16+ ignores the lock on large screens).
+- [x] Assistant settings: a failed load shows an error with retry. Contacts RPC: a permission request nobody answers ends as `permission_denied` after 30 s.
+- [x] +33 JVM tests (127 total): `OfferSessionTest`, `SessionRetryTest`, `WakeWordCoordinatorTest`, `PermissionGatewayTest`, `VoiceConnectorTest`, `HomeViewModelTest`, `AppCoordinatorTest`, `AssistantSettingsViewModelTest`, plus new cases in `DriverRepositoryTest` and `ForegroundControllerTest`.
+- Review round (same day):
+  - A refused foreground start never stops a service that is still validly running: the wanted reasons that were already running are kept (same-type and subset cases), only new ones are dropped; the stop-at-once fallback uses `shortService` on API 34+ (declared in the manifest) instead of type 0.
+  - `VoiceConnector` keeps one waiting connect and re-validates it before the mic prompt and before connecting (same driver, session idle, caller's `stillWanted`, e.g. the nudge still pending); a stale one is dropped and the nudge latch re-armed.
+  - Wake word ignores callbacks of a recogniser run it already stopped (no 300 ms restart loop after a refusal). Background location retries a refused start on the next foreground transition. Contacts permission: denied at once with no started activity, 6 s cap (agent RPC timeout is 8 s). A refused call service sets `VoiceState.callServiceRefused` and a caption.
+  - JVM tests: 138 total.
+- Not verified on a device: foreground-service behaviour on API 29 and on refused typed starts, the notification prompt order, wake word with real audio.
+
 ## Remaining / follow-ups
 
 - Live LiveKit + real backend never exercised (no credentials by rule); verify prod flavor against the backend.

@@ -7,6 +7,7 @@ import com.chinhtruongba.driverapp.core.realtime.DispatchEvent
 import com.chinhtruongba.driverapp.core.realtime.DispatchSocket
 import com.chinhtruongba.driverapp.feature.location.LocationTracker
 import com.chinhtruongba.driverapp.feature.voice.ChatStore
+import com.chinhtruongba.driverapp.feature.voice.VoiceConnector
 import com.chinhtruongba.driverapp.feature.voice.VoiceSession
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +33,7 @@ class AppCoordinator @Inject constructor(
     private val location: LocationTracker,
     private val voice: VoiceSession,
     private val chat: ChatStore,
+    private val connector: VoiceConnector,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
     private var started = false
@@ -41,12 +43,7 @@ class AppCoordinator @Inject constructor(
         if (started) return
         started = true
 
-        // ['driverContext'] is enabled once ['me'] is loaded.
-        scope.launch {
-            session.me.map { it.data?.id }.distinctUntilChanged().collect { id ->
-                if (id != null) drivers.invalidate()
-            }
-        }
+        // ['driverContext'] is enabled once ['me'] is loaded: DriverRepository fetches it itself.
 
         // useDispatchSocket(driver.status === 'online', driver.phone)
         scope.launch {
@@ -59,20 +56,30 @@ class AppCoordinator @Inject constructor(
             }
         }
 
-        // useAutoConnectOnNudge: open the panel and connect, only while idle; re-arm when false.
+        // useAutoConnectOnNudge: open the panel and connect, only while idle; re-arm when the
+        // nudge is gone. Deps are [has_pending_nudge, phone, status], so a nudge that arrived
+        // during a session connects once the session is idle again.
         scope.launch {
             var fired = false
-            drivers.context.map { it.data?.hasPendingNudge == true }.distinctUntilChanged().collect { pending ->
-                if (!pending) {
+            combine(
+                drivers.context.map { it.data?.hasPendingNudge == true },
+                session.me.map { it.data?.phone },
+                voice.state.map { it.status },
+            ) { pending, phone, status -> Triple(pending, phone, status) }.distinctUntilChanged().collect { (pending, phone, status) ->
+                if (!pending || phone.isNullOrBlank()) {
                     fired = false
                     return@collect
                 }
-                val phone = session.currentPhone()
-                if (!fired && phone != null && voice.state.value.status == VoiceStatus.Idle) {
-                    fired = true
-                    chat.openPanel()
-                    voice.connect(phone)
-                }
+                if (fired || status != VoiceStatus.Idle) return@collect
+                fired = true
+                chat.openPanel()
+                // If the microphone prompt has to wait for an activity, the nudge may be gone
+                // by then: drop the connect and re-arm instead of opening a session for nothing.
+                connector.connect(
+                    phone,
+                    stillWanted = { drivers.context.value.data?.hasPendingNudge == true },
+                    onDropped = { fired = false },
+                )
             }
         }
 
@@ -105,14 +112,21 @@ class AppCoordinator @Inject constructor(
 
     private fun onEvent(e: DispatchEvent) {
         when (e) {
-            DispatchEvent.Opened -> drivers.invalidate()
+            DispatchEvent.Opened -> {
+                drivers.invalidate()
+                offers.revalidate()
+            }
             is DispatchEvent.Message -> when (e.event) {
                 "trip_offer" -> {
                     drivers.invalidate()
                     e.data?.get("trip_id")?.jsonPrimitive?.content?.let(offers::show)
                 }
                 "trip_confirmed" -> location.pushImmediate()
-                "schedule_updated", "pending_nudge" -> drivers.invalidate()
+                "schedule_updated" -> {
+                    drivers.invalidate()
+                    offers.revalidate()
+                }
+                "pending_nudge" -> drivers.invalidate()
                 else -> Unit
             }
         }

@@ -15,6 +15,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
@@ -39,23 +41,59 @@ class DriverRepository @Inject constructor(
     private var inflight: Job? = null
     private var lastFetchAt = 0L
 
+    /** An invalidation arrived while a fetch was in flight: fetch once more when it lands. */
+    private var dirty = false
+    private var dirtyFresh = false
+
     init {
         scope.launch {
             session.loggedIn.collect { loggedIn ->
                 if (!loggedIn) {
                     inflight?.cancel()
+                    dirty = false
+                    dirtyFresh = false
                     _context.value = Loadable()
                     summaries.values.forEach { it.value = Loadable() }
                     lastFetchAt = 0L
                 }
             }
         }
+        // `enabled: !!driver`: the first fetch happens as soon as ['me'] is loaded.
+        scope.launch {
+            session.me.map { it.data?.id }.distinctUntilChanged().collect { id ->
+                if (id != null) invalidate()
+            }
+        }
     }
 
-    /** React Query `invalidateQueries(['driverContext'])`: refetch in the background. */
+    /**
+     * The query is enabled only once `me` is loaded: the `X-Driver-Phone` header is read from
+     * it, so a request before that would go out without the header.
+     */
+    private fun enabled(): Boolean = session.me.value.data != null
+
+    /**
+     * React Query `invalidateQueries(['driverContext'])`: refetch in the background. A call
+     * that arrives while a fetch is in flight (accept, a socket event…) marks the data dirty and
+     * one more fetch runs right after, so the change it announced is never missed.
+     */
     fun invalidate(fresh: Boolean = false) {
-        if (inflight?.isActive == true && !fresh) return
-        inflight = scope.launch { refresh(fresh) }
+        if (!enabled()) return
+        if (inflight?.isActive == true) {
+            dirty = true
+            dirtyFresh = dirtyFresh || fresh
+            return
+        }
+        inflight = scope.launch {
+            var useFresh = fresh
+            while (true) {
+                dirty = false
+                dirtyFresh = false
+                refresh(useFresh)
+                if (!dirty) break
+                useFresh = dirtyFresh
+            }
+        }
     }
 
     /** Refetch only if older than the 60 s stale time. */
@@ -63,16 +101,24 @@ class DriverRepository @Inject constructor(
         if (System.currentTimeMillis() - lastFetchAt > 60_000 || _context.value.data == null) invalidate()
     }
 
+    /**
+     * One fetch. The answer is committed only if the session it started in is still current:
+     * a response landing after logout must not bring the previous account's context back.
+     */
     suspend fun refresh(fresh: Boolean = false) {
+        if (!enabled()) return
+        val startedIn = session.sessionGeneration
         _context.update { it.copy(loading = true, error = null) }
         try {
             val ctx = apiCall { api.context(if (fresh) true else null) }
-            lastFetchAt = System.currentTimeMillis()
-            _context.value = Loadable(ctx)
+            session.commitIfCurrent(startedIn) {
+                lastFetchAt = System.currentTimeMillis()
+                _context.value = Loadable(ctx)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _context.update { it.copy(loading = false, error = e) }
+            session.commitIfCurrent(startedIn) { _context.update { it.copy(loading = false, error = e) } }
         }
     }
 

@@ -6,16 +6,19 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.chinhtruongba.driverapp.app.PermissionGateway
 import com.chinhtruongba.driverapp.core.data.ApplicationScope
 import com.chinhtruongba.driverapp.core.data.DriverRepository
 import com.chinhtruongba.driverapp.core.data.SessionRepository
 import com.chinhtruongba.driverapp.core.model.LatLng
 import com.chinhtruongba.driverapp.core.util.PushCadence
+import com.chinhtruongba.driverapp.service.CzenForegroundService
 import com.chinhtruongba.driverapp.service.ServiceForegroundController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -30,14 +33,44 @@ import javax.inject.Singleton
  * one immediate fix when tracking starts. Asking for the permission is the UI's job (going online).
  */
 @Singleton
-class BackgroundLocationCoordinator @Inject constructor(
-    @ApplicationContext private val context: Context,
+class BackgroundLocationCoordinator internal constructor(
     private val session: SessionRepository,
     private val drivers: DriverRepository,
     private val source: LocationSource,
     private val foreground: ServiceForegroundController,
-    @param:ApplicationScope private val scope: CoroutineScope,
+    private val permissions: PermissionGateway,
+    private val scope: CoroutineScope,
+    /** Whether the app (process) is in the foreground. */
+    private val foregrounded: () -> Flow<Boolean>,
+    /** The real OS grants the location-typed foreground service needs. */
+    private val osPermitted: () -> Boolean,
 ) {
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        session: SessionRepository,
+        drivers: DriverRepository,
+        source: LocationSource,
+        foreground: ServiceForegroundController,
+        permissions: PermissionGateway,
+        @ApplicationScope scope: CoroutineScope,
+    ) : this(
+        session = session,
+        drivers = drivers,
+        source = source,
+        foreground = foreground,
+        permissions = permissions,
+        scope = scope,
+        foregrounded = {
+            ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) }
+        },
+        osPermitted = {
+            fun granted(p: String) = ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
+            granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION) &&
+                (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION))
+        },
+    )
+
     private var started = false
     private var job: Job? = null
     private var lastPushAt = 0L
@@ -46,29 +79,33 @@ class BackgroundLocationCoordinator @Inject constructor(
     fun start() {
         if (started) return
         started = true
-        // Re-evaluated whenever the app returns to the foreground, so a permission granted
-        // in Settings while online starts tracking without another toggle.
-        val foregrounded = ProcessLifecycleOwner.get().lifecycle.currentStateFlow
-            .map { it.isAtLeast(Lifecycle.State.STARTED) }
-            .distinctUntilChanged()
+        // "Wanted" (signed in, online, permitted) is evaluated on every change and on every
+        // foreground/background transition; whether tracking actually runs is `job`. So a
+        // permission granted in Settings, or a service start the OS refused earlier, is picked
+        // up the next time the app comes to the foreground — no offline/online toggle needed.
         scope.launch {
-            combine(session.loggedIn, session.me.map { it.data?.isOnline == true }, foregrounded) { loggedIn, online, _ ->
-                loggedIn && online && permitted()
-            }.distinctUntilChanged().collect { active -> if (active) startTracking() else stopTracking() }
+            combine(
+                session.loggedIn,
+                session.me.map { it.data?.isOnline == true },
+                foregrounded().distinctUntilChanged(),
+            ) { loggedIn, online, inForeground ->
+                (loggedIn && online && permitted()) to inForeground
+            }.distinctUntilChanged().collect { (wanted, _) -> if (wanted) startTracking() else stopTracking() }
+        }
+        // The OS refused the location-typed service: stop the pushes that needed it.
+        scope.launch {
+            foreground.refused.collect { reason -> if (reason == CzenForegroundService.Reasons.LOCATION) stopTracking() }
         }
     }
 
-    private fun granted(p: String) = ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
-
     /** The location-typed foreground service needs the real OS grants, not just the source's view. */
-    private fun permitted(): Boolean =
-        source.hasBackgroundPermission() &&
-            granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION) &&
-            (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION))
+    private fun permitted(): Boolean = source.hasBackgroundPermission() && osPermitted()
 
     private fun startTracking() {
         if (job?.isActive == true) return
-        foreground.startLocation()
+        // Going online starts the service: make sure its notification can be shown (Android 13+).
+        permissions.requestNotifications()
+        if (!foreground.startLocation()) return
         lastPushAt = 0L
         lastPushed = null
         job = scope.launch {

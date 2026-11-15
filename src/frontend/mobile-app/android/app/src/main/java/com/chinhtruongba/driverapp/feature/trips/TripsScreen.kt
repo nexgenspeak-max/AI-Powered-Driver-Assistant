@@ -88,6 +88,16 @@ fun TripsScreen(onAddTrip: () -> Unit, vm: TripsViewModel = hiltViewModel()) {
             ) {
                 val itemMod = Modifier.widthIn(max = 640.dp).fillMaxWidth()
                 when {
+                    s.driverError -> item {
+                        EmptyState(
+                            CzenIcon.AlertCircle,
+                            stringResource(R.string.dash_profile_error_title),
+                            itemMod,
+                            stringResource(R.string.dash_error_body),
+                            actionLabel = stringResource(R.string.common_retry),
+                            onAction = vm::retry,
+                        )
+                    }
                     !s.driverLoaded || (!s.contextLoaded && s.loading) -> {
                         item { SkeletonCard(itemMod) }
                         item { SkeletonCard(itemMod) }
@@ -156,6 +166,11 @@ fun TripsScreen(onAddTrip: () -> Unit, vm: TripsViewModel = hiltViewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val m = Modifier.widthIn(max = 640.dp).fillMaxWidth()
+                if (s.driverError) {
+                    // No profile to greet or toggle: the list below carries the error and the retry.
+                    Text(stringResource(R.string.app_name), style = CzenTheme.type.h1, color = c.textPrimary, modifier = m)
+                    return@Column
+                }
                 if (!s.driverLoaded) {
                     Skeleton(m.height(48.dp), radius = 12.dp)
                     Skeleton(m.height(44.dp), radius = 14.dp)

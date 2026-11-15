@@ -8,6 +8,7 @@ import com.chinhtruongba.driverapp.core.storage.PrefsStore
 import com.chinhtruongba.driverapp.feature.voice.ChatMessage
 import com.chinhtruongba.driverapp.feature.voice.ChatStore
 import com.chinhtruongba.driverapp.feature.voice.Speaker
+import com.chinhtruongba.driverapp.feature.voice.VoiceConnector
 import com.chinhtruongba.driverapp.feature.voice.VoiceSession
 import com.chinhtruongba.driverapp.feature.voice.VoiceState
 import com.chinhtruongba.driverapp.feature.voice.VoiceStatus
@@ -52,6 +53,7 @@ data class PanelUi(
 @HiltViewModel
 class AssistantViewModel @Inject constructor(
     private val voice: VoiceSession,
+    private val connector: VoiceConnector,
     private val chat: ChatStore,
     private val session: SessionRepository,
     prefs: PrefsStore,
@@ -75,9 +77,10 @@ class AssistantViewModel @Inject constructor(
     fun openPanel() = chat.openPanel()
     fun closePanel() = chat.closePanel()
 
-    fun connect(phone: String, micGranted: Boolean = true) {
+    /** Opens the panel and connects; [VoiceConnector] asks for the microphone first. */
+    fun connect(phone: String) {
         chat.openPanel()
-        voice.connect(phone, micGranted)
+        connector.connect(phone)
     }
 
     /** Composer / orb button: connect when idle, end the session when connected. */

@@ -40,7 +40,6 @@ import dev.chrisbanes.haze.rememberHazeState
 
 private const val FINE = Manifest.permission.ACCESS_FINE_LOCATION
 private const val COARSE = Manifest.permission.ACCESS_COARSE_LOCATION
-private const val BACKGROUND = Manifest.permission.ACCESS_BACKGROUND_LOCATION
 
 /** Extra clearance for the Czen orb, which rises ~28 dp above the floating tab bar. */
 private val ORB_CLEARANCE = 30.dp
@@ -70,29 +69,15 @@ fun HomeScreen(onGoTrips: () -> Unit, vm: HomeViewModel = hiltViewModel()) {
         onDispose { if (ctl != null && prev != null) ctl.isAppearanceLightStatusBars = prev }
     }
 
-    // The map needs the driver's position: ask in context, then start the watch.
+    // The map needs the driver's position: ask in context. The grant (precise or approximate)
+    // starts LocationTracker's watch through the activity's permission-result callback.
     LaunchedEffect(permissions) {
         val p = permissions ?: return@LaunchedEffect
-        if (p.granted(FINE) || p.granted(COARSE)) vm.startUpdates()
-        else p.request(arrayOf(FINE, COARSE)) { ok -> if (ok) vm.startUpdates() }
+        if (!p.granted(FINE) && !p.granted(COARSE)) p.requestEach(arrayOf(FINE, COARSE)) { }
     }
 
-    val goOnline = {
-        val p = permissions
-        if (p == null) {
-            vm.goOnline()
-        } else {
-            // Location when going online: foreground first, then background (Android 10+ asks separately).
-            p.request(arrayOf(FINE, COARSE)) { fg ->
-                if (fg) {
-                    vm.startUpdates()
-                    p.request(arrayOf(BACKGROUND)) { vm.goOnline() }
-                } else {
-                    vm.goOnline()
-                }
-            }
-        }
-    }
+    // Location when going online: foreground first, then background; "Approximate" counts as granted.
+    val goOnline = { permissions?.requestLocationForOnline { vm.goOnline() } ?: vm.goOnline() }
 
     Box(Modifier.fillMaxSize()) {
         DriverMap(
