@@ -235,6 +235,29 @@ struct MapLabelRepairTests {
         #expect(GoongTileRepairer.shouldRepair(URL(string: "https://tiles.goong.io/tiles/composite/16/52031/28849.pbf?api_key=x")))
         #expect(!GoongTileRepairer.shouldRepair(URL(string: "https://tiles.goong.io/assets/goong_map_web.json")))
         #expect(!GoongTileRepairer.shouldRepair(URL(string: "https://example.com/tiles/1/2/3.pbf")))
+        #expect(GoongTileRepairer.shouldRepair(URL(string: "https://goong.io/tiles/composite/1/2/3.pbf")))
+        #expect(!GoongTileRepairer.shouldRepair(URL(string: "https://evilgoong.io/tiles/composite/1/2/3.pbf")))
+        #expect(!GoongTileRepairer.shouldRepair(URL(string: "https://goong.io.example.com/tiles/composite/1/2/3.pbf")))
+    }
+
+    @Test("the one-off tile cache clear is marked done only when it succeeded")
+    func cacheClearFlag() {
+        let defaults = UserDefaults(suiteName: "test-\(UUID())")!
+        #expect(GoongTileRepairer.needsCacheClear(defaults: defaults))
+        GoongTileRepairer.cacheCleared(error: URLError(.cannotOpenFile), defaults: defaults)
+        #expect(GoongTileRepairer.needsCacheClear(defaults: defaults), "a failed clear retries next launch")
+        GoongTileRepairer.cacheCleared(error: nil, defaults: defaults)
+        #expect(!GoongTileRepairer.needsCacheClear(defaults: defaults))
+    }
+
+    @Test("the tile parser never crashes on arbitrary bytes")
+    func parserFuzz() {
+        var rng = SystemRandomNumberGenerator()
+        for _ in 0..<2_000 {
+            let count = Int.random(in: 0...400, using: &rng)
+            let bytes = Data((0..<count).map { _ in UInt8.random(in: 0...255, using: &rng) })
+            _ = VectorTileRepair.repair(bytes) // nil (not repaired) or a rewritten tile; never a trap
+        }
     }
 }
 

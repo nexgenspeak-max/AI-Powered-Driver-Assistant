@@ -83,6 +83,25 @@ struct VoiceLifecycleTests {
                      audio: FillerAudio(enabled: false), settleDelay: .zero, requestMicPermission: { true })
     }
 
+    @Test("listen-only joins without the mic or its permission, and unmute is ignored")
+    func listenOnlyJoinsWithoutMic() async {
+        let engine = FakeVoiceEngine()
+        var asked = false
+        let session = VoiceSession(engine: engine, api: DemoBackend(latency: .zero),
+                                   prefs: Preferences(defaults: UserDefaults(suiteName: "test-\(UUID())")!),
+                                   audio: FillerAudio(enabled: false), listenOnly: true, settleDelay: .zero,
+                                   requestMicPermission: { asked = true; return false })
+        await session.connect(phone: "0901234567")
+        #expect(session.status == .connected)
+        #expect(session.isMicMuted)
+        #expect(!engine.micEnabled)
+        #expect(!asked)
+
+        await session.setMicMuted(false)
+        #expect(!engine.micEnabled)
+        #expect(session.isMicMuted)
+    }
+
     @Test("hang-up while the room connects cancels it and never leaves a live mic")
     func hangUpDuringRoomConnect() async {
         let engine = FakeVoiceEngine()

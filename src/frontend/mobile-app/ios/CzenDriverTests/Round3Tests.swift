@@ -32,8 +32,10 @@ final class GatedAuth: AuthAPI, @unchecked Sendable {
         await withCheckedContinuation { c in lock.withLock { gates[name] = c } }
     }
 
-    func login(phone: String, password: String) async throws -> AuthTokens { try await backend.login(phone: phone, password: password) }
-    func register(_ input: RegisterInput) async throws -> RegisterResponse { try await backend.register(input) }
+    func login(phone: String, password: String) async throws -> AuthTokens {
+        await pass("login"); return try await backend.login(phone: phone, password: password)
+    }
+    func register(_ input: RegisterInput) async throws -> RegisterResponse { await pass("register"); return try await backend.register(input) }
     func me() async throws -> AuthUser { await pass("me"); return try await backend.me() }
     func updateAccount(id: String, name: String) async throws -> AuthUser {
         await pass("updateAccount"); return try await backend.updateAccount(id: id, name: name)
@@ -101,6 +103,31 @@ struct StaleResponseTests {
         h.auth.release("me")
         await boot.value
         await expectSignedOutClean(h, startsBefore: 0)
+    }
+
+    @Test("register / login resolving after a session reset do not sign in", arguments: ["register", "login"])
+    func signInAfterReset(call: String) async {
+        let h = make()
+        await h.model.logout() // start signed out, as on the auth screens
+        let starts = h.socket.starts
+        h.auth.hold(call)
+        let signIn = Task { () -> Bool in
+            do {
+                if call == "register" {
+                    try await h.model.register(RegisterInput(phone: "0901234567", name: "Tài xế", email: "a@b.vn", password: "secret1",
+                                                             vehicleType: "car", vehiclePlate: "30A-12345", vehicleName: "Vios"))
+                } else {
+                    try await h.model.login(phone: "0901234567", password: "secret1")
+                }
+                return true
+            } catch { return false }
+        }
+        await waitUntil { h.auth.isWaiting(call) }
+        await h.model.logout() // the session is reset while the request is in flight
+        h.auth.release(call)
+        #expect(await signIn.value == false)
+        #expect(await h.session.accessToken == nil)
+        await expectSignedOutClean(h, startsBefore: starts)
     }
 
     @Test("updateName resolving after logout does not restore `me` or restart the socket")

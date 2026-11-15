@@ -209,15 +209,34 @@ final class GoongTileRepairer: NSObject, MLNNetworkConfigurationDelegate, @unche
         guard config.delegate !== shared else { return }
         config.delegate = shared
         // Tiles cached before the repair existed would be served as-is; drop them once.
-        if defaults.integer(forKey: cacheKey) < cacheVersion {
-            MLNOfflineStorage.shared.clearAmbientCache { _ in }
-            defaults.set(cacheVersion, forKey: cacheKey)
+        if needsCacheClear(defaults: defaults) {
+            let suite = UncheckedDefaults(defaults)
+            MLNOfflineStorage.shared.clearAmbientCache { error in
+                cacheCleared(error: error, defaults: suite.value)
+            }
         }
     }
 
+    static func needsCacheClear(defaults: UserDefaults) -> Bool {
+        defaults.integer(forKey: cacheKey) < cacheVersion
+    }
+
+    /// Marks the one-off clear as done only when it succeeded; a failure retries on the next launch.
+    static func cacheCleared(error: Error?, defaults: UserDefaults) {
+        guard error == nil else { return }
+        defaults.set(cacheVersion, forKey: cacheKey)
+    }
+
+    /// `goong.io` and its subdomains only (`evilgoong.io` is not Goong), `/tiles/….pbf`.
     static func shouldRepair(_ url: URL?) -> Bool {
-        guard let url, url.host?.hasSuffix("goong.io") == true else { return false }
+        guard let url, let host = url.host?.lowercased(), host == "goong.io" || host.hasSuffix(".goong.io") else { return false }
         return url.path.hasPrefix("/tiles/") && url.path.hasSuffix(".pbf")
+    }
+
+    /// `UserDefaults` is thread-safe but not declared `Sendable`; this carries it into MapLibre's completion handler.
+    private struct UncheckedDefaults: @unchecked Sendable {
+        let value: UserDefaults
+        init(_ value: UserDefaults) { self.value = value }
     }
 
     func didReceive(_ response: MLNNetworkResponse) -> MLNNetworkResponse {

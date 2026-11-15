@@ -55,7 +55,7 @@ final class AppModel {
         self.chat = ChatStore()
         self.voice = config.launch.demo
             ? VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio, requestMicPermission: { true })
-            : VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio)
+            : VoiceSession(engine: voiceEngine, api: api, prefs: prefs, audio: audio, listenOnly: VoiceSession.micUnavailable)
         self.location = LocationTracker(api: api, demo: config.launch.demo)
         self.socket = socket
         self.navigation = TurnByTurn(api: api)
@@ -93,7 +93,10 @@ final class AppModel {
     }
 
     func login(phone: String, password: String) async throws {
+        let generation = sessionGeneration
         let tokens = try await auth.login(phone: phone, password: password)
+        // A session reset that landed while the request was in flight wins: do not sign back in.
+        guard generation == sessionGeneration else { throw CancellationError() }
         await session.setTokens(tokens)
         phase = .signedIn
         await loadMe()
@@ -102,9 +105,11 @@ final class AppModel {
     }
 
     func register(_ input: RegisterInput) async throws {
+        let generation = sessionGeneration // before the await, so a reset in between is seen
         let res = try await auth.register(input)
+        guard generation == sessionGeneration else { throw CancellationError() }
         await session.setTokens(AuthTokens(accessToken: res.accessToken, refreshToken: res.refreshToken))
-        if let user = res.user { await setMe(user, generation: sessionGeneration) }
+        if let user = res.user { await setMe(user, generation: generation) }
         phase = .signedIn
         if me == nil { await loadMe() }
         await loadContext()

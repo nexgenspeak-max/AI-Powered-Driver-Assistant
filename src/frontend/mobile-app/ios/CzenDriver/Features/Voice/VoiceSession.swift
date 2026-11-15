@@ -65,10 +65,25 @@ final class VoiceSession {
     @ObservationIgnored private let log = Logger(subsystem: "com.chinhtruongba.driverapp", category: "voice")
     @ObservationIgnored private let settleDelay: Duration
     @ObservationIgnored private let requestMicPermission: @MainActor () async -> Bool
+    /// Join without publishing the mic: the agent's voice still plays and the driver types.
+    @ObservationIgnored private let listenOnly: Bool
 
-    init(engine: VoiceEngine, api: DriverAPI, prefs: Preferences, audio: FillerAudio, settleDelay: Duration = .milliseconds(350),
+    /// Xcode 27's simulator host (DeviceHub) gets no microphone from macOS: capture sees a 0 Hz
+    /// input and LiveKit fails the whole room ("Audio Engine Error -4010"). Live sessions there
+    /// join listen-only instead.
+    static var micUnavailable: Bool {
+        #if targetEnvironment(simulator)
+        true
+        #else
+        false
+        #endif
+    }
+
+    init(engine: VoiceEngine, api: DriverAPI, prefs: Preferences, audio: FillerAudio, listenOnly: Bool = false,
+         settleDelay: Duration = .milliseconds(350),
          requestMicPermission: @escaping @MainActor () async -> Bool = { await AVAudioApplication.requestRecordPermission() }) {
         self.requestMicPermission = requestMicPermission
+        self.listenOnly = listenOnly
         self.engine = engine
         self.api = api
         self.prefs = prefs
@@ -116,7 +131,9 @@ final class VoiceSession {
             async let token = api.voiceToken(phone: phone, lang: prefs.voiceLang.rawValue)
             await audio.playConnecting()
             // No mic = no conversation: fail visibly instead of joining a room that can't hear the driver.
-            guard await requestMicPermission() else { throw MicDenied() }
+            if !listenOnly {
+                guard await requestMicPermission() else { throw MicDenied() }
+            }
             try checkCurrent(gen)
             let tok = try await token
             try checkCurrent(gen)
@@ -125,7 +142,7 @@ final class VoiceSession {
             try checkCurrent(gen)
             try await engine.connect(url: tok.livekitUrl, token: tok.token)
             try checkCurrent(gen)
-            if try await !engine.setMicrophone(enabled: true) {
+            if !listenOnly, try await !engine.setMicrophone(enabled: true) {
                 try checkCurrent(gen)
                 _ = try await engine.setMicrophone(enabled: false)
                 try await Task.sleep(for: .milliseconds(200))
@@ -134,7 +151,7 @@ final class VoiceSession {
             }
             try checkCurrent(gen)
             status = .connected
-            isMicMuted = false
+            isMicMuted = listenOnly
             log.info("voice connected in \(Date().timeIntervalSince(started), privacy: .public)s")
             startWatchdog()
         } catch {
@@ -196,7 +213,7 @@ final class VoiceSession {
     }
 
     func setMicMuted(_ muted: Bool) async {
-        guard status == .connected else { return }
+        guard status == .connected, !listenOnly else { return }
         do {
             _ = try await engine.setMicrophone(enabled: !muted)
             isMicMuted = muted
