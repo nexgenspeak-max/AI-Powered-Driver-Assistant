@@ -101,7 +101,7 @@ nghiệp vụ.
 > Kiều Linh, Google TTS tự động dự phòng. Phần thời gian thực chạy trên LiveKit; ứng dụng dùng React
 > Native và React; hạ tầng trên AWS.
 
-**Luận văn:** mục 5.3, Phụ lục D (cấu hình lúc đo).
+**Luận văn:** mục 5.3, Bảng 6.2 (cấu hình lúc đo).
 
 ## Slide 7 — Một lượt hội thoại (≈ 1 phút)
 
@@ -323,7 +323,7 @@ Những điểm đã ghi nhận khi rà soát luận văn, cần tự xác nhậ
 - Bảng 6.8: số lỗi tổng (4/3/2/2) chưa khớp các dòng chấm chi tiết (3/2/1/0); mục 6.13 đã giải thích
   là bảng chấm chi tiết thiếu dòng của một trong 13 phiên.
 - Đã sửa trong luận văn ngày 15/11/2026: RS-03 ghi theo tệp kết quả (phiên mới được phục vụ sau trung
-  vị 0,1 s); số lần lộ số điện thoại là 2.352; hình báo cáo ngày (nay là Hình C.21) chỉ là giao diện
+  vị 0,1 s); số lần lộ số điện thoại là 2.352; hình báo cáo ngày (nay là Hình C.7) chỉ là giao diện
   minh họa.
 - Mục 6.2 nói "số điện thoại được che" trong khi mục 6.10 nói nhật ký có số đầy đủ trước khi sửa —
   thống nhất cách nói theo thời gian.
