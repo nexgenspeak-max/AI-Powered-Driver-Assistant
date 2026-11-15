@@ -87,7 +87,7 @@ Thứ nhất, kết quả đạt là nhờ câu đệm chứ không nhờ trả 
 
 Thứ hai, biên an toàn rất mỏng. P95 chỉ thấp hơn ngưỡng 0,01 giây; một đợt đo khác, với mạng hoặc nhà cung cấp chậm hơn một chút, có thể cho kết quả vượt ngưỡng.
 
-Thứ ba, không chặng nào một mình vượt ngưỡng, nhưng hai chặng đầu cộng lại đã dùng hết ngân sách. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị. Chặng thứ nhất không phải do khoảng lặng chờ quá dài: tác nhân chỉ chờ 0,25–0,55 giây im lặng, còn lại là thời gian nhà cung cấp STT trả kết quả cuối của câu. Cả hai chặng lớn vì vậy đều thuộc nhà cung cấp AI bên ngoài. Câu đệm cũng không cứu được lượt mà riêng chặng thứ nhất đã vượt 1,6 giây, vì khi đó LLM chưa bắt đầu chạy.
+Thứ ba, không chặng nào một mình vượt ngưỡng, nhưng hai chặng đầu cộng lại đã dùng hết ngân sách. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị. Chặng thứ nhất không phải do khoảng lặng chờ quá dài: tác nhân chỉ chờ 0,25–0,55 giây im lặng, còn lại là thời gian nhà cung cấp STT trả kết quả cuối của câu. Cả hai chặng lớn vì vậy đều thuộc nhà cung cấp AI bên ngoài. Câu đệm cũng không cứu được lượt mà riêng chặng thứ nhất đã vượt 1,6 giây, vì khi đó LLM chưa bắt đầu chạy. Khoảng lặng chờ ngắn cũng có giá của nó: trong đợt thứ hai, 24 trong 200 câu của tài xế ảo bị tách thành hai lượt vì tác nhân chốt lượt ở một chỗ ngắt giữa câu (224 lượt được ghi nhận cho 200 câu nói).
 
 Thứ tư, khoảng chờ tài xế cảm nhận dài hơn chỉ số A. Đồng hồ của chỉ số A bắt đầu khi tác nhân nhận biết tài xế đã dứt lời, tức là sau khi tài xế thật sự ngừng nói một khoảng; chỉ số C tính cả khoảng này và đường truyền, cho P50 là 2,82 giây.
 

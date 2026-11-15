@@ -151,39 +151,35 @@ APPENDIX_A_TOOLS = [
 ]
 
 APPENDIX_B_INTRO = (
-    "Phụ lục này trích một số lượt thoại thực tế từ nhật ký phiên (đã che thông tin định danh) để minh họa luồng "
-    "STT → LLM gọi công cụ → TTS, xử lý im lặng và kết thúc phiên. Kịch bản B.1 thuộc đợt đo 05–06/09/2026, "
-    "khi còn nhánh rút gọn theo ý định (mục 5.3.2). Ghi chú trong ngoặc vuông lấy từ nhật ký: khâu xử lý, nhãn "
-    "ý định (FollowUpKnowledge: hỏi tiếp về chuyến vừa nhắc; conversational_ack: đáp lễ) và độ trễ cảm nhận "
-    "(user_stop_to_agent_speak)."
+    "Phụ lục này trích nguyên văn một số lượt thoại từ nhật ký phiên để minh họa luồng STT → LLM gọi công cụ → TTS "
+    "và câu đệm. Kịch bản B.1 lấy từ một phiên của đợt đo độ trễ thứ hai ngày 15/11/2026 (mục 6.4), trong đó người "
+    "nói là tài xế ảo và tài khoản thử nghiệm không có chuyến nào trong ngày. Ghi chú trong ngoặc vuông cho biết việc "
+    "tác nhân làm ở lượt đó và thời gian từ lúc tài xế dứt lời tới âm thanh đầu tiên của tác nhân."
 )
 
 APPENDIX_B_DIALOGUES = [
     (
-        "Kịch bản B.1 — Tra cứu lịch trình và thông tin chuyến (phiên trong ứng dụng, 06/09/2026)",
+        "Kịch bản B.1 — Hỏi đáp trong ứng dụng, có câu đệm (phiên trong ứng dụng, 15/11/2026)",
         [
-            "Trợ lý: Chào bạn, tôi là Czen, trợ lý AI của bạn.",
-            "Trợ lý: Tôi có thể giúp gì cho bạn?",
-            "Tài xế: Tôi muốn kiểm tra lịch trình hôm nay.  [LLM + công cụ — check_upcoming_trips]",
-            "Trợ lý: Bạn có 11 chuyến sắp tới.",
-            "Tài xế: Chuyến đầu tiên đi đâu?  [LLM + FollowUpKnowledge — 3,4 giây]",
-            "Trợ lý: Chuyến đầu tiên đón tại Mỹ Đình và trả ở Đông Anh.",
-            "Tài xế: Đón người khách tên là gì?  [LLM + FollowUpKnowledge — 2,1 giây]",
-            "Trợ lý: Khách tên là Khách Mỹ Đình.",
-            "Tài xế: Ok, cảm ơn.  [LLM — conversational_ack]",
-            "Trợ lý: Không có gì.",
-            "(im lặng ~15 giây)",
-            "Trợ lý: Bạn còn đó không?",
-            "(im lặng lần hai)",
-            "Trợ lý: Nếu bạn không còn câu hỏi nào nữa, em xin phép kết thúc cuộc gọi ở đây. Tạm biệt bạn!",
-            "Kết quả: hệ thống gọi POST /api/v1/voice/end-session và nhận mã 200.",
+            "Trợ lý: Chào bạn, mình là Czen, trợ lý AI của bạn.",
+            "Trợ lý: Hôm nay bạn chưa có chuyến nào, thu nhập đang là 0đ. Cần gì bạn cứ nói nhé.",
+            "Tài xế: Hôm nay có thưởng không?  [gọi công cụ tra ưu đãi; 1,58 giây]",
+            "Trợ lý: Đang có một ưu đãi: Vùng trung tâm — tăng giá 1.2x, 20%, đến 23:59 hôm nay.",
+            "Tài xế: Bạn có thể giúp gì?  [LLM trả lời trực tiếp, không có câu đệm; 2,01 giây]",
+            "Trợ lý: Mình xem chuyến, điểm đón, giao thông, thu nhập, thưởng và hỗ trợ thao tác gọi nhắn khách trong app nha.",
+            "Tài xế: Làm sao để gọi khách?  [tới giây 1,6 LLM chưa có token nên mở đầu bằng câu đệm; 1,79 giây]",
+            "Trợ lý: Đợi mình một chút… Bạn mở chuyến đang chạy, bấm Gọi khách rồi chọn gọi bằng ứng dụng; nếu muốn mình gọi hộ, nói “gọi khách”.",
+            "Tài xế: Tôi hủy chuyến thì làm thế nào?  [câu đệm, rồi gọi công cụ tra sổ tay; 1,80 giây]",
+            "Trợ lý: Đợi mình một chút… Bạn có thể hủy chuyến bằng cách nhấn nút hủy trên ứng dụng hoặc nói với AI \"Tôi muốn hủy chuyến\". AI sẽ hỏi xác nhận trước khi thực hiện hủy.",
+            "Tài xế: Trời mưa lái sao cho an toàn?  [ngoài phạm vi; LLM từ chối và hỏi lại; 1,78 giây]",
+            "Trợ lý: Mình chưa hỗ trợ tư vấn an toàn giao thông; bạn xem hướng dẫn trên ứng dụng bản đồ hoặc gọi hotline, bạn đang hỏi để chuẩn bị cho chuyến nào?",
         ],
     ),
     (
-        "Kịch bản B.2 — Nhận chuyến qua cuộc gọi mời nhận chuyến (phiên SIP, tập công cụ hẹp)",
+        "Kịch bản B.2 — Nhận chuyến qua cuộc gọi điện thoại mời nhận chuyến (phiên chỉ có hai công cụ nhận và từ chối)",
         [
             "Trợ lý: Có chuyến mới đón tại 88 Pasteur, Quận 3. Bạn có nhận chuyến này không?",
-            "Tài xế: Xác nhận nhận chuyến.  [LLM + công cụ — confirm_trip]",
+            "Tài xế: Xác nhận nhận chuyến.  [gọi công cụ nhận chuyến]",
             "Trợ lý: Đã nhận chuyến. Chúc bạn đi đường an toàn.",
         ],
     ),
