@@ -16,7 +16,6 @@ from typing import Any, NoReturn
 
 from livekit.agents import StopResponse
 
-from app.agent.turn_metrics import mark_user_stopped
 from app.services import backend_api
 from app.voicebot.processors import context_store
 
@@ -24,7 +23,7 @@ logger = logging.getLogger("llm-orchestrator.confirm_trip_flow")
 
 
 def _start_say(session: Any, message: str, *, status: str) -> Any:
-    mark_user_stopped(session)
+    # Keep the wall clock stamped at the end of the driver's turn (see context_store).
     started = session.say(message, allow_interruptions=False)
     if asyncio.iscoroutine(started):
         return asyncio.create_task(started, name=f"{status}_trip_say")

@@ -17,7 +17,6 @@ from typing import Any, NoReturn
 
 from livekit.agents import StopResponse
 
-from app.agent.turn_metrics import mark_user_stopped
 from app.voicebot.prompts.tool_response import ToolResponse
 
 logger = logging.getLogger("llm-orchestrator.context_store")
@@ -132,7 +131,9 @@ async def speak_and_stop(
     if isinstance(text, ToolResponse):
         set_last_tool_response(session.userdata, text)
     spoken = spoken_from_tool_output(text)
-    mark_user_stopped(session)
+    # Do not restart the turn wall clock here: it was stamped when the driver
+    # stopped speaking (voice) or when the chat text arrived. Restarting it made
+    # tool-spoken replies log ~0.2s instead of the real wait.
     try:
         await session.say(spoken, allow_interruptions=allow_interruptions)
     except Exception:
