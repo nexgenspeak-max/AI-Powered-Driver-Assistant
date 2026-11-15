@@ -16,6 +16,8 @@ final class LocationTracker: NSObject {
     @ObservationIgnored private let manager = CLLocationManager()
     @ObservationIgnored private let api: DriverAPI
     @ObservationIgnored private let demo: Bool
+    /// False in demo mode and in unit tests: `CLLocationManager` is never asked for anything.
+    @ObservationIgnored private let usesSystemLocation: Bool
     @ObservationIgnored private var lastFixAt: Date?
     @ObservationIgnored private var lastLivePushAt: TimeInterval = 0
     @ObservationIgnored private var lastLivePushed: LatLng?
@@ -29,18 +31,20 @@ final class LocationTracker: NSObject {
     @ObservationIgnored private(set) var backgroundTracking = false
     /// True between `startForeground()` and `stopForeground()`.
     @ObservationIgnored private(set) var foregroundActive = false
+    /// True while the scene is in the background (balanced accuracy, 100 m filter).
+    @ObservationIgnored private(set) var inBackground = false
 
-    init(api: DriverAPI, demo: Bool) {
+    init(api: DriverAPI, demo: Bool, usesSystemLocation: Bool? = nil) {
         self.api = api
         self.demo = demo
+        self.usesSystemLocation = usesSystemLocation ?? !demo
         super.init()
         if demo {
             current = LatLng(lat: 21.0333, lng: 105.8200)
             authorization = .authorizedWhenInUse
-        } else {
+        } else if self.usesSystemLocation {
             manager.delegate = self
-            manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-            manager.distanceFilter = 5
+            applyUpdateSettings()
             manager.activityType = .automotiveNavigation
             authorization = manager.authorizationStatus
         }
@@ -49,7 +53,7 @@ final class LocationTracker: NSObject {
     /// Foreground watch (3 s / 5 m) plus a 15 s wall-clock tick that refreshes a fix older than 10 s.
     func startForeground() {
         foregroundActive = true
-        guard !demo else { return }
+        guard usesSystemLocation else { return }
         if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
         manager.startUpdatingLocation()
         tick?.cancel()
@@ -68,16 +72,42 @@ final class LocationTracker: NSObject {
         tick?.cancel()
         tick = nil
         resumeWaiters(with: current)
-        guard !demo else { return }
+        guard usesSystemLocation else { return }
         manager.stopUpdatingLocation()
+    }
+
+    /// Foreground: 10 m accuracy / 5 m filter. Background (parity map §4): balanced accuracy and
+    /// a 100 m filter, so the online driver's battery is not spent on navigation-grade fixes.
+    nonisolated static func updateSettings(inBackground: Bool) -> (accuracy: CLLocationAccuracy, distanceFilter: CLLocationDistance) {
+        inBackground ? (kCLLocationAccuracyHundredMeters, 100) : (kCLLocationAccuracyNearestTenMeters, 5)
+    }
+
+    /// Call on scene-phase changes.
+    func setInBackground(_ background: Bool) {
+        guard inBackground != background else { return }
+        inBackground = background
+        guard usesSystemLocation else { return }
+        applyUpdateSettings()
+    }
+
+    private func applyUpdateSettings() {
+        let settings = Self.updateSettings(inBackground: inBackground)
+        manager.desiredAccuracy = settings.accuracy
+        manager.distanceFilter = settings.distanceFilter
+    }
+
+    /// "Always" is asked for in context: only while background tracking is wanted and the driver
+    /// has already granted When-In-Use (iOS ignores the request before that).
+    nonisolated static func shouldRequestAlways(backgroundTracking: Bool, status: CLAuthorizationStatus) -> Bool {
+        backgroundTracking && status == .authorizedWhenInUse
     }
 
     /// Background tracking while online; asks for Always authorisation in context.
     func setBackgroundTracking(_ on: Bool) {
         backgroundTracking = on
-        guard !demo else { return }
+        guard usesSystemLocation else { return }
         if on {
-            if manager.authorizationStatus == .authorizedWhenInUse { manager.requestAlwaysAuthorization() }
+            if Self.shouldRequestAlways(backgroundTracking: on, status: manager.authorizationStatus) { manager.requestAlwaysAuthorization() }
             manager.allowsBackgroundLocationUpdates = manager.authorizationStatus == .authorizedAlways
             manager.showsBackgroundLocationIndicator = true
             manager.pausesLocationUpdatesAutomatically = false
@@ -92,7 +122,9 @@ final class LocationTracker: NSObject {
     func freshFix(timeout: Duration = .seconds(5)) async -> LatLng? {
         if demo { return current }
         if let at = lastFixAt, Date().timeIntervalSince(at) < 5 { return current }
-        manager.requestLocation()
+        // No permission, no fix: answer with the last known point instead of waiting out the timeout.
+        if authorization == .denied || authorization == .restricted { return current }
+        if usesSystemLocation { manager.requestLocation() }
         let fallback = current
         // Whichever comes first resumes every waiter: a new fix, or the timeout with the last fix.
         let timer = Task { [weak self] in
@@ -102,6 +134,25 @@ final class LocationTracker: NSObject {
         let fix = await withCheckedContinuation { fixWaiters.append($0) }
         timer.cancel()
         return fix ?? fallback
+    }
+
+    /// `didFailWithError`: a denied permission releases everyone awaiting a fix at once (with the
+    /// last known point). Other errors are transient — Core Location keeps trying.
+    func handleLocationFailure(denied: Bool) {
+        guard denied else { return }
+        resumeWaiters(with: current)
+    }
+
+    /// `locationManagerDidChangeAuthorization`.
+    func handleAuthorizationChange(_ status: CLAuthorizationStatus) {
+        authorization = status
+        if status == .denied || status == .restricted { resumeWaiters(with: current) }
+        guard usesSystemLocation else { return }
+        if foregroundActive, status == .authorizedWhenInUse || status == .authorizedAlways { manager.startUpdatingLocation() }
+        if backgroundTracking { manager.allowsBackgroundLocationUpdates = status == .authorizedAlways }
+        // Already online at sign-in: `setBackgroundTracking(true)` ran while the status was still
+        // undetermined, so the upgrade to Always is requested here, once When-In-Use lands.
+        if Self.shouldRequestAlways(backgroundTracking: backgroundTracking, status: status) { manager.requestAlwaysAuthorization() }
     }
 
     private func resumeWaiters(with value: LatLng?) {
@@ -162,14 +213,13 @@ extension LocationTracker: CLLocationManagerDelegate {
         Task { @MainActor in self.handleFix(point, course: course) }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        let denied = (error as? CLError)?.code == .denied
+        Task { @MainActor in self.handleLocationFailure(denied: denied) }
+    }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
-        Task { @MainActor in
-            self.authorization = status
-            if self.foregroundActive, status == .authorizedWhenInUse || status == .authorizedAlways { self.manager.startUpdatingLocation() }
-            if self.backgroundTracking { self.manager.allowsBackgroundLocationUpdates = status == .authorizedAlways }
-        }
+        Task { @MainActor in self.handleAuthorizationChange(status) }
     }
 }

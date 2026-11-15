@@ -35,6 +35,7 @@
 		8FFA9717C6C33CEA33EC3459 /* InfoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CE017B75C9EEE8213FBFBB /* InfoViews.swift */; };
 		90B03E758D3BC8B2DD7A3CD9 /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE3A6108D90B859D9E84021 /* HTTPClient.swift */; };
 		9122784554E3885923E64E6D /* TokenRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0295A8B937C8C9D71007A9EF /* TokenRefreshTests.swift */; };
+		940E282EF81AD465BC6B4F17 /* AuditFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BBD3506E1CDF1B9D866709C /* AuditFixTests.swift */; };
 		962E4BFAFF469AFCA86E48A3 /* TileTextRepair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD31BC0AE646D428E3A6A50 /* TileTextRepair.swift */; };
 		AB8CC21323F6CEF682A5B3A4 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81894AA2CC5F65E54039B302 /* AuthViews.swift */; };
 		AC216A50972D6F305C870F68 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF839A4D3255C96B280FF7CE /* Storage.swift */; };
@@ -89,6 +90,7 @@
 		2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewFixTests.swift; sourceTree = "<group>"; };
 		2E190D9285B4726F9661F694 /* CzenDriverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CzenDriverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		37E87A50A2E71FCE6701C2F9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3BBD3506E1CDF1B9D866709C /* AuditFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuditFixTests.swift; sourceTree = "<group>"; };
 		3EE3A6108D90B859D9E84021 /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
 		4347BC54DB5872C9105715EE /* new-trip-alert.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "new-trip-alert.mp3"; sourceTree = "<group>"; };
 		4427A4BAD0412F1BC6144703 /* LiveKitVoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveKitVoiceEngine.swift; sourceTree = "<group>"; };
@@ -422,6 +424,7 @@
 		F3D9AE391EE8CA46CA01F82A /* CzenDriverTests */ = {
 			isa = PBXGroup;
 			children = (
+				3BBD3506E1CDF1B9D866709C /* AuditFixTests.swift */,
 				C8F4261C420E370422B3B0E5 /* LifecycleTests.swift */,
 				D18A4E29C8B4EDCF6B448DE9 /* LogicTests.swift */,
 				2B1FF4B91CBE2E2E084325C3 /* ReviewFixTests.swift */,
@@ -637,6 +640,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				940E282EF81AD465BC6B4F17 /* AuditFixTests.swift in Sources */,
 				173BAF56A6B5BAE718361671 /* LifecycleTests.swift in Sources */,
 				F09C80EAFCA3CFCA8471415B /* LogicTests.swift in Sources */,
 				89194D7ADEC423C6F513382B /* ReviewFixTests.swift in Sources */,

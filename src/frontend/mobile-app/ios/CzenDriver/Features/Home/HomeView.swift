@@ -13,6 +13,8 @@ struct NextStop: Equatable {
     var total: Int
     var serverDistanceM: Double?
     var serverEtaMin: Double?
+    /// Where the server measured `serverDistanceM` from (the live leg is rescaled from it).
+    var routeOrigin: LatLng?
 
     var label: String {
         let base = isPickup ? (arrived ? "Đã đến · chờ khách" : "Đón khách") : "Trả khách"
@@ -27,14 +29,20 @@ struct NextStop: Equatable {
             return NextStop(tripId: first.tripId, name: first.customerName ?? trip?.displayName ?? "Khách", address: first.address,
                             coordinate: first.coordinate, isPickup: first.isPickup, arrived: trip?.status == .arrivedPickup,
                             phone: trip?.customerPhone, index: 1, total: route.stops.count,
-                            serverDistanceM: first.distanceM, serverEtaMin: first.etaMinutes)
+                            serverDistanceM: first.distanceM, serverEtaMin: first.etaMinutes, routeOrigin: route.driverLocation)
         }
         guard let trip = ctx.currentTrip ?? ctx.activeTrips.first else { return nil }
         let pickup = trip.status != .pickedUp
         guard let coord = pickup ? trip.pickup : trip.dropoff else { return nil }
+        // The trip's own distance / ETA describe pickup → dropoff (`useDriverMapModel.ts`): they
+        // apply only once the customer is on board, measured from the pickup. A pickup leg has
+        // no server figures and falls back to the live straight-line estimate.
         return NextStop(tripId: trip.tripId, name: trip.displayName, address: pickup ? trip.pickupAddress : trip.dropoffAddress,
                         coordinate: coord, isPickup: pickup, arrived: trip.status == .arrivedPickup, phone: trip.customerPhone,
-                        index: 1, total: 1, serverDistanceM: trip.distanceKm.map { $0 * 1000 }, serverEtaMin: trip.etaMinutes)
+                        index: 1, total: 1,
+                        serverDistanceM: pickup ? nil : trip.distanceKm.flatMap { $0 > 0 ? $0 * 1000 : nil },
+                        serverEtaMin: pickup ? nil : trip.etaMinutes.flatMap { $0 > 0 ? $0 : nil },
+                        routeOrigin: pickup ? nil : trip.pickup)
     }
 }
 
@@ -140,10 +148,16 @@ struct HomeView: View {
                 // Goong tiles are light in both themes, so the floating glass reads as light glass.
                 .environment(\.colorScheme, .light)
             }
+            if location.authorization == .denied || location.authorization == .restricted {
+                LocationDeniedHint()
+                    .padding(.horizontal, Spacing.s4)
+                    .padding(.top, Spacing.s2)
+                    .environment(\.colorScheme, .light)
+            }
             Spacer()
             if !nav.isNavigating {
                 if let next {
-                    NextStopCard(stop: next, live: location.current, routeOrigin: model.context?.optimizedRoute?.driverLocation) {
+                    NextStopCard(stop: next, live: location.current, routeOrigin: next.routeOrigin) {
                         Task { await startNavigation(to: next) }
                     }
                     .padding(.horizontal, Spacing.s4)
@@ -160,6 +174,25 @@ struct HomeView: View {
     private func startNavigation(to next: NextStop) async {
         Task { await location.pushImmediate() }
         await nav.start(from: location.current, to: next.coordinate)
+    }
+}
+
+/// Shown while location permission is denied / restricted; opens the app's Settings page.
+struct LocationDeniedHint: View {
+    @Environment(\.openURL) private var openURL
+    var body: some View {
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+        } label: {
+            Label("Chưa có quyền vị trí. Nhấn để mở Cài đặt.", systemImage: "location.slash.fill")
+                .appText(.label).foregroundStyle(Palette.textPrimary)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("location-denied-hint")
     }
 }
 

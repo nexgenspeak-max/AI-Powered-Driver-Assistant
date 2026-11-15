@@ -98,7 +98,14 @@ struct TripsView: View {
 
     @ViewBuilder
     private var content: some View {
-        if model.me == nil || (model.context == nil && model.contextLoading) || (model.context == nil && !model.contextError) {
+        if model.me == nil && model.meError {
+            // The profile request failed: an error with a retry, never endless skeletons.
+            EmptyStateView(systemImage: "exclamationmark.circle", title: "Không thể tải thông tin tài xế",
+                           message: "Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.", actionTitle: "Thử lại") {
+                Task { await model.loadContext(fresh: true) }
+            }
+            .accessibilityIdentifier("me-error")
+        } else if model.me == nil || (model.context == nil && model.contextLoading) || (model.context == nil && !model.contextError) {
             SkeletonBlock(height: 210)
             SkeletonBlock(height: 210)
         } else if model.context == nil && model.contextError {

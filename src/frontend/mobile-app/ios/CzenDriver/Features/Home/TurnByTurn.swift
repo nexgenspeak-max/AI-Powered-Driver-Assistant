@@ -45,6 +45,22 @@ final class TurnByTurn {
         await fetch(from: origin ?? destination)
     }
 
+    /// The next stop changed while navigating (`useDriverMapModel.ts`: the route is refetched
+    /// when the destination key changes, and navigation ends when there is no target).
+    func retarget(to newDestination: LatLng?, from origin: LatLng?) async {
+        guard isNavigating else { return }
+        guard let newDestination else { stop(); return }
+        // Same key as RN (`toFixed(5)`): float jitter in a refreshed context is not a new stop.
+        if let destination, Self.sameStop(destination, newDestination) { return }
+        await start(from: origin, to: newDestination) // also during the 4 s "Đã đến nơi" HUD, as in RN
+    }
+
+    /// Equal to 5 decimal places (~1 m).
+    nonisolated static func sameStop(_ a: LatLng, _ b: LatLng) -> Bool {
+        func key(_ v: Double) -> Double { (v * 100_000).rounded() }
+        return key(a.lat) == key(b.lat) && key(a.lng) == key(b.lng)
+    }
+
     func retry(from origin: LatLng?) async {
         guard let destination else { return }
         state = .loading

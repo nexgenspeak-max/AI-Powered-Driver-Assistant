@@ -86,7 +86,10 @@ struct TripCard: View {
     @Environment(AppModel.self) private var model
     var trip: Trip
     @State private var confirmReject = false
-    @State private var busy = false
+    @State private var accepting = false
+    @State private var rejecting = false
+    @State private var failure: String?
+    private var busy: Bool { accepting || rejecting }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -100,20 +103,37 @@ struct TripCard: View {
             TripMetaRow(trip: trip)
             if trip.status == .notified || trip.status == .calling {
                 HStack(spacing: Spacing.s3) {
-                    CzenButton(title: "Từ chối", kind: .outline, disabled: busy) { confirmReject = true }
-                    CzenButton(title: "Nhận chuyến", loading: busy, identifier: "accept-\(trip.tripId)") {
-                        busy = true
-                        Task { try? await model.acceptTrip(trip.tripId); busy = false }
+                    CzenButton(title: "Từ chối", kind: .outline, loading: rejecting, disabled: busy) { confirmReject = true }
+                    CzenButton(title: "Nhận chuyến", loading: accepting, disabled: busy, identifier: "accept-\(trip.tripId)") {
+                        guard !busy else { return }
+                        accepting = true
+                        Task {
+                            failure = await TripActionFailure.message { try await model.acceptTrip(trip.tripId) }
+                            if failure != nil { Haptics.error() }
+                            accepting = false
+                        }
                     }
                 }
             }
         }
         .surfaceCard()
         .confirmationDialog("Từ chối chuyến này?", isPresented: $confirmReject, titleVisibility: .visible) {
-            Button("Từ chối", role: .destructive) { Task { try? await model.rejectTrip(trip.tripId) } }
+            Button("Từ chối", role: .destructive) {
+                guard !busy else { return }
+                rejecting = true
+                Task {
+                    failure = await TripActionFailure.message { try await model.rejectTrip(trip.tripId) }
+                    rejecting = false
+                }
+            }
             Button("Giữ lại", role: .cancel) {}
         } message: {
             Text("Bạn sẽ không thể nhận lại chuyến này sau khi từ chối.")
+        }
+        .alert("Không thực hiện được", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(failure ?? "")
         }
     }
 }
@@ -125,7 +145,9 @@ struct ActiveTripCard: View {
     var trip: Trip
     @State private var confirmCancel = false
     @State private var busy = false
+    @State private var cancelling = false
     @State private var failure: String?
+    @State private var cancelFailure: String?
 
     private var nextAction: (String, CzenButton.Kind)? {
         switch trip.status {
@@ -154,7 +176,7 @@ struct ActiveTripCard: View {
                     .appText(.caption).foregroundStyle(Palette.info)
             }
             if let action = nextAction {
-                CzenButton(title: LocalizedStringKey(action.0), kind: action.1, loading: busy, disabled: trip.status == .completed, identifier: "advance-\(trip.tripId)") {
+                CzenButton(title: LocalizedStringKey(action.0), kind: action.1, loading: busy, disabled: trip.status == .completed || cancelling, identifier: "advance-\(trip.tripId)") {
                     advance()
                 }
             }
@@ -165,14 +187,21 @@ struct ActiveTripCard: View {
                     }
                     .accessibilityLabel(trip.customerName.map { "Gọi \($0)" } ?? "Gọi khách")
                     if trip.status != .pickedUp {
-                        CzenButton(title: "Huỷ chuyến", kind: .outline) { confirmCancel = true }
+                        CzenButton(title: "Huỷ chuyến", kind: .outline, loading: cancelling, disabled: busy) { confirmCancel = true }
                     }
                 }
             }
         }
         .surfaceCard()
         .confirmationDialog("Huỷ chuyến này?", isPresented: $confirmCancel, titleVisibility: .visible) {
-            Button("Huỷ chuyến", role: .destructive) { Task { try? await model.cancelTrip(trip.tripId) } }
+            Button("Huỷ chuyến", role: .destructive) {
+                guard !cancelling, !busy else { return }
+                cancelling = true
+                Task {
+                    cancelFailure = await TripActionFailure.message { try await model.cancelTrip(trip.tripId) }
+                    cancelling = false
+                }
+            }
             Button("Giữ chuyến", role: .cancel) {}
         } message: {
             Text("Khách sẽ được thông báo. Thao tác này không thể hoàn tác.")
@@ -182,20 +211,42 @@ struct ActiveTripCard: View {
         } message: {
             Text(failure ?? "")
         }
+        .alert("Không huỷ được chuyến", isPresented: Binding(get: { cancelFailure != nil }, set: { if !$0 { cancelFailure = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(cancelFailure ?? "")
+        }
     }
 
     private func advance() {
+        guard !busy, !cancelling else { return }
         busy = true
         Task {
-            do {
-                try await model.advance(trip)
-            } catch let error as APIError {
-                if error.status == 409 { failure = error.detail ?? "Không thể xác nhận, vui lòng thử lại." }
-                else { failure = "Không thể xác nhận, vui lòng thử lại." }
-            } catch {
-                failure = "Không thể xác nhận, vui lòng thử lại."
-            }
+            // `arrivalErrorMessage` (ActiveTripCard.tsx): the server `detail` for any status.
+            failure = await TripActionFailure.message(generic: TripActionFailure.arrivalGeneric) { try await model.advance(trip) }
             busy = false
+        }
+    }
+}
+
+/// Turns a failed trip action into the alert text: the server `detail` when there is one
+/// (whatever the HTTP status), else a generic message. `nil` = the action succeeded.
+enum TripActionFailure {
+    static let generic = "Đã có lỗi xảy ra. Vui lòng thử lại."
+    static let arrivalGeneric = "Không thể xác nhận, vui lòng thử lại."
+
+    static func text(for error: Error, generic: String = TripActionFailure.generic) -> String {
+        guard let detail = (error as? APIError)?.detail, !detail.isEmpty else { return generic }
+        return detail
+    }
+
+    @MainActor
+    static func message(generic: String = TripActionFailure.generic, _ op: () async throws -> Void) async -> String? {
+        do {
+            try await op()
+            return nil
+        } catch {
+            return text(for: error, generic: generic)
         }
     }
 }

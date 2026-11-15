@@ -20,6 +20,19 @@ enum APIError: Error, Equatable, Sendable {
     }
 }
 
+/// Query encoding equivalent to JS `encodeURIComponent`. `URLComponents.queryItems` leaves "+"
+/// untouched and servers read it as a space, which corrupts phone numbers such as "+8490…".
+enum QueryEncoding {
+    private static let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+    static func encode(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value }
+
+    /// Items for `URLComponents.percentEncodedQueryItems`.
+    static func encoded(_ items: [URLQueryItem]) -> [URLQueryItem] {
+        items.map { URLQueryItem(name: encode($0.name), value: $0.value.map(encode)) }
+    }
+}
+
 protocol HTTPTransport: Sendable {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
 }
@@ -188,7 +201,7 @@ final class HTTPClient: Sendable {
 
     func request(_ method: String, _ path: String, query: [URLQueryItem] = [], body: (any Encodable & Sendable)? = nil, authorized: Bool = true) async throws -> Data {
         var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        if !query.isEmpty { components?.queryItems = query }
+        if !query.isEmpty { components?.percentEncodedQueryItems = QueryEncoding.encoded(query) }
         guard let url = components?.url else { throw APIError.network("bad url") }
         var req = URLRequest(url: url)
         req.httpMethod = method

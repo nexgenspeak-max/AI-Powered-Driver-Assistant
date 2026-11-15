@@ -93,7 +93,39 @@ Review fixes, round 3 (2026-11-12)
 - [x] Dispatch socket: a handshake rejected with HTTP 401 retries after 3 s → 6 → 12 … ≤ 60 s; a successful
       open resets it; other closes keep the 3 s reconnect.
 
+Audit fixes (2026-11-15)
+- [x] `/auth/me` failure: `AppModel.meError`, background retry (2 s → 4 → 8 … ≤ 30 s) while signed in without a
+      profile, `loadContext()` loads `me` first, Chuyến shows an error + "Thử lại" instead of endless skeletons.
+- [x] Trip offer sheet: closes only on success (error haptic + message otherwise), clears the previous offer's
+      details when the id changes, retries a failed load (1 s, 2 s, then every 3 s).
+- [x] Turn-by-turn follows the next stop: a context whose next stop moved re-routes, no next stop ends it
+      (`TurnByTurn.retarget`, driven from `AppModel.apply`).
+- [x] More session-generation guards: `setOnline` rollback, `patchSettings`, `loadEarnings`, `loadSettings` catch.
+- [x] "Always" location is requested from the authorization callback once When-In-Use lands while background
+      tracking is on; Home shows a "Chưa có quyền vị trí" hint (opens Settings) when denied / restricted.
+- [x] Trip cards: accept / reject / cancel failures raise an alert (server `detail` or generic), buttons are busy
+      / disabled meanwhile; arrival alert shows `detail` for any status; a denied permission releases fix waiters.
+- [x] Debug-only `driver-app://dev-login?phone=&password=` (`DevLoginLink`, `.onOpenURL` under `#if DEBUG`).
+- [x] NextStopCard without an optimized route: server distance / ETA only for the dropoff leg, origin = pickup.
+- [x] Nudge auto-connect re-evaluated on voice status changes; success haptic on accept and on completion; the
+      offer haptic always fires (only the sound is skipped while voice is active).
+- [x] Query values encoded like `encodeURIComponent` ("+" → `%2B`) for REST and the dispatch socket.
+- [x] Wake word reschedules listening when it triggers without a driver phone; composer voice button shows the
+      "Lỗi" alert; chat `send` is single-flight; logout shows progress and caps the offline PATCH at 3 s.
+- [x] Earnings hero: no third stat when neither hours nor bonus exists; background location uses 100 m accuracy
+      and a 100 m distance filter (scene phase), foreground 10 m / 5 m.
+- [x] Review round: the offer countdown and the trip load run independently (`TripOfferModel`: the sheet always
+      closes at 30 s, at most 3 retries and only for transient errors, a late response for a replaced offer is
+      dropped, one fetch on appear); `login` over a live session resets the previous account first; `retarget`
+      compares stops to 5 decimals and continues during the "Đã đến nơi" HUD; a manual profile retry cancels the
+      background one; `LocationTracker(usesSystemLocation:)` keeps unit tests off `CLLocationManager`.
+- Not done (need a real device): audio-session hand-over between offer alert / wake word / LiveKit, suspected
+  LiveKit Room retain cycle. Permission prompts, haptics, the wake-word reschedule and the Settings hint were
+  verified by build and unit logic only.
+
 Test notes
+- Audit fixes: 113 Swift Testing tests in 30 suites (`AuditFixTests.swift` adds 40). With the fixes neutralised
+  (retry, generation guards, retarget, NextStop figures, query encoding) 9 of the new tests failed; all pass now.
 - `xcodebuild clean test` passes on the "Czen Native iOS 26" (iOS 26.1) simulator with zero warnings: 69 Swift
   Testing tests in 19 suites + 4 XCUITests (demo journey, 3 accessibility tests). Round-3 tests
   (`Round3Tests.swift`): 9 of the 10 failed against the pre-fix sources (the Keychain write-status test passed

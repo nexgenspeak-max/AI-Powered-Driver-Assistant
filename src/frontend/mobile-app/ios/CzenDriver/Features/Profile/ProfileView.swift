@@ -29,6 +29,7 @@ struct ProfileView: View {
     @Environment(AppModel.self) private var model
     @Binding var path: [ProfileRoute]
     @State private var confirmLogout = false
+    @State private var loggingOut = false
 
     var body: some View {
         ScrollView {
@@ -71,8 +72,13 @@ struct ProfileView: View {
                         NavigationLink(value: ProfileRoute.faq) { MenuRow(systemImage: "questionmark.circle.fill", title: "Câu hỏi thường gặp") }
                         Divider().overlay(Palette.divider).padding(.leading, 46)
                         Button { confirmLogout = true } label: {
-                            MenuRow(systemImage: "rectangle.portrait.and.arrow.right", title: "Đăng xuất", tint: Palette.danger, showsChevron: false)
+                            HStack {
+                                MenuRow(systemImage: "rectangle.portrait.and.arrow.right", title: loggingOut ? "Đang đăng xuất..." : "Đăng xuất",
+                                        tint: Palette.danger, showsChevron: false)
+                                if loggingOut { ProgressView().tint(Palette.danger) }
+                            }
                         }
+                        .disabled(loggingOut)
                         .accessibilityIdentifier("logout")
                     }
                     .buttonStyle(.plain)
@@ -90,7 +96,14 @@ struct ProfileView: View {
         .navigationTitle("Quay lại")
         .toolbar(.hidden, for: .navigationBar)
         .confirmationDialog("Đăng xuất?", isPresented: $confirmLogout, titleVisibility: .visible) {
-            Button("Đăng xuất", role: .destructive) { Task { await model.logout() } }
+            Button("Đăng xuất", role: .destructive) {
+                guard !loggingOut else { return }
+                loggingOut = true
+                Task {
+                    await model.logout() // the offline PATCH is capped at ~3 s
+                    loggingOut = false
+                }
+            }
             Button("Ở lại", role: .cancel) {}
         } message: {
             Text("Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng ứng dụng.")

@@ -109,7 +109,8 @@ final class WakeWordService {
         lastHeard = text
         if WakePhrase.matches(text) {
             stop()
-            trigger()
+            // Nothing to connect to (no driver phone yet): keep listening instead of going deaf.
+            if !trigger() { schedule(after: .seconds(1)) }
             return
         }
         if isFinal || failed {
@@ -118,10 +119,12 @@ final class WakeWordService {
         }
     }
 
-    private func trigger() {
-        guard let model, let phone = model.phone else { return }
+    /// `false` when the session could not be started.
+    private func trigger() -> Bool {
+        guard let model, let phone = model.phone else { return false }
         model.chat.openPanel()
         Task { await model.voice.connect(phone: phone) }
+        return true
     }
 
     private func retryAfterFailure() {

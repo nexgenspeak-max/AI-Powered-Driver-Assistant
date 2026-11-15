@@ -70,6 +70,16 @@ enum EarningsMath {
     }
 }
 
+/// Third hero stat (`EarningsHero.tsx`): hours online when known, else the bonus, else nothing —
+/// the 7- and 30-day summaries carry neither, so they show two stats.
+enum EarningsHeroStat {
+    static func third(hours: Double?, bonus: Double?) -> (label: String, value: String)? {
+        if let hours { return ("Giờ online", "\(Fmt.decimal(hours)) giờ") }
+        if let bonus { return ("Thưởng", Fmt.currency(bonus)) }
+        return nil
+    }
+}
+
 /// "Thu nhập": hero, weekly chart, searchable history.
 struct EarningsView: View {
     @Environment(AppModel.self) private var model
@@ -133,10 +143,8 @@ struct EarningsView: View {
                 HStack(spacing: Spacing.s2) {
                     StatCard(label: "Chuyến", value: "\(count)")
                     StatCard(label: "TB/chuyến", value: count > 0 ? Fmt.currency((total / Double(count)).rounded()) : "—")
-                    if period == .today {
-                        StatCard(label: "Giờ online", value: t.hours.map { "\(Fmt.decimal($0)) giờ" } ?? "—")
-                    } else {
-                        StatCard(label: "Thưởng", value: t.bonus.map { Fmt.currency($0) } ?? "—")
+                    if let third = EarningsHeroStat.third(hours: t.hours, bonus: t.bonus) {
+                        StatCard(label: third.label, value: third.value)
                     }
                 }
             } else {

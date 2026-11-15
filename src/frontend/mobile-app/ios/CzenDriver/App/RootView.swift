@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(Preferences.self) private var prefs
     @Environment(WakeWordService.self) private var wakeWord
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -23,10 +24,45 @@ struct RootView: View {
         .tint(Palette.primary)
         .task { await model.bootstrap() }
         .onChange(of: model.phase) { wakeWord.sync() }
+        .onChange(of: scenePhase) {
+            // Background location runs with balanced accuracy / a 100 m filter (parity map §4).
+            if scenePhase == .background { model.location.setInBackground(true) }
+            if scenePhase == .active { model.location.setInBackground(false) }
+        }
         .onChange(of: prefs.wakeWordEnabled) { wakeWord.sync() }
-        .onChange(of: model.voice.status) { wakeWord.sync() }
+        .onChange(of: model.voice.status) {
+            wakeWord.sync()
+            model.autoConnectOnNudge() // useAutoConnectOnNudge has `status` in its deps
+        }
+        #if DEBUG
+        // Debug-only `driver-app://dev-login?phone=&password=`; Release builds compile no URL handler.
+        .onOpenURL { url in
+            guard let login = DevLoginLink(url: url) else { return }
+            Task { try? await model.login(phone: login.phone, password: login.password) }
+        }
+        #endif
     }
 }
+
+#if DEBUG
+/// `driver-app://dev-login?phone=&password=` (Android `DeepLinks.kt`): signs in with credentials
+/// from the URL, so it exists only in debug builds.
+struct DevLoginLink: Equatable {
+    let phone: String
+    let password: String
+
+    init?(url: URL) {
+        guard url.scheme == "driver-app", let comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        let path = ([comps.host ?? ""] + comps.path.split(separator: "/").map(String.init)).filter { !$0.isEmpty && $0 != "(app)" }
+        guard path.first == "dev-login" else { return nil }
+        func value(_ name: String) -> String? { comps.queryItems?.first { $0.name == name }?.value }
+        guard let phone = value("phone"), let password = value("password"),
+              !phone.trimmingCharacters(in: .whitespaces).isEmpty, !password.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        self.phone = phone
+        self.password = password
+    }
+}
+#endif
 
 enum AppTab: Hashable { case home, trips, assistant, earnings, profile }
 
@@ -95,7 +131,7 @@ struct AppShellView: View {
             }
 
             if chat.panelOpen {
-                AssistantChatPanel(onCancelCall: { confirmCancelCall = true })
+                AssistantChatPanel(onCancelCall: { confirmCancelCall = true }, onMissingPhone: { missingPhone = true })
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .zIndex(100)
             }

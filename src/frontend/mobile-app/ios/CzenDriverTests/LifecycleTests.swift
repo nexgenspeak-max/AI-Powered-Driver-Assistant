@@ -366,7 +366,10 @@ struct SignOutTests {
         let model = makeModel()
         await model.bootstrap()
         #expect(model.location.backgroundTracking) // demo driver is online
-        await model.navigation.start(from: LatLng(lat: 21.03, lng: 105.82), to: LatLng(lat: 21.04, lng: 105.83))
+        // Navigate to the real next stop: turn-by-turn now follows the context's next stop, so an
+        // arbitrary destination would be re-targeted by the socket-open context refresh.
+        guard let next = NextStop.from(model.context) else { Issue.record("demo context has no next stop"); return }
+        await model.navigation.start(from: LatLng(lat: 21.03, lng: 105.82), to: next.coordinate)
         #expect(model.navigation.state == .active)
 
         await model.logout()

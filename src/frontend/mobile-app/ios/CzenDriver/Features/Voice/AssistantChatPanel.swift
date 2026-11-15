@@ -7,10 +7,12 @@ struct AssistantChatPanel: View {
     @Environment(VoiceSession.self) private var voice
     @Environment(Preferences.self) private var prefs
     var onCancelCall: () -> Void
+    var onMissingPhone: () -> Void = {}
 
     @State private var text = ""
     @State private var error: String?
     @State private var stubLoading = false
+    @State private var sending = false
     @FocusState private var focused: Bool
     @Namespace private var glass
 
@@ -210,7 +212,7 @@ struct AssistantChatPanel: View {
                     .accessibilityLabel("Gửi tin nhắn")
                     .accessibilityIdentifier("chat-send")
                 } else {
-                    ComposerVoiceButton(onCancelCall: onCancelCall)
+                    ComposerVoiceButton(onCancelCall: onCancelCall, onMissingPhone: onMissingPhone)
                         .glassEffectID("action", in: glass)
                 }
             }
@@ -235,9 +237,12 @@ struct AssistantChatPanel: View {
             error = "Bạn chưa nhập nội dung."
             return
         }
+        guard !sending else { return } // one message at a time (double tap, chip + return key)
+        sending = true
         error = nil
         text = ""
         Task {
+            defer { sending = false }
             if voice.status == .connected {
                 chat.upsert(who: .me, msg: raw, isFinal: true)
                 if await voice.sendText(raw) { return }
@@ -266,6 +271,7 @@ struct ComposerVoiceButton: View {
     @Environment(VoiceSession.self) private var voice
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onCancelCall: () -> Void
+    var onMissingPhone: () -> Void = {}
 
     var body: some View {
         Button(action: tap) {
@@ -303,7 +309,7 @@ struct ComposerVoiceButton: View {
         case .connected:
             if voice.isCallActive { onCancelCall() } else { voice.disconnect(userInitiated: true) }
         case .idle, .error:
-            guard let phone = model.phone else { return }
+            guard let phone = model.phone else { onMissingPhone(); return } // the "Lỗi" alert
             Task { await voice.connect(phone: phone) }
         }
     }

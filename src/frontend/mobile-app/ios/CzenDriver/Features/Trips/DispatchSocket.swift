@@ -91,11 +91,16 @@ final class LiveDispatchSocket: DispatchSocket {
         return Swift.min(base * factor, max)
     }
 
+    /// `?role=driver&id=<encodeURIComponent(phone)>` — a "+" must travel as %2B.
+    nonisolated static func socketURL(base: URL, phone: String) -> URL? {
+        var comps = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        comps?.percentEncodedQueryItems = QueryEncoding.encoded([URLQueryItem(name: "role", value: "driver"), URLQueryItem(name: "id", value: phone)])
+        return comps?.url
+    }
+
     /// One connection's lifetime; returns how long to wait before the next attempt.
     private func runOnce(phone: String) async -> Duration {
-        var comps = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-        comps?.queryItems = [URLQueryItem(name: "role", value: "driver"), URLQueryItem(name: "id", value: phone)]
-        guard let url = comps?.url, !Task.isCancelled else { return reconnectDelay }
+        guard let url = Self.socketURL(base: baseURL, phone: phone), !Task.isCancelled else { return reconnectDelay }
         connectionID += 1
         let id = connectionID
         let opened = OpenFlag()
