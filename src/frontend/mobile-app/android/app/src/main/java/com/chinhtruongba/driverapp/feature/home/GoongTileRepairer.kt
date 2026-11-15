@@ -48,9 +48,10 @@ object GoongTileRepairer {
     @Volatile
     private var installed = false
 
-    /** `*.goong.io/tiles/….pbf` only. */
+    /** `goong.io` and its subdomains, `/tiles/….pbf` only (`evilgoong.io` is not Goong). */
     fun shouldRepair(url: HttpUrl): Boolean =
-        url.host.endsWith("goong.io") && url.encodedPath.startsWith("/tiles/") && url.encodedPath.endsWith(".pbf")
+        (url.host == "goong.io" || url.host.endsWith(".goong.io")) &&
+            url.encodedPath.startsWith("/tiles/") && url.encodedPath.endsWith(".pbf")
 
     /** Idempotent; call after `MapLibre.getInstance` and before the first `MapView`. */
     @Synchronized

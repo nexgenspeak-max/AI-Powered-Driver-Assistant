@@ -151,8 +151,22 @@ object VectorTileRepair {
         return repair(plain)
     }
 
-    private fun gunzip(data: ByteArray): ByteArray? = runCatching {
-        GZIPInputStream(ByteArrayInputStream(data)).use { it.readBytes() }
+    /** Largest inflated tile accepted. Goong tiles are well under 1 MB; anything bigger is not repaired. */
+    const val MAX_INFLATED_BYTES = 8 * 1024 * 1024
+
+    /** Inflates [data], or null when it is not valid gzip or inflates past [limit] (a decompression bomb). */
+    internal fun gunzip(data: ByteArray, limit: Int = MAX_INFLATED_BYTES): ByteArray? = runCatching {
+        GZIPInputStream(ByteArrayInputStream(data)).use { input ->
+            val out = ByteArrayOutputStream(minOf(data.size * 4, limit))
+            val buffer = ByteArray(16 * 1024)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                if (out.size() + n > limit) return null
+                out.write(buffer, 0, n)
+            }
+            out.toByteArray()
+        }
     }.getOrNull()
 
     /** The repaired tile, or null when nothing needed repair (or the data is not a plain MVT). */

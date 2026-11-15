@@ -3,7 +3,9 @@ package com.chinhtruongba.driverapp.core.storage
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.annotation.SuppressLint
 import android.util.Base64
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -13,6 +15,7 @@ import com.chinhtruongba.driverapp.core.model.AuthTokens
 import com.chinhtruongba.driverapp.core.model.ThemeMode
 import com.chinhtruongba.driverapp.core.model.VoiceLang
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +53,7 @@ private data class PersistedAuth(val state: PersistedTokens, val version: Int = 
 private data class PersistedTokens(val accessToken: String? = null, val refreshToken: String? = null)
 
 /** AES-256-GCM with a non-exportable Android Keystore key. */
-class KeystoreCipher(private val alias: String = "czen-driver-auth") {
+class KeystoreCipher(private val alias: String = "czen-driver-auth") : TokenCipher {
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (ks.getEntry(alias, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
@@ -65,14 +68,14 @@ class KeystoreCipher(private val alias: String = "czen-driver-auth") {
         return gen.generateKey()
     }
 
-    fun encrypt(plain: String): String {
+    override fun encrypt(plain: String): String {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, key())
         val out = c.iv + c.doFinal(plain.toByteArray(Charsets.UTF_8))
         return Base64.encodeToString(out, Base64.NO_WRAP)
     }
 
-    fun decrypt(encoded: String): String {
+    override fun decrypt(encoded: String): String {
         val bytes = Base64.decode(encoded, Base64.NO_WRAP)
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes, 0, 12))
@@ -80,10 +83,21 @@ class KeystoreCipher(private val alias: String = "czen-driver-auth") {
     }
 }
 
+/** Encrypts and decrypts the persisted token blob. */
+interface TokenCipher {
+    fun encrypt(plain: String): String
+    fun decrypt(encoded: String): String
+}
+
 @Singleton
-class EncryptedTokenStore @Inject constructor(@ApplicationContext private val context: Context) : TokenStore {
+@SuppressLint("LogNotTimber") // the app has no Timber; one warning-level line, never the tokens
+class EncryptedTokenStore(
+    private val context: Context,
+    private val cipher: TokenCipher,
+) : TokenStore {
+    @Inject constructor(@ApplicationContext context: Context) : this(context, KeystoreCipher())
+
     private val key = stringPreferencesKey("driver-auth-tokens")
-    private val cipher = KeystoreCipher()
     private val json = Json { ignoreUnknownKeys = true }
     private val _tokens = MutableStateFlow<AuthTokens?>(null)
     private val _hydrated = MutableStateFlow(false)
@@ -104,8 +118,25 @@ class EncryptedTokenStore @Inject constructor(@ApplicationContext private val co
 
     override suspend fun set(tokens: AuthTokens) {
         _tokens.value = tokens
-        val blob = cipher.encrypt(json.encodeToString(PersistedAuth.serializer(), PersistedAuth(PersistedTokens(tokens.accessToken, tokens.refreshToken))))
-        context.secureStore.edit { it[key] = blob }
+        persist(tokens)
+    }
+
+    /**
+     * A Keystore or DataStore failure must not fail the login: the session stays usable in
+     * memory until the process dies. The older blob is dropped so a restart cannot bring back
+     * tokens that were rotated away (or another account's).
+     */
+    private suspend fun persist(tokens: AuthTokens) {
+        try {
+            val payload = PersistedAuth(PersistedTokens(tokens.accessToken, tokens.refreshToken))
+            val blob = cipher.encrypt(json.encodeToString(PersistedAuth.serializer(), payload))
+            context.secureStore.edit { it[key] = blob }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("EncryptedTokenStore", "tokens not persisted (${e.javaClass.simpleName}); session is memory-only")
+            runCatching { context.secureStore.edit { it.remove(key) } }
+        }
     }
 
     override suspend fun clear() {

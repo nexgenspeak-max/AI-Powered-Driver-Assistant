@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.chinhtruongba.driverapp.R
 
 /** Something that can ask for runtime permissions and report each one's state afterwards. */
@@ -27,13 +29,22 @@ interface PermissionAsker {
  * waits its turn instead of overwriting the earlier caller's callback.
  */
 class PermissionQueue(
-    private val launch: (Array<String>) -> Unit,
+    private var launch: (Array<String>) -> Unit,
     private val isGranted: (String) -> Boolean,
 ) : PermissionAsker {
     private class Pending(val permissions: Array<String>, val onResult: (Map<String, Boolean>) -> Unit)
 
     private val queue = ArrayDeque<Pending>()
     private var inFlight: Pending? = null
+
+    /**
+     * Points the queue at the launcher of a recreated activity. The request in flight is not
+     * launched again: the system re-delivers its result to the new launcher, and [onResult]
+     * answers the original caller and moves on to the requests still waiting.
+     */
+    fun attach(launch: (Array<String>) -> Unit) {
+        this.launch = launch
+    }
 
     override fun requestEach(permissions: Array<String>, onResult: (Map<String, Boolean>) -> Unit) {
         if (permissions.all(isGranted)) {
@@ -71,6 +82,11 @@ class PermissionQueue(
     }
 }
 
+/** Keeps the [PermissionQueue] across activity recreation. */
+class PermissionQueueHolder : ViewModel() {
+    var queue: PermissionQueue? = null
+}
+
 /**
  * Runtime permissions asked in context (mic on connect, location when going online, contacts
  * lazily). Registered by [ComponentActivity] before it is started.
@@ -80,14 +96,21 @@ class PermissionRequester(
     /** Observes every permission result (before the caller's callback), e.g. to start location. */
     private val onAnyResult: (Map<String, Boolean>) -> Unit = {},
 ) : PermissionAsker {
-    private lateinit var queue: PermissionQueue
+    private val queue: PermissionQueue
     private val launcher = activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         onAnyResult(res)
         queue.onResult(res)
     }
 
     init {
-        queue = PermissionQueue(launch = { launcher.launch(it) }, isGranted = ::granted)
+        // The queue outlives a configuration change (rotation, dark mode, font scale) in the
+        // activity's ViewModelStore, so a dialog that was showing still answers its caller and
+        // the requests behind it are not dropped. It holds the application context only.
+        val holder = ViewModelProvider(activity)[PermissionQueueHolder::class.java]
+        val appContext = activity.applicationContext
+        queue = holder.queue?.also { it.attach { p -> launcher.launch(p) } }
+            ?: PermissionQueue(launch = { launcher.launch(it) }, isGranted = { appContext.hasPermission(it) })
+                .also { holder.queue = it }
     }
 
     fun granted(permission: String): Boolean =
