@@ -1,0 +1,19 @@
+== SAU KHI SUA DONG HO DO (turns_after_fix)
+Luot noi: 120 | duoc tra loi: 120 | phien: 12 | cau khac nhau: 22 | cau dem phat: 33 | lan goi cong cu: 41
+A. Tac nhan: tai xe dut loi -> am thanh dau (AC-15)  n=120 P50=1.83 P90=2.35 P95=2.58 max=3.36 | <=2s 87/120 (72.5%)
+B. Tac nhan: EOU + token dau + TTS (cau tra loi)     n= 81 P50=2.14 P90=2.54 P95=2.87 max=2.96 | <=2s 26/81 (32.1%)
+C. May khach: het cau noi -> am thanh dau tien       n=120 P50=2.94 P90=3.49 P95=3.62 max=4.44 | <=2s 2/120 (1.7%)
+   chang: phat hien ket thuc phat ngon               n= 81 P50=0.95 P90=1.12 P95=1.23 max=1.62 | <=2s 81/81 (100.0%)
+   chang: LLM token dau                              n= 81 P50=1.04 P90=1.27 P95=1.32 max=1.91 | <=2s 81/81 (100.0%)
+   chang: TTS am thanh dau                           n= 81 P50=0.17 P90=0.19 P95=0.19 max=0.69 | <=2s 81/81 (100.0%)
+   phan bo A: {'<=1.0': 2, '1.0-1.5': 7, '1.5-2.0': 78, '2.0-2.5': 24, '>2.5': 9}
+
+== TRUOC KHI SUA (turns_before_fix) - chi so A bi lech, chi de doi chieu
+Luot noi: 126 | duoc tra loi: 120 | phien: 10 | cau khac nhau: 22 | cau dem phat: 35 | lan goi cong cu: 39
+A. Tac nhan: tai xe dut loi -> am thanh dau (AC-15)  n=126 P50=1.71 P90=2.19 P95=2.23 max=3.44 | <=2s 99/126 (78.6%)
+B. Tac nhan: EOU + token dau + TTS (cau tra loi)     n= 83 P50=2.12 P90=2.47 P95=2.55 max=2.67 | <=2s 21/83 (25.3%)
+C. May khach: het cau noi -> am thanh dau tien       n=120 P50=3.00 P90=3.55 P95=3.79 max=4.49 | <=2s 0/120 (0.0%)
+   chang: phat hien ket thuc phat ngon               n= 83 P50=0.95 P90=1.14 P95=1.15 max=1.38 | <=2s 83/83 (100.0%)
+   chang: LLM token dau                              n= 83 P50=1.04 P90=1.32 P95=1.36 max=2.37 | <=2s 82/83 (98.8%)
+   chang: TTS am thanh dau                           n= 83 P50=0.17 P90=0.19 P95=0.20 max=0.27 | <=2s 83/83 (100.0%)
+   phan bo A: {'<=1.0': 38, '1.0-1.5': 7, '1.5-2.0': 54, '2.0-2.5': 26, '>2.5': 1}
