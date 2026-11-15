@@ -188,3 +188,153 @@ async def test_filler_is_kept_when_it_is_the_speech_playing():
         mark_reply_started(session)
 
     filler_handle.interrupt.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_filler_plays_presynthesized_audio_when_tts_is_available():
+    """Synthesizing on demand lands after the 2s bar; cached frames play at once."""
+    frames = [object(), object()]
+    synthesized: list[str] = []
+
+    def synthesize(text):
+        async def _gen():
+            synthesized.append(text)
+            for frame in frames:
+                yield SimpleNamespace(frame=frame)
+        return _gen()
+
+    said: list[dict] = []
+
+    def say(text, **kwargs):
+        said.append({"text": text, **kwargs})
+
+    session = SimpleNamespace(
+        userdata={}, agent_state="thinking", say=say, tts=SimpleNamespace(synthesize=synthesize)
+    )
+    schedule_turn_filler(session, lang="vn", delay_s=0.03)
+    await asyncio.sleep(0.1)
+
+    assert synthesized == [FILLER_VN]
+    assert len(said) == 1 and said[0]["text"] == FILLER_VN
+    played = [f async for f in said[0]["audio"]]
+    assert played == frames
+
+    # Second turn reuses the cached audio instead of synthesizing again.
+    schedule_turn_filler(session, lang="vn", delay_s=0.03)
+    await asyncio.sleep(0.1)
+    assert synthesized == [FILLER_VN]
+    assert len(said) == 2
+
+
+@pytest.mark.asyncio
+async def test_filler_falls_back_to_text_when_presynthesis_fails():
+    def synthesize(text):
+        async def _gen():
+            raise RuntimeError("tts down")
+            yield  # pragma: no cover
+        return _gen()
+
+    said: list[dict] = []
+
+    def say(text, **kwargs):
+        said.append({"text": text, **kwargs})
+
+    session = SimpleNamespace(
+        userdata={}, agent_state="thinking", say=say, tts=SimpleNamespace(synthesize=synthesize)
+    )
+    schedule_turn_filler(session, lang="vn", delay_s=0.03)
+    await asyncio.sleep(0.1)
+
+    assert len(said) == 1 and "audio" not in said[0]
+
+
+def _stamped_session(seconds_ago: float = 0.0, agent_state: str = "thinking"):
+    return SimpleNamespace(
+        userdata={"_turn_wall_state": {"user_stopped_at": time.perf_counter() - seconds_ago}},
+        agent_state=agent_state,
+    )
+
+
+async def _chunks(items, first_delay: float = 0.0):
+    await asyncio.sleep(first_delay)
+    for item in items:
+        yield item
+
+
+@pytest.mark.asyncio
+async def test_inline_filler_opens_reply_when_llm_is_silent_at_deadline():
+    from app.voicebot.processors.turn_filler import inline_turn_filler
+
+    session = _stamped_session()
+    out = [c async for c in inline_turn_filler(
+        session, _chunks(["Bạn còn 3 chuyến."], first_delay=0.08), lang="vn", delay_s=0.02)]
+    from livekit.agents import FlushSentinel
+
+    assert out[0] == FILLER_VN + " "
+    assert isinstance(out[1], FlushSentinel)  # TTS speaks the filler at once
+    assert out[2:] == ["Bạn còn 3 chuyến."]
+
+
+@pytest.mark.asyncio
+async def test_inline_filler_stays_silent_when_llm_answers_in_time():
+    from app.voicebot.processors.turn_filler import inline_turn_filler
+
+    session = _stamped_session()
+    out = [c async for c in inline_turn_filler(
+        session, _chunks(["Bạn còn 3 chuyến."]), lang="vn", delay_s=0.5)]
+    assert out == ["Bạn còn 3 chuyến."]
+
+
+@pytest.mark.asyncio
+async def test_inline_filler_opens_followup_llm_call_when_deadline_already_passed():
+    """After a tool call with nothing spoken, the next LLM call is already late."""
+    from app.voicebot.processors.turn_filler import inline_turn_filler
+
+    session = _stamped_session(seconds_ago=3.0)
+    out = [c async for c in inline_turn_filler(
+        session, _chunks(["Xong."], first_delay=0.03), lang="en", delay_s=1.5)]
+    assert out[0] == FILLER_EN + " " and out[-1] == "Xong." and len(out) == 3
+
+
+@pytest.mark.asyncio
+async def test_inline_filler_passes_through_without_stamp_or_when_agent_speaks():
+    from app.voicebot.processors.turn_filler import inline_turn_filler
+
+    no_stamp = SimpleNamespace(userdata={"_turn_wall_state": {"user_stopped_at": None}},
+                               agent_state="thinking")
+    out = [c async for c in inline_turn_filler(
+        no_stamp, _chunks(["A"], first_delay=0.05), lang="vn", delay_s=0.01)]
+    assert out == ["A"]
+
+    speaking = _stamped_session(agent_state="speaking")
+    out = [c async for c in inline_turn_filler(
+        speaking, _chunks(["A"], first_delay=0.05), lang="vn", delay_s=0.01)]
+    assert out == ["A"]
+
+
+@pytest.mark.asyncio
+async def test_inline_filler_not_added_after_a_tool_call_chunk():
+    from app.voicebot.processors.turn_filler import inline_turn_filler
+
+    tool_chunk = SimpleNamespace(delta=SimpleNamespace(content=None, tool_calls=[object()]))
+
+    async def stream():
+        yield tool_chunk
+        await asyncio.sleep(0.06)
+        yield "sau công cụ"
+
+    session = _stamped_session()
+    out = [c async for c in inline_turn_filler(session, stream(), lang="vn", delay_s=0.02)]
+    assert out == [tool_chunk, "sau công cụ"]
+
+
+def test_filler_is_stripped_from_assistant_history():
+    from app.voicebot.processors.turn_filler import strip_filler_from_history
+
+    ctx = SimpleNamespace(items=[
+        SimpleNamespace(role="assistant", content=[FILLER_VN + " Bạn còn 3 chuyến."]),
+        SimpleNamespace(role="user", content=[FILLER_VN]),
+    ])
+    strip_filler_from_history(ctx)
+    assert ctx.items[0].content == ["Bạn còn 3 chuyến."]
+    assert ctx.items[1].content == [FILLER_VN]

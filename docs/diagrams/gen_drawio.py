@@ -123,8 +123,8 @@ EN = {
     "Gọi API nghiệp vụ": "Business API call", "Trạng thái phiên\nhội thoại": "Session\nstate",
     "context_store\ntải trước khi mở phiên": "context_store\npreloaded at session start",
     "Dịch vụ Chuyến đi\nvà Điều phối": "Trip & dispatch\nservice", "Câu đệm": "Hold phrase",
-    "turn_filler: quá 2 s chưa có âm thanh trả lời thì phát một lần;\nhủy khi câu trả lời thật bắt đầu":
-        "turn_filler: plays once when no answer audio after 2 s;\ncancelled when the real answer starts",
+    "turn_filler: tới 1,6 s mà LLM chưa có token thì mở đầu\ncâu trả lời bằng câu đệm; mỗi lượt tối đa một lần":
+        "turn_filler: if the LLM has no token by 1.6 s, the reply\nopens with the hold phrase; at most once per turn",
     "văn bản": "text", "gọi công cụ": "tool call", "kết quả": "result", "trả lời": "answer",
     "đọc trước": "read first", "thiếu dữ liệu / ghi": "missing data / write",
     # sequence steps
@@ -134,7 +134,7 @@ EN = {
     "④ tạo phòng": "④ create room", "ký token LiveKit": "sign LiveKit token", "④ phân công tác nhân": "④ dispatch agent",
     "200 token, phòng": "200 token, room", "⑤ vào phòng (WebRTC)": "⑤ join room (WebRTC)", "⑥ giao việc": "⑥ assign job",
     "⑤ lời chào": "⑤ greeting", "ngữ cảnh": "context", "⑤ hỏi cần gì": "⑤ ask what is needed",
-    "⑤⑥ âm thanh": "⑤⑥ audio", "đếm 2 s": "start 2 s timer", "⑦ LLM + công cụ": "⑦ LLM + tools", "câu đệm": "hold phrase",
+    "⑤⑥ âm thanh": "⑤⑥ audio", "đếm 1,6 s": "start 1.6 s timer", "⑦ LLM + công cụ": "⑦ LLM + tools", "câu đệm": "hold phrase",
     "⑨ ghi trạng thái": "⑨ write status", "⑤ câu trả lời": "⑤ spoken answer", "④ người tham gia SIP": "④ SIP participant",
     "⑩ trạng thái calling": "⑩ status calling", "hỏi nhận chuyến": "ask to accept", "⑩ trạng thái mới": "⑩ new status",
     "⑪ gọi khách": "⑪ call rider", "⑫ gửi SMS": "⑫ send SMS", "㉒ lưu sự kiện": "㉒ store event",
@@ -142,7 +142,7 @@ EN = {
     "tóm tắt": "summary", "⑲ 00:15 hằng ngày": "⑲ daily at 00:15", "bản ghi của ngày": "day's records",
     "tổng hợp chỉ số": "aggregate metrics", "㉘ chấm mẫu": "㉘ grade sample", "đúng / sai / không rõ": "correct / incorrect / unclear",
     "㉑ lưu báo cáo": "㉑ store report", "báo cáo + xu hướng": "report + trend",
-    "opt [mật khẩu đúng]": "opt [password OK]", "opt [chưa có phòng]": "opt [no open room]", "opt [quá 2 s]": "opt [> 2 s]",
+    "opt [mật khẩu đúng]": "opt [password OK]", "opt [chưa có phòng]": "opt [no open room]", "opt [quá 1,6 s]": "opt [> 1.6 s]",
     "opt [có SIP trunk]": "opt [SIP trunk set]", "alt [chế độ gọi]": "alt [call mode]",
     "opt [tài xế hỏi tóm tắt]": "opt [driver asks summary]", "opt [có khóa API]": "opt [API key set]",
 }
@@ -602,7 +602,7 @@ def sequences() -> list[Diagram]:
         [
             ("msg", "app", "agent", "⑤⑥ âm thanh"),
             ("msg", "agent", "ai", "⑦ STT"),
-            ("self", "agent", "agent", "đếm 2 s"),
+            ("self", "agent", "agent", "đếm 1,6 s"),
             ("msg", "agent", "ai", "⑦ LLM + công cụ"),
             ("msg", "agent", "app", "câu đệm"),
             ("ret", "ai", "agent", "gọi công cụ"),
@@ -612,7 +612,7 @@ def sequences() -> list[Diagram]:
             ("msg", "agent", "ai", "⑦ LLM + TTS"),
             ("msg", "agent", "app", "⑤ câu trả lời"),
         ],
-        frames=[("opt [quá 2 s]", 5, 5, "app", "agent")],
+        frames=[("opt [quá 1,6 s]", 5, 5, "app", "agent")],
     )
     s4 = sequence(
         "S4 Mời nhận chuyến",
@@ -721,8 +721,8 @@ def pipeline() -> Diagram:
     d.vertex("tool", lab("Gọi API nghiệp vụ", "backend_api\ntimeout 8 s / 25 s"), box, 400, 450, 280, 120)
     d.vertex("ctx", lab("Trạng thái phiên\nhội thoại", "context_store\ntải trước khi mở phiên"), ext, 60, 630, 330, 120)
     d.vertex("api", lab("Dịch vụ Chuyến đi\nvà Điều phối", "HTTPS qua API Gateway"), ext, 560, 630, 330, 120)
-    d.vertex("filler", lab("Câu đệm", "turn_filler: quá 2 s chưa có âm thanh trả lời thì phát một lần;\n"
-                                    "hủy khi câu trả lời thật bắt đầu"), ext, 330, 20, 700, 110)
+    d.vertex("filler", lab("Câu đệm", "turn_filler: tới 1,6 s mà LLM chưa có token thì mở đầu\n"
+                                    "câu trả lời bằng câu đệm; mỗi lượt tối đa một lần"), ext, 330, 20, 700, 110)
     d.edge("p1", "mic", "stt", "", style=edge, ports=(1, .5, 0, .5))
     d.edge("p2", "stt", "llm", "văn bản", style=edge, ports=(1, .5, 0, .5))
     d.edge("p3", "llm", "tool", "gọi công cụ", style=edge, ports=(.25, 1, .25, 0))

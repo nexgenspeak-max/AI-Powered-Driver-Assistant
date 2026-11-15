@@ -1,4 +1,4 @@
-"""Spoken filler when first reply audio would miss the ~2s speech-to-first-audio bar.
+"""Spoken filler when first reply audio would miss the 2s speech-to-first-audio bar.
 
 One filler per turn. Skip/cancel if the real reply (or any agent speech) starts first.
 Phrases are generic holds only — never trip facts.
@@ -10,13 +10,27 @@ import logging
 import time
 from typing import Any
 
+from livekit.agents import FlushSentinel
+
 from app.devlog import event
 
 logger = logging.getLogger("llm-orchestrator.turn_filler")
 
-# Fire at the ~2s speech-to-first-audio bar (NFR-P01), measured from when
-# the driver stopped speaking — not from when this task was scheduled.
-FILLER_DELAY_S = 2.0
+# Fire shortly before the 2s speech-to-first-audio bar (NFR-02 / AC-15), measured
+# from when the driver stopped speaking — not from when this task was scheduled.
+# 1.8s + pre-synthesized audio keeps the first sound under 2s; firing at 2.0s and
+# synthesizing on demand always landed after the bar (measured 2026-11-15:
+# filler audio arrived 0.27s P50 / 0.67s P90 after the trigger).
+FILLER_DELAY_S = 1.8
+_AUDIO_KEY = "_turn_filler_audio"
+# The SDK plays one speech at a time: a filler sent with ``say()`` queues behind
+# the reply that is still waiting for the LLM, so it is dropped when the reply
+# starts (25 of 33 fillers on 2026-11-15). The inline filler below is therefore
+# the main path: it is yielded as the first text of the reply itself when the LLM
+# has produced nothing by this many seconds after the driver stopped speaking.
+# The filler is flushed to TTS at once, so 1.6s leaves the TTS time-to-first-audio
+# (about 0.2s) plus a margin before the 2s bar.
+INLINE_FILLER_DELAY_S = 1.6
 _STATE_KEY = "_turn_filler"
 _WALL_STATE_KEY = "_turn_wall_state"
 # Ignore a user-stopped stamp older than this; it belongs to a prior turn.
@@ -47,6 +61,44 @@ def filler_wait_s(
     if elapsed < 0 or elapsed > _STALE_USER_STOP_S:
         return delay_s
     return max(0.0, delay_s - elapsed)
+
+
+def _prewarm_filler_audio(session: Any, userdata: dict, lang: str) -> None:
+    """Synthesize the filler once per session and language so it can play at once.
+
+    Best effort: with no TTS, or if synthesis fails, the filler falls back to
+    on-demand ``say(text)``.
+    """
+    cache = userdata.setdefault(_AUDIO_KEY, {})
+    if lang in cache:
+        return
+    tts = getattr(session, "tts", None)
+    synthesize = getattr(tts, "synthesize", None)
+    if not callable(synthesize):
+        return
+    cache[lang] = None  # in flight; None means "not ready, use text"
+
+    async def _run() -> None:
+        try:
+            frames = [ev.frame async for ev in synthesize(filler_phrase(lang))]
+        except Exception:
+            logger.warning("turn_filler prewarm failed", exc_info=True)
+            cache.pop(lang, None)
+            return
+        if frames:
+            cache[lang] = frames
+        else:
+            cache.pop(lang, None)
+
+    try:
+        asyncio.get_running_loop().create_task(_run())
+    except RuntimeError:
+        cache.pop(lang, None)
+
+
+async def _replay(frames: list) -> Any:
+    for frame in frames:
+        yield frame
 
 
 def _user_stopped_at(userdata: dict) -> float | None:
@@ -121,6 +173,7 @@ def schedule_turn_filler(session: Any, *, lang: str, delay_s: float = FILLER_DEL
         "started_at": started_at,
     }
     userdata[_STATE_KEY] = state
+    _prewarm_filler_audio(session, userdata, lang)
     wait_s = filler_wait_s(
         delay_s=delay_s,
         user_stopped_at=_user_stopped_at(userdata),
@@ -193,7 +246,11 @@ def schedule_turn_filler(session: Any, *, lang: str, delay_s: float = FILLER_DEL
         if not callable(say):
             return
         try:
-            result = say(phrase, allow_interruptions=True)
+            frames = (userdata.get(_AUDIO_KEY) or {}).get(lang)
+            if frames:
+                result = say(phrase, audio=_replay(frames), allow_interruptions=True)
+            else:
+                result = say(phrase, allow_interruptions=True)
             if asyncio.iscoroutine(result):
                 await result
             elif result is not None:
@@ -213,3 +270,103 @@ def schedule_turn_filler(session: Any, *, lang: str, delay_s: float = FILLER_DEL
     except RuntimeError:
         return
     loop.create_task(_run())
+
+
+def _chunk_has_payload(chunk: Any) -> bool:
+    """True once the LLM produced text or a tool call — no filler needed after that."""
+    if isinstance(chunk, str):
+        return bool(chunk.strip())
+    delta = getattr(chunk, "delta", None)
+    if delta is None:
+        return False
+    return bool(getattr(delta, "content", None)) or bool(getattr(delta, "tool_calls", None))
+
+
+async def inline_turn_filler(
+    session: Any,
+    stream: Any,
+    *,
+    lang: str,
+    delay_s: float = INLINE_FILLER_DELAY_S,
+) -> Any:
+    """Pass LLM chunks through; open with the filler when nothing arrived in time.
+
+    The deadline counts from when the driver stopped speaking. After a tool call
+    with no spoken text the next LLM call of the same turn is past the deadline,
+    so it opens with the filler at once. No stamp (agent already spoke, or a
+    typed turn that never set one) means plain pass-through.
+    """
+    if asyncio.iscoroutine(stream):
+        stream = await stream
+    userdata = getattr(session, "userdata", None)
+    stamp = _user_stopped_at(userdata) if isinstance(userdata, dict) else None
+    now = time.perf_counter()
+    armed = stamp is not None and 0 <= now - stamp <= _STALE_USER_STOP_S
+    deadline = (stamp or 0.0) + delay_s
+    it = stream.__aiter__()
+    pending: asyncio.Future | None = None
+    try:
+        while True:
+            pending = asyncio.ensure_future(it.__anext__())
+            if armed:
+                remaining = deadline - time.perf_counter()
+                if remaining > 0:
+                    await asyncio.wait({pending}, timeout=remaining)
+                if not pending.done():
+                    armed = False
+                    still_waiting = (
+                        _user_stopped_at(userdata) == stamp
+                        and getattr(session, "agent_state", None) != "speaking"
+                    )
+                    if still_waiting:
+                        state = userdata.get(_STATE_KEY)
+                        if isinstance(state, dict):
+                            state["spoken"] = True  # the say() filler stands down
+                        waited_ms = (time.perf_counter() - float(stamp)) * 1000
+                        event("turn_filler", ok=True, lang=lang, delay_s=delay_s,
+                              duration_ms=waited_ms, inline=True)
+                        logger.info("turn_filler lang=%s delay_s=%.2f duration_ms=%.0f inline",
+                                    lang, delay_s, waited_ms)
+                        yield filler_phrase(lang) + " "
+                        # LiveKit's own pattern (examples/voice_agents/flush_llm_node.py):
+                        # flush so TTS speaks the filler now instead of waiting for
+                        # the rest of the reply text.
+                        yield FlushSentinel()
+            try:
+                chunk = await pending
+            except StopAsyncIteration:
+                return
+            pending = None
+            if armed and _chunk_has_payload(chunk):
+                armed = False
+            yield chunk
+    finally:
+        if pending is not None and not pending.done():
+            pending.cancel()
+        aclose = getattr(it, "aclose", None)
+        if callable(aclose):
+            try:
+                await aclose()
+            except Exception:
+                pass
+
+
+def strip_filler_from_history(chat_ctx: Any) -> None:
+    """Drop the filler from earlier assistant turns so the LLM does not learn to say it."""
+    items = getattr(chat_ctx, "items", None)
+    if not items:
+        return
+    phrases = (FILLER_VN, FILLER_EN)
+    for item in items:
+        if getattr(item, "role", None) != "assistant":
+            continue
+        content = getattr(item, "content", None)
+        if not isinstance(content, list):
+            continue
+        for i, part in enumerate(content):
+            if not isinstance(part, str):
+                continue
+            for phrase in phrases:
+                if part.lstrip().startswith(phrase):
+                    content[i] = part.lstrip()[len(phrase):].lstrip()
+                    break

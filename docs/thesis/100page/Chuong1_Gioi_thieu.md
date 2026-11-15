@@ -70,9 +70,9 @@ Chiến lược đánh giá tuân theo khung FEDS (Venable et al., 2016): do r�
 Bốn đóng góp dưới đây được định vị so với các công trình và hệ thống liên quan ở Bảng 2.2 (theo năng lực) và Bảng 6.16 (theo kết quả đo).
 
 1. **Kiến trúc tham chiếu cho trợ lý giọng nói thực thi nghiệp vụ:** microservices hướng tới AWS, được lập luận từ năm yêu cầu phi chức năng, kèm phân tích đánh đổi và rủi ro (Chương 3, 4).
-2. **Nguyên mẫu đầu cuối, mã nguồn công khai:** chuỗi STT – LLM gọi công cụ – TTS, có câu đệm (phát khi sau 2 giây vẫn chưa có câu trả lời) và nhà cung cấp dự phòng, phục vụ tài xế qua ứng dụng (WebRTC) và qua cuộc gọi điện thoại (SIP) (Chương 5).
+2. **Nguyên mẫu đầu cuối, mã nguồn công khai:** chuỗi STT – LLM gọi công cụ – TTS, có câu đệm (phát trước mốc 2 giây khi câu trả lời chưa sẵn sàng) và nhà cung cấp dự phòng, phục vụ tài xế qua ứng dụng (WebRTC) và qua cuộc gọi điện thoại (SIP) (Chương 5).
 3. **Khung đánh giá gắn với tiêu chí chấp nhận:** 19 tiêu chí Given – When – Then cùng khả năng truy vết từ yêu cầu đến kết quả (Chương 3, 6).
-4. **Bằng chứng thực nghiệm về giới hạn của chuỗi xử lý theo tầng:** trong cấu hình đã đo, P95 độ trễ phản hồi là 2,58 giây, chưa đạt ngưỡng 2 giây; chờ STT trả kết quả cuối của câu và chờ LLM sinh token đầu mỗi chặng mất khoảng 1 giây, nên chuỗi theo tầng gần như không còn dư địa trong ngân sách 2 giây; việc đạt ngưỡng phụ thuộc vào các nhà cung cấp AI hơn là cách chia dịch vụ (Chương 6).
+4. **Bằng chứng thực nghiệm về giới hạn của chuỗi xử lý theo tầng:** chờ STT trả kết quả cuối của câu và chờ LLM sinh token đầu mỗi chặng mất khoảng 1 giây, nên chuỗi theo tầng gần như không còn dư địa trong ngân sách 2 giây. P95 độ trễ tới âm thanh đầu tiên là 2,58 giây ở đợt đo đầu và chỉ đạt sát ngưỡng (1,99 giây) sau khi câu đệm được sửa để phát sớm; thời gian tới câu trả lời thật vẫn vượt 2 giây ở phần lớn các lượt. Việc đạt ngưỡng vì vậy phụ thuộc vào các nhà cung cấp AI hơn là cách chia dịch vụ (Chương 6).
 
 ## 1.8. Cấu trúc luận văn
 

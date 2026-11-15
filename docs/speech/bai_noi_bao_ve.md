@@ -20,15 +20,16 @@ và chỗ trong luận văn để trỏ tới khi hội đồng hỏi.
 | Chỉ số | Kết quả | Nguồn |
 |---|---|---|
 | Ngưỡng độ trễ | P95 ≤ 2 giây (từ lúc tài xế dứt lời đến lúc Czen bắt đầu nói) | Mục 1.3, 2.8 |
-| Độ trễ phản hồi (AC-15) | P50 1,83 s · P95 **2,58 s** (n = 120, đo 15/11/2026) — không đạt; 72,5% lượt ≤ 2 s | Bảng 6.3 |
-| Đo từ phía máy khách | P50 2,94 s · P95 3,62 s (gồm cả đường truyền) | Bảng 6.3 |
-| Hai chặng lớn | Chờ kết quả cuối của STT P50 0,95 s · LLM token đầu P50 1,04 s · TTS 0,17 s | Bảng 6.4 |
+| Độ trễ tới âm thanh đầu (AC-15) | Trước khi sửa câu đệm: P95 2,58 s (n = 120) — không đạt. Sau khi sửa: P50 1,79 s · P95 **1,99 s** (n = 200), 95,0% lượt ≤ 2 s — đạt sát ngưỡng | Bảng 6.3, 6.5 |
+| Tới câu trả lời thật | P50 2,27 s · P95 2,90 s — không giảm; câu đệm phát ở 44,5% số lượt | Bảng 6.3 |
+| Đo từ phía máy khách | P50 2,82 s · P95 3,36 s (gồm cả đường truyền) | Bảng 6.3 |
+| Hai chặng lớn | Chờ kết quả cuối của STT P50 0,97 s · LLM token đầu P50 1,11 s · TTS 0,18 s | Bảng 6.4 |
 | Chọn đúng công cụ | **37/43 = 86,0%** (KTC 95% Wilson 72,7–93,4%) | Mục 6.6 |
 | Hoàn thành ngay lần đầu | **32/43 = 74,4%** (59,8–85,1%) | Mục 6.6 |
 | Tỷ lệ lỗi từ (WER) | **3,1%** yên tĩnh → **7,3%** có nhiễu (1 người đọc, 22 câu) | Mục 6.5 |
 | Phục hồi | **200/200** lượt tiêm lỗi không làm hỏng hội thoại; lỗi treo 6–8 s | Bảng 6.11 |
 | Mở rộng | 1 → 40 phiên, P95 không tăng (1,54 → 1,51 s), AI giả lập; ~225 MB RAM/phiên | Bảng 6.10 |
-| Tiêu chí chấp nhận | 19 tiêu chí, cả 19 đã được đánh giá; chỉ AC-15 (độ trễ) không đạt | Bảng 6.15 |
+| Tiêu chí chấp nhận | 19 tiêu chí, cả 19 đã được đánh giá; AC-15 (độ trễ) đạt sát ngưỡng sau một vòng sửa | Bảng 6.15 |
 | Công cụ | 48 công cụ gói tiếng Việt (42 cho tài xế) | Phụ lục A |
 
 ---
@@ -132,7 +133,7 @@ trả lời nhanh mà không bị tiếng ồn đánh lừa."
 > khoảng lặng.
 
 **Lưu ý quan trọng (hội đồng có thể hỏi):** Bảng 6.4 ghi chặng "phát hiện kết thúc phát ngôn" là P50
-0,95 s, P95 1,23 s — dài hơn nhiều so với 0,25–0,55 s trên slide. Cả hai đều đúng: 0,25–0,55 s là
+0,97 s, P95 1,22 s — dài hơn nhiều so với 0,25–0,55 s trên slide. Cả hai đều đúng: 0,25–0,55 s là
 khoảng lặng mà tác nhân chờ; phần còn lại của chặng là thời gian nhà cung cấp STT trả kết quả cuối của
 câu (trung vị 0,96 s trong nhật ký 15/11/2026). Nói chủ động câu này nếu thời gian cho phép:
 
@@ -171,12 +172,14 @@ câu (trung vị 0,96 s trong nhật ký 15/11/2026). Nói chủ động câu n�
 > **RQ3 — nhận dạng giọng nói:** tỷ lệ lỗi từ tăng từ **3,1%** lên **7,3%** khi có nhiễu khoang xe —
 > với một người đọc và 22 câu, đây là xu hướng.
 >
-> **RQ2 — độ trễ: chưa đạt.** Trên 120 lượt đo ngày 15/11, trung vị là 1,83 giây nhưng P95 là
-> **2,58 giây**, ngưỡng là 2 giây; 72,5% số lượt nằm trong ngưỡng. Có hai chặng chi phối, mỗi chặng
+> **RQ2 — độ trễ: đạt sát ngưỡng sau một vòng sửa.** Đợt đo đầu ngày 15/11 không đạt, P95 là 2,58
+> giây. Em tìm ra câu đệm cũ bị xếp sau câu trả lời nên gần như không bao giờ phát, sửa lại theo mẫu của
+> LiveKit, rồi đo 200 lượt: trung vị 1,79 giây, P95 **1,99 giây**, 95% số lượt trong ngưỡng 2 giây. Em
+> nói rõ: mức đạt này là nhờ câu đệm, phát ở 44,5% số lượt; thời gian tới câu trả lời thật vẫn là 2,27
+> giây ở trung vị. Có hai chặng chi phối, mỗi chặng
 > khoảng 1 giây: **chờ STT trả kết quả cuối của câu** và **chờ LLM sinh token đầu**. Cả hai thuộc nhà
 > cung cấp AI bên ngoài, nên việc đạt ngưỡng phụ thuộc vào nhà cung cấp, **không phải vào cách chia
-> dịch vụ** — bằng chứng là độ trễ không tăng khi số phiên tăng. Câu đệm sau 2 giây giúp tài xế không
-> phải nghe khoảng lặng, nhưng không làm tiêu chí này đạt.
+> dịch vụ** — bằng chứng là độ trễ không tăng khi số phiên tăng.
 
 **Luận văn:** Bảng 6.3, 6.4 (độ trễ), mục 6.5 (WER), 6.6 (gọi công cụ), Bảng 6.10–6.11, Bảng 6.15
 (tổng hợp), mục 6.12 (trả lời RQ).
@@ -240,12 +243,13 @@ câu (trung vị 0,96 s trong nhật ký 15/11/2026). Nói chủ động câu n�
 > **Đã làm được:** tài xế đi trọn một chuyến bằng giọng nói; AI gọi điện thoại thật cho khách; kiến
 > trúc microservices trên AWS với LiveKit, mã nguồn công khai.
 >
-> **Chưa đạt:** độ trễ — P95 là 2,58 giây so với ngưỡng 2 giây, do hai chặng thuộc nhà cung cấp AI:
-> chờ kết quả cuối của STT và chờ token đầu của LLM.
+> **Còn yếu:** độ trễ — âm thanh đầu tiên đạt ngưỡng 2 giây sát nút (P95 1,99 giây) và đạt nhờ câu
+> đệm; câu trả lời thật vẫn tới sau 2 giây ở phần lớn các lượt, do hai chặng thuộc nhà cung cấp AI: chờ
+> kết quả cuối của STT và chờ token đầu của LLM.
 >
-> **Bước tiếp theo:** giảm độ trễ — thử nhà cung cấp STT và LLM nhanh hơn hoặc mô hình giọng nói đầu
-> cuối, phát câu đệm sớm hơn; đo lại với người nói thật và các lượt gọi điện, nhắn tin; và thử nghiệm
-> với tài xế thật trên đường.
+> **Bước tiếp theo:** rút ngắn thời gian tới câu trả lời thật — thử nhà cung cấp STT và LLM nhanh hơn
+> hoặc mô hình giọng nói đầu cuối; đo lại vào ngày khác, với người nói thật và các lượt gọi điện, nhắn
+> tin; và thử nghiệm với tài xế thật trên đường.
 >
 > Em xin cảm ơn thầy cô và các bạn đã lắng nghe. Em rất mong nhận được câu hỏi và góp ý của Hội đồng.
 
@@ -253,10 +257,11 @@ câu (trung vị 0,96 s trong nhật ký 15/11/2026). Nói chủ động câu n�
 
 ## Chuẩn bị câu hỏi của Hội đồng
 
-**1. Độ trễ không đạt thì hệ thống có còn dùng được không?**
-Có, với giới hạn rõ ràng. Trung vị là 1,83 s và 72,5% số lượt nằm trong 2 s; ở các lượt chậm hơn, câu
-đệm giúp tài xế biết hệ thống đang xử lý. Luận văn không giấu kết quả này: AC-15 ghi "Không đạt" (Bảng
-6.15), và còn nêu rằng khoảng chờ đo từ phía máy khách dài hơn khoảng 1,1 s. Đóng góp thứ tư của luận
+**1. Độ trễ đạt nhờ câu đệm thì có phải là "lách" tiêu chí không?**
+Không. Tiêu chí AC-15 ngay từ đầu tính tới âm thanh đầu tiên của tác nhân, kể cả câu đệm, vì mục đích là
+tài xế không phải nghe khoảng lặng quá 2 giây. Nhưng luận văn không dừng ở đó: Bảng 6.3 báo riêng thời
+gian tới câu trả lời thật (P50 2,27 s, P95 2,90 s) và thời gian đo từ phía máy khách (P50 2,82 s), và
+ghi rõ biên chỉ 0,01 s. Đợt đo đầu không đạt (P95 2,58 s) cũng được giữ nguyên trong Bảng 6.5. Đóng góp thứ tư của luận
 văn chính là bằng chứng rằng nút thắt nằm ở hai nhà cung cấp AI (STT và LLM) chứ không ở kiến trúc.
 
 **2. Vì sao không dùng mô hình giọng nói đầu-cuối (speech-to-speech) cho nhanh?**

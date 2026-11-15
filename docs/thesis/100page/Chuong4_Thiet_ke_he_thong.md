@@ -57,9 +57,9 @@ Quyết định ở mục này được ký hiệu là ADR-02.
 | (1) Mọi câu qua LLM, không câu đệm | Một luồng duy nhất | Tài xế nghe khoảng lặng trong lúc chờ | Không chọn |
 | (2) Nhánh rút gọn theo ý định, kết hợp LLM | Câu khớp mẫu được trả lời ngay, không chờ LLM | Dễ chọn sai công cụ; khó bảo trì mẫu câu | Không chọn; đã dùng thử rồi loại bỏ (mục 5.3.2) |
 | (3) Mô hình giọng nói đầu cuối (speech-to-speech), không tách STT, LLM, TTS | Độ trễ thấp hơn nhiều so với chuỗi theo tầng (mục 2.9.1) | Không thay được từng khâu, không có dự phòng riêng cho từng khâu; luận văn chưa kiểm chứng với tiếng Việt và 42 công cụ | Không chọn; hướng phát triển |
-| (4) Chuỗi theo tầng, mọi câu qua LLM gọi công cụ; câu đệm sau 2 giây; tải trước ngữ cảnh | Một luồng; chỉ trả lời khi có kết quả thật; thay và dự phòng được từng khâu | Độ trễ vẫn phụ thuộc hai chặng đầu | **Chọn** |
+| (4) Chuỗi theo tầng, mọi câu qua LLM gọi công cụ; câu đệm trước mốc 2 giây; tải trước ngữ cảnh | Một luồng; chỉ trả lời khi có kết quả thật; thay và dự phòng được từng khâu | Độ trễ vẫn phụ thuộc hai chặng đầu | **Chọn** |
 
-**Quyết định và hệ quả.** Chọn phương án (4) để trợ lý chỉ xác nhận khi có kết quả thật và để mỗi khâu AI có nhà cung cấp dự phòng (mục 4.7). Đổi lại, độ trễ không thấp hơn tổng thời gian của hai chặng đầu và chỉ được bù một phần bằng câu đệm (TP-1, mục 4.10); kết quả đo ở mục 6.4 cho thấy cái giá này là có thật.
+**Quyết định và hệ quả.** Chọn phương án (4) để trợ lý chỉ xác nhận khi có kết quả thật và để mỗi khâu AI có nhà cung cấp dự phòng (mục 4.7). Đổi lại, độ trễ không thấp hơn tổng thời gian của hai chặng đầu và chỉ được bù một phần bằng câu đệm (TP-1, mục 4.10); kết quả đo ở mục 6.4 cho thấy cái giá này là có thật: tiêu chí chỉ đạt sát ngưỡng và đạt nhờ câu đệm.
 
 ## 4.3. Kiến trúc tổng thể trên AWS
 
@@ -141,7 +141,7 @@ Khi ứng dụng yêu cầu token thoại, dịch vụ dùng lại phiên đang 
 
 **Hình 4.4.** Biểu đồ tuần tự S3: một lượt hội thoại có gọi công cụ, câu đệm và dự phòng
 
-Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại và danh sách công cụ tới LLM; nếu sau 2 giây chưa có phản hồi, tác nhân phát câu đệm (mục 4.6.1). Mô hình chọn công cụ update_trip_status; dịch vụ kiểm tra vị trí GPS của tài xế cách điểm đón không quá 200 m rồi mới ghi vào bảng trips; tác nhân chỉ xác nhận khi có kết quả thật. Nếu STT, LLM hoặc TTS lỗi, tác nhân chuyển sang nhà cung cấp dự phòng; nếu API lỗi, tác nhân báo không cập nhật được và phiên tiếp tục.
+Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại và danh sách công cụ tới LLM; nếu tới giây 1,6 LLM chưa sinh ra gì, tác nhân mở đầu câu trả lời bằng câu đệm (mục 4.6.1). Mô hình chọn công cụ update_trip_status; dịch vụ kiểm tra vị trí GPS của tài xế cách điểm đón không quá 200 m rồi mới ghi vào bảng trips; tác nhân chỉ xác nhận khi có kết quả thật. Nếu STT, LLM hoặc TTS lỗi, tác nhân chuyển sang nhà cung cấp dự phòng; nếu API lỗi, tác nhân báo không cập nhật được và phiên tiếp tục.
 
 ### 4.5.4. Mời nhận chuyến qua cuộc gọi điện thoại
 
@@ -187,7 +187,7 @@ WebRTC và SIP chỉ vận chuyển âm thanh. Việc gọi STT, LLM và TTS do 
 
 ### 4.6.1. Chuỗi xử lý và câu đệm
 
-Mỗi phát ngôn đi qua chuỗi STT, LLM kèm gọi công cụ và TTS (Hình 4.10). Nếu sau 2 giây phản hồi chưa bắt đầu phát, tác nhân phát câu đệm ngắn như "Đợi mình một chút"; câu đệm không chứa dữ liệu nghiệp vụ và bị hủy khi câu trả lời thật bắt đầu. Ngữ cảnh phiên và gói ngôn ngữ được nạp sẵn để lượt đầu không bị chậm.
+Mỗi phát ngôn đi qua chuỗi STT, LLM kèm gọi công cụ và TTS (Hình 4.10). Nếu tới giây 1,6 kể từ lúc tài xế dứt lời mà LLM chưa sinh ra gì, tác nhân mở đầu câu trả lời bằng một câu đệm ngắn như "Đợi mình một chút" rồi nói tiếp nội dung khi có; nếu LLM kịp trả lời trước mốc này thì không có câu đệm. Câu đệm không chứa dữ liệu nghiệp vụ và được phát tối đa một lần mỗi lượt. Mốc 1,6 giây được chọn để âm thanh của câu đệm tới trước ngưỡng 2 giây của NFR-02 (mục 6.4). Ngữ cảnh phiên và gói ngôn ngữ được nạp sẵn để lượt đầu không bị chậm.
 
 ![Hình 4.10](../diagrams/H4_2_turn_pipeline.png)
 
@@ -248,7 +248,7 @@ Tính khả dụng (NFR-01) được thiết kế ở hai mức: mức kiến tr
 
 | STT | Nguyên tắc | Thiết kế tương ứng |
 |---|---|---|
-| 1 | Hiển thị trạng thái hệ thống | Biểu tượng trạng thái (Hình 4.11a); câu đệm sau 2 giây |
+| 1 | Hiển thị trạng thái hệ thống | Biểu tượng trạng thái (Hình 4.11a); câu đệm khi câu trả lời chưa sẵn sàng |
 | 2 | Tương thích với thế giới thực | Dùng từ ngữ quen thuộc với tài xế; tiếng Việt hoặc tiếng Anh (Hình 4.11c) |
 | 3 | Quyền kiểm soát và tự do | Có thể từ chối ở bước xác nhận; kết thúc phiên bằng lời; thoát nói trực tiếp bằng cụm từ kết thúc |
 | 4 | Nhất quán và tuân theo chuẩn | Cùng nghiệp vụ trong ứng dụng, qua cuộc gọi điện thoại và ở hai ngôn ngữ; cùng mẫu xác nhận |
@@ -294,11 +294,11 @@ Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng r
 | U-6 | Kịch bản | NFR-01: 100% thao tác rủi ro có xác nhận | Khả dụng (C / Th) | Kiểm tra khi lái (mục 6.7) |
 | SP-1 | Điểm nhạy | Thời gian LLM sinh token đầu | Hiệu năng | Đo riêng theo chặng (mục 6.4) |
 | SP-2 | Điểm nhạy | Thời gian phát hiện kết thúc phát ngôn: khoảng lặng chờ (ngắn thì nhanh nhưng dễ ngắt lời tài xế) cộng thời gian STT trả kết quả cuối | Hiệu năng, khả dụng | Khoảng lặng chờ 0,25–0,55 giây; đo riêng theo chặng (mục 6.4) |
-| TP-1 | Đánh đổi | Mọi lượt qua LLM (ADR-02) | Đúng chức năng ↔ hiệu năng | Bù bằng câu đệm |
+| TP-1 | Đánh đổi | Mọi lượt qua LLM (ADR-02) | Đúng chức năng ↔ hiệu năng | Bù bằng câu đệm: âm thanh đầu tới trong 2 giây, nội dung thì không (mục 6.4) |
 | TP-2 | Đánh đổi | Thời gian chờ API (8–25 giây) | Phục hồi ↔ hiệu năng | Tránh báo lỗi giả khi mạng chậm |
 | TP-3 | Đánh đổi | AI dự phòng (STT, LLM chờ tối đa 5 giây/lần thử) | Phục hồi ↔ chi phí, hiệu năng | Chấp nhận chi phí; đo RS-05 |
 | TP-4 | Đánh đổi | API nghiệp vụ trên FaaS | Mở rộng ↔ khởi động nguội | Tải trước ngữ cảnh khi mở phiên |
-| R-1 | Rủi ro | Hai chặng đầu (phát hiện kết thúc phát ngôn, token đầu của LLM) cộng lại vượt 2 giây | Hiệu năng | Đã xảy ra trong đợt đo 15/11/2026: P95 2,58 giây so với ngưỡng 2 giây (mục 6.4) |
+| R-1 | Rủi ro | Hai chặng đầu (phát hiện kết thúc phát ngôn, token đầu của LLM) cộng lại vượt 2 giây | Hiệu năng | Đã xảy ra ở đợt đo đầu ngày 15/11/2026 (P95 2,58 giây); sau khi sửa câu đệm, P95 tới âm thanh đầu là 1,99 giây, sát ngưỡng (mục 6.4) |
 | R-2 | Rủi ro | Một khóa bí mật JWT dùng chung | Bảo mật | Khóa bất đối xứng (hướng phát triển) |
 | R-3 | Rủi ro | Một nhà cung cấp truyền thông | Phục hồi | Ngoài phạm vi nguyên mẫu |
 | R-4 | Rủi ro | Chỉ một vùng AWS | Phục hồi | Chấp nhận ở nguyên mẫu |
@@ -309,4 +309,4 @@ Rủi ro lớn nhất là R-1, và nó đến từ hai chặng. Thời gian sinh
 
 ## Kết luận chương
 
-Chương này đã chọn kiến trúc microservices dựa trên bốn yêu cầu phi chức năng (ADR-01) và chọn chuỗi xử lý theo tầng, mọi lượt đi qua LLM gọi công cụ, kèm câu đệm sau 2 giây (ADR-02). Hệ thống gồm sáu dịch vụ, mỗi dịch vụ sở hữu dữ liệu riêng; tài xế dùng trợ lý trong ứng dụng qua WebRTC và qua cuộc gọi điện thoại bằng SIP, cả hai kênh dùng chung một tác nhân và một bộ nghiệp vụ. Đánh giá ATAM rút gọn cho thấy rủi ro lớn nhất là độ trễ (R-1), do thời gian phát hiện kết thúc phát ngôn và thời gian sinh token đầu của LLM cộng lại. Chương 5 trình bày phần hiện thực của thiết kế này; Chương 6 kiểm chứng nó bằng số đo.
+Chương này đã chọn kiến trúc microservices dựa trên bốn yêu cầu phi chức năng (ADR-01) và chọn chuỗi xử lý theo tầng, mọi lượt đi qua LLM gọi công cụ, kèm câu đệm phát trước mốc 2 giây (ADR-02). Hệ thống gồm sáu dịch vụ, mỗi dịch vụ sở hữu dữ liệu riêng; tài xế dùng trợ lý trong ứng dụng qua WebRTC và qua cuộc gọi điện thoại bằng SIP, cả hai kênh dùng chung một tác nhân và một bộ nghiệp vụ. Đánh giá ATAM rút gọn cho thấy rủi ro lớn nhất là độ trễ (R-1), do thời gian phát hiện kết thúc phát ngôn và thời gian sinh token đầu của LLM cộng lại. Chương 5 trình bày phần hiện thực của thiết kế này; Chương 6 kiểm chứng nó bằng số đo.

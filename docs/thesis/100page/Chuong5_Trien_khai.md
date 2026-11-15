@@ -31,7 +31,7 @@ Tác nhân phân loại phiên theo tên và siêu dữ liệu (metadata) của 
 
 ### 5.3.2. Xử lý lượt hội thoại và câu đệm
 
-Mọi phát ngôn đều được đưa qua LLM cùng tập công cụ được phép của loại phiên. Mô-đun nhận dạng ý định không gọi công cụ mà chỉ gán nhãn, dùng để loại bỏ mảnh chữ thừa ở cuối câu và nhận ra câu đồng ý với hành động đang chờ xác nhận. Nhánh rút gọn theo ý định (gọi thẳng công cụ, không qua LLM) được dùng trong đợt đo 05–06/09/2026 và đã được gỡ khỏi mã nguồn. Câu đệm (mục 4.6.1) được phát sau 2 giây kể từ khi tài xế kết thúc phát ngôn, tối đa một lần mỗi lượt.
+Mọi phát ngôn đều được đưa qua LLM cùng tập công cụ được phép của loại phiên. Mô-đun nhận dạng ý định không gọi công cụ mà chỉ gán nhãn, dùng để loại bỏ mảnh chữ thừa ở cuối câu và nhận ra câu đồng ý với hành động đang chờ xác nhận. Nhánh rút gọn theo ý định (gọi thẳng công cụ, không qua LLM) được dùng trong đợt đo 05–06/09/2026 và đã được gỡ khỏi mã nguồn. Câu đệm (mục 4.6.1) được hiện thực ngay trong luồng trả lời: tác nhân bọc luồng văn bản của LLM, và nếu tới giây 1,6 kể từ khi tài xế kết thúc phát ngôn mà chưa có token nào thì chèn câu đệm lên đầu rồi đẩy sang TTS ngay, theo mẫu LiveKit hướng dẫn cho việc phát sớm một câu ngắn. Bản hiện thực đầu tiên gửi câu đệm bằng một lệnh nói riêng ở giây thứ 2; vì LiveKit chỉ phát từng câu một, câu đệm này bị xếp sau câu trả lời đang chờ và hầu như không bao giờ được phát, nên đã được thay sau đợt đo đầu ngày 15/11/2026 (mục 6.4). Câu đệm được lọc khỏi lịch sử hội thoại gửi cho LLM để mô hình không bắt chước nó.
 
 Vì cuộc gọi tới khách không thể hoàn tác, ngoài cơ chế xác nhận hai bước, hệ thống còn có một lớp chặn. Lớp này được bổ sung sau khi, trong phiên thử ngày 18/10/2026, câu "Ok." vốn trả lời cho một chủ đề khác đã kích hoạt cuộc gọi: công cụ gọi khách chỉ chạy khi tài xế vừa nói rõ ý định gọi hoặc vừa đồng ý với hành động đang chờ; hành động đang chờ bị hủy sau 30 giây hoặc khi tài xế chuyển chủ đề. Tài xế có thể hủy cuộc gọi bằng nút Czen; ở chế độ tác nhân gọi thay, lệnh hủy được gửi qua kênh dữ liệu riêng.
 
@@ -169,7 +169,7 @@ Bảng 5.6 đối chiếu quyết định thiết kế ở Chương 4 với vị
 |---|---|
 | Tác nhân chỉ gọi API (CON-01) | llm-orchestrator/app/services/backend_api.py |
 | Khởi tạo phiên, lời chào, tải trước; cấp token, tái sử dụng phòng (S2) | llm-orchestrator/app/agent/session.py, voicebot/processors/prefetch.py; external-api-service/src/routes/voice.ts |
-| Một luồng LLM duy nhất (ADR-02); câu đệm 2 giây | llm-orchestrator/app/voicebot/processors/spoken_intent.py, intent_classify.py, turn_filler.py |
+| Một luồng LLM duy nhất (ADR-02); câu đệm trong luồng trả lời | llm-orchestrator/app/voicebot/processors/spoken_intent.py, intent_classify.py, turn_filler.py |
 | Dự phòng nhà cung cấp AI | llm-orchestrator/app/providers/__init__.py, fallback.py |
 | Phân loại phiên và tập công cụ | session.py; voicebot/locales/{vn,en}/agent.py |
 | Mời nhận chuyến (S4); gọi khách ba chế độ (S5) | external-api-service/src/services/dispatchService.ts, callService.ts, telephony/livekit.ts |

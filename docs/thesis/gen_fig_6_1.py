@@ -13,9 +13,10 @@ OUT = Path(__file__).resolve().parent / "thesis_screenshots"
 
 # (nhãn, P50, P95, n) — experiments/latency_20261115/results.txt
 GROUPS = [
-    ("A. Tác nhân: tới âm thanh đầu (AC-15)", 1.83, 2.58, 120),
-    ("B. Tác nhân: tới câu trả lời thật", 2.14, 2.87, 81),
-    ("C. Phía tài xế ảo", 2.94, 3.62, 120),
+    ("A trước khi sửa câu đệm", 1.83, 2.58, 120),
+    ("A sau khi sửa (AC-15)", 1.79, 1.99, 200),
+    ("B sau khi sửa: tới câu trả lời", 2.27, 2.90, 173),
+    ("C sau khi sửa: phía tài xế ảo", 2.82, 3.36, 200),
 ]
 THRESHOLD = 2.0
 Y_MAX = 4.0
@@ -56,11 +57,9 @@ def main() -> None:
     yt = y(THRESHOLD)
     s.append(f'<line x1="{ML}" y1="{yt:.1f}" x2="{ML+PW}" y2="{yt:.1f}" '
              f'stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6 4"/>')
-    s.append(f'<text x="{ML+PW/3:.1f}" y="{yt-8:.1f}" text-anchor="middle" font-size="13" '
-             f'fill="#DC2626">Ngưỡng P95 ≤ 2 giây</text>')
 
     gw = PW / len(GROUPS)
-    bw = 58
+    bw = 50
     for i, (label, p50, p95, n) in enumerate(GROUPS):
         cx = ML + gw * (i + 0.5)
         for j, (val, fill, name) in enumerate(
@@ -83,6 +82,9 @@ def main() -> None:
     s.append(f'<text x="{lx+22}" y="{ly+13}" font-size="13" fill="#111827">P50</text>')
     s.append(f'<rect x="{lx+70}" y="{ly}" width="16" height="16" fill="#1D4ED8"/>')
     s.append(f'<text x="{lx+92}" y="{ly+13}" font-size="13" fill="#111827">P95</text>')
+    s.append(f'<line x1="{lx+140}" y1="{ly+8}" x2="{lx+172}" y2="{ly+8}" stroke="#DC2626" '
+             f'stroke-width="1.5" stroke-dasharray="6 4"/>')
+    s.append(f'<text x="{lx+180}" y="{ly+13}" font-size="13" fill="#DC2626">Ngưỡng P95 ≤ 2 giây</text>')
 
     s.append('</svg>')
     svg = OUT / "H6_1_latency.svg"

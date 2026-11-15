@@ -9,7 +9,7 @@ chi tiết từng phép đo nằm ở đây.
 
 | Tiêu chí | Nội dung đo | Script hoặc quy trình | Kết quả thô | Trong luận văn |
 |---|---|---|---|---|
-| AC-15 (NFR-02) | Độ trễ phản hồi của thiết kế hiện hành, 120 lượt, 15/11/2026 | `experiments/latency_20261115/audio_probe.py`, `analyze.py` | `experiments/latency_20261115/` (xem `README.md`, `results.txt`) | Mục 6.4 |
+| AC-15 (NFR-02) | Độ trễ phản hồi trước (120 lượt) và sau (200 lượt) khi sửa câu đệm, 15/11/2026 | `experiments/latency_20261115/audio_probe.py`, `analyze.py` | `experiments/latency_20261115/` (xem `README.md`, `results.txt`) | Mục 6.4 |
 | AC-15 (NFR-02) | Độ trễ đợt đo 05–06/09/2026, khi còn nhánh rút gọn (chỉ để tham khảo) | `extract_ch6_metrics.py` | Nhật ký gốc của tác nhân không lưu trong kho mã | Bảng 6.5 |
 | AC-19 | Tỷ lệ lỗi từ, 22 câu, yên tĩnh và có nhiễu | `compute_wer.py`, `wer_kich_ban.md` | `wer_ket_qua.md` | Mục 6.5 |
 | AC-01 đến AC-08 | Độ chính xác gọi công cụ, tỷ lệ hoàn thành, phân loại lỗi (43 lượt, chấm tay) | `ch6_manual_scoring.md` | `ch6_manual_scoring.md` | Mục 6.6 |

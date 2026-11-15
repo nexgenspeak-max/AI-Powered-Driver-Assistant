@@ -17,3 +17,14 @@ C. May khach: het cau noi -> am thanh dau tien       n=120 P50=3.00 P90=3.55 P95
    chang: LLM token dau                              n= 83 P50=1.04 P90=1.32 P95=1.36 max=2.37 | <=2s 82/83 (98.8%)
    chang: TTS am thanh dau                           n= 83 P50=0.17 P90=0.19 P95=0.20 max=0.27 | <=2s 83/83 (100.0%)
    phan bo A: {'<=1.0': 38, '1.0-1.5': 7, '1.5-2.0': 54, '2.0-2.5': 26, '>2.5': 1}
+
+== SAU KHI SUA CAU DEM (turns_inline_filler): cau dem chen trong luong tra loi o 1,6 s, flush ngay
+Luot noi: 200 | duoc tra loi: 200 | phien: 20 | cau khac nhau: 22 | cau dem phat: 129 | lan goi cong cu: 76
+A. Tac nhan: tai xe dut loi -> am thanh dau (AC-15)  n=200 P50=1.79 P90=1.92 P95=1.99 max=2.22 | <=2s 190/200 (95.0%)
+B. Tac nhan: EOU + token dau + TTS (cau tra loi)     n=173 P50=2.27 P90=2.68 P95=2.90 max=3.88 | <=2s 41/173 (23.7%)
+C. May khach: het cau noi -> am thanh dau tien       n=200 P50=2.82 P90=3.13 P95=3.36 max=3.61 | <=2s 2/200 (1.0%)
+   chang: phat hien ket thuc phat ngon               n=173 P50=0.97 P90=1.13 P95=1.22 max=1.77 | <=2s 173/173 (100.0%)
+   chang: LLM token dau                              n=173 P50=1.11 P90=1.42 P95=1.69 max=2.17 | <=2s 171/173 (98.8%)
+   chang: TTS am thanh dau                           n=173 P50=0.18 P90=0.20 P95=0.21 max=0.32 | <=2s 173/173 (100.0%)
+   phan bo A: {'<=1.0': 3, '1.0-1.5': 5, '1.5-2.0': 182, '2.0-2.5': 10, '>2.5': 0}
+   cau dem trong luong tra loi (inline): 89/200 luot; cau dem say() du phong kich hoat 40 lan, bi huy 39 lan (reply_first)

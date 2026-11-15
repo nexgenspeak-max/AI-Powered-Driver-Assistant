@@ -29,7 +29,11 @@ from app.voicebot.processors.intent_classify import (
     needs_tool_llm,
     parse_trip_index,
 )
-from app.voicebot.processors.turn_filler import schedule_turn_filler
+from app.voicebot.processors.turn_filler import (
+    inline_turn_filler,
+    schedule_turn_filler,
+    strip_filler_from_history,
+)
 
 logger = logging.getLogger("llm-orchestrator.spoken_intent")
 
@@ -409,4 +413,9 @@ class SpokenIntentMixin:
 
     def llm_node(self, chat_ctx: Any, tools: list[Any], model_settings: Any):
         apply_auto_tool_choice(model_settings)
-        return Agent.default.llm_node(self, chat_ctx, tools, model_settings)
+        strip_filler_from_history(chat_ctx)
+        return inline_turn_filler(
+            self.session,
+            Agent.default.llm_node(self, chat_ctx, tools, model_settings),
+            lang=self._spoken_intent_lang,
+        )

@@ -92,7 +92,7 @@ phần mềm dùng để lập luận, và ba khoảng trống nghiên cứu.
 ### Ví dụ trong Czen
 
 - "Cộng dồn độ trễ": tài xế dứt lời → chờ chốt lượt → chờ LLM sinh token đầu → chờ TTS ra âm thanh
-  đầu. Ba chặng cộng lại mới thành con số P95 2,58 giây ở Chương 6.
+  đầu. Ba chặng cộng lại mới thành con số P95 2,90 giây tới câu trả lời thật ở Chương 6.
 - Serverless và container (mục 2.7): API chuyến đi chỉ chạy vài trăm mili-giây nên đặt trên Lambda;
   tác nhân Czen phải giữ kết nối âm thanh cả cuốc xe nên **không thể** đặt trên Lambda — phải chạy
   container trên Fargate.
@@ -267,15 +267,17 @@ Node.js, app React Native — với lớp dự phòng nhà cung cấp AI và t�
 ## Chương 6 — Thực nghiệm và đánh giá
 
 **Một câu:** đo trên hệ thống thật theo 19 tiêu chí; đạt phục hồi và mở rộng (mô phỏng), chức năng ở
-mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
+mức khá với mẫu nhỏ, **độ trễ chỉ đạt sát ngưỡng sau một vòng sửa**.
 
 ### Lời nói
 
 > Em đánh giá theo từng câu hỏi nghiên cứu, quy tắc xử lý dữ liệu được cố định từ trước, tỷ lệ kèm
 > khoảng tin cậy 95% Wilson.
 >
-> **RQ2 — độ trễ.** Trên 120 lượt đo ngày 15/11/2026, P50 là 1,83 giây nhưng **P95 là 2,58 giây**,
-> không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng. Phân tích theo chặng (Bảng 6.4) cho thấy
+> **RQ2 — độ trễ.** Đợt đo đầu ngày 15/11/2026 (120 lượt) không đạt: P95 2,58 giây. Sau khi sửa câu
+> đệm, trên 200 lượt, P50 là 1,79 giây và **P95 là 1,99 giây**, đạt sát ngưỡng 2 giây; 95% số lượt nằm
+> trong ngưỡng. Mức đạt này là nhờ câu đệm (44,5% số lượt); thời gian tới câu trả lời thật vẫn có P50
+> 2,27 giây. Phân tích theo chặng (Bảng 6.4) cho thấy
 > hai chặng lớn, mỗi chặng khoảng 1 giây: chờ STT trả kết quả cuối của câu và chờ LLM sinh token đầu.
 > Cả hai thuộc nhà cung cấp AI bên ngoài, nên việc đạt ngưỡng phụ thuộc vào nhà cung cấp, không phải
 > cách chia dịch vụ.
@@ -309,18 +311,19 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 
 ### Mối đe dọa (mục 6.13) — nói ngắn gọn
 
-> Nội tại: 120 lượt đo độ trễ trong một ngày với giọng máy, một tài khoản, một người chấm. Bên ngoài: thử tải trên một máy với
+> Nội tại: hai đợt đo độ trễ (120 và 200 lượt) trong cùng một ngày với giọng máy, mốc câu đệm chọn sau khi xem đợt đầu, một tài khoản, một người chấm. Bên ngoài: thử tải trên một máy với
 > AI giả lập, chưa phải AWS thật. Cấu trúc: độ trễ đo trải nghiệm hội thoại, không đo an toàn giao
 > thông. Kết luận: mẫu nhỏ nên em báo khoảng tin cậy và không khẳng định khác biệt khi khoảng tin cậy
 > chồng lấn.
 
 ### Câu hỏi hay gặp
 
-- **"Độ trễ không đạt thì luận văn có thất bại không?"** Không — RQ2 hỏi độ trễ đạt mức nào và thành
-  phần nào chi phối; câu trả lời có số liệu rõ ràng, và đó là đóng góp thứ tư. Kết quả "không đạt" được
-  báo trung thực ở Bảng 6.15.
-- **"Thiết kế hiện tại (có câu đệm, không còn nhánh rút gọn) đã đo chưa?"** Đã đo ngày 15/11/2026: 120
-  lượt, P95 2,58 giây (Bảng 6.3). Đợt đo tháng 9 chỉ còn để tham khảo (Bảng 6.5).
+- **"Độ trễ đạt nhờ câu đệm thì có đáng tin không?"** RQ2 hỏi độ trễ đạt mức nào và thành phần nào chi
+  phối; luận văn báo cả ba con số: tới âm thanh đầu (P95 1,99 giây, đạt sát ngưỡng), tới câu trả lời
+  thật (P95 2,90 giây) và từ phía máy khách (P95 3,36 giây), cùng đợt đo đầu không đạt (Bảng 6.3, 6.5).
+- **"Thiết kế hiện tại (có câu đệm, không còn nhánh rút gọn) đã đo chưa?"** Đã đo hai đợt ngày
+  15/11/2026: trước khi sửa câu đệm P95 2,58 giây (120 lượt), sau khi sửa P95 1,99 giây (200 lượt, Bảng
+  6.3). Đợt đo tháng 9 chỉ còn để tham khảo (Bảng 6.5).
 - **"74,4% so với τ-bench dưới 50% — Czen tốt hơn GPT-4o à?"** Không so trực tiếp được: τ-bench tính
   theo nhiệm vụ nhiều lượt, luận văn tính theo lượt (Bảng 6.16).
 - **"Slide 8 nói chốt lượt 0,25–0,55 giây, Bảng 6.4 nói gần 1 giây?"** 0,25–0,55 giây là khoảng lặng
@@ -335,7 +338,7 @@ mức khá với mẫu nhỏ, **độ trễ chưa đạt**.
 > đánh giá theo 19 tiêu chí chấp nhận — cả 19 tiêu chí đã được đánh giá.
 >
 > Kết quả chính: phục hồi và mở rộng đạt trong môi trường mô phỏng; chức năng đạt mức khá với mẫu nhỏ;
-> độ trễ chưa đạt và bị chi phối bởi mô hình ngôn ngữ bên ngoài.
+> độ trễ chỉ đạt sát ngưỡng nhờ câu đệm và bị chi phối bởi hai nhà cung cấp AI bên ngoài (STT và LLM).
 >
 > Hướng phát triển: đo lại thiết kế hiện hành với ít nhất 200 lượt và thử mô hình nhanh hơn; triển khai
 > đầy đủ trên AWS và đo lại; duy trì tối thiểu hai bản sao tác nhân; tăng cỡ mẫu với nhiều người đọc và

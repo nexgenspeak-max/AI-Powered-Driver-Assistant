@@ -1,0 +1,200 @@
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:11:46"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.72, "replied": true, "ts": "2026-11-15 18:11:55"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.89, "replied": true, "ts": "2026-11-15 18:12:04"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:12:15"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:12:26"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:12:38"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.74, "replied": true, "ts": "2026-11-15 18:12:48"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:12:57"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:13:09"}
+{"room": "driver-0900111000-ca3deaa8-925d-4cb2-914b-79d8dabd3dcf", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.89, "replied": true, "ts": "2026-11-15 18:13:20"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.87, "replied": true, "ts": "2026-11-15 18:13:53"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.71, "replied": true, "ts": "2026-11-15 18:14:07"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Bạn có thể giúp gì?", "client_latency_s": 3.06, "replied": true, "ts": "2026-11-15 18:14:21"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Làm sao để gọi khách?", "client_latency_s": 3.52, "replied": true, "ts": "2026-11-15 18:14:38"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 3.45, "replied": true, "ts": "2026-11-15 18:14:47"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 3.52, "replied": true, "ts": "2026-11-15 18:15:07"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 3.57, "replied": true, "ts": "2026-11-15 18:15:31"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 3.49, "replied": true, "ts": "2026-11-15 18:15:47"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 3.45, "replied": true, "ts": "2026-11-15 18:16:04"}
+{"room": "driver-0900111000-438b7d42-4810-47fb-8409-0706d98f9348", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 3.48, "replied": true, "ts": "2026-11-15 18:16:21"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Cảm ơn nhiều.", "client_latency_s": 3.61, "replied": true, "ts": "2026-11-15 18:16:54"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 3.31, "replied": true, "ts": "2026-11-15 18:17:11"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 3.36, "replied": true, "ts": "2026-11-15 18:17:22"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 3.37, "replied": true, "ts": "2026-11-15 18:17:34"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 3.31, "replied": true, "ts": "2026-11-15 18:17:43"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 3.2, "replied": true, "ts": "2026-11-15 18:17:53"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 3.32, "replied": true, "ts": "2026-11-15 18:18:03"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 3.28, "replied": true, "ts": "2026-11-15 18:18:13"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Điểm đón ở đâu?", "client_latency_s": 3.36, "replied": true, "ts": "2026-11-15 18:18:24"}
+{"room": "driver-0900111000-497993d3-718f-4f5f-bd3d-0642b64b4a03", "utt": "Khách đứng ở đâu?", "client_latency_s": 3.44, "replied": true, "ts": "2026-11-15 18:18:34"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:19:08"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.28, "replied": true, "ts": "2026-11-15 18:19:18"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:19:35"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.72, "replied": true, "ts": "2026-11-15 18:19:50"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Bạn có thể giúp gì?", "client_latency_s": 2.76, "replied": true, "ts": "2026-11-15 18:20:06"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.74, "replied": true, "ts": "2026-11-15 18:20:19"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:20:28"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:20:36"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.76, "replied": true, "ts": "2026-11-15 18:21:04"}
+{"room": "driver-0900111000-d0697b9d-c846-47c1-9031-9c15fc04baa5", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:21:19"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 1.67, "replied": true, "ts": "2026-11-15 18:21:47"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:22:02"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Cảm ơn nhiều.", "client_latency_s": 3.03, "replied": true, "ts": "2026-11-15 18:22:13"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.87, "replied": true, "ts": "2026-11-15 18:22:24"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.02, "replied": true, "ts": "2026-11-15 18:22:33"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.92, "replied": true, "ts": "2026-11-15 18:22:44"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.96, "replied": true, "ts": "2026-11-15 18:22:53"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 18:23:04"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.7, "replied": true, "ts": "2026-11-15 18:23:14"}
+{"room": "driver-0900111000-8a0ad828-6f6a-4082-928e-d9fece3236b7", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.88, "replied": true, "ts": "2026-11-15 18:23:25"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:24:00"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.59, "replied": true, "ts": "2026-11-15 18:24:09"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.73, "replied": true, "ts": "2026-11-15 18:24:19"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.33, "replied": true, "ts": "2026-11-15 18:24:29"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.76, "replied": true, "ts": "2026-11-15 18:24:45"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.66, "replied": true, "ts": "2026-11-15 18:24:59"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Bạn có thể giúp gì?", "client_latency_s": 3.04, "replied": true, "ts": "2026-11-15 18:25:15"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.71, "replied": true, "ts": "2026-11-15 18:25:26"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.96, "replied": true, "ts": "2026-11-15 18:25:39"}
+{"room": "driver-0900111000-4f4dff44-52e7-4763-90db-deb8583dbae7", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:25:50"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:26:46"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 1.45, "replied": true, "ts": "2026-11-15 18:26:52"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:27:10"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:27:26"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.88, "replied": true, "ts": "2026-11-15 18:27:35"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:27:47"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.64, "replied": true, "ts": "2026-11-15 18:27:56"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:28:05"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:28:16"}
+{"room": "driver-0900111000-f4e4bc9a-1859-4346-8c25-ddfcac8fefaa", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.8, "replied": true, "ts": "2026-11-15 18:28:27"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:29:01"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.8, "replied": true, "ts": "2026-11-15 18:29:12"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:29:21"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:29:30"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:29:40"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.31, "replied": true, "ts": "2026-11-15 18:29:50"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:30:07"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:30:24"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Bạn có thể giúp gì?", "client_latency_s": 2.8, "replied": true, "ts": "2026-11-15 18:30:40"}
+{"room": "driver-0900111000-3c579deb-f9e5-4b53-b1a5-376e210ae358", "utt": "Làm sao để gọi khách?", "client_latency_s": 3.13, "replied": true, "ts": "2026-11-15 18:30:54"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:31:40"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:31:59"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:32:30"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:33:03"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 3.12, "replied": true, "ts": "2026-11-15 18:33:17"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:33:31"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Cảm ơn nhiều.", "client_latency_s": 3.17, "replied": true, "ts": "2026-11-15 18:33:41"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 3.05, "replied": true, "ts": "2026-11-15 18:33:52"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:34:03"}
+{"room": "driver-0900111000-33755dbc-dfa6-4340-9c7b-7d07498e05ab", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:34:14"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:34:47"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:34:58"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:35:07"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.89, "replied": true, "ts": "2026-11-15 18:35:17"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.67, "replied": true, "ts": "2026-11-15 18:35:26"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:35:36"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.69, "replied": true, "ts": "2026-11-15 18:35:46"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.63, "replied": true, "ts": "2026-11-15 18:35:56"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:36:11"}
+{"room": "driver-0900111000-e5f833c6-d322-4094-bac4-7358fc1fe1af", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.92, "replied": true, "ts": "2026-11-15 18:36:28"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Bạn có thể giúp gì?", "client_latency_s": 2.95, "replied": true, "ts": "2026-11-15 18:37:08"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Làm sao để gọi khách?", "client_latency_s": 3.02, "replied": true, "ts": "2026-11-15 18:37:22"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:37:31"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.58, "replied": true, "ts": "2026-11-15 18:37:40"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.95, "replied": true, "ts": "2026-11-15 18:37:52"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.88, "replied": true, "ts": "2026-11-15 18:38:23"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:38:39"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.38, "replied": true, "ts": "2026-11-15 18:38:52"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.91, "replied": true, "ts": "2026-11-15 18:39:01"}
+{"room": "driver-0900111000-16cfbf1e-782f-4102-a6aa-2f6c6f08ba00", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:39:13"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.67, "replied": true, "ts": "2026-11-15 18:39:45"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:39:55"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:40:06"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:40:16"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.72, "replied": true, "ts": "2026-11-15 18:40:25"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.67, "replied": true, "ts": "2026-11-15 18:40:34"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.61, "replied": true, "ts": "2026-11-15 18:40:44"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:40:54"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.98, "replied": true, "ts": "2026-11-15 18:41:06"}
+{"room": "driver-0900111000-73f6605c-0da3-4f95-9225-ef29d35c03ba", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:41:18"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:41:57"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.67, "replied": true, "ts": "2026-11-15 18:42:12"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Bạn có thể giúp gì?", "client_latency_s": 2.88, "replied": true, "ts": "2026-11-15 18:42:25"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.98, "replied": true, "ts": "2026-11-15 18:42:38"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:42:47"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:42:55"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:43:20"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:43:35"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 2.7, "replied": true, "ts": "2026-11-15 18:43:49"}
+{"room": "driver-0900111000-56c3c20f-d224-4ca9-9700-2b03dbbd141b", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:44:04"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.8, "replied": true, "ts": "2026-11-15 18:44:36"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:44:47"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:44:57"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.69, "replied": true, "ts": "2026-11-15 18:45:06"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:45:17"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.64, "replied": true, "ts": "2026-11-15 18:45:26"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 18:45:37"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:45:47"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:45:56"}
+{"room": "driver-0900111000-8316b42c-cdb8-4931-8250-fa3c93c5f29c", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.87, "replied": true, "ts": "2026-11-15 18:46:06"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.76, "replied": true, "ts": "2026-11-15 18:46:41"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.59, "replied": true, "ts": "2026-11-15 18:46:51"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:47:06"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.65, "replied": true, "ts": "2026-11-15 18:47:21"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Bạn có thể giúp gì?", "client_latency_s": 2.99, "replied": true, "ts": "2026-11-15 18:47:37"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.93, "replied": true, "ts": "2026-11-15 18:47:52"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.94, "replied": true, "ts": "2026-11-15 18:48:01"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.93, "replied": true, "ts": "2026-11-15 18:48:19"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.69, "replied": true, "ts": "2026-11-15 18:48:33"}
+{"room": "driver-0900111000-6f151ece-bc85-4b06-b728-7f5b353d7ee3", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.94, "replied": true, "ts": "2026-11-15 18:48:44"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:49:24"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:49:40"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.76, "replied": true, "ts": "2026-11-15 18:49:49"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.91, "replied": true, "ts": "2026-11-15 18:50:00"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:50:10"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.73, "replied": true, "ts": "2026-11-15 18:50:20"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.68, "replied": true, "ts": "2026-11-15 18:50:29"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:50:40"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.77, "replied": true, "ts": "2026-11-15 18:50:51"}
+{"room": "driver-0900111000-93dc6fdd-fb9b-4eb4-b77d-6faa68a32893", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:51:01"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.68, "replied": true, "ts": "2026-11-15 18:51:32"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:51:42"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:51:54"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.89, "replied": true, "ts": "2026-11-15 18:52:06"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.85, "replied": true, "ts": "2026-11-15 18:52:23"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.9, "replied": true, "ts": "2026-11-15 18:52:40"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Bạn có thể giúp gì?", "client_latency_s": 3.03, "replied": true, "ts": "2026-11-15 18:52:56"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.61, "replied": true, "ts": "2026-11-15 18:53:09"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 18:53:28"}
+{"room": "driver-0900111000-90d062c5-3e46-4fa8-adb7-4f3534fed4ad", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:53:36"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 3.03, "replied": true, "ts": "2026-11-15 18:54:14"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 3.3, "replied": true, "ts": "2026-11-15 18:54:32"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:54:45"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.62, "replied": true, "ts": "2026-11-15 18:54:59"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:55:10"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:55:21"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:55:32"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 18:55:41"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Cho tôi xem lịch chuyến.", "client_latency_s": 2.6, "replied": true, "ts": "2026-11-15 18:55:50"}
+{"room": "driver-0900111000-39fe53e5-8701-45f2-a065-5715877e6c84", "utt": "Chuyến tiếp theo của tôi là gì?", "client_latency_s": 2.78, "replied": true, "ts": "2026-11-15 18:56:00"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Chuyến hiện tại của tôi thế nào?", "client_latency_s": 2.81, "replied": true, "ts": "2026-11-15 18:56:33"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Lịch trình của tôi hôm nay thế nào?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:56:45"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Điểm đón ở đâu?", "client_latency_s": 2.61, "replied": true, "ts": "2026-11-15 18:56:53"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Khách đứng ở đâu?", "client_latency_s": 2.95, "replied": true, "ts": "2026-11-15 18:57:03"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Hôm nay tôi kiếm được bao nhiêu?", "client_latency_s": 2.79, "replied": true, "ts": "2026-11-15 18:57:15"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Thu nhập hôm nay thế nào?", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:57:25"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Điểm đánh giá của tôi bao nhiêu?", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:57:42"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Hôm nay có thưởng không?", "client_latency_s": 2.71, "replied": true, "ts": "2026-11-15 18:57:57"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Bạn có thể giúp gì?", "client_latency_s": 3.09, "replied": true, "ts": "2026-11-15 18:58:12"}
+{"room": "driver-0900111000-3eb94766-822a-4c68-b86f-f6d1377f24af", "utt": "Làm sao để gọi khách?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 18:58:26"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Làm sao để xem thu nhập trong ứng dụng?", "client_latency_s": 2.83, "replied": true, "ts": "2026-11-15 18:58:57"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Tôi hủy chuyến thì làm thế nào?", "client_latency_s": 2.75, "replied": true, "ts": "2026-11-15 18:59:07"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Cuộc gọi vừa rồi khách nói gì?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 18:59:40"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Tóm tắt cuộc gọi giúp tôi.", "client_latency_s": 2.84, "replied": true, "ts": "2026-11-15 18:59:55"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Đi cao tốc cần lưu ý gì?", "client_latency_s": 3.06, "replied": true, "ts": "2026-11-15 19:00:10"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Trời mưa lái sao cho an toàn?", "client_latency_s": 2.99, "replied": true, "ts": "2026-11-15 19:00:26"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Cảm ơn nhiều.", "client_latency_s": 2.88, "replied": true, "ts": "2026-11-15 19:00:36"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Hôm nay trời đẹp nhỉ.", "client_latency_s": 3.16, "replied": true, "ts": "2026-11-15 19:00:47"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Hôm nay tôi còn mấy chuyến?", "client_latency_s": 2.82, "replied": true, "ts": "2026-11-15 19:00:57"}
+{"room": "driver-0900111000-805fe49e-8a91-456d-9f27-4de381b45a29", "utt": "Tôi có chuyến nào sắp tới không?", "client_latency_s": 2.86, "replied": true, "ts": "2026-11-15 19:01:08"}

@@ -23,11 +23,11 @@ Bảng 6.1 liên kết từng yêu cầu với câu hỏi nghiên cứu, tiêu c
 
 ## 6.2. Môi trường thực nghiệm
 
-Số liệu được lấy từ bốn nguồn: đợt đo độ trễ ngày 15/11/2026 trên thiết kế hiện hành (mục 6.4); nhật ký các phiên hội thoại do tác giả thực hiện, chủ yếu ngày 05 và 06/09/2026 (mục 6.5, 6.6); bộ kiểm thử tự động của các dịch vụ; và thí nghiệm có kiểm soát trong môi trường mô phỏng cục bộ (mục 6.8, 6.9). Mọi phiên dùng tài khoản và chuyến thử nghiệm nội bộ; số điện thoại được che.
+Số liệu được lấy từ bốn nguồn: hai đợt đo độ trễ ngày 15/11/2026, trước và sau khi sửa cơ chế câu đệm (mục 6.4); nhật ký các phiên hội thoại do tác giả thực hiện, chủ yếu ngày 05 và 06/09/2026 (mục 6.5, 6.6); bộ kiểm thử tự động của các dịch vụ; và thí nghiệm có kiểm soát trong môi trường mô phỏng cục bộ (mục 6.8, 6.9). Mọi phiên dùng tài khoản và chuyến thử nghiệm nội bộ; số điện thoại được che.
 
 ### 6.2.1. Môi trường đo hội thoại
 
-Bảng 6.2 nêu cấu hình đo; gpt-5.6-luna là một mô hình thuộc họ GPT. Trong đợt đo độ trễ ngày 15/11/2026, người nói là một "tài xế ảo": một chương trình vào phòng LiveKit như ứng dụng tài xế và phát câu tiếng Việt do giọng máy đọc. Đợt đo gồm 12 phiên, mỗi phiên 10 lượt, tổng 120 lượt, lấy từ 22 câu tra cứu và hỏi đáp (lịch chuyến, thu nhập, cách dùng ứng dụng, tóm tắt cuộc gọi) lặp theo vòng; không có câu nào tạo cuộc gọi, gửi SMS hay đổi trạng thái chuyến. Mọi lượt đều được giữ, kể cả lượt chậm.
+Bảng 6.2 nêu cấu hình đo; gpt-5.6-luna là một mô hình thuộc họ GPT. Trong hai đợt đo độ trễ ngày 15/11/2026, người nói là một "tài xế ảo": một chương trình vào phòng LiveKit như ứng dụng tài xế và phát câu tiếng Việt do giọng máy đọc. Đợt thứ nhất gồm 12 phiên với 120 lượt; đợt thứ hai, sau khi sửa câu đệm, gồm 20 phiên với 200 lượt. Mỗi phiên có 10 lượt, lấy từ 22 câu tra cứu và hỏi đáp (lịch chuyến, thu nhập, cách dùng ứng dụng, tóm tắt cuộc gọi) lặp theo vòng; không có câu nào tạo cuộc gọi, gửi SMS hay đổi trạng thái chuyến. Mọi lượt đều được giữ, kể cả lượt chậm.
 
 **Bảng 6.2.** Môi trường đo hội thoại
 
@@ -35,8 +35,8 @@ Bảng 6.2 nêu cấu hình đo; gpt-5.6-luna là một mô hình thuộc họ G
 |---|---|
 | Dịch vụ Liên lạc hội thoại thời gian thực | Chạy trên máy phát triển, kết nối LiveKit Cloud qua WebRTC |
 | Dịch vụ backend | Chạy cục bộ (Phụ lục D) |
-| Người nói | Đợt 15/11/2026: tài xế ảo phát giọng máy tiếng Việt. Các đợt trước: tác giả đọc trên thiết bị thật hoặc trình giả lập |
-| Mô hình AI | LLM gpt-5.6-luna; STT Google chirp_3 (vi-VN); TTS ElevenLabs eleven_v4_turbo trong đợt 15/11/2026, Google vi-VN-Chirp3-HD-Kore trong các đợt trước |
+| Người nói | Hai đợt 15/11/2026: tài xế ảo phát giọng máy tiếng Việt. Các đợt trước: tác giả đọc trên thiết bị thật hoặc trình giả lập |
+| Mô hình AI | LLM gpt-5.6-luna; STT Google chirp_3 (vi-VN); TTS ElevenLabs eleven_v4_turbo trong hai đợt 15/11/2026, Google vi-VN-Chirp3-HD-Kore trong các đợt trước |
 | Dữ liệu | Tài khoản và chuyến thử nghiệm nội bộ |
 
 ### 6.2.2. Môi trường mô phỏng thử tải và tiêm lỗi
@@ -51,46 +51,55 @@ Quy tắc xử lý dữ liệu được cố định từ trước: các chỉ s
 
 ## 6.4. Kết quả hiệu năng
 
-Mục này kiểm tra yêu cầu hiệu năng NFR-02 (tiêu chí AC-15) và trả lời câu hỏi nghiên cứu RQ2. Bảng 6.3 trình bày độ trễ của thiết kế hiện hành (mọi lượt qua LLM, câu đệm sau 2 giây) theo ba cách đo. Chỉ số A là chỉ số của AC-15. Chỉ số B tính tới câu trả lời thật, bỏ qua câu đệm. Chỉ số C đo từ phía tài xế ảo, gồm cả đường truyền hai chiều, nên là giới hạn trên của khoảng chờ mà tài xế cảm nhận.
+Mục này kiểm tra yêu cầu hiệu năng NFR-02 (tiêu chí AC-15) và trả lời câu hỏi nghiên cứu RQ2. Độ trễ được đo hai đợt trong ngày 15/11/2026. Đợt thứ nhất không đạt; sau khi tìm ra nguyên nhân và sửa cơ chế câu đệm, đợt thứ hai đạt sát ngưỡng. Mỗi đợt có ba cách đo: chỉ số A là chỉ số của AC-15; chỉ số B tính tới câu trả lời thật, bỏ qua câu đệm; chỉ số C đo từ phía tài xế ảo, gồm cả đường truyền hai chiều, nên là giới hạn trên của khoảng chờ mà tài xế cảm nhận.
 
-**Bảng 6.3.** Độ trễ phản hồi của thiết kế hiện hành (giây; ngày 15/11/2026; 120 lượt trong 12 phiên)
+**Đợt thứ nhất: không đạt.** Trên 120 lượt, chỉ số A có P50 1,83 giây và P95 2,58 giây; 87 lượt (72,5%) nằm trong ngưỡng 2 giây (Bảng 6.5). Ở thiết kế lúc đó, câu đệm được gửi đi bằng một lệnh nói riêng ở giây thứ 2. Nhật ký cho thấy cơ chế này gần như không có tác dụng: nền tảng LiveKit chỉ phát từng câu một, nên câu đệm bị xếp sau câu trả lời đang chờ LLM và bị hủy khi câu trả lời bắt đầu. Trong 33 lần câu đệm được kích hoạt, 25 lần nó bị hủy theo cách này.
+
+**Vòng sửa.** Câu đệm được chuyển vào ngay trong luồng trả lời, theo mẫu mà LiveKit hướng dẫn cho việc phát sớm một câu ngắn: nếu tới giây 1,6 kể từ lúc tài xế dứt lời mà LLM chưa sinh ra gì, tác nhân mở đầu câu trả lời bằng câu đệm và đẩy nó sang TTS ngay, rồi nói tiếp nội dung khi LLM trả về (mục 5.3.2). Mốc 1,6 giây được chọn để âm thanh của câu đệm, vốn cần khoảng 0,2 giây tổng hợp, tới trước mốc 2 giây.
+
+**Đợt thứ hai: đạt sát ngưỡng.** Bảng 6.3 trình bày kết quả sau khi sửa.
+
+**Bảng 6.3.** Độ trễ phản hồi sau khi sửa câu đệm (giây; ngày 15/11/2026; 200 lượt trong 20 phiên)
 
 | Chỉ số | Cách đo | n | P50 | P90 | P95 | Lớn nhất | Lượt ≤ 2 giây |
 |---|---|---|---|---|---|---|---|
-| A (AC-15) | Tác nhân nhận biết tài xế dứt lời → âm thanh đầu của tác nhân | 120 | 1,83 | 2,35 | 2,58 | 3,36 | 87/120 (72,5%) |
-| B | Tổng ba chặng tới câu trả lời thật | 81 | 2,14 | 2,54 | 2,87 | 2,96 | 26/81 (32,1%) |
-| C | Tài xế ảo phát hết câu → nhận âm thanh đầu | 120 | 2,94 | 3,49 | 3,62 | 4,44 | 2/120 (1,7%) |
+| A (AC-15) | Tác nhân nhận biết tài xế dứt lời → âm thanh đầu của tác nhân | 200 | 1,79 | 1,92 | 1,99 | 2,22 | 190/200 (95,0%) |
+| B | Tổng ba chặng tới câu trả lời thật | 173 | 2,27 | 2,68 | 2,90 | 3,88 | 41/173 (23,7%) |
+| C | Tài xế ảo phát hết câu → nhận âm thanh đầu | 200 | 2,82 | 3,13 | 3,36 | 3,61 | 2/200 (1,0%) |
 
-Chỉ số B chỉ có ở 81 lượt, vì ở 39 lượt còn lại công cụ tự đọc kết quả và nhật ký không tách được ba chặng.
+Chỉ số B chỉ có ở 173 lượt, vì ở 27 lượt còn lại công cụ tự đọc kết quả và nhật ký không tách được ba chặng.
 
-**Bảng 6.4.** Độ trễ theo chặng trong một lượt (giây; n = 81)
+**Bảng 6.4.** Độ trễ theo chặng trong một lượt (giây; đợt thứ hai; n = 173)
 
 | Chặng | P50 | P95 | Nhận xét |
 |---|---|---|---|
-| Phát hiện kết thúc phát ngôn | 0,95 | 1,23 | Gần như toàn bộ là thời gian chờ STT trả kết quả cuối của câu |
-| LLM sinh token đầu | 1,04 | 1,32 | Thuộc nhà cung cấp LLM |
-| TTS đến âm thanh đầu | 0,17 | 0,19 | Không đáng kể |
+| Phát hiện kết thúc phát ngôn | 0,97 | 1,22 | Gần như toàn bộ là thời gian chờ STT trả kết quả cuối của câu |
+| LLM sinh token đầu | 1,11 | 1,69 | Thuộc nhà cung cấp LLM |
+| TTS đến âm thanh đầu | 0,18 | 0,21 | Không đáng kể |
 
-![Biểu đồ P50 P95 độ trễ theo ba cách đo|h=8](thesis_screenshots/H6_1_latency.png)
+![Biểu đồ P50 P95 độ trễ trước và sau khi sửa câu đệm|h=8](thesis_screenshots/H6_1_latency.png)
 
-**Hình 6.1.** P50 và P95 độ trễ phản hồi theo ba cách đo, đợt đo 15/11/2026 (n = 120 lượt)
+**Hình 6.1.** P50 và P95 độ trễ phản hồi: chỉ số A trước và sau khi sửa câu đệm; chỉ số B và C sau khi sửa (ngày 15/11/2026)
 
-**AC-15 không đạt:** P95 là 2,58 giây so với ngưỡng 2 giây. Phần lớn các lượt nằm sát dưới ngưỡng: 78 trong 120 lượt rơi vào khoảng 1,5–2,0 giây, và 33 lượt vượt 2 giây (24 lượt trong khoảng 2,0–2,5 giây, 9 lượt trên 2,5 giây). Có ba nhận định.
+**AC-15 đạt sau một vòng sửa, sát ngưỡng:** P95 của chỉ số A là 1,99 giây so với ngưỡng 2 giây, và 190 trong 200 lượt (95,0%) nằm trong ngưỡng. Mười lượt còn lại vượt nhẹ, từ 2,01 đến 2,22 giây. Có bốn nhận định.
 
-Thứ nhất, không chặng nào một mình vượt ngưỡng. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị; cộng lại, hai chặng này đã dùng gần hết ngân sách 2 giây, nên chỉ cần một chặng chậm hơn bình thường là lượt đó vượt ngưỡng. Chặng thứ nhất không phải do khoảng lặng chờ quá dài: tác nhân chỉ chờ 0,25–0,55 giây im lặng, còn lại là thời gian nhà cung cấp STT trả kết quả cuối của câu (trung vị 0,96 giây trong nhật ký). Cả hai chặng lớn vì vậy đều thuộc nhà cung cấp AI bên ngoài.
+Thứ nhất, kết quả đạt là nhờ câu đệm chứ không nhờ trả lời nhanh hơn. Câu đệm được phát ở 89 trong 200 lượt (44,5%). Thời gian tới câu trả lời thật (chỉ số B) không giảm: P50 2,27 giây, P95 2,90 giây. Ở các lượt có câu đệm, tài xế nghe "Đợi mình một chút…" (dài khoảng 1,2 đến 1,4 giây) rồi mới nghe nội dung, nên nội dung tới muộn hơn so với khi không có câu đệm.
 
-Thứ hai, câu đệm rút ngắn khoảng lặng nhưng không giúp đạt AC-15. Câu đệm được phát ở 33 lượt. Nó được kích hoạt đúng ở giây thứ 2 và còn cần thời gian tổng hợp giọng nói, nên âm thanh của nó luôn tới sau ngưỡng. Muốn đạt ngưỡng bằng câu đệm thì phải phát sớm hơn, đổi lại câu đệm sẽ xuất hiện ở nhiều lượt hơn.
+Thứ hai, biên an toàn rất mỏng. P95 chỉ thấp hơn ngưỡng 0,01 giây; một đợt đo khác, với mạng hoặc nhà cung cấp chậm hơn một chút, có thể cho kết quả vượt ngưỡng.
 
-Thứ ba, khoảng chờ tài xế cảm nhận dài hơn chỉ số A. Đồng hồ của chỉ số A bắt đầu khi tác nhân nhận biết tài xế đã dứt lời, tức là sau khi tài xế thật sự ngừng nói một khoảng; chỉ số C tính cả khoảng này và đường truyền, cho P50 là 2,94 giây.
+Thứ ba, không chặng nào một mình vượt ngưỡng, nhưng hai chặng đầu cộng lại đã dùng hết ngân sách. Phát hiện kết thúc phát ngôn và token đầu của LLM mỗi chặng mất khoảng 1 giây ở trung vị. Chặng thứ nhất không phải do khoảng lặng chờ quá dài: tác nhân chỉ chờ 0,25–0,55 giây im lặng, còn lại là thời gian nhà cung cấp STT trả kết quả cuối của câu. Cả hai chặng lớn vì vậy đều thuộc nhà cung cấp AI bên ngoài. Câu đệm cũng không cứu được lượt mà riêng chặng thứ nhất đã vượt 1,6 giây, vì khi đó LLM chưa bắt đầu chạy.
 
-**Đối chiếu với đợt đo trước.** Bảng 6.5 đặt kết quả cạnh đợt đo 05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn theo ý định (đã loại bỏ theo ADR-02, mục 4.2.2). Hai đợt khác nhau về thiết kế, người nói và tập câu, nên bảng chỉ dùng để tham khảo. Thời gian sinh token đầu của LLM ở đợt sau ngắn hơn rõ rệt dù cùng tên mô hình; luận văn không xác định được nguyên nhân. Nhật ký gốc của đợt đầu không còn được lưu, và số liệu của nhánh rút gọn ở đợt đó (P50 0,21 giây trên 167 lượt) không được dùng làm kết quả vì không kiểm tra lại được (mục 6.13).
+Thứ tư, khoảng chờ tài xế cảm nhận dài hơn chỉ số A. Đồng hồ của chỉ số A bắt đầu khi tác nhân nhận biết tài xế đã dứt lời, tức là sau khi tài xế thật sự ngừng nói một khoảng; chỉ số C tính cả khoảng này và đường truyền, cho P50 là 2,82 giây.
 
-**Bảng 6.5.** Đối chiếu hai đợt đo độ trễ (giây)
+**Đối chiếu ba đợt đo.** Bảng 6.5 đặt hai đợt ngày 15/11/2026 cạnh đợt đo 05–06/09/2026, khi nguyên mẫu còn nhánh rút gọn theo ý định (đã loại bỏ theo ADR-02, mục 4.2.2). Đợt tháng 9 khác về thiết kế, người nói và tập câu, nên chỉ dùng để tham khảo; nhật ký gốc của đợt này không còn được lưu, và số liệu của nhánh rút gọn (P50 0,21 giây trên 167 lượt) không được dùng làm kết quả vì không kiểm tra lại được (mục 6.13). Thời gian sinh token đầu của LLM ở hai đợt sau ngắn hơn rõ rệt dù cùng tên mô hình; luận văn không xác định được nguyên nhân.
 
-| Đợt đo | Thiết kế và người nói | n | P50 | P95 | Token đầu của LLM P50 / P95 | Phát hiện kết thúc phát ngôn P50 / P95 |
-|---|---|---|---|---|---|---|
-| 05–06/09/2026 | Còn nhánh rút gọn, chỉ tính lượt qua LLM; tác giả đọc | 174 | 1,54 | 3,75 | 1,25 / 2,49 | 0,94 / 1,70 |
-| 15/11/2026 | Mọi lượt qua LLM, có câu đệm; tài xế ảo | 120 | 1,83 | 2,58 | 1,04 / 1,32 | 0,95 / 1,23 |
+**Bảng 6.5.** Đối chiếu ba đợt đo độ trễ theo chỉ số A (giây)
+
+| Đợt đo | Thiết kế và người nói | n | P50 | P95 | Lượt ≤ 2 giây | Token đầu của LLM P50 / P95 | Phát hiện kết thúc phát ngôn P50 / P95 |
+|---|---|---|---|---|---|---|---|
+| 05–06/09/2026 | Còn nhánh rút gọn, chỉ tính lượt qua LLM; tác giả đọc | 174 | 1,54 | 3,75 | 69,5% | 1,25 / 2,49 | 0,94 / 1,70 |
+| 15/11/2026, đợt thứ nhất | Mọi lượt qua LLM; câu đệm bằng lệnh nói riêng ở giây thứ 2; tài xế ảo | 120 | 1,83 | 2,58 | 72,5% | 1,04 / 1,32 | 0,95 / 1,23 |
+| 15/11/2026, đợt thứ hai | Mọi lượt qua LLM; câu đệm trong luồng trả lời ở giây 1,6; tài xế ảo | 200 | 1,79 | 1,99 | 95,0% | 1,11 / 1,69 | 0,97 / 1,22 |
 
 ## 6.5. Kết quả nhận dạng giọng nói
 
@@ -254,7 +263,7 @@ Bảng 6.15 tổng hợp kết quả theo từng tiêu chí chấp nhận.
 
 | Yêu cầu | Tiêu chí | Kết quả chính | Trạng thái |
 |---|---|---|---|
-| NFR-02 Hiệu năng | AC-15 | P50 1,83 s, P95 2,58 s (n = 120); 72,5% lượt ≤ 2 s; chờ kết quả cuối của STT và token đầu của LLM mỗi chặng ≈ 1 s | Không đạt |
+| NFR-02 Hiệu năng | AC-15 | Trước khi sửa câu đệm: P95 2,58 s (n = 120). Sau khi sửa: P50 1,79 s, P95 1,99 s (n = 200), 95,0% lượt ≤ 2 s; câu đệm ở 44,5% số lượt; thời gian tới câu trả lời thật không giảm (P95 2,90 s) | Đạt sau một vòng sửa (sát ngưỡng) |
 | Nhận dạng giọng nói | AC-19 | WER 3,1% (yên tĩnh), 7,3% (nhiễu); 1 người đọc, 22 câu | Đã đo (mẫu nhỏ) |
 | FR của tài xế | AC-01–AC-08 | Đúng công cụ 37/43 (86,0%; KTC 72,7–93,4%); hoàn thành ngay 32/43 (74,4%; 59,8–85,1%) | Đã đo (mẫu nhỏ) |
 | NFR-01 Tính khả dụng | AC-14 | 100% thao tác rủi ro có xác nhận; danh mục 5/6, sau sửa 6/6 | Đạt sau một vòng sửa |
@@ -268,7 +277,7 @@ Bảng 6.15 tổng hợp kết quả theo từng tiêu chí chấp nhận.
 
 **RQ1 – Kiến trúc microservices có đáp ứng khả năng mở rộng và khả năng phục hồi không?** Có, ở mức thành phần và trong môi trường mô phỏng: 200/200 lượt tiêm lỗi không làm hỏng luồng hội thoại và P95 không tăng khi số phiên tăng từ 1 lên 40 (Bảng 6.10, Bảng 6.11). Giới hạn là phiên đang chạy bị mất khi bản sao bị dừng, lỗi treo kéo dài 6–8 giây, và kết quả chưa được kiểm chứng trên AWS với nhà cung cấp AI thật.
 
-**RQ2 – Độ trễ phản hồi đạt mức nào và thành phần nào chi phối?** Trên 120 lượt của thiết kế hiện hành, P50 là 1,83 giây và P95 là 2,58 giây, không đạt ngưỡng 2 giây; 72,5% số lượt nằm trong ngưỡng (Bảng 6.3). Độ trễ do hai chặng chi phối với mức gần bằng nhau: phát hiện kết thúc phát ngôn (P50 0,95 giây) và token đầu của LLM (P50 1,04 giây) (Bảng 6.4). Cả hai đều thuộc nhà cung cấp AI bên ngoài: chặng thứ nhất gần như toàn bộ là thời gian STT trả kết quả cuối của câu, chặng thứ hai là thời gian của LLM (điểm nhạy SP-1, SP-2, rủi ro R-1, Bảng 4.11). Cách chia dịch vụ không phải là nguyên nhân: với nhà cung cấp AI giả lập, độ trễ không đổi khi số phiên tăng (Bảng 6.10).
+**RQ2 – Độ trễ phản hồi đạt mức nào và thành phần nào chi phối?** Sau khi sửa câu đệm, trên 200 lượt, P50 tới âm thanh đầu tiên là 1,79 giây và P95 là 1,99 giây, đạt sát ngưỡng 2 giây; 95,0% số lượt nằm trong ngưỡng (Bảng 6.3). Trước khi sửa, P95 là 2,58 giây. Mức đạt này đến từ câu đệm, phát ở 44,5% số lượt; thời gian tới câu trả lời thật vẫn có P50 2,27 giây và P95 2,90 giây. Độ trễ do hai chặng chi phối với mức gần bằng nhau: phát hiện kết thúc phát ngôn (P50 0,97 giây) và token đầu của LLM (P50 1,11 giây) (Bảng 6.4). Cả hai đều thuộc nhà cung cấp AI bên ngoài: chặng thứ nhất gần như toàn bộ là thời gian STT trả kết quả cuối của câu, chặng thứ hai là thời gian của LLM (điểm nhạy SP-1, SP-2, rủi ro R-1, Bảng 4.11). Cách chia dịch vụ không phải là nguyên nhân: với nhà cung cấp AI giả lập, độ trễ không đổi khi số phiên tăng (Bảng 6.10).
 
 **RQ3 – Tỷ lệ lỗi từ thay đổi thế nào khi có nhiễu?** Tăng từ 3,1% lên 7,3%, do lỗi chèn và thay thế tăng (mục 6.5); với một người đọc và 22 câu, đây chỉ là xu hướng.
 
@@ -282,23 +291,23 @@ Bảng 6.15 tổng hợp kết quả theo từng tiêu chí chấp nhận.
 |---|---|---|---|
 | Hoàn thành nghiệp vụ | 74,4% hoàn thành ngay; 86,0% đúng công cụ (43 lượt) | τ-bench: GPT-4o hoàn thành dưới 50% nhiệm vụ; pass^8 dưới 25% ở miền bán lẻ (Yao et al., 2024) | τ-bench tính theo nhiệm vụ nhiều lượt; luận văn theo lượt |
 | Chọn công cụ đơn lượt | 276/276 (23 câu × 12 lần) | BFCL: mô hình mạnh tốt ở đơn lượt, yếu ở nhiều bước (Patil et al., 2025) | Câu đơn lẻ, công cụ chỉ đọc |
-| Độ trễ phản hồi | P50 1,83 giây; P95 2,58 giây | Moshi: 160 ms lý thuyết, 200 ms thực tế (Défossez et al., 2024); chuyển lượt tự nhiên 0–200 ms (Stivers et al., 2009) | Moshi song công, không gọi công cụ |
+| Độ trễ phản hồi | Tới âm thanh đầu: P50 1,79 giây, P95 1,99 giây; tới câu trả lời thật: P50 2,27 giây | Moshi: 160 ms lý thuyết, 200 ms thực tế (Défossez et al., 2024); chuyển lượt tự nhiên 0–200 ms (Stivers et al., 2009) | Moshi song công, không gọi công cụ |
 | Tỷ lệ lỗi từ tiếng Việt | 3,1% (yên tĩnh); 7,3% (nhiễu) | Whisper large-v2 trên FLEURS tiếng Việt: 10,3% (Radford et al., 2023) | FLEURS đa chủ đề; luận văn 22 câu ngắn, đúng miền, 1 người đọc |
 
-Tỷ lệ hoàn thành cao hơn τ-bench một phần vì tính theo lượt; ở nhiệm vụ nhiều bước, lỗi E-CONFIRM và E-PARAM sẽ cộng dồn. Độ trễ của chuỗi xử lý theo tầng cao hơn mô hình song công khoảng một bậc độ lớn (P50 1,83 giây so với khoảng 0,2 giây); đó là đánh đổi của chuỗi theo tầng để thay được từng khâu xử lý (mục 2.9.1). Việc WER thấp hơn Whisper trên FLEURS chưa đủ để kết luận khâu nhận dạng tốt hơn.
+Tỷ lệ hoàn thành cao hơn τ-bench một phần vì tính theo lượt; ở nhiệm vụ nhiều bước, lỗi E-CONFIRM và E-PARAM sẽ cộng dồn. Độ trễ của chuỗi xử lý theo tầng cao hơn mô hình song công khoảng một bậc độ lớn (P50 1,79 giây tới âm thanh đầu, 2,27 giây tới câu trả lời thật, so với khoảng 0,2 giây); đó là đánh đổi của chuỗi theo tầng để thay được từng khâu xử lý (mục 2.9.1). Việc WER thấp hơn Whisper trên FLEURS chưa đủ để kết luận khâu nhận dạng tốt hơn.
 
 ## 6.13. Mối đe dọa đối với độ tin cậy của kết quả
 
 Các hạn chế được phân tích theo bốn loại mối đe dọa của Wohlin et al. (2012), kèm biện pháp đã áp dụng và rủi ro còn lại.
 
-**Độ tin cậy nội tại (internal validity).** Số liệu độ trễ lấy từ 120 lượt trong một ngày, với một tài khoản thử nghiệm, một máy và một đường mạng. Trong lần chạy đầu của ngày 15/11/2026, đồng hồ đo của tác nhân có lỗi: ở các lượt mà công cụ tự đọc kết quả, mã nguồn bấm giờ lại ngay trước khi nói, nên nhật ký ghi khoảng 0,2 giây thay cho thời gian chờ thật và P95 lệch thấp (2,23 giây). Lỗi được sửa trong cùng ngày, đợt đo được chạy lại, và Bảng 6.3 chỉ dùng số liệu sau khi sửa; số liệu của lần chạy đầu được giữ trong kho mã nguồn để đối chiếu. Đợt đo 05–06/09/2026 có thể đã chịu cùng lỗi này ở các lượt tương tự, nhưng nhật ký gốc không còn nên không kiểm tra lại được; vì vậy Bảng 6.5 chỉ dùng để tham khảo. Độ chính xác gọi công cụ do một người chấm (biết trước kết quả mong đợi) đánh giá theo tiêu chí đã cố định từ trước; rủi ro còn lại là thiên lệch người chấm. Bảng chấm chi tiết thiếu dòng của một trong 13 phiên (mất khi chép sang tệp chấm); các lượt của phiên này chỉ còn được tính trong tổng 43 lượt. Đợt đánh giá sau cần ít nhất hai người chấm độc lập và hệ số đồng thuận giữa họ.
+**Độ tin cậy nội tại (internal validity).** Số liệu độ trễ lấy từ hai đợt trong cùng một ngày (120 và 200 lượt), với một tài khoản thử nghiệm, một máy và một đường mạng. Mốc 1,6 giây của câu đệm được chọn sau khi đã thấy kết quả đợt thứ nhất và một lần chạy thử 8 lượt, nên đợt thứ hai là phép kiểm tra lại sau khi sửa, không phải phép đo độc lập; với P95 chỉ thấp hơn ngưỡng 0,01 giây, kết quả cần được lặp lại vào ngày khác. Trước đợt thứ nhất, đồng hồ đo của tác nhân có lỗi: ở các lượt mà công cụ tự đọc kết quả, mã nguồn bấm giờ lại ngay trước khi nói, nên nhật ký ghi khoảng 0,2 giây thay cho thời gian chờ thật và P95 lệch thấp (2,23 giây). Lỗi được sửa trong cùng ngày và mọi số liệu ở Bảng 6.3 đến Bảng 6.5 của ngày 15/11/2026 đều lấy sau khi sửa; số liệu của lần chạy lỗi được giữ trong kho mã nguồn để đối chiếu. Đợt đo 05–06/09/2026 có thể đã chịu cùng lỗi này ở các lượt tương tự, nhưng nhật ký gốc không còn nên không kiểm tra lại được. Độ chính xác gọi công cụ do một người chấm (biết trước kết quả mong đợi) đánh giá theo tiêu chí đã cố định từ trước; rủi ro còn lại là thiên lệch người chấm. Bảng chấm chi tiết thiếu dòng của một trong 13 phiên (mất khi chép sang tệp chấm); các lượt của phiên này chỉ còn được tính trong tổng 43 lượt. Đợt đánh giá sau cần ít nhất hai người chấm độc lập và hệ số đồng thuận giữa họ.
 
 **Độ tin cậy bên ngoài (external validity).** Thử tải và tiêm lỗi chạy trên một máy với nhà cung cấp AI giả lập; khởi động nguội của Lambda, giới hạn của API Gateway, việc tăng bản sao trên Fargate và giới hạn tốc độ của nhà cung cấp AI thật chưa được quan sát (mục 5.6.1). Kết quả gắn với cấu hình STT, LLM, TTS lúc đo (Phụ lục D), và nhiễu mô phỏng không đại diện cho mọi khoang xe. Đợt đo độ trễ dùng giọng máy, phát âm rõ và đều hơn người thật, và chỉ gồm câu tra cứu, hỏi đáp; độ trễ của các lượt gọi điện, gửi SMS hay đổi trạng thái chuyến, cũng như của người nói thật trong khoang xe, chưa được đo trên thiết kế hiện hành. SMS mới được kiểm tra với Twilio giả lập: nhà mạng Việt Nam chỉ nhận SMS quốc tế từ tên người gửi và mẫu tin đã đăng ký (Twilio, n.d.), và phép thử gửi thật ngày 12/10/2026 bị từ chối với mã lỗi 21612, nên AC-11 chỉ được đánh giá ở mức kiểm thử. Hội thoại tiếng Anh mới được hỗ trợ ở mức chức năng, chưa đo độ chính xác hay độ trễ. Các dịch vụ được đo khi chạy cục bộ trên Node.js 26.10, trong khi cấu hình Lambda dùng môi trường nodejs20.x (Bảng 5.1), nên hiệu năng trên AWS có thể khác.
 
-**Độ tin cậy cấu trúc (construct validity).** Độ trễ phản hồi đo trải nghiệm hội thoại, không đo an toàn giao thông thực địa (mục 2.9.1). Chỉ số của AC-15 bắt đầu tính từ lúc tác nhân nhận biết tài xế dứt lời nên thấp hơn khoảng chờ tài xế thật sự cảm nhận; số đo từ phía máy khách (chỉ số C, Bảng 6.3) cao hơn khoảng 1,1 giây ở trung vị. Ngoài ra, danh mục hành vi khi lái (Bảng 6.9) đo việc thiết kế tuân thủ nguyên tắc, không thay thế nghiên cứu người dùng. Các webhook nhận sự kiện từ Twilio (mục 5.4.3) chưa kiểm tra chữ ký X-Twilio-Signature, nên sự kiện giả mạo có thể lọt vào bảng channel-events; Bảng 6.12 không đo được rủi ro này vì dùng Twilio giả lập.
+**Độ tin cậy cấu trúc (construct validity).** Độ trễ phản hồi đo trải nghiệm hội thoại, không đo an toàn giao thông thực địa (mục 2.9.1). Chỉ số của AC-15 bắt đầu tính từ lúc tác nhân nhận biết tài xế dứt lời nên thấp hơn khoảng chờ tài xế thật sự cảm nhận; số đo từ phía máy khách (chỉ số C, Bảng 6.3) cao hơn khoảng 1 giây ở trung vị. Chỉ số này cũng tính câu đệm là phản hồi, nên việc đạt AC-15 không có nghĩa là tài xế nhận được nội dung trả lời trong 2 giây. Ngoài ra, danh mục hành vi khi lái (Bảng 6.9) đo việc thiết kế tuân thủ nguyên tắc, không thay thế nghiên cứu người dùng. Các webhook nhận sự kiện từ Twilio (mục 5.4.3) chưa kiểm tra chữ ký X-Twilio-Signature, nên sự kiện giả mạo có thể lọt vào bảng channel-events; Bảng 6.12 không đo được rủi ro này vì dùng Twilio giả lập.
 
-**Độ tin cậy của kết luận (conclusion validity).** Mỗi mức thử tải và đợt đo độ trễ chỉ chạy một lần nên chưa ước lượng được độ biến thiên giữa các lần chạy. Với cỡ mẫu nhỏ (22 câu; 43 lượt chấm), luận văn báo cáo khoảng tin cậy, ghi "mẫu nhỏ" và không khẳng định khác biệt khi khoảng tin cậy chồng lấn. Script và quy tắc xử lý dữ liệu ở Phụ lục E.
+**Độ tin cậy của kết luận (conclusion validity).** Mỗi mức thử tải và mỗi cấu hình đo độ trễ chỉ chạy một lần nên chưa ước lượng được độ biến thiên giữa các lần chạy. Với cỡ mẫu nhỏ (22 câu; 43 lượt chấm), luận văn báo cáo khoảng tin cậy, ghi "mẫu nhỏ" và không khẳng định khác biệt khi khoảng tin cậy chồng lấn. Script và quy tắc xử lý dữ liệu ở Phụ lục E.
 
 ## Kết luận chương
 
-Cả 19 tiêu chí chấp nhận (Bảng 6.15) đều đã được đánh giá; AC-09 (từ khóa đánh thức) và AC-12 (điều phối viên mời tài xế) đạt khi kiểm thử chức năng trên thiết bị thật, chưa có số đo định lượng về tỷ lệ đánh thức đúng và đánh thức nhầm. Khả năng phục hồi và khả năng mở rộng đạt ở mức thành phần, trong môi trường mô phỏng; hai lỗi hiện thực về tính khả dụng và bảo mật nhật ký đã được sửa và đạt khi kiểm tra lại. Kết quả không đạt duy nhất còn lại là độ trễ phản hồi (P95 = 2,58 giây so với ngưỡng 2 giây, AC-15); ngoài ra, RS-03 chỉ đạt một phần (mất phiên đang chạy khi bản sao bị dừng) và AC-11 mới đạt ở mức kiểm thử.
+Cả 19 tiêu chí chấp nhận (Bảng 6.15) đều đã được đánh giá; AC-09 (từ khóa đánh thức) và AC-12 (điều phối viên mời tài xế) đạt khi kiểm thử chức năng trên thiết bị thật, chưa có số đo định lượng về tỷ lệ đánh thức đúng và đánh thức nhầm. Khả năng phục hồi và khả năng mở rộng đạt ở mức thành phần, trong môi trường mô phỏng; hai lỗi hiện thực về tính khả dụng và bảo mật nhật ký đã được sửa và đạt khi kiểm tra lại. Độ trễ phản hồi (AC-15) không đạt ở đợt đo đầu (P95 2,58 giây) và đạt sát ngưỡng sau khi sửa câu đệm (P95 1,99 giây), nhưng thời gian tới câu trả lời thật không giảm; ngoài ra, RS-03 chỉ đạt một phần (mất phiên đang chạy khi bản sao bị dừng) và AC-11 mới đạt ở mức kiểm thử.
