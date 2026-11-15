@@ -1,4 +1,4 @@
-# Kết quả đo WER — Bảng 6.5 / Hình 6.2 (Chương 6)
+# Kết quả đo WER — Bảng 6.6 / Hình 6.2 (Chương 6)
 
 **Ngày đo:** 2026-09-06. **Thiết bị:** app tài xế trên điện thoại (kênh WebRTC in-app).
 **STT:** Google `chirp_3`, vi-VN. **Đoạn đọc:** 22 câu cố định (`wer_kich_ban.md`), N = 192 từ.
@@ -32,7 +32,7 @@ canh toàn transcript bằng khoảng cách sửa mức từ).
 
 Ở điều kiện A chỉ có: rụng "Tôi"/"cho"/"của"/"nhận" (hư từ) và 1 lần "điểm đón" → "điểm đó".
 
-## Hạn chế (đã nêu trong §6.6, §6.11, §6.12)
+## Hạn chế (đã nêu trong mục 6.5 và 6.13)
 
 Mẫu nhỏ, một người đọc, một lượt mỗi điều kiện, một mức nhiễu, đọc kịch bản (biết trước).
 Cần nhiều người đọc, nhiều mức nhiễu và đọc mù để khái quát.

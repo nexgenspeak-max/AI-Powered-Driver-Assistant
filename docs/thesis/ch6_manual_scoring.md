@@ -1,10 +1,10 @@
-# Chấm tay độ đúng công cụ — Bảng 6.6 / 6.7 (Chương 6)
+# Chấm tay độ đúng công cụ — Bảng 6.7 / 6.8 (Chương 6)
 
 **Nguồn:** `src/backend/llm-orchestrator/logs/agent.*.log`, cửa sổ 2026-09-05 → 2026-09-06.
 **Cách trích:** lọc dòng `[DRIVER]` / `[AI]` / `event=spoken_intent` / `event=http` / `event=turn` (đã lược ANSI, dedup), gộp theo `room=`.
 **Người chấm:** 1 (tác giả). **Chưa mù.** Phiên là dev-probe, nhiều câu cạnh biên. → Chỉ dùng làm **quan sát sơ bộ**, không phải campaign chính thức.
 
-## Tiêu chí (theo mục 6.4.3–6.4.4)
+## Tiêu chí (theo mục 6.3)
 
 - **Đúng công cụ**: công cụ được gọi khớp việc tài xế yêu cầu; tham số then chốt đúng; không gọi thêm công cụ phá nghiệp vụ.
 - **Hoàn thành**: nhu cầu tài xế được đáp ứng đúng ngay lần đầu (không tính lần bot tự sửa sau khi bị nhắc).
@@ -35,8 +35,8 @@
 - **Chọn đúng công cụ** = (Đ + P) / tổng = 37/43 = **86,0%** (Wilson 95%: 72,7%–93,4%).
 - **Hoàn thành đúng ngay lần đầu** = Đ / tổng = 32/43 = **74,4%** (Wilson 95%: 59,8%–85,1%).
 - Bản trước của luận văn ghi 88% / 77% trên "≈ 39 lượt" và chia theo use case; các số đó không truy được từ bảng chấm (các lượt không gắn nhãn UC), nên đã được thay ngày 20/10/2026.
-- Phân loại lỗi (Bảng 6.9), theo ghi chú khi chấm: E-INTENT 4 · E-PARAM 2 · E-UX 3 · E-CONFIRM 2 · E-STT 2 · E-API 0.
+- Phân loại lỗi (Bảng 6.8), theo ghi chú khi chấm: E-INTENT 4 · E-PARAM 2 · E-UX 3 · E-CONFIRM 2 · E-STT 2 · E-API 0.
 
-## Hạn chế của cách chấm này (đã ghi trong §6.11 và §6.12)
+## Hạn chế của cách chấm này (đã ghi trong mục 6.6 và 6.13)
 
 Mẫu nhỏ, một người chấm, chưa mù, không gắn nhãn UC, phiên phát triển. Cần đợt chấm chính thức: kịch bản mù, ≥ 2 người chấm, gắn nhãn UC01–UC08, n ≥ 10 mỗi UC.

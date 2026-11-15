@@ -28,7 +28,7 @@ và chỗ trong luận văn để trỏ tới khi hội đồng hỏi.
 | Hoàn thành ngay lần đầu | **32/43 = 74,4%** (59,8–85,1%) | Mục 6.6 |
 | Tỷ lệ lỗi từ (WER) | **3,1%** yên tĩnh → **7,3%** có nhiễu (1 người đọc, 22 câu) | Mục 6.5 |
 | Phục hồi | **200/200** lượt tiêm lỗi không làm hỏng hội thoại; lỗi treo 6–8 s | Bảng 6.11 |
-| Mở rộng | 1 → 40 phiên, P95 không tăng (1,54 → 1,51 s), AI giả lập; ~225 MB RAM/phiên | Bảng 6.10 |
+| Mở rộng | 1 → 40 phiên, P95 không tăng (1,54 → 1,51 s), AI giả lập; RAM tăng 150–430 MB mỗi phiên | Bảng 6.10 |
 | Tiêu chí chấp nhận | 19 tiêu chí, cả 19 đã được đánh giá; AC-15 (độ trễ) đạt sát ngưỡng sau một vòng sửa | Bảng 6.15 |
 | Công cụ | 48 công cụ gói tiếng Việt (42 cho tài xế) | Phụ lục A |
 
@@ -282,7 +282,7 @@ Luận văn không khẳng định an toàn giao thông: độ trễ đo trải 
 **5. Khả năng mở rộng đo trên mô phỏng, chưa phải AWS?**
 Đúng. Thử tải và tiêm lỗi chạy trên một máy với AI giả lập; khởi động nguội Lambda, giới hạn API
 Gateway, tăng bản sao Fargate và giới hạn tốc độ của nhà cung cấp AI chưa được quan sát (mục 6.13, độ
-tin cậy bên ngoài). Phát hiện hữu ích: bộ nhớ là giới hạn chính, khoảng 225 MB mỗi phiên, nên tự mở
+tin cậy bên ngoài). Phát hiện hữu ích: bộ nhớ là giới hạn chính, mỗi phiên thêm 150–430 MB tùy mức tải (tác vụ 2 GB chỉ chứa 2 đến 3 phiên), nên tự mở
 rộng cần dựa trên bộ nhớ hoặc số phiên.
 
 **6. Khi một bản sao tác nhân chết thì sao?**

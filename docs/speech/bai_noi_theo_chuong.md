@@ -169,7 +169,7 @@ dịch vụ theo năng lực nghiệp vụ, và tự đánh giá kiến trúc b�
 ### Lời nói
 
 > Hệ thống có hai loại tải rất khác nhau. Một là **tác nhân hội thoại**: chạy dài hạn, giữ kết nối âm
-> thanh, mỗi phiên tốn khoảng 225 MB bộ nhớ. Hai là **API nghiệp vụ**: nhanh, không trạng thái, được
+> thanh, mỗi phiên thêm vào tốn khoảng 150–430 MB bộ nhớ tùy mức tải. Hai là **API nghiệp vụ**: nhanh, không trạng thái, được
 > app, trang điều phối và tác nhân cùng gọi.
 >
 > Em so sánh bốn phương án: nguyên khối, nguyên khối phân mô-đun, microservices và thuần serverless

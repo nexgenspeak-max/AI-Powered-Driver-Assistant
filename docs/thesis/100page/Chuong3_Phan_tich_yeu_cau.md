@@ -22,7 +22,7 @@ Yêu cầu được rút ra từ bốn nguồn:
 
 - **Nghiên cứu về tài xế gọi xe.** Người lái cho nền tảng số có khả năng thường xuyên dùng ứng dụng điện thoại khi lái cao gần gấp bốn lần so với người lái khác (Insurance Institute for Highway Safety, 2022) và thường thao tác điện thoại để nhận chuyến khi đang lái (Song et al., 2023).
 - **Trao đổi trực tiếp với tài xế.** Tác giả hỏi chuyện các tài xế xe công nghệ trong những chuyến đi của chính mình, về cách họ nhận chuyến, liên lạc với khách và với tổng đài khi đang lái. Đây là trao đổi không chính thức: không có bảng hỏi, không ghi âm và không thống kê, nên chỉ được dùng để định hướng và đối chiếu chân dung người dùng ở mục 3.2, không được dùng làm số liệu.
-- **Tài liệu nội bộ của dự án:** tài liệu yêu cầu, sổ tay và kịch bản hội thoại (Phụ lục B).
+- **Tài liệu nội bộ của dự án:** tài liệu yêu cầu, sổ tay và kịch bản hội thoại của dự án.
 - **Ràng buộc an toàn khi lái** (mục 2.8).
 
 Luận văn chưa kiểm chứng lại bộ yêu cầu với tài xế bằng một khảo sát có cấu trúc; đây là một giới hạn, được nêu lại ở phần hướng phát triển. Các mã FR, UC, NFR và AC được dùng lại ở Chương 4 đến 6.
@@ -157,7 +157,7 @@ Bảng 3.6 không liệt kê FR-L01 (song ngữ) vì yêu cầu này áp dụng 
 | UC18 | Quản trị viên hệ thống | Giám sát dịch vụ, cấu hình, nhật ký | FR-S01, FR-S02, FR-S03 |
 | UC11 | Quản trị viên hệ thống | Xem báo cáo vận hành ngày | FR-O01, FR-O02 |
 
-Năm use case tiêu biểu được tóm tắt dưới đây (yêu cầu liên quan ghi ở Bảng 3.6) gồm bốn use case thuộc chuỗi nghiệp vụ chính của một chuyến (UC14, UC02, UC04, UC12) và UC11; lời thoại mẫu ở Phụ lục B.
+Năm use case tiêu biểu được tóm tắt dưới đây (yêu cầu liên quan ghi ở Bảng 3.6) gồm bốn use case thuộc chuỗi nghiệp vụ chính của một chuyến (UC14, UC02, UC04, UC12) và UC11; lời thoại mẫu của UC02 và của một phiên hỏi đáp trong ứng dụng ở Phụ lục B.
 
 **UC14 – Tạo chuyến và mời tài xế.** Điều phối viên nhập tên và số điện thoại khách, kênh khách đã dùng để đặt, điểm đón, điểm trả, ghi chú cho tài xế, tài xế được chọn và giờ đón; hệ thống lưu chuyến ở trạng thái chờ rồi gọi mời tài xế được chọn (UC02). Nếu tài xế nhận, chuyến chuyển sang trạng thái đã xác nhận; nếu tài xế ngoại tuyến hoặc không nghe máy, chuyến giữ trạng thái chờ. Chuyến còn chờ hoặc bị từ chối (UC02) có thể được gán cho tài xế khác.
 
