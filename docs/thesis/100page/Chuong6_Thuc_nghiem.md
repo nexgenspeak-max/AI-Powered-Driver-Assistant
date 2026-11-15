@@ -49,9 +49,9 @@ Khả năng mở rộng và phục hồi được đánh giá trên một máy p
 
 Quy tắc xử lý dữ liệu được cố định từ trước: các chỉ số hội thoại tính theo lượt; giá trị ngoại lai được giữ; phân vị tính bằng nội suy tuyến tính; tỷ lệ kèm khoảng tin cậy 95% Wilson. Tiêu chí được xem là "đạt" khi thỏa ngưỡng ở Bảng 3.8, ghi kèm "mẫu nhỏ" khi cỡ mẫu nhỏ hơn dự kiến.
 
-## 6.4. Kết quả hiệu năng — NFR-02 (RQ2)
+## 6.4. Kết quả hiệu năng
 
-Bảng 6.3 trình bày độ trễ của thiết kế hiện hành (mọi lượt qua LLM, câu đệm sau 2 giây) theo ba cách đo. Chỉ số A là chỉ số của AC-15. Chỉ số B tính tới câu trả lời thật, bỏ qua câu đệm. Chỉ số C đo từ phía tài xế ảo, gồm cả đường truyền hai chiều, nên là giới hạn trên của khoảng chờ mà tài xế cảm nhận.
+Mục này kiểm tra yêu cầu hiệu năng NFR-02 (tiêu chí AC-15) và trả lời câu hỏi nghiên cứu RQ2. Bảng 6.3 trình bày độ trễ của thiết kế hiện hành (mọi lượt qua LLM, câu đệm sau 2 giây) theo ba cách đo. Chỉ số A là chỉ số của AC-15. Chỉ số B tính tới câu trả lời thật, bỏ qua câu đệm. Chỉ số C đo từ phía tài xế ảo, gồm cả đường truyền hai chiều, nên là giới hạn trên của khoảng chờ mà tài xế cảm nhận.
 
 **Bảng 6.3.** Độ trễ phản hồi của thiết kế hiện hành (giây; ngày 15/11/2026; 120 lượt trong 12 phiên)
 
@@ -92,9 +92,9 @@ Thứ ba, khoảng chờ tài xế cảm nhận dài hơn chỉ số A. Đồng 
 | 05–06/09/2026 | Còn nhánh rút gọn, chỉ tính lượt qua LLM; tác giả đọc | 174 | 1,54 | 3,75 | 1,25 / 2,49 | 0,94 / 1,70 |
 | 15/11/2026 | Mọi lượt qua LLM, có câu đệm; tài xế ảo | 120 | 1,83 | 2,58 | 1,04 / 1,32 | 0,95 / 1,23 |
 
-## 6.5. Kết quả nhận dạng giọng nói (RQ3)
+## 6.5. Kết quả nhận dạng giọng nói
 
-Bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, địa chỉ có số nhà, mốc giờ) được đọc một lượt ở mỗi điều kiện, cùng thiết bị và micro; ở điều kiện B, tiếng ồn khoang xe phát từ thiết bị khác để bộ khử tiếng vọng không lọc mất. Văn bản nhận dạng được chuẩn hóa chữ số và dấu câu rồi so với câu tham chiếu.
+Mục này đo tỷ lệ lỗi từ (tiêu chí AC-19) và trả lời câu hỏi nghiên cứu RQ3. Bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, địa chỉ có số nhà, mốc giờ) được đọc một lượt ở mỗi điều kiện, cùng thiết bị và micro; ở điều kiện B, tiếng ồn khoang xe phát từ thiết bị khác để bộ khử tiếng vọng không lọc mất. Văn bản nhận dạng được chuẩn hóa chữ số và dấu câu rồi so với câu tham chiếu.
 
 **Bảng 6.6.** Tỷ lệ lỗi từ theo điều kiện âm thanh (một người đọc, một lượt mỗi điều kiện)
 
@@ -110,9 +110,9 @@ Bộ 22 câu (tra cứu chuyến, xác nhận, gọi và nhắn tin cho khách, 
 
 Khi có nhiễu, tỷ lệ lỗi từ tăng hơn gấp đôi do lỗi chèn và lỗi thay thế, trong đó có thay thế từ mang nghĩa ("thu nhập" thành "phim Nhật") và sai chữ số trong địa chỉ; lỗi xóa (như mất hư từ ngắn) không đổi. Trong mẫu này, nhận dạng vẫn dùng được cho câu lệnh ngắn nhưng độ tin cậy giảm. Luận văn không huấn luyện lại mô hình nhận dạng (mục 1.5.3).
 
-## 6.6. Kết quả tính đúng chức năng (RQ4)
+## 6.6. Kết quả tính đúng chức năng
 
-Bảng 6.7 là kết quả chấm thủ công một mẫu lượt trong nhật ký 05–06/09/2026 theo định nghĩa ở mục 6.3.
+Mục này đánh giá các yêu cầu chức năng của tài xế (AC-01 đến AC-08) và trả lời câu hỏi nghiên cứu RQ4. Bảng 6.7 là kết quả chấm thủ công một mẫu lượt trong nhật ký 05–06/09/2026 theo định nghĩa ở mục 6.3.
 
 **Bảng 6.7.** Độ chính xác gọi công cụ và tỷ lệ hoàn thành nghiệp vụ (một người chấm, 43 lượt trong 13 phiên, nhật ký 05–06/09/2026)
 
@@ -136,9 +136,9 @@ Tỷ lệ chọn đúng công cụ là 37/43 = 86,0% (khoảng tin cậy 95% Wil
 | E-STT | Nhận dạng sai tên riêng | "NexGen Speak" thành "Nick Jan Speed" | STT, nhiễu | 2 |
 | E-API | Đúng công cụ nhưng API lỗi | Ngoài mẫu: SMS trả 503 ngày 06/09/2026 (Bảng 5.2) | Dịch vụ tin nhắn | 0 |
 
-## 6.7. Kết quả tính khả dụng — NFR-01
+## 6.7. Kết quả tính khả dụng
 
-Bảng 6.9 là danh mục kiểm tra hành vi khi lái dùng cho AC-14.
+Mục này kiểm tra yêu cầu tính khả dụng NFR-01. Bảng 6.9 là danh mục kiểm tra hành vi khi lái dùng cho AC-14.
 
 **Bảng 6.9.** Danh mục kiểm tra hành vi khi lái
 
@@ -153,9 +153,9 @@ Bảng 6.9 là danh mục kiểm tra hành vi khi lái dùng cho AC-14.
 
 "Đạt (mẫu)" ở Bảng 6.9 và Bảng 6.12 nghĩa là mới chỉ được kiểm tra trên các phiên mẫu. Ngày 11/10/2026, phần định lượng của AC-14 đạt (100% thao tác rủi ro có bước xác nhận) nhưng danh mục chỉ đạt 5/6, vì câu báo lỗi khi gọi khách thất bại chứa thông tin kỹ thuật ("Kiểm tra trip-service (:8002) và SIP_TRUNK_ID."). Lỗi nằm ở một chuỗi văn bản trong bốn công cụ gọi điện, không nằm ở kiến trúc; theo vòng lặp xây dựng – đánh giá (Peffers et al., 2007), chuỗi này được sửa thành "Bạn thử lại sau ít phút nhé.", kiểm tra bằng test_call_error_message và RS-04 (20/20); lần kiểm tra lại ngày 13/10/2026 đạt 6/6, nên AC-14 **đạt sau một vòng sửa**. Đây là danh mục kiểm tra thiết kế, chưa phải nghiên cứu người dùng (mục 6.13).
 
-## 6.8. Kết quả khả năng mở rộng — NFR-03 (RQ1)
+## 6.8. Kết quả khả năng mở rộng
 
-Khả năng mở rộng được đánh giá ở mức phiên hội thoại (SC-01, SC-02, Bảng 6.10): mỗi mức tải kéo dài 90 giây; SC-01 dùng một bản sao tác nhân với 1 đến 40 phiên, SC-02 dùng hai và bốn bản sao với 20 và 40 phiên.
+Mục này kiểm tra yêu cầu khả năng mở rộng NFR-03 (tiêu chí AC-16), là một nửa của câu hỏi nghiên cứu RQ1. Khả năng mở rộng được đánh giá ở mức phiên hội thoại (SC-01, SC-02, Bảng 6.10): mỗi mức tải kéo dài 90 giây; SC-01 dùng một bản sao tác nhân với 1 đến 40 phiên, SC-02 dùng hai và bốn bản sao với 20 và 40 phiên.
 
 Phép thử tải ở mức API nghiệp vụ (SC-03, ngày 11/10/2026) chỉ dùng để tham khảo và không dùng để xét AC-16. Dịch vụ Chuyến đi và Điều phối không có yêu cầu lỗi tới 100 người dùng ảo; ở 200 người dùng ảo, 7,95% yêu cầu lỗi, nhưng khi đó bộ giả lập cơ sở dữ liệu đã bão hòa trong khi dịch vụ chỉ dùng 19–28% một nhân CPU. Phép thử vì vậy không đo được giới hạn tải hay khả năng tự mở rộng của Lambda và DynamoDB; số liệu đầy đủ nằm trong kho mã nguồn.
 
@@ -175,9 +175,9 @@ Phép thử tải ở mức API nghiệp vụ (SC-03, ngày 11/10/2026) chỉ d�
 
 P95 không tăng theo số phiên (1,54 giây ở 1 phiên, 1,51 giây từ 20 tới 40 phiên) và mọi phiên đều được phục vụ, nên AC-16 (P95 tăng không quá 20%, phiên lỗi dưới 1%) **đạt trong môi trường mô phỏng**. Thêm bản sao rút ngắn thời gian vào phiên (20 phiên: P50 từ 1,44 xuống 0,48 giây khi tăng từ 1 lên 4 bản sao) vì mỗi bản sao giữ sẵn một tiến trình chờ, phù hợp với chiến thuật nhiều bản sao của AC-16 (Bảng 3.8). Bộ nhớ là tài nguyên giới hạn chính: RAM tăng khoảng 225 MB mỗi phiên, còn CPU đỉnh của tác nhân chỉ tăng khoảng 9% một nhân mỗi phiên. Với tác vụ Fargate 1 vCPU, 2 GB (Bảng 5.5), một bản sao chỉ chứa được khoảng 4 phiên (1.315 MB + 3 × 225 MB ≈ 1.990 MB), tối đa khoảng 9 phiên nếu bỏ qua bộ nhớ nền (2.048 MB / 225 MB), nên việc tự mở rộng cần dựa trên bộ nhớ hoặc số phiên. Kết quả chưa phản ánh năng lực tải trên AWS (mục 6.13).
 
-## 6.9. Kết quả khả năng phục hồi — NFR-04 (RQ1)
+## 6.9. Kết quả khả năng phục hồi
 
-Bảng 6.11 tổng hợp kết quả tiêm lỗi (mục 6.2.2); mỗi kiểu lỗi lặp 20 lần (RS-05: 30; RS-03: 10). Một lượt "đạt" khi lỗi không lọt khỏi công cụ dưới dạng ngoại lệ và tác nhân báo thao tác không thực hiện được; với RS-01, khi việc ghi bản ghi thất bại không làm ngoại lệ lọt ra hội thoại; với RS-05, khi vẫn nhận được câu trả lời từ nhà cung cấp dự phòng.
+Mục này kiểm tra yêu cầu khả năng phục hồi NFR-04 (tiêu chí AC-17), là nửa còn lại của câu hỏi nghiên cứu RQ1. Bảng 6.11 tổng hợp kết quả tiêm lỗi (mục 6.2.2); mỗi kiểu lỗi lặp 20 lần (RS-05: 30; RS-03: 10). Một lượt "đạt" khi lỗi không lọt khỏi công cụ dưới dạng ngoại lệ và tác nhân báo thao tác không thực hiện được; với RS-01, khi việc ghi bản ghi thất bại không làm ngoại lệ lọt ra hội thoại; với RS-05, khi vẫn nhận được câu trả lời từ nhà cung cấp dự phòng.
 
 **Bảng 6.11.** Kết quả tiêm lỗi (RS-01, RS-02, RS-04, RS-05 ngày 11/10/2026; RS-03 ngày 13/10/2026; KTC = khoảng tin cậy 95% Wilson)
 
@@ -198,9 +198,9 @@ Trong 200 lượt tiêm lỗi mức thành phần, không lượt nào để ngo
 
 Ở RS-03 (hai bản sao), mỗi lượt dừng đột ngột bản sao đang phục vụ một phiên rồi mở ngay phiên mới; phiên mới luôn được bản sao còn lại phục vụ (Bảng 6.11). Ngược lại, phiên đang chạy trên bản sao bị dừng đều mất (0/10) vì LiveKit không tự giao lại phiên; đường khôi phục ở tầng ứng dụng (khi tài xế mở lại trợ lý, API cấp token phân công lại tác nhân; biểu đồ tuần tự S2, Bảng 4.8) chưa được đo đầu cuối. Trong một lượt bổ sung không còn bản sao nào, phiên mở trong lúc đó vẫn không được phục vụ trong 30 giây sau khi bản sao mới khởi động xong. Vì vậy hệ thống cần tối thiểu hai bản sao, và AC-17 với RS-03 **đạt một phần**.
 
-## 6.10. Kết quả bảo mật — NFR-05
+## 6.10. Kết quả bảo mật
 
-Bảng 6.12 là danh mục kiểm tra bảo mật dùng cho AC-18.
+Mục này kiểm tra yêu cầu bảo mật NFR-05. Bảng 6.12 là danh mục kiểm tra bảo mật dùng cho AC-18.
 
 **Bảng 6.12.** Danh mục kiểm tra bảo mật
 

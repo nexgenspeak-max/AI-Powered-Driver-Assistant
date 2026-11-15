@@ -22,7 +22,9 @@ Chương này đi từ yêu cầu ở Chương 3 tới bản thiết kế, theo 
 
 ## 4.2. Quyết định kiến trúc
 
-### 4.2.1. Lựa chọn kiểu kiến trúc (ADR-01)
+### 4.2.1. Lựa chọn kiểu kiến trúc
+
+Quyết định ở mục này được ký hiệu là ADR-01.
 
 **Bối cảnh.** Hệ thống có hai loại tải: tác nhân hội thoại chạy dài hạn, giữ kết nối âm thanh và dùng các thư viện AI viết bằng Python; và các API nghiệp vụ nhanh, không trạng thái, do ứng dụng, trang quản trị và tác nhân cùng gọi.
 
@@ -42,7 +44,9 @@ Chương này đi từ yêu cầu ở Chương 3 tới bản thiết kế, theo 
 
 **Hệ quả và giảm thiểu.** Microservices làm tăng độ phức tạp vận hành và độ trễ mạng, đồng thời khiến việc bảo đảm tính nhất quán dữ liệu khó hơn (Soldani et al., 2018). Giảm thiểu: mỗi dịch vụ có hạ tầng dạng mã riêng (AWS SAM, CloudFormation) và kịch bản triển khai tự động; tải trước ngữ cảnh phiên, dùng lại kết nối HTTP; chỉ một dịch vụ giữ bản chính thức của dữ liệu chuyến đi; mọi dòng nhật ký gắn mã phòng.
 
-### 4.2.2. Lựa chọn luồng xử lý lượt hội thoại (ADR-02)
+### 4.2.2. Lựa chọn luồng xử lý lượt hội thoại
+
+Quyết định ở mục này được ký hiệu là ADR-02.
 
 **Bối cảnh.** Độ trễ một lượt gồm ba chặng: phát hiện tài xế đã nói xong, chờ LLM sinh token đầu, và chờ TTS phát âm thanh đầu. Hai chặng đầu chiếm gần hết thời gian, mỗi chặng khoảng 1 giây ở trung vị, còn TTS khoảng 0,2 giây (mục 6.4). Cách tổ chức một lượt hội thoại vì vậy quyết định việc có đạt ngưỡng 2 giây hay không. Bảng 4.3 so sánh bốn phương án.
 
@@ -113,9 +117,9 @@ FR-A01 (từ khóa đánh thức) không thuộc dịch vụ nào: ứng dụng 
 
 ## 4.5. Biểu đồ tuần tự cho các luồng chính
 
-Bảy biểu đồ tuần tự (sequence diagram) S1 đến S7 lần lượt mô tả bảy luồng chính; tên dịch vụ chủ trì ghi trong ngoặc ở tiêu đề mục. Mỗi biểu đồ thể hiện thông điệp, mã lỗi và thời gian chờ; vị trí hiện thực từng luồng nêu ở Bảng 5.6.
+Bảy biểu đồ tuần tự (sequence diagram), ký hiệu S1 đến S7, lần lượt mô tả bảy luồng chính ở mục 4.5.1 đến 4.5.7; ký hiệu ghi ở chú thích hình. Dịch vụ chủ trì từng luồng là: Định danh (S1); Chuyến đi và Điều phối (S2, S4, S5, trong đó S5 có thêm Liên lạc bằng tin nhắn); Liên lạc hội thoại thời gian thực (S3); Nhật ký cuộc gọi (S6); Giám sát vận hành (S7). Mỗi biểu đồ thể hiện thông điệp, mã lỗi và thời gian chờ; vị trí hiện thực từng luồng nêu ở Bảng 5.6.
 
-### 4.5.1. S1 — Đăng nhập (Dịch vụ Định danh)
+### 4.5.1. Đăng nhập
 
 ![Hình 4.2](../diagrams/H4_S1_identity_login.png)
 
@@ -123,7 +127,7 @@ Bảy biểu đồ tuần tự (sequence diagram) S1 đến S7 lần lượt mô
 
 Ứng dụng gửi vai trò, số điện thoại và mật khẩu; dịch vụ so khớp mật khẩu với giá trị băm bcrypt, ký access token (hạn 15 phút) và refresh token (hạn 30 ngày), lưu giá trị băm của refresh token để có thể thu hồi. Trường hợp sai mật khẩu và trường hợp tài khoản không tồn tại đều trả về cùng một lỗi để không tiết lộ tài khoản có tồn tại hay không.
 
-### 4.5.2. S2 — Khởi tạo phiên trợ lý trong ứng dụng (Dịch vụ Chuyến đi và Điều phối)
+### 4.5.2. Khởi tạo phiên trợ lý trong ứng dụng
 
 ![Hình 4.3](../diagrams/H4_S2_voice_session.png)
 
@@ -131,7 +135,7 @@ Bảy biểu đồ tuần tự (sequence diagram) S1 đến S7 lần lượt mô
 
 Khi ứng dụng yêu cầu token thoại, dịch vụ dùng lại phiên đang mở hoặc tạo phòng mới trên LiveKit Cloud, phân công tác nhân rồi ký token LiveKit. Tác nhân phân loại phiên (mục 4.6.3), chào tài xế ngay rồi tải chuyến đi, thu nhập và cài đặt vào trạng thái phiên; nếu tải lỗi, tác nhân vẫn trả lời và tải lại khi cần.
 
-### 4.5.3. S3 — Xử lý một lượt hội thoại (Dịch vụ Liên lạc hội thoại thời gian thực)
+### 4.5.3. Xử lý một lượt hội thoại
 
 ![Hình 4.4](../diagrams/H4_S3_voice_turn.png)
 
@@ -139,7 +143,7 @@ Khi ứng dụng yêu cầu token thoại, dịch vụ dùng lại phiên đang 
 
 Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại và danh sách công cụ tới LLM; nếu sau 2 giây chưa có phản hồi, tác nhân phát câu đệm (mục 4.6.1). Mô hình chọn công cụ update_trip_status; dịch vụ kiểm tra vị trí GPS của tài xế cách điểm đón không quá 200 m rồi mới ghi vào bảng trips; tác nhân chỉ xác nhận khi có kết quả thật. Nếu STT, LLM hoặc TTS lỗi, tác nhân chuyển sang nhà cung cấp dự phòng; nếu API lỗi, tác nhân báo không cập nhật được và phiên tiếp tục.
 
-### 4.5.4. S4 — Mời nhận chuyến qua cuộc gọi điện thoại (Dịch vụ Chuyến đi và Điều phối)
+### 4.5.4. Mời nhận chuyến qua cuộc gọi điện thoại
 
 ![Hình 4.5](../diagrams/H4_S4_trip_offer.png)
 
@@ -147,7 +151,7 @@ Khi tài xế báo đã đón khách, tác nhân gửi lịch sử hội thoại
 
 Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuyến mới được báo vào phòng hiện có. Nếu không, dịch vụ tạo phòng mang metadata chuyến, phân công tác nhân và tạo người tham gia SIP để LiveKit quay số qua Twilio. Tác nhân đọc điểm đón và hỏi tài xế có nhận chuyến không. Phiên này chỉ có hai công cụ confirm_trip và reject_trip; kết quả được ghi vào chuyến và đẩy tới ứng dụng.
 
-### 4.5.5. S5 — Gọi khách hàng và gửi tin nhắn (Dịch vụ Chuyến đi và Điều phối, Dịch vụ Liên lạc bằng tin nhắn)
+### 4.5.5. Gọi khách hàng và gửi tin nhắn
 
 ![Hình 4.6](../diagrams/H4_S5_customer_call.png)
 
@@ -155,7 +159,7 @@ Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuy
 
 Ở hai chế độ *tác nhân gọi thay* và *nói trực tiếp*, khách được nối vào phòng của tài xế; ở chế độ *gọi nền*, cuộc gọi dùng phòng riêng và tóm tắt được gửi về khi kết thúc. Tin nhắn đi qua Dịch vụ Liên lạc bằng tin nhắn tới Twilio, trạng thái giao tin trả về qua webhook; số điện thoại ngoài chuyến phải được tài xế xác nhận trước. Khi gửi SMS thất bại, dịch vụ trả lỗi kèm mã Twilio (nếu có) và tác nhân báo không gửi được (Bảng 5.2 minh họa một lần trả về mã 503).
 
-### 4.5.6. S6 — Ghi nhật ký và tóm tắt cuộc gọi (Dịch vụ Nhật ký cuộc gọi)
+### 4.5.6. Ghi nhật ký và tóm tắt cuộc gọi
 
 ![Hình 4.7](../diagrams/H4_S6_call_records.png)
 
@@ -163,7 +167,7 @@ Khi điều phối viên giao chuyến cho tài xế đang có phiên mở, chuy
 
 Khi phiên kết thúc, tác nhân gửi bản ghi, tóm tắt do LLM sinh và chỉ số phiên (mục 5.3.6) tới Dịch vụ Nhật ký cuộc gọi để lưu vào bảng call-records, với ngày ghi theo giờ Việt Nam. Truy vấn tóm tắt chỉ lấy bản ghi mới nhất của chính tài xế đó. Nếu dịch vụ lỗi, bản ghi được ghi vào nhật ký của tác nhân và phiên không bị ảnh hưởng.
 
-### 4.5.7. S7 — Lập báo cáo vận hành ngày (Dịch vụ Giám sát vận hành)
+### 4.5.7. Lập báo cáo vận hành ngày
 
 ![Hình 4.8](../diagrams/H4_S7_daily_report.png)
 
@@ -274,7 +278,7 @@ Bảng 4.10 liên kết từng yêu cầu phi chức năng và FR-O01, FR-O02 v�
 | NFR-05 Bảo mật | Định danh tập trung; ẩn bí mật; IAM riêng | S1; Cross-cutting | AC-18: danh mục kiểm tra bảo mật (mục 6.10) |
 | FR-O01, FR-O02 | Báo cáo ngày ở Giám sát vận hành; EventBridge | S7 | AC-13 (mục 6.11) |
 
-## 4.10. Đánh giá kiến trúc theo ATAM rút gọn
+## 4.10. Đánh giá kiến trúc và các điểm đánh đổi
 
 Luận văn áp dụng ATAM (Architecture Tradeoff Analysis Method) ở dạng rút gọn (Kazman et al., 2000; Bass et al., 2021), gồm ba sản phẩm: cây tiện ích (utility tree) xếp hạng kịch bản theo mức quan trọng và mức khó đạt (C – cao, T – trung bình, Th – thấp); các điểm nhạy (sensitivity point) và điểm đánh đổi (tradeoff point); các rủi ro (risk) và không rủi ro (non-risk). Do không tổ chức các buổi làm việc với các bên liên quan, kịch bản và xếp hạng chỉ phản ánh đánh giá của tác giả. Bảng 4.11 trình bày kết quả; kịch bản và ngưỡng lấy từ Bảng 3.8. Mã ở cột đầu đọc như sau: U là kịch bản trong cây tiện ích, SP là điểm nhạy, TP là điểm đánh đổi, R là rủi ro, NR là không rủi ro.
 
